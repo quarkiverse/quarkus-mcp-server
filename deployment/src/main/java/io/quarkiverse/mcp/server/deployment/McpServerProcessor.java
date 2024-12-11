@@ -4,6 +4,7 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
 import jakarta.inject.Singleton;
@@ -16,6 +17,7 @@ import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
+import io.quarkiverse.mcp.server.runtime.Mappers;
 import io.quarkiverse.mcp.server.runtime.McpBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
@@ -41,8 +43,10 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
+import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
+import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
@@ -167,10 +171,11 @@ class McpServerProcessor {
             ResultHandle invoker = promptsMethod
                     .newInstance(MethodDescriptor.ofConstructor(prompt.getInvoker().getClassName()));
             ResultHandle executionModel = promptsMethod.load(executionModel(prompt.getMethod(), transformedAnnotations));
+            ResultHandle resultMapper = getMapper(promptsMethod, prompt.getMethod().returnType());
             ResultHandle metadata = promptsMethod.newInstance(
                     MethodDescriptor.ofConstructor(PromptMetadata.class, PromptMethodInfo.class, Invoker.class,
-                            ExecutionModel.class),
-                    info, invoker, executionModel);
+                            ExecutionModel.class, Function.class),
+                    info, invoker, executionModel, resultMapper);
             Gizmo.listOperations(promptsMethod).on(ret).add(metadata);
         }
         promptsMethod.returnValue(ret);
@@ -181,6 +186,20 @@ class McpServerProcessor {
                 .setRuntimeInit()
                 .runtimeValue(recorderContext.newInstance(metadataClassName))
                 .done());
+    }
+
+    private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.LIST)) {
+            return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "LIST_MESSAGE", Function.class));
+        } else if (returnType.name().equals(DotNames.UNI)) {
+            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
+            if (typeArg.name().equals(DotNames.LIST)) {
+                return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "IDENTITY", Function.class));
+            } else {
+                return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "UNI_SINGLE_MESSAGE", Function.class));
+            }
+        }
+        return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "SINGLE_MESSAGE", Function.class));
     }
 
     private static ExecutionModel executionModel(MethodInfo method, TransformedAnnotationsBuildItem transformedAnnotations) {

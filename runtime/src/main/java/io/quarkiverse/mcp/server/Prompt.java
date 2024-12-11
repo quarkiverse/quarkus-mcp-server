@@ -8,6 +8,9 @@ import java.lang.annotation.Target;
 
 /**
  * Annotates a business method of a CDI bean as an exposed prompt template.
+ * <p>
+ * The method return type must be one of the following list: {@code PromptMessage}, {@code List<PromptMessage>},
+ * {@code Uni<PromptMessage>} or {@code Uni<List<PromptMessage>>}.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

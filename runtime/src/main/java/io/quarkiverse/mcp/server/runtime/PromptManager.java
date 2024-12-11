@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -41,13 +42,12 @@ public class PromptManager extends ComponentManager {
         }
         Invoker<Object, Object> invoker = prompt.invoker();
         Object[] arguments = prepareArguments(prompt.info(), args);
-        return doExecute(prompt.executionModel(), new Callable<Object>() {
-
+        return execute(prompt.executionModel(), new Callable<Uni<List<PromptMessage>>>() {
             @Override
-            public Object call() throws Exception {
-                return invoker.invoke(null, arguments);
+            public Uni<List<PromptMessage>> call() throws Exception {
+                return prompt.resultMapper().apply(invoker.invoke(null, arguments));
             }
-        }).map(this::mapResult);
+        });
     }
 
     @SuppressWarnings("unchecked")
