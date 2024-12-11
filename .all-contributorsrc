@@ -1,0 +1,27 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "mkouba",
+      "name": "Martin Kouba",
+      "avatar_url": "https://avatars.githubusercontent.com/u/913004?v=4",
+      "profile": "https://github.com/mkouba",
+      "contributions": [
+        "code",
+        "maintenance"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "quarkus-mcp-server",
+  "projectOwner": "quarkiverse"
+}
