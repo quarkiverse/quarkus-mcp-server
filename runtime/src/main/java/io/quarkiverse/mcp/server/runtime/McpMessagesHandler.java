@@ -141,7 +141,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
                             .put("messages", new JsonArray(ar.result())))
                             .encode());
                 } else {
-                    LOG.error(ar.cause());
+                    LOG.error("Unable to obtain prompt", ar.cause());
                     ctx.fail(500);
                 }
             }

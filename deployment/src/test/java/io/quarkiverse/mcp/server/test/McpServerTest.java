@@ -93,16 +93,26 @@ public class McpServerTest {
         JsonObject promptListResult = promptListResponse.getJsonObject("result");
         assertNotNull(promptListResult);
         JsonArray prompts = promptListResult.getJsonArray("prompts");
-        assertEquals(2, prompts.size());
+        assertEquals(4, prompts.size());
 
+        assertPromptMessage("Hello Lu!", endpoint, "foo", new JsonObject()
+                .put("name", "Lu")
+                .put("repeat", 1)
+                .put("options", new JsonObject()
+                        .put("enabled", true)));
+        assertPromptMessage("LU", endpoint, "BAR", new JsonObject()
+                .put("val", "Lu"));
+        assertPromptMessage("LU", endpoint, "uni_bar", new JsonObject()
+                .put("val", "Lu"));
+        assertPromptMessage("LU", endpoint, "uni_list_bar", new JsonObject()
+                .put("val", "Lu"));
+    }
+
+    private void assertPromptMessage(String expectedText, URI endpoint, String name, JsonObject arguments) {
         JsonObject promptGetMessage = newMessage("prompts/get")
                 .put("params", new JsonObject()
-                        .put("name", "foo")
-                        .put("arguments", new JsonObject()
-                                .put("name", "Lu")
-                                .put("repeat", 1)
-                                .put("options", new JsonObject()
-                                        .put("enabled", true))));
+                        .put("name", name)
+                        .put("arguments", arguments));
 
         JsonObject promptGetResponse = new JsonObject(given()
                 .contentType(ContentType.JSON)
@@ -123,7 +133,7 @@ public class McpServerTest {
         assertEquals("user", message.getString("role"));
         JsonObject content = message.getJsonObject("content");
         assertEquals("text", content.getString("type"));
-        assertEquals("Hello Lu!", content.getString("text"));
+        assertEquals(expectedText, content.getString("text"));
     }
 
     private static AtomicInteger ID = new AtomicInteger();
