@@ -159,10 +159,19 @@ class McpServerProcessor {
                 }
                 // TODO validate types
                 ResultHandle type = Types.getTypeHandle(promptsMethod, pi.type());
+                ResultHandle provider;
+                if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
+                    provider = promptsMethod.load(PromptArgument.Provider.MCP_CONNECTION);
+                } else if (pi.type().name().equals(DotNames.REQUEST_ID)) {
+                    provider = promptsMethod.load(PromptArgument.Provider.REQUEST_ID);
+                } else {
+                    provider = promptsMethod.load(PromptArgument.Provider.PARAMS);
+                }
                 ResultHandle arg = promptsMethod.newInstance(
                         MethodDescriptor.ofConstructor(PromptArgument.class, String.class, String.class, boolean.class,
-                                Type.class),
-                        promptsMethod.load(name), promptsMethod.load(description), promptsMethod.load(required), type);
+                                Type.class, PromptArgument.Provider.class),
+                        promptsMethod.load(name), promptsMethod.load(description), promptsMethod.load(required), type,
+                        provider);
                 Gizmo.listOperations(promptsMethod).on(args).add(arg);
             }
             ResultHandle info = promptsMethod.newInstance(

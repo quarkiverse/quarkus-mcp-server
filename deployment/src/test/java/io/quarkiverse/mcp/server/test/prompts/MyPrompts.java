@@ -4,9 +4,12 @@ import java.util.List;
 
 import jakarta.inject.Inject;
 
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkus.arc.Arc;
@@ -28,10 +31,12 @@ public class MyPrompts {
     }
 
     @Prompt(name = "BAR")
-    List<PromptMessage> bar(String val) {
+    List<PromptMessage> bar(String val, RequestId id, McpConnection connection) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
+        checkRequestId(id);
+        checkMcpConnection(connection);
         return List.of(PromptMessage.user(new TextContent(val.toUpperCase())));
     }
 
@@ -66,6 +71,18 @@ public class MyPrompts {
     private void checkDuplicatedContext() {
         if (!VertxContext.isOnDuplicatedContext()) {
             throw new IllegalStateException("Not on duplicated context");
+        }
+    }
+
+    private void checkRequestId(RequestId id) {
+        if (id == null || id.asInteger() < 1) {
+            throw new IllegalStateException("Invalid request id: " + id);
+        }
+    }
+
+    private void checkMcpConnection(McpConnection connection) {
+        if (connection == null || connection.status() != Status.IN_OPERATION) {
+            throw new IllegalStateException("Invalid connection: " + connection);
         }
     }
 
