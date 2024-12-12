@@ -9,35 +9,35 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import org.awaitility.Awaitility;
 import org.jboss.resteasy.reactive.client.SseEvent;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
-import io.quarkus.test.QuarkusUnitTest;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.restassured.http.ContentType;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class McpServerTest {
-
-    @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class, FooService.class, MyPrompts.class));
+public abstract class McpServerTest {
 
     @TestHTTPResource
     URI testUri;
 
-    @Test
-    public void testInit() throws URISyntaxException {
+    List<SseEvent<String>> sseMessages;
+
+    AtomicInteger idGenerator = new AtomicInteger();
+
+    protected URI initClient() throws URISyntaxException {
+        return initClient(null);
+    }
+
+    protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
         McpClient mcpClient = QuarkusRestClientBuilder.newBuilder()
                 .baseUri(testUri)
                 .build(McpClient.class);
 
-        List<SseEvent<String>> sseMessages = new CopyOnWriteArrayList<>();
+        sseMessages = new CopyOnWriteArrayList<>();
         mcpClient.init().subscribe().with(s -> sseMessages.add(s), e -> {
         });
         Awaitility.await().until(() -> !sseMessages.isEmpty());
@@ -47,7 +47,7 @@ public class McpServerTest {
                 .put("params",
                         new JsonObject()
                                 .put("clientInfo", new JsonObject()
-                                        .put("name", "FooClient")
+                                        .put("name", "test-client")
                                         .put("version", "1.0"))
                                 .put("protocolVersion", "2024-11-05"));
 
@@ -60,11 +60,13 @@ public class McpServerTest {
                 .statusCode(200)
                 .extract().body().asString());
 
-        assertEquals(initMessage.getInteger("id"), initResponse.getInteger("id"));
-        assertEquals("2.0", initResponse.getString("jsonrpc"));
-        JsonObject initResult = initResponse.getJsonObject("result");
+        JsonObject initResult = assertResponseMessage(initMessage, initResponse);
         assertNotNull(initResult);
         assertEquals("2024-11-05", initResult.getString("protocolVersion"));
+
+        if (initResultAssert != null) {
+            initResultAssert.accept(initResult);
+        }
 
         // Send "notifications/initialized"
         given()
@@ -77,69 +79,20 @@ public class McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject promptListMessage = newMessage("prompts/list");
-
-        JsonObject promptListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(promptListMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200)
-                .extract().body().asString());
-
-        assertEquals(promptListMessage.getInteger("id"), promptListResponse.getInteger("id"));
-        assertEquals("2.0", promptListResponse.getString("jsonrpc"));
-        JsonObject promptListResult = promptListResponse.getJsonObject("result");
-        assertNotNull(promptListResult);
-        JsonArray prompts = promptListResult.getJsonArray("prompts");
-        assertEquals(4, prompts.size());
-
-        assertPromptMessage("Hello Lu!", endpoint, "foo", new JsonObject()
-                .put("name", "Lu")
-                .put("repeat", 1)
-                .put("options", new JsonObject()
-                        .put("enabled", true)));
-        assertPromptMessage("LU", endpoint, "BAR", new JsonObject()
-                .put("val", "Lu"));
-        assertPromptMessage("LU", endpoint, "uni_bar", new JsonObject()
-                .put("val", "Lu"));
-        assertPromptMessage("LU", endpoint, "uni_list_bar", new JsonObject()
-                .put("val", "Lu"));
+        return endpoint;
     }
 
-    private void assertPromptMessage(String expectedText, URI endpoint, String name, JsonObject arguments) {
-        JsonObject promptGetMessage = newMessage("prompts/get")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", arguments));
-
-        JsonObject promptGetResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(promptGetMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200)
-                .extract().body().asString());
-
-        assertEquals(promptGetMessage.getInteger("id"), promptGetResponse.getInteger("id"));
-        assertEquals("2.0", promptGetResponse.getString("jsonrpc"));
-        JsonObject promptGetResult = promptGetResponse.getJsonObject("result");
-        assertNotNull(promptGetResult);
-        JsonArray messages = promptGetResult.getJsonArray("messages");
-        assertEquals(1, messages.size());
-        JsonObject message = messages.getJsonObject(0);
-        assertEquals("user", message.getString("role"));
-        JsonObject content = message.getJsonObject("content");
-        assertEquals("text", content.getString("type"));
-        assertEquals(expectedText, content.getString("text"));
+    protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
+        assertEquals(message.getInteger("id"), response.getInteger("id"));
+        assertEquals("2.0", response.getString("jsonrpc"));
+        return response.getJsonObject("result");
     }
 
-    private static AtomicInteger ID = new AtomicInteger();
-
-    private JsonObject newMessage(String method) {
-        return new JsonObject().put("jsonrpc", "2.0").put("method", method).put("id", ID.incrementAndGet());
+    protected JsonObject newMessage(String method) {
+        return new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("method", method)
+                .put("id", idGenerator.incrementAndGet());
     }
 
 }

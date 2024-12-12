@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.test;
+package io.quarkiverse.mcp.server.test.prompts;
 
 import java.util.List;
 
@@ -8,6 +8,7 @@ import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.BlockingOperationControl;
 import io.smallrye.common.vertx.VertxContext;
