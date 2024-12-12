@@ -2,7 +2,7 @@ package io.quarkiverse.mcp.server.test;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.quarkiverse.mcp.server.test.MyPrompts.Options;
+import io.quarkiverse.mcp.server.test.prompts.MyPrompts.Options;
 
 @ApplicationScoped
 public class FooService {

@@ -42,7 +42,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         }
         String id = ctx.request().getParam("id");
         if (id == null) {
-            LOG.error("Connection id is required");
+            LOG.error("Connection id is missing");
             ctx.fail(400);
             return;
         }
@@ -56,7 +56,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         JsonObject message = ctx.body().asJsonObject();
         String jsonrpc = message.getString("jsonrpc");
         if (!"2.0".equals(jsonrpc)) {
-            LOG.errorf("Invalid jsonrpc [%s]", message);
+            LOG.errorf("Invalid jsonrpc version [%s]", message);
             ctx.fail(400);
             return;
         }
@@ -99,11 +99,11 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         String method = message.getString("method");
         if ("notifications/initialized".equals(method)) {
             if (connection.initialized()) {
-                LOG.infof("Client initialized [id: %s]", connection.id());
+                LOG.infof("Client successfully initialized [%s]", connection.id());
                 ctx.end();
             }
         } else {
-            LOG.infof("Client not initialized yet [id: %s]", connection.id());
+            LOG.infof("Client not initialized yet [%s]", connection.id());
             ctx.fail(400);
         }
         // TODO ping
@@ -114,20 +114,31 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         switch (method) {
             case "prompts/list" -> promptsList(message, ctx);
             case "prompts/get" -> promptsGet(message, ctx);
+            case "ping" -> ping(message, ctx);
             default -> throw new IllegalArgumentException("Unsupported method: " + method);
         }
     }
 
+    private void ping(JsonObject message, RoutingContext ctx) {
+        // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
+        Object id = message.getValue("id");
+        LOG.infof("Ping [id: %s]", id);
+        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        ctx.end(result(id, new JsonObject()).encode());
+    }
+
     private void promptsList(JsonObject message, RoutingContext ctx) {
-        LOG.infof("List prompts");
+        Object id = message.getValue("id");
+        LOG.infof("List prompts [id: %s]", id);
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        ctx.end(result(message.getValue("id"), new JsonObject()
+        ctx.end(result(id, new JsonObject()
                 .put("prompts", new JsonArray(promptManager.list()))).encode());
     }
 
     private void promptsGet(JsonObject message, RoutingContext ctx) {
-        LOG.infof("Get prompts");
+        Object id = message.getValue("id");
+        LOG.infof("Get prompts [id: %s]", id);
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         JsonObject params = message.getJsonObject("params");
@@ -137,7 +148,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
             @Override
             public void handle(AsyncResult<List<PromptMessage>> ar) {
                 if (ar.succeeded()) {
-                    ctx.end(result(message.getValue("id"), new JsonObject()
+                    ctx.end(result(id, new JsonObject()
                             .put("messages", new JsonArray(ar.result())))
                             .encode());
                 } else {

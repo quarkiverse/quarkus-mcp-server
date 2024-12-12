@@ -43,7 +43,7 @@ public class McpServerRecorder {
 
                 String id = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
 
-                LOG.infof("Connection initialized: %s]", id);
+                LOG.infof("Client connection initialized [%s]", id);
 
                 McpConnectionImpl connection = new McpConnectionImpl(id, response);
                 connectionManager.add(connection);
