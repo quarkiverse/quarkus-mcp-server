@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
+import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonArray;
@@ -22,7 +23,7 @@ public class PromptsTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class, FooService.class, MyPrompts.class));
+            .withApplicationRoot(root -> root.addClasses(McpClient.class, FooService.class, Options.class, MyPrompts.class));
 
     @Test
     public void testPrompts() throws URISyntaxException {

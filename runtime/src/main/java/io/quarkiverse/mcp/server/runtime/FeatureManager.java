@@ -1,9 +1,17 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
-import jakarta.inject.Inject;
+import jakarta.enterprise.invoke.Invoker;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
@@ -15,13 +23,78 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
-public abstract class ComponentManager {
+public abstract class FeatureManager<R> {
 
-    @Inject
-    Vertx vertx;
+    final Vertx vertx;
 
-    protected <R> Future<R> execute(ExecutionModel executionModel, Callable<Uni<R>> action) {
+    final ObjectMapper mapper;
+
+    protected FeatureManager(Vertx vertx, ObjectMapper mapper) {
+        this.vertx = vertx;
+        this.mapper = mapper;
+    }
+
+    public Future<R> get(String name, ArgumentProviders argProviders) {
+        FeatureMetadata<R> metadata = getMetadata(name);
+        if (metadata == null) {
+            throw new IllegalArgumentException("Metadata not found: " + name);
+        }
+        Invoker<Object, Object> invoker = metadata.invoker();
+        Object[] arguments = prepareArguments(metadata.info(), argProviders);
+        return execute(metadata.executionModel(), new Callable<Uni<R>>() {
+            @Override
+            public Uni<R> call() throws Exception {
+                return metadata.resultMapper().apply(invoker.invoke(null, arguments));
+            }
+        });
+
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object[] prepareArguments(FeatureMethodInfo info, ArgumentProviders argProviders) {
+        Object[] ret = new Object[info.arguments().size()];
+        int idx = 0;
+        for (FeatureArgument arg : info.arguments()) {
+            if (arg.provider() == Provider.MCP_CONNECTION) {
+                ret[idx] = argProviders.connection();
+            } else if (arg.provider() == Provider.REQUEST_ID) {
+                ret[idx] = new RequestId(argProviders.requestId());
+            } else {
+                Object val = argProviders.args().get(arg.name());
+                if (val == null && arg.required()) {
+                    throw new IllegalStateException("Missing required argument: " + arg.name());
+                }
+                if (val instanceof Map map) {
+                    // json object
+                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    try {
+                        ret[idx] = mapper.readValue(new JsonObject(map).encode(), javaType);
+                    } catch (JsonProcessingException e) {
+                        throw new IllegalStateException(e);
+                    }
+                } else if (val instanceof List list) {
+                    // json array
+                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    try {
+                        ret[idx] = mapper.readValue(new JsonArray(list).encode(), javaType);
+                    } catch (JsonProcessingException e) {
+                        throw new IllegalStateException(e);
+                    }
+                } else {
+                    ret[idx] = val;
+                }
+            }
+            idx++;
+        }
+        return ret;
+    }
+
+    protected abstract FeatureMetadata<R> getMetadata(String name);
+
+    protected Future<R> execute(ExecutionModel executionModel, Callable<Uni<R>> action) {
         Promise<R> ret = Promise.promise();
         ActivateRequestContext<R> activate = new ActivateRequestContext<>(action);
 

@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.FooService;
+import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.BlockingOperationControl;
 import io.smallrye.common.vertx.VertxContext;
@@ -84,9 +85,6 @@ public class MyPrompts {
         if (connection == null || connection.status() != Status.IN_OPERATION) {
             throw new IllegalStateException("Invalid connection: " + connection);
         }
-    }
-
-    public record Options(boolean enabled) {
     }
 
 }

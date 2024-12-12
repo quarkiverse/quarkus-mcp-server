@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.reflect.Type;
@@ -17,14 +19,15 @@ import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
-import io.quarkiverse.mcp.server.runtime.Mappers;
+import io.quarkiverse.mcp.server.runtime.FeatureArgument;
+import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
+import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.McpBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
-import io.quarkiverse.mcp.server.runtime.PromptArgument;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
-import io.quarkiverse.mcp.server.runtime.PromptMetadata;
-import io.quarkiverse.mcp.server.runtime.PromptMethodInfo;
+import io.quarkiverse.mcp.server.runtime.ResultMappers;
+import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
@@ -67,11 +70,12 @@ class McpServerProcessor {
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(PromptManager.class));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(ToolManager.class));
     }
 
     @BuildStep
     AutoAddScopeBuildItem autoAddScope() {
-        return AutoAddScopeBuildItem.builder().containsAnnotations(DotNames.PROMPT)
+        return AutoAddScopeBuildItem.builder().containsAnnotations(DotNames.PROMPT, DotNames.TOOL)
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
@@ -97,29 +101,40 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    void collectServerComponents(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
-            BuildProducer<PromptBuildItem> prompts) {
-        for (BeanInfo bean : beanDiscovery.beanStream().classBeans()
-                .filter(b -> b.getTarget().get().asClass().hasAnnotation(DotNames.PROMPT))) {
+    void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
+            BuildProducer<FeatureMethodBuildItem> features) {
+        for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
             for (MethodInfo method : beanClass.methods()) {
-                if (method.hasDeclaredAnnotation(DotNames.PROMPT)) {
-                    AnnotationInstance promptAnnotation = method.declaredAnnotation(DotNames.PROMPT);
-                    AnnotationValue nameValue = promptAnnotation.value("name");
+                AnnotationInstance featureAnnotation = method.declaredAnnotation(DotNames.PROMPT);
+                if (featureAnnotation == null) {
+                    featureAnnotation = method.declaredAnnotation(DotNames.TOOL);
+                }
+                if (featureAnnotation != null) {
+                    // TODO validate method
+                    AnnotationValue nameValue = featureAnnotation.value("name");
                     String name = nameValue != null ? nameValue.asString() : method.name();
-                    AnnotationValue descValue = promptAnnotation.value("description");
+                    AnnotationValue descValue = featureAnnotation.value("description");
                     String description = descValue != null ? descValue.asString() : "";
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
-                    prompts.produce(new PromptBuildItem(bean, method, invokerBuilder.build(), name, description));
+                    features.produce(
+                            new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, description,
+                                    featureAnnotation.name().equals(DotNames.PROMPT) ? PROMPT : TOOL));
                 }
             }
         }
     }
 
+    private boolean hasFeatureMethod(BeanInfo bean) {
+        ClassInfo beanClass = bean.getTarget().get().asClass();
+        return beanClass.hasAnnotation(DotNames.PROMPT) || beanClass.hasAnnotation(DotNames.TOOL);
+    }
+
     @Record(RUNTIME_INIT)
     @BuildStep
-    void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext, List<PromptBuildItem> prompts,
+    void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
+            List<FeatureMethodBuildItem> featureMethods,
             TransformedAnnotationsBuildItem transformedAnnotations,
             BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
 
@@ -133,61 +148,22 @@ class McpServerProcessor {
                 .interfaces(McpMetadata.class)
                 .build();
 
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
         MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
-        ResultHandle ret = Gizmo.newArrayList(promptsMethod);
-
-        for (PromptBuildItem prompt : prompts) {
-            ResultHandle args = Gizmo.newArrayList(promptsMethod);
-            for (MethodParameterInfo pi : prompt.getMethod().parameters()) {
-                String name = pi.name();
-                String description = "";
-                boolean required = true;
-                AnnotationInstance promptArgAnnotation = pi.declaredAnnotation(DotNames.PROMPT_ARG);
-                if (promptArgAnnotation != null) {
-                    AnnotationValue nameValue = promptArgAnnotation.value("name");
-                    if (nameValue != null) {
-                        name = nameValue.asString();
-                    }
-                    AnnotationValue descriptionValue = promptArgAnnotation.value("name");
-                    if (descriptionValue != null) {
-                        description = descriptionValue.asString();
-                    }
-                    AnnotationValue requiredValue = promptArgAnnotation.value("name");
-                    if (requiredValue != null) {
-                        required = requiredValue.asBoolean();
-                    }
-                }
-                // TODO validate types
-                ResultHandle type = Types.getTypeHandle(promptsMethod, pi.type());
-                ResultHandle provider;
-                if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
-                    provider = promptsMethod.load(PromptArgument.Provider.MCP_CONNECTION);
-                } else if (pi.type().name().equals(DotNames.REQUEST_ID)) {
-                    provider = promptsMethod.load(PromptArgument.Provider.REQUEST_ID);
-                } else {
-                    provider = promptsMethod.load(PromptArgument.Provider.PARAMS);
-                }
-                ResultHandle arg = promptsMethod.newInstance(
-                        MethodDescriptor.ofConstructor(PromptArgument.class, String.class, String.class, boolean.class,
-                                Type.class, PromptArgument.Provider.class),
-                        promptsMethod.load(name), promptsMethod.load(description), promptsMethod.load(required), type,
-                        provider);
-                Gizmo.listOperations(promptsMethod).on(args).add(arg);
-            }
-            ResultHandle info = promptsMethod.newInstance(
-                    MethodDescriptor.ofConstructor(PromptMethodInfo.class, String.class, String.class, List.class),
-                    promptsMethod.load(prompt.getName()), promptsMethod.load(prompt.getDescription()), args);
-            ResultHandle invoker = promptsMethod
-                    .newInstance(MethodDescriptor.ofConstructor(prompt.getInvoker().getClassName()));
-            ResultHandle executionModel = promptsMethod.load(executionModel(prompt.getMethod(), transformedAnnotations));
-            ResultHandle resultMapper = getMapper(promptsMethod, prompt.getMethod().returnType());
-            ResultHandle metadata = promptsMethod.newInstance(
-                    MethodDescriptor.ofConstructor(PromptMetadata.class, PromptMethodInfo.class, Invoker.class,
-                            ExecutionModel.class, Function.class),
-                    info, invoker, executionModel, resultMapper);
-            Gizmo.listOperations(promptsMethod).on(ret).add(metadata);
+        ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
+        for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
+            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations);
         }
-        promptsMethod.returnValue(ret);
+        promptsMethod.returnValue(retPrompts);
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
+        MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
+        ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
+        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
+            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations);
+        }
+        toolsMethod.returnValue(retTools);
+
         metadataCreator.close();
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
@@ -197,18 +173,102 @@ class McpServerProcessor {
                 .done());
     }
 
-    private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.LIST)) {
-            return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "LIST_MESSAGE", Function.class));
+    private void processFeatureMethod(MethodCreator method, FeatureMethodBuildItem featureMethod, ResultHandle retList,
+            TransformedAnnotationsBuildItem transformedAnnotations) {
+        ResultHandle args = Gizmo.newArrayList(method);
+        for (MethodParameterInfo pi : featureMethod.getMethod().parameters()) {
+            String name = pi.name();
+            String description = "";
+            boolean required = true;
+            AnnotationInstance promptArgAnnotation = pi.declaredAnnotation(DotNames.PROMPT_ARG);
+            if (promptArgAnnotation != null) {
+                AnnotationValue nameValue = promptArgAnnotation.value("name");
+                if (nameValue != null) {
+                    name = nameValue.asString();
+                }
+                AnnotationValue descriptionValue = promptArgAnnotation.value("name");
+                if (descriptionValue != null) {
+                    description = descriptionValue.asString();
+                }
+                AnnotationValue requiredValue = promptArgAnnotation.value("name");
+                if (requiredValue != null) {
+                    required = requiredValue.asBoolean();
+                }
+            }
+            // TODO validate types
+            ResultHandle type = Types.getTypeHandle(method, pi.type());
+            ResultHandle provider;
+            if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
+                provider = method.load(FeatureArgument.Provider.MCP_CONNECTION);
+            } else if (pi.type().name().equals(DotNames.REQUEST_ID)) {
+                provider = method.load(FeatureArgument.Provider.REQUEST_ID);
+            } else {
+                provider = method.load(FeatureArgument.Provider.PARAMS);
+            }
+            ResultHandle arg = method.newInstance(
+                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
+                            Type.class, FeatureArgument.Provider.class),
+                    method.load(name), method.load(description), method.load(required), type,
+                    provider);
+            Gizmo.listOperations(method).on(args).add(arg);
+        }
+        ResultHandle info = method.newInstance(
+                MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, List.class),
+                method.load(featureMethod.getName()), method.load(featureMethod.getDescription()), args);
+        ResultHandle invoker = method
+                .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
+        ResultHandle executionModel = method.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
+        ResultHandle resultMapper = getMapper(method, featureMethod.getMethod().returnType(), featureMethod.getFeature());
+        ResultHandle metadata = method.newInstance(
+                MethodDescriptor.ofConstructor(FeatureMetadata.class, FeatureMethodInfo.class, Invoker.class,
+                        ExecutionModel.class, Function.class),
+                info, invoker, executionModel, resultMapper);
+        Gizmo.listOperations(method).on(retList).add(metadata);
+    }
+
+    private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
+            FeatureMethodBuildItem.Feature feature) {
+        // At this point the method return type is already validated
+        return switch (feature) {
+            case PROMPT -> promptMapper(bytecode, returnType);
+            case TOOL -> toolMapper(bytecode, returnType);
+            default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
+        };
+    }
+
+    private ResultHandle promptMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.PROMPT_RESPONSE)) {
+            return resultMapper(bytecode, "TO_UNI");
+        } else if (returnType.name().equals(DotNames.LIST)) {
+            return resultMapper(bytecode, "PROMPT_LIST_MESSAGE");
         } else if (returnType.name().equals(DotNames.UNI)) {
             org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
-            if (typeArg.name().equals(DotNames.LIST)) {
-                return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "IDENTITY", Function.class));
+            if (typeArg.name().equals(DotNames.PROMPT_RESPONSE)) {
+                return resultMapper(bytecode, "IDENTITY");
+            } else if (typeArg.name().equals(DotNames.LIST)) {
+                return resultMapper(bytecode, "PROMPT_UNI_LIST_MESSAGE");
             } else {
-                return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "UNI_SINGLE_MESSAGE", Function.class));
+                return resultMapper(bytecode, "PROMPT_UNI_SINGLE_MESSAGE");
             }
+        } else {
+            return resultMapper(bytecode, "PROMPT_SINGLE_MESSAGE");
         }
-        return bytecode.readStaticField(FieldDescriptor.of(Mappers.class, "SINGLE_MESSAGE", Function.class));
+    }
+
+    private ResultHandle toolMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.TOOL_RESPONSE)) {
+            // ToolResponse
+            return resultMapper(bytecode, "TO_UNI");
+        } else if (returnType.name().equals(DotNames.UNI)) {
+            // Uni<ToolResponse>
+            return resultMapper(bytecode, "IDENTITY");
+        } else {
+            throw new IllegalArgumentException("Unsupported return type");
+        }
+    }
+
+    private ResultHandle resultMapper(BytecodeCreator bytecode, String contantName) {
+        return bytecode.readStaticField(FieldDescriptor.of(ResultMappers.class, contantName, Function.class));
     }
 
     private static ExecutionModel executionModel(MethodInfo method, TransformedAnnotationsBuildItem transformedAnnotations) {

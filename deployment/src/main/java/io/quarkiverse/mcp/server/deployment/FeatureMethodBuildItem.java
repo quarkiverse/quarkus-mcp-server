@@ -6,40 +6,60 @@ import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;
 
-public final class PromptBuildItem extends MultiBuildItem {
+final class FeatureMethodBuildItem extends MultiBuildItem {
 
     private final BeanInfo bean;
     private final InvokerInfo invoker;
     private final String name;
     private final String description;
     private final MethodInfo method;
+    private final Feature feature;
 
-    PromptBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description) {
+    FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description,
+            Feature feature) {
         this.bean = bean;
         this.method = method;
         this.invoker = invoker;
         this.name = name;
         this.description = description;
+        this.feature = feature;
     }
 
-    public BeanInfo getBean() {
+    BeanInfo getBean() {
         return bean;
     }
 
-    public MethodInfo getMethod() {
+    MethodInfo getMethod() {
         return method;
     }
 
-    public InvokerInfo getInvoker() {
+    InvokerInfo getInvoker() {
         return invoker;
     }
 
-    public String getName() {
+    String getName() {
         return name;
     }
 
-    public String getDescription() {
+    String getDescription() {
         return description;
+    }
+
+    Feature getFeature() {
+        return feature;
+    }
+
+    boolean isTool() {
+        return feature == Feature.TOOL;
+    }
+
+    boolean isPrompt() {
+        return feature == Feature.PROMPT;
+    }
+
+    enum Feature {
+        PROMPT,
+        TOOL
     }
 
 }

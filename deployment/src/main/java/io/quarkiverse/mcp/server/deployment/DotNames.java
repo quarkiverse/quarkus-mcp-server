@@ -8,7 +8,10 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.common.annotation.RunOnVirtualThread;
@@ -19,7 +22,10 @@ class DotNames {
 
     static final DotName PROMPT = DotName.createSimple(Prompt.class);
     static final DotName PROMPT_ARG = DotName.createSimple(PromptArg.class);
+    static final DotName PROMPT_RESPONSE = DotName.createSimple(PromptResponse.class);
     static final DotName PROMPT_MESSAGE = DotName.createSimple(PromptMessage.class);
+    static final DotName TOOL = DotName.createSimple(Tool.class);
+    static final DotName TOOL_RESPONSE = DotName.createSimple(ToolResponse.class);
     static final DotName LIST = DotName.createSimple(List.class);
     static final DotName UNI = DotName.createSimple(Uni.class);
     static final DotName MULTI = DotName.createSimple(Multi.class);
