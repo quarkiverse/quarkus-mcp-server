@@ -10,7 +10,8 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitializeRequest;
-import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkus.arc.Arc;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -89,7 +90,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-            ctx.end(result(id, serverInfo()).encode());
+            ctx.end(newResult(id, serverInfo()).encode());
         } else {
             ctx.fail(400);
         }
@@ -114,6 +115,8 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         switch (method) {
             case "prompts/list" -> promptsList(message, ctx);
             case "prompts/get" -> promptsGet(message, ctx, connection);
+            case "tools/list" -> toolsList(message, ctx);
+            case "tools/call" -> toolsCall(message, ctx, connection);
             case "ping" -> ping(message, ctx);
             default -> throw new IllegalArgumentException("Unsupported method: " + method);
         }
@@ -124,7 +127,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         Object id = message.getValue("id");
         LOG.infof("Ping [id: %s]", id);
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        ctx.end(result(id, new JsonObject()).encode());
+        ctx.end(newResult(id, new JsonObject()).encode());
     }
 
     private void promptsList(JsonObject message, RoutingContext ctx) {
@@ -132,25 +135,64 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         LOG.infof("List prompts [id: %s]", id);
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        ctx.end(result(id, new JsonObject()
+        ctx.end(newResult(id, new JsonObject()
                 .put("prompts", new JsonArray(promptManager.list()))).encode());
     }
 
     private void promptsGet(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
         Object id = message.getValue("id");
         LOG.infof("Get prompts [id: %s]", id);
-        PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
+
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         JsonObject params = message.getJsonObject("params");
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
-        Future<List<PromptMessage>> fu = promptManager.get(params.getString("name"), argProviders);
-        fu.onComplete(new Handler<AsyncResult<List<PromptMessage>>>() {
+
+        PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
+        Future<PromptResponse> fu = promptManager.get(params.getString("name"), argProviders);
+        fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
             @Override
-            public void handle(AsyncResult<List<PromptMessage>> ar) {
+            public void handle(AsyncResult<PromptResponse> ar) {
                 if (ar.succeeded()) {
-                    ctx.end(result(id, new JsonObject()
-                            .put("messages", new JsonArray(ar.result())))
-                            .encode());
+                    PromptResponse promptResponse = ar.result();
+                    JsonObject result = new JsonObject();
+                    if (promptResponse.description() != null) {
+                        result.put("description", promptResponse.description());
+                    }
+                    result.put("messages", promptResponse.messages());
+                    ctx.end(newResult(id, result).encode());
+                } else {
+                    LOG.error("Unable to obtain prompt", ar.cause());
+                    ctx.fail(500);
+                }
+            }
+        });
+    }
+
+    private void toolsList(JsonObject message, RoutingContext ctx) {
+        Object id = message.getValue("id");
+        LOG.infof("List tools [id: %s]", id);
+        ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
+        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        ctx.end(newResult(id, new JsonObject()
+                .put("tools", new JsonArray(toolManager.list()))).encode());
+    }
+
+    private void toolsCall(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
+        Object id = message.getValue("id");
+        LOG.infof("Call tool [id: %s]", id);
+
+        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        JsonObject params = message.getJsonObject("params");
+        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
+
+        ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
+        Future<ToolResponse> fu = toolManager.get(params.getString("name"), argProviders);
+        fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
+            @Override
+            public void handle(AsyncResult<ToolResponse> ar) {
+                if (ar.succeeded()) {
+                    ToolResponse toolResponse = ar.result();
+                    ctx.end(newResult(id, toolResponse).encode());
                 } else {
                     LOG.error("Unable to obtain prompt", ar.cause());
                     ctx.fail(500);
@@ -174,7 +216,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         return new InitializeRequest(implementation, protocolVersion, clientCapabilities);
     }
 
-    private JsonObject result(Object id, Object result) {
+    private JsonObject newResult(Object id, Object result) {
         JsonObject response = new JsonObject();
         response.put("jsonrpc", "2.0");
         response.put("id", id);

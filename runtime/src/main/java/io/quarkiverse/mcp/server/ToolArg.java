@@ -1,27 +1,17 @@
 package io.quarkiverse.mcp.server;
 
-import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Annotates a business method of a CDI bean as an exposed prompt template.
- * <p>
- * The method return type must be one of the following list:
- * <ul>
- * <li>{@code PromptResponse}</li>
- * <li>{@code PromptMessage}</li>
- * <li>{@code List<PromptMessage>}</li>
- * <li>{@code Uni<PromptResponse>}</li>
- * <li>{@code Uni<PromptMessage>}</li>
- * <li>{@code Uni<List<PromptMessage>>}</li>
- * </ul>
+ * Annotates a parameter of a {@link Tool} method.
  */
 @Retention(RUNTIME)
-@Target(METHOD)
-public @interface Prompt {
+@Target(ElementType.PARAMETER)
+public @interface ToolArg {
 
     /**
      * Constant value for {@link #name()} indicating that the annotated element's name should be used as-is.
@@ -37,5 +27,10 @@ public @interface Prompt {
      *
      */
     String description() default "";
+
+    /**
+     *
+     */
+    boolean required() default true;
 
 }
