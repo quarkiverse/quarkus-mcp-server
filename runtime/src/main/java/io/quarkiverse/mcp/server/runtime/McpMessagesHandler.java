@@ -113,7 +113,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         String method = message.getString("method");
         switch (method) {
             case "prompts/list" -> promptsList(message, ctx);
-            case "prompts/get" -> promptsGet(message, ctx);
+            case "prompts/get" -> promptsGet(message, ctx, connection);
             case "ping" -> ping(message, ctx);
             default -> throw new IllegalArgumentException("Unsupported method: " + method);
         }
@@ -136,14 +136,14 @@ class McpMessagesHandler implements Handler<RoutingContext> {
                 .put("prompts", new JsonArray(promptManager.list()))).encode());
     }
 
-    private void promptsGet(JsonObject message, RoutingContext ctx) {
+    private void promptsGet(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
         Object id = message.getValue("id");
         LOG.infof("Get prompts [id: %s]", id);
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         JsonObject params = message.getJsonObject("params");
-        Future<List<PromptMessage>> fu = promptManager.get(params.getString("name"),
-                params.getJsonObject("arguments").getMap());
+        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
+        Future<List<PromptMessage>> fu = promptManager.get(params.getString("name"), argProviders);
         fu.onComplete(new Handler<AsyncResult<List<PromptMessage>>>() {
             @Override
             public void handle(AsyncResult<List<PromptMessage>> ar) {

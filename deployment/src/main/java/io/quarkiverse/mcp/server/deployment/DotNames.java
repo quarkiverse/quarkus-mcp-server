@@ -4,9 +4,11 @@ import java.util.List;
 
 import org.jboss.jandex.DotName;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.RequestId;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.common.annotation.RunOnVirtualThread;
@@ -25,5 +27,7 @@ class DotNames {
     static final DotName BLOCKING = DotName.createSimple(Blocking.class);
     static final DotName NON_BLOCKING = DotName.createSimple(NonBlocking.class);
     static final DotName TRANSACTIONAL = DotName.createSimple("jakarta.transaction.Transactional");
+    static final DotName MCP_CONNECTION = DotName.createSimple(McpConnection.class);
+    static final DotName REQUEST_ID = DotName.createSimple(RequestId.class);
 
 }

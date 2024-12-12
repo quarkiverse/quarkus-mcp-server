@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.runtime.PromptArgument.Provider;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -35,13 +37,13 @@ public class PromptManager extends ComponentManager {
         return prompts.values().stream().map(PromptMetadata::info).toList();
     }
 
-    public Future<List<PromptMessage>> get(String name, Map<String, Object> args) {
+    public Future<List<PromptMessage>> get(String name, ArgumentProviders argProviders) {
         PromptMetadata prompt = prompts.get(name);
         if (prompt == null) {
             throw new IllegalArgumentException("Prompt not found: " + name);
         }
         Invoker<Object, Object> invoker = prompt.invoker();
-        Object[] arguments = prepareArguments(prompt.info(), args);
+        Object[] arguments = prepareArguments(prompt.info(), argProviders);
         return execute(prompt.executionModel(), new Callable<Uni<List<PromptMessage>>>() {
             @Override
             public Uni<List<PromptMessage>> call() throws Exception {
@@ -61,32 +63,38 @@ public class PromptManager extends ComponentManager {
     }
 
     @SuppressWarnings("unchecked")
-    private Object[] prepareArguments(PromptMethodInfo info, Map<String, Object> args) {
+    private Object[] prepareArguments(PromptMethodInfo info, ArgumentProviders argProviders) {
         Object[] ret = new Object[info.arguments().size()];
         int idx = 0;
         for (PromptArgument arg : info.arguments()) {
-            Object val = args.get(arg.name());
-            if (val == null && arg.required()) {
-                throw new IllegalStateException("Missing required argument: " + arg.name());
-            }
-            if (val instanceof Map map) {
-                // json object
-                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
-                try {
-                    ret[idx] = mapper.readValue(new JsonObject(map).encode(), javaType);
-                } catch (JsonProcessingException e) {
-                    throw new IllegalStateException(e);
-                }
-            } else if (val instanceof List list) {
-                // json array
-                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
-                try {
-                    ret[idx] = mapper.readValue(new JsonArray(list).encode(), javaType);
-                } catch (JsonProcessingException e) {
-                    throw new IllegalStateException(e);
-                }
+            if (arg.provider() == Provider.MCP_CONNECTION) {
+                ret[idx] = argProviders.connection();
+            } else if (arg.provider() == Provider.REQUEST_ID) {
+                ret[idx] = new RequestId(argProviders.requestId());
             } else {
-                ret[idx] = val;
+                Object val = argProviders.args().get(arg.name());
+                if (val == null && arg.required()) {
+                    throw new IllegalStateException("Missing required argument: " + arg.name());
+                }
+                if (val instanceof Map map) {
+                    // json object
+                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    try {
+                        ret[idx] = mapper.readValue(new JsonObject(map).encode(), javaType);
+                    } catch (JsonProcessingException e) {
+                        throw new IllegalStateException(e);
+                    }
+                } else if (val instanceof List list) {
+                    // json array
+                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    try {
+                        ret[idx] = mapper.readValue(new JsonArray(list).encode(), javaType);
+                    } catch (JsonProcessingException e) {
+                        throw new IllegalStateException(e);
+                    }
+                } else {
+                    ret[idx] = val;
+                }
             }
             idx++;
         }
