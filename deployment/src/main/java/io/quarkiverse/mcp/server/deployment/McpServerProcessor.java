@@ -4,8 +4,10 @@ import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Featur
 import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
@@ -14,10 +16,12 @@ import jakarta.inject.Singleton;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 
+import io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
@@ -111,7 +115,8 @@ class McpServerProcessor {
                     featureAnnotation = method.declaredAnnotation(DotNames.TOOL);
                 }
                 if (featureAnnotation != null) {
-                    // TODO validate method
+                    Feature feature = featureAnnotation.name().equals(DotNames.PROMPT) ? PROMPT : TOOL;
+                    validateFeatureMethod(method, feature);
                     AnnotationValue nameValue = featureAnnotation.value("name");
                     String name = nameValue != null ? nameValue.asString() : method.name();
                     AnnotationValue descValue = featureAnnotation.value("description");
@@ -119,10 +124,56 @@ class McpServerProcessor {
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
                     features.produce(
-                            new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, description,
-                                    featureAnnotation.name().equals(DotNames.PROMPT) ? PROMPT : TOOL));
+                            new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, description, feature));
                 }
             }
+        }
+    }
+
+    private void validateFeatureMethod(MethodInfo method, Feature feature) {
+        if (Modifier.isStatic(method.flags())) {
+            throw new IllegalStateException("MCP feature method must not be static: " + method);
+        }
+        if (Modifier.isPrivate(method.flags())) {
+            throw new IllegalStateException("MCP feature method must not be private: " + method);
+        }
+        switch (feature) {
+            case PROMPT -> validatePromptMethod(method);
+            case TOOL -> validateToolMethod(method);
+            default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
+        }
+    }
+
+    private static final Set<org.jboss.jandex.Type> PROMPT_TYPES = Set.of(ClassType.create(DotNames.PROMPT_RESPONSE),
+            ClassType.create(DotNames.PROMPT_MESSAGE));
+
+    private void validatePromptMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!PROMPT_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported prompt method return type: " + method.returnType());
+        }
+    }
+
+    private static final Set<org.jboss.jandex.Type> TOOL_TYPES = Set.of(ClassType.create(DotNames.TOOL_RESPONSE),
+            ClassType.create(DotNames.CONTENT), ClassType.create(DotNames.TEXT_CONTENT),
+            ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.RESOURCE_CONTENT));
+
+    private void validateToolMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!TOOL_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported Tool method return type: " + method.returnType());
         }
     }
 
@@ -195,7 +246,6 @@ class McpServerProcessor {
                     required = requiredValue.asBoolean();
                 }
             }
-            // TODO validate types
             ResultHandle type = Types.getTypeHandle(method, pi.type());
             ResultHandle provider;
             if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
@@ -257,14 +307,27 @@ class McpServerProcessor {
 
     private ResultHandle toolMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (returnType.name().equals(DotNames.TOOL_RESPONSE)) {
-            // ToolResponse
             return resultMapper(bytecode, "TO_UNI");
+        } else if (isContent(returnType.name())) {
+            return resultMapper(bytecode, "TOOL_CONTENT");
+        } else if (returnType.name().equals(DotNames.LIST)) {
+            return resultMapper(bytecode, "TOOL_LIST_CONTENT");
         } else if (returnType.name().equals(DotNames.UNI)) {
-            // Uni<ToolResponse>
-            return resultMapper(bytecode, "IDENTITY");
-        } else {
-            throw new IllegalArgumentException("Unsupported return type");
+            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
+            if (typeArg.name().equals(DotNames.TOOL_RESPONSE)) {
+                return resultMapper(bytecode, "IDENTITY");
+            } else if (isContent(typeArg.name())) {
+                return resultMapper(bytecode, "TOOL_UNI_CONTENT");
+            } else if (typeArg.name().equals(DotNames.LIST)) {
+                return resultMapper(bytecode, "TOOL_UNI_LIST_CONTENT");
+            }
         }
+        throw new IllegalArgumentException("Unsupported return type");
+    }
+
+    private boolean isContent(DotName typeName) {
+        return DotNames.CONTENT.equals(typeName) || DotNames.TEXT_CONTENT.equals(typeName)
+                || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.RESOURCE_CONTENT.equals(typeName);
     }
 
     private ResultHandle resultMapper(BytecodeCreator bytecode, String contantName) {

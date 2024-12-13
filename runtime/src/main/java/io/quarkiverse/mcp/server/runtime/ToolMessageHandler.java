@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -59,7 +61,7 @@ public class ToolMessageHandler {
             toolsArray.add(tool);
         }
 
-        ctx.end(McpMessagesHandler.newResult(id, new JsonObject()
+        ctx.end(newResult(id, new JsonObject()
                 .put("tools", toolsArray)).encode());
     }
 
@@ -77,22 +79,23 @@ public class ToolMessageHandler {
 
     void toolsCall(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
         Object id = message.getValue("id");
-        LOG.infof("Call tool [id: %s]", id);
-
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         JsonObject params = message.getJsonObject("params");
+        String toolName = params.getString("name");
+        LOG.infof("Call tool %s [id: %s]", toolName, id);
+
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
+        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
 
         ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
-        Future<ToolResponse> fu = toolManager.get(params.getString("name"), argProviders);
+        Future<ToolResponse> fu = toolManager.get(toolName, argProviders);
         fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
             @Override
             public void handle(AsyncResult<ToolResponse> ar) {
                 if (ar.succeeded()) {
                     ToolResponse toolResponse = ar.result();
-                    ctx.end(McpMessagesHandler.newResult(id, toolResponse).encode());
+                    ctx.end(newResult(id, toolResponse).encode());
                 } else {
-                    LOG.error("Unable to obtain prompt", ar.cause());
+                    LOG.error("Unable to call tool " + toolName, ar.cause());
                     ctx.fail(500);
                 }
             }

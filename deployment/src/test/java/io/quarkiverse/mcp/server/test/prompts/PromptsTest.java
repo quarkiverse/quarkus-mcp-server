@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -24,7 +25,8 @@ public class PromptsTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class, FooService.class, Options.class, MyPrompts.class));
+            .withApplicationRoot(
+                    root -> root.addClasses(McpClient.class, FooService.class, Options.class, Checks.class, MyPrompts.class));
 
     @Test
     public void testPrompts() throws URISyntaxException {

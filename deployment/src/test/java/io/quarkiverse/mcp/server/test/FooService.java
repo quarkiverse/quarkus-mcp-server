@@ -1,8 +1,8 @@
 package io.quarkiverse.mcp.server.test;
 
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.RequestScoped;
 
-@ApplicationScoped
+@RequestScoped
 public class FooService {
 
     public String ping(String name, int repeat, Options options) {

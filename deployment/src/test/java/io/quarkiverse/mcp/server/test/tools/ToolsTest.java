@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -24,7 +25,8 @@ public class ToolsTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class, FooService.class, Options.class, MyTools.class));
+            .withApplicationRoot(
+                    root -> root.addClasses(McpClient.class, FooService.class, Options.class, Checks.class, MyTools.class));
 
     @Test
     public void testTools() throws URISyntaxException {
@@ -44,8 +46,9 @@ public class ToolsTest extends McpServerTest {
         JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
         JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(2, tools.size());
+        assertEquals(4, tools.size());
 
+        // alpha, bravo, uni_alpha, uni_bravo
         assertTool(tools.getJsonObject(0), "alpha", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");
             assertEquals(1, properties.size());
@@ -54,7 +57,7 @@ public class ToolsTest extends McpServerTest {
             assertEquals("integer", priceProperty.getString("type"));
             assertEquals("Define the price...", priceProperty.getString("description"));
         });
-        assertTool(tools.getJsonObject(1), "uni_alpha", null, schema -> {
+        assertTool(tools.getJsonObject(2), "uni_alpha", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");
             assertEquals(1, properties.size());
             JsonObject priceProperty = properties.getJsonObject("uni_price");
@@ -66,6 +69,10 @@ public class ToolsTest extends McpServerTest {
                 .put("price", 1));
         assertToolCall("Hello 1.0!", endpoint, "uni_alpha", new JsonObject()
                 .put("uni_price", 1));
+        assertToolCall("Hello 1!", endpoint, "bravo", new JsonObject()
+                .put("price", 1));
+        assertToolCall("Hello 1!", endpoint, "uni_bravo", new JsonObject()
+                .put("price", 1));
     }
 
     private void assertTool(JsonObject tool, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
