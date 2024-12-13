@@ -9,6 +9,7 @@ import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.FooService;
@@ -55,6 +56,23 @@ public class MyPrompts {
         checkDuplicatedContext();
         checkRequestContext();
         return Uni.createFrom().item(List.of(PromptMessage.user(new TextContent(val.toUpperCase()))));
+    }
+
+    @Prompt
+    PromptResponse response(String val) {
+        checkExecutionModel(true);
+        checkRequestContext();
+        checkDuplicatedContext();
+        return new PromptResponse("My description", List.of(PromptMessage.user(new TextContent(val.toUpperCase()))));
+    }
+
+    @Prompt
+    Uni<PromptResponse> uni_response(String val) {
+        checkExecutionModel(false);
+        checkRequestContext();
+        checkDuplicatedContext();
+        return Uni.createFrom()
+                .item(new PromptResponse("My description", List.of(PromptMessage.user(new TextContent(val.toUpperCase())))));
     }
 
     private void checkRequestContext() {

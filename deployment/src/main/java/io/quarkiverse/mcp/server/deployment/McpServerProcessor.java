@@ -152,7 +152,7 @@ class McpServerProcessor {
         MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
         ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
         for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
-            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations);
+            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations, DotNames.PROMPT_ARG);
         }
         promptsMethod.returnValue(retPrompts);
 
@@ -160,7 +160,7 @@ class McpServerProcessor {
         MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
         ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
-            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations);
+            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations, DotNames.TOOL_ARG);
         }
         toolsMethod.returnValue(retTools);
 
@@ -174,23 +174,23 @@ class McpServerProcessor {
     }
 
     private void processFeatureMethod(MethodCreator method, FeatureMethodBuildItem featureMethod, ResultHandle retList,
-            TransformedAnnotationsBuildItem transformedAnnotations) {
+            TransformedAnnotationsBuildItem transformedAnnotations, DotName argAnnotationName) {
         ResultHandle args = Gizmo.newArrayList(method);
         for (MethodParameterInfo pi : featureMethod.getMethod().parameters()) {
             String name = pi.name();
             String description = "";
             boolean required = true;
-            AnnotationInstance promptArgAnnotation = pi.declaredAnnotation(DotNames.PROMPT_ARG);
-            if (promptArgAnnotation != null) {
-                AnnotationValue nameValue = promptArgAnnotation.value("name");
+            AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
+            if (argAnnotation != null) {
+                AnnotationValue nameValue = argAnnotation.value("name");
                 if (nameValue != null) {
                     name = nameValue.asString();
                 }
-                AnnotationValue descriptionValue = promptArgAnnotation.value("name");
+                AnnotationValue descriptionValue = argAnnotation.value("description");
                 if (descriptionValue != null) {
                     description = descriptionValue.asString();
                 }
-                AnnotationValue requiredValue = promptArgAnnotation.value("name");
+                AnnotationValue requiredValue = argAnnotation.value("required");
                 if (requiredValue != null) {
                     required = requiredValue.asBoolean();
                 }

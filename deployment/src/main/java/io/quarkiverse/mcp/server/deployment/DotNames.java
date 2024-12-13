@@ -11,6 +11,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
@@ -25,6 +26,7 @@ class DotNames {
     static final DotName PROMPT_RESPONSE = DotName.createSimple(PromptResponse.class);
     static final DotName PROMPT_MESSAGE = DotName.createSimple(PromptMessage.class);
     static final DotName TOOL = DotName.createSimple(Tool.class);
+    static final DotName TOOL_ARG = DotName.createSimple(ToolArg.class);
     static final DotName TOOL_RESPONSE = DotName.createSimple(ToolResponse.class);
     static final DotName LIST = DotName.createSimple(List.class);
     static final DotName UNI = DotName.createSimple(Uni.class);
