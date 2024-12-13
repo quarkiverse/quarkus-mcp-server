@@ -5,11 +5,23 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.List;
+
+import io.smallrye.mutiny.Uni;
 
 /**
  * Annotates a business method of a CDI bean as an exposed prompt template.
  * <p>
- * The method return type must be one of the following list:
+ * A result of a "prompt get" is always represented as a {@link PromptResponse}. However, the annotated method can also return
+ * other types that are converted according to the following rules.
+ * <ul>
+ * <li>If the method returns a {@link PromptMessage} then the reponse has no description and contains the single
+ * message object.</li>
+ * <li>If the method returns a {@link List} of {@link PromptMessage}s then the reponse has no description and contains the
+ * list of messages.</li>
+ * <li>The method may return a {@link Uni} that wraps any of the type mentioned above.</li>
+ * </ul>
+ * In other words, the return type must be one of the following list:
  * <ul>
  * <li>{@code PromptResponse}</li>
  * <li>{@code PromptMessage}</li>
@@ -18,6 +30,9 @@ import java.lang.annotation.Target;
  * <li>{@code Uni<PromptMessage>}</li>
  * <li>{@code Uni<List<PromptMessage>>}</li>
  * </ul>
+ *
+ * @see PromptResponse
+ * @see PromptArg
  */
 @Retention(RUNTIME)
 @Target(METHOD)

@@ -257,14 +257,27 @@ class McpServerProcessor {
 
     private ResultHandle toolMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (returnType.name().equals(DotNames.TOOL_RESPONSE)) {
-            // ToolResponse
             return resultMapper(bytecode, "TO_UNI");
+        } else if (isContent(returnType.name())) {
+            return resultMapper(bytecode, "TOOL_CONTENT");
+        } else if (returnType.name().equals(DotNames.LIST)) {
+            return resultMapper(bytecode, "TOOL_LIST_CONTENT");
         } else if (returnType.name().equals(DotNames.UNI)) {
-            // Uni<ToolResponse>
-            return resultMapper(bytecode, "IDENTITY");
-        } else {
-            throw new IllegalArgumentException("Unsupported return type");
+            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
+            if (typeArg.name().equals(DotNames.TOOL_RESPONSE)) {
+                return resultMapper(bytecode, "IDENTITY");
+            } else if (isContent(typeArg.name())) {
+                return resultMapper(bytecode, "TOOL_UNI_CONTENT");
+            } else if (typeArg.name().equals(DotNames.LIST)) {
+                return resultMapper(bytecode, "TOOL_UNI_LIST_CONTENT");
+            }
         }
+        throw new IllegalArgumentException("Unsupported return type");
+    }
+
+    private boolean isContent(DotName typeName) {
+        return DotNames.CONTENT.equals(typeName) || DotNames.TEXT_CONTENT.equals(typeName)
+                || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.RESOURCE_CONTENT.equals(typeName);
     }
 
     private ResultHandle resultMapper(BytecodeCreator bytecode, String contantName) {

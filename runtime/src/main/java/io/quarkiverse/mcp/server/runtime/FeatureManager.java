@@ -112,7 +112,7 @@ public abstract class FeatureManager<R> {
                         public void run() {
                             try {
                                 activate.call().subscribe().with(ret::complete, ret::fail);
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 ret.fail(e);
                             }
                         }
@@ -125,7 +125,7 @@ public abstract class FeatureManager<R> {
                 public Void call() {
                     try {
                         activate.call().subscribe().with(ret::complete, ret::fail);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         ret.fail(e);
                     }
                     return null;
@@ -138,7 +138,7 @@ public abstract class FeatureManager<R> {
                 public void handle(Void event) {
                     try {
                         activate.call().subscribe().with(ret::complete, ret::fail);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         ret.fail(e);
                     }
                 }

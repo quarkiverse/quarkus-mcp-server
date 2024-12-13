@@ -2,7 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public interface Content {
+public sealed interface Content permits TextContent, ImageContent, ResourceContent {
 
     @JsonProperty("type")
     default String getType() {

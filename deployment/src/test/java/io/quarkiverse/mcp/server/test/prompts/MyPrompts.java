@@ -1,11 +1,16 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
+import static io.quarkiverse.mcp.server.test.Checks.checkDuplicatedContext;
+import static io.quarkiverse.mcp.server.test.Checks.checkExecutionModel;
+import static io.quarkiverse.mcp.server.test.Checks.checkMcpConnection;
+import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
+import static io.quarkiverse.mcp.server.test.Checks.checkRequestId;
+
 import java.util.List;
 
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -14,9 +19,6 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.Options;
-import io.quarkus.arc.Arc;
-import io.quarkus.runtime.BlockingOperationControl;
-import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
 
 public class MyPrompts {
@@ -73,36 +75,6 @@ public class MyPrompts {
         checkDuplicatedContext();
         return Uni.createFrom()
                 .item(new PromptResponse("My description", List.of(PromptMessage.user(new TextContent(val.toUpperCase())))));
-    }
-
-    private void checkRequestContext() {
-        if (!Arc.container().requestContext().isActive()) {
-            throw new IllegalStateException("Request context not active");
-        }
-    }
-
-    private void checkExecutionModel(boolean blocking) {
-        if (BlockingOperationControl.isBlockingAllowed() && !blocking) {
-            throw new IllegalStateException("Invalid execution model");
-        }
-    }
-
-    private void checkDuplicatedContext() {
-        if (!VertxContext.isOnDuplicatedContext()) {
-            throw new IllegalStateException("Not on duplicated context");
-        }
-    }
-
-    private void checkRequestId(RequestId id) {
-        if (id == null || id.asInteger() < 1) {
-            throw new IllegalStateException("Invalid request id: " + id);
-        }
-    }
-
-    private void checkMcpConnection(McpConnection connection) {
-        if (connection == null || connection.status() != Status.IN_OPERATION) {
-            throw new IllegalStateException("Invalid connection: " + connection);
-        }
     }
 
 }
