@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -27,7 +28,12 @@ public class PromptManager extends FeatureManager<PromptResponse> {
         return prompts.get(name);
     }
 
+    /**
+     *
+     * @return the list of prompts sorted by name asc
+     */
     public List<FeatureMethodInfo> list() {
-        return prompts.values().stream().map(FeatureMetadata::info).toList();
+        return prompts.values().stream().map(FeatureMetadata::info).sorted(Comparator.comparing(FeatureMethodInfo::name))
+                .toList();
     }
 }

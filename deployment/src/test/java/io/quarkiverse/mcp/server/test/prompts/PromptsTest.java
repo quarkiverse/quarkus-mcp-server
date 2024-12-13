@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,19 +44,43 @@ public class PromptsTest extends McpServerTest {
         JsonObject promptListResult = assertResponseMessage(promptListMessage, promptListResponse);
         assertNotNull(promptListResult);
         JsonArray prompts = promptListResult.getJsonArray("prompts");
-        assertEquals(4, prompts.size());
+        assertEquals(6, prompts.size());
+
+        assertPrompt(prompts.getJsonObject(0), "BAR", null, args -> {
+            assertEquals(1, args.size());
+            JsonObject arg1 = args.getJsonObject(0);
+            assertEquals("val", arg1.getString("name"));
+            assertEquals(true, arg1.getBoolean("required"));
+        });
+        assertPrompt(prompts.getJsonObject(1), "foo", "Not much we can say here.", args -> {
+            assertEquals(3, args.size());
+        });
 
         assertPromptMessage("Hello Lu!", endpoint, "foo", new JsonObject()
                 .put("name", "Lu")
                 .put("repeat", 1)
                 .put("options", new JsonObject()
                         .put("enabled", true)));
-        assertPromptMessage("LU", endpoint, "BAR", new JsonObject()
-                .put("val", "Lu"));
-        assertPromptMessage("LU", endpoint, "uni_bar", new JsonObject()
-                .put("val", "Lu"));
-        assertPromptMessage("LU", endpoint, "uni_list_bar", new JsonObject()
-                .put("val", "Lu"));
+        assertPromptMessage("JACHYM", endpoint, "BAR", new JsonObject()
+                .put("val", "Jachym"));
+        assertPromptMessage("VOJTECH", endpoint, "uni_bar", new JsonObject()
+                .put("val", "Vojtech"));
+        assertPromptMessage("ONDREJ", endpoint, "uni_list_bar", new JsonObject()
+                .put("val", "Ondrej"));
+        assertPromptMessage("MARTIN", endpoint, "response", new JsonObject()
+                .put("val", "Martin"));
+        assertPromptMessage("MARTIN", endpoint, "uni_response", new JsonObject()
+                .put("val", "Martin"));
+    }
+
+    private void assertPrompt(JsonObject prompt, String name, String description, Consumer<JsonArray> argumentsAsserter) {
+        assertEquals(name, prompt.getString("name"));
+        if (description != null) {
+            assertEquals(description, prompt.getString("description"));
+        }
+        if (argumentsAsserter != null) {
+            argumentsAsserter.accept(prompt.getJsonArray("arguments"));
+        }
     }
 
     private void assertPromptMessage(String expectedText, URI endpoint, String name, JsonObject arguments) {
