@@ -6,9 +6,13 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import jakarta.enterprise.invoke.Invoker;
 import jakarta.inject.Singleton;
@@ -38,6 +42,7 @@ import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
+import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.InvokerBuilder;
@@ -106,7 +111,9 @@ class McpServerProcessor {
 
     @BuildStep
     void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
-            BuildProducer<FeatureMethodBuildItem> features) {
+            BuildProducer<FeatureMethodBuildItem> features, BuildProducer<ValidationErrorBuildItem> errors) {
+        Map<Feature, List<FeatureMethodBuildItem>> found = new HashMap<>();
+
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
             for (MethodInfo method : beanClass.methods()) {
@@ -123,8 +130,34 @@ class McpServerProcessor {
                     String description = descValue != null ? descValue.asString() : "";
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
-                    features.produce(
-                            new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, description, feature));
+                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                            description, feature);
+                    features.produce(fm);
+                    found.compute(feature, (f, list) -> {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        list.add(fm);
+                        return list;
+                    });
+                }
+            }
+        }
+
+        // Check duplicate names
+        for (List<FeatureMethodBuildItem> featureMethods : found.values()) {
+            Map<String, List<FeatureMethodBuildItem>> byName = featureMethods.stream()
+                    .collect(Collectors.toMap(FeatureMethodBuildItem::getName, List::of, (v1, v2) -> {
+                        List<FeatureMethodBuildItem> list = new ArrayList<>();
+                        list.addAll(v1);
+                        list.addAll(v2);
+                        return list;
+                    }));
+            for (List<FeatureMethodBuildItem> list : byName.values()) {
+                if (list.size() > 1) {
+                    String message = "Duplicate feature name found:\n\t%s"
+                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
                 }
             }
         }

@@ -13,8 +13,7 @@ import io.smallrye.mutiny.Uni;
  * Annotates a business method of a CDI bean as an exposed prompt template.
  * <p>
  * The result of a "prompt get" operation is always represented as a {@link PromptResponse}. However, the annotated method can
- * also return
- * other types that are converted according to the following rules.
+ * also return other types that are converted according to the following rules.
  * <ul>
  * <li>If the method returns a {@link PromptMessage} then the reponse has no description and contains the single
  * message object.</li>
@@ -45,12 +44,12 @@ public @interface Prompt {
     String ELEMENT_NAME = "<<element name>>";
 
     /**
-     *
+     * Each prompt must have a unique name. By default, the name is derived from the name of the annotated method.
      */
     String name() default ELEMENT_NAME;
 
     /**
-     *
+     * An optional description.
      */
     String description() default "";
 

@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import java.util.Objects;
+
 import org.jboss.jandex.MethodInfo;
 
 import io.quarkus.arc.processor.BeanInfo;
@@ -17,12 +19,12 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description,
             Feature feature) {
-        this.bean = bean;
-        this.method = method;
-        this.invoker = invoker;
-        this.name = name;
+        this.bean = Objects.requireNonNull(bean);
+        this.method = Objects.requireNonNull(method);
+        this.invoker = Objects.requireNonNull(invoker);
+        this.name = Objects.requireNonNull(name);
         this.description = description;
-        this.feature = feature;
+        this.feature = Objects.requireNonNull(feature);
     }
 
     BeanInfo getBean() {
@@ -55,6 +57,12 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     boolean isPrompt() {
         return feature == Feature.PROMPT;
+    }
+
+    @Override
+    public String toString() {
+        return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#" + method.name()
+                + "(), feature=" + feature + "]";
     }
 
     enum Feature {
