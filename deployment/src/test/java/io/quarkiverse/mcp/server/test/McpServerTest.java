@@ -27,7 +27,7 @@ public abstract class McpServerTest {
     @TestHTTPResource
     URI testUri;
 
-    List<SseEvent<String>> sseMessages;
+    protected List<SseEvent<String>> sseMessages;
 
     AtomicInteger idGenerator = new AtomicInteger();
 
