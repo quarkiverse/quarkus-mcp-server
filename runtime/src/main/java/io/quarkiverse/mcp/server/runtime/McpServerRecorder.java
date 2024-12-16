@@ -55,7 +55,7 @@ public class McpServerRecorder {
                 connectionManager.add(connection);
 
                 // /mcp/messages?id=generatedId
-                String endpointPath = mcpPath + "/messages?id=" + id;
+                String endpointPath = mcpPath + "/messages/" + id;
 
                 // https://spec.modelcontextprotocol.io/specification/basic/transports/#http-with-sse
                 connection.sendEvent("endpoint", endpointPath);

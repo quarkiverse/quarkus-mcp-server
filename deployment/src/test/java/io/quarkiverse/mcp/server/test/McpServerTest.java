@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.awaitility.Awaitility;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.client.SseEvent;
 
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
@@ -20,6 +21,8 @@ import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonObject;
 
 public abstract class McpServerTest {
+
+    private static final Logger LOG = Logger.getLogger(McpServerTest.class);
 
     @TestHTTPResource
     URI testUri;
@@ -42,6 +45,7 @@ public abstract class McpServerTest {
         });
         Awaitility.await().until(() -> !sseMessages.isEmpty());
         URI endpoint = new URI(sseMessages.get(0).data());
+        LOG.infof("Client received endpoint: %s", endpoint);
 
         JsonObject initMessage = newMessage("initialize")
                 .put("params",
