@@ -20,6 +20,12 @@ public class McpServerRecorder {
 
     private static final Logger LOG = Logger.getLogger(McpServerRecorder.class);
 
+    private final McpBuildTimeConfig config;
+
+    public McpServerRecorder(McpBuildTimeConfig config) {
+        this.config = config;
+    }
+
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath) {
 
         ArcContainer container = Arc.container();
@@ -68,7 +74,7 @@ public class McpServerRecorder {
     }
 
     public Handler<RoutingContext> createMessagesEndpointHandler() {
-        return new McpMessagesHandler(Arc.container().instance(ConnectionManager.class).get());
+        return new McpMessagesHandler(Arc.container().instance(ConnectionManager.class).get(), config);
     }
 
 }
