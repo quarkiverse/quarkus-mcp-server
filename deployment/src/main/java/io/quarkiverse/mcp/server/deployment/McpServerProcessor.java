@@ -103,7 +103,7 @@ class McpServerProcessor {
                 .build());
 
         routes.produce(RouteBuildItem.builder()
-                .routeFunction(mcpPath + "/" + "messages", recorder.addBodyHandler(bodyHandler.getHandler()))
+                .routeFunction(mcpPath + "/" + "messages/:id", recorder.addBodyHandler(bodyHandler.getHandler()))
                 .handlerType(HandlerType.NORMAL)
                 .handler(recorder.createMessagesEndpointHandler())
                 .build());

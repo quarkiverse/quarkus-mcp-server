@@ -40,7 +40,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
     @Override
     public void handle(RoutingContext ctx) {
         HttpServerRequest request = ctx.request();
-        String id = ctx.request().getParam("id");
+        String id = ctx.pathParam("id");
         if (id == null) {
             LOG.error("Connection id is missing");
             ctx.fail(400);
@@ -48,7 +48,8 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         }
         if (request.method() != HttpMethod.POST) {
             LOG.errorf("Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), id);
-            ctx.fail(400);
+            ctx.response().putHeader(HttpHeaders.ALLOW, "POST");
+            ctx.fail(405);
             return;
         }
         McpConnectionImpl connection = connectionManager.get(id);
