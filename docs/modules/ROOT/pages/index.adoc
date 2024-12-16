@@ -1,8 +1,10 @@
-= Quarkus Mcp Server
+= Quarkus MCP Server
 
 include::./includes/attributes.adoc[]
 
-TIP: Describe what the extension does here.
+_"https://modelcontextprotocol.io/[Model Context Protocol]  (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
+
+This extension provides a declarative API that enables developers to implement the MCP server features easily.
 
 == Installation
 
@@ -18,6 +20,114 @@ For instance, with Maven, add the following dependency to your POM file:
     <version>{project-version}</version>
 </dependency>
 ----
+
+== Supported server features
+
+A server feature (prompt, resource, or tool) is represented by an _annotated business method_ of a CDI bean.
+Blocking and non-blocking logic is supported.
+The execution model is determined by the method signature and additional annotations such as `@Blocking` and `@NonBlocking`.
+
+* Methods annotated with `@RunOnVirtualThread`, `@Blocking` or `@Transactional` are considered blocking.
+* Methods declared in a class annotated with `@RunOnVirtualThread` are considered blocking.
+* Methods annotated with `@NonBlocking` are considered non-blocking.
+* Methods declared in a class annotated with `@Transactional` are considered blocking unless annotated with `@NonBlocking`.
+* If the method does not declare any of the annotations listed above the execution model is derived from the return type:
+** Methods returning `Uni` and `Multi` are considered non-blocking.
+** Methods returning any other type are considered blocking.
+* Kotlin `suspend` functions are always considered non-blocking and may not be annotated with `@Blocking`, `@NonBlocking`
+ or `@RunOnVirtualThread` and may not be in a class annotated with `@RunOnVirtualThread`.
+* Non-blocking methods must execute on the connection's event loop thread.
+* Blocking methods must execute on a worker thread unless annotated with `@RunOnVirtualThread` or in a class annotated
+ with `@RunOnVirtualThread`.
+* Methods annotated with `@RunOnVirtualThread` or declared in class annotated with `@RunOnVirtualThread` must execute on
+ a virtual thread, each invocation spawns a new virtual thread.
+
+=== Prompts
+
+MCP provides a https://spec.modelcontextprotocol.io/specification/server/prompts/[standardized way] for servers to expose prompt templates to clients.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+
+// @Singleton <1>
+public class MyPrompts {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Prompt(description = "Put you description here.") <3>
+    PromptMessage foo(@PromptArg(description = "The name") String name) { <4>
+        return PromptMessage.withUserRole(new TextContent(fooService.ping(name));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyPrompts` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name. 
+<4> The `@PromptArg` can be used to customize the description of an argument.
+
+The result of a "prompt get" operation is always represented as a `PromptResponse`.
+However, the annotated method can also return other types that are converted according to the following rules.
+
+* If the method returns a `PromptMessage` then the reponse has no description and contains the single message object.
+* If the method returns a `List` of ``PromptMessage``s then the reponse has no description and contains the list of messages.
+* The method may return a `Uni` that wraps any of the type mentioned above.
+
+In other words, the return type must be one of the following list:
+
+* `PromptResponse`
+* `PromptMessage`
+* `List<PromptMessage>`
+* `Uni<PromptResponse>`
+* `Uni<PromptMessage>`
+* `Uni<List<PromptMessage>>`
+
+=== Resources
+
+TODO
+
+=== Tools
+
+MCP provides a https://spec.modelcontextprotocol.io/specification/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+// @Singleton <1>
+public class MyTools {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Tool(description = "Put you description here.") <3>
+    ToolResponse foo(@ToolArg(description = "The name") String name) {
+        return ToolResponse.success(
+                new TextContent(fooService.ping(name)));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyTools` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Tool` annotates a business method of a CDI bean that should be exposed as a tool. By default, the name of the tool is derived from the method name.
+
+A result of a "tool call" operation is always represented as a `ToolResponse`.
+However, the annotated method can also return other types that are converted according to the following rules.
+
+* If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the reponse is "success" and contains the single content object.
+* If the method returns a `List` of `Content` implementations then the reponse is "success" and contains the list of content objects.
+* The method may return a `Uni` that wraps any of the type mentioned above.
+
+=== Utilities
+
+TODO
 
 [[extension-configuration-reference]]
 == Extension Configuration Reference

@@ -41,7 +41,7 @@ public class MyPrompts {
         checkRequestContext();
         checkRequestId(id);
         checkMcpConnection(connection);
-        return List.of(PromptMessage.user(new TextContent(val.toUpperCase())));
+        return List.of(PromptMessage.withUserRole(new TextContent(val.toUpperCase())));
     }
 
     @Prompt
@@ -49,7 +49,7 @@ public class MyPrompts {
         checkExecutionModel(false);
         checkRequestContext();
         checkDuplicatedContext();
-        return Uni.createFrom().item(PromptMessage.user(new TextContent(val.toUpperCase())));
+        return Uni.createFrom().item(PromptMessage.withUserRole(new TextContent(val.toUpperCase())));
     }
 
     @Prompt
@@ -57,7 +57,7 @@ public class MyPrompts {
         checkExecutionModel(false);
         checkDuplicatedContext();
         checkRequestContext();
-        return Uni.createFrom().item(List.of(PromptMessage.user(new TextContent(val.toUpperCase()))));
+        return Uni.createFrom().item(List.of(PromptMessage.withUserRole(new TextContent(val.toUpperCase()))));
     }
 
     @Prompt
@@ -65,7 +65,7 @@ public class MyPrompts {
         checkExecutionModel(true);
         checkRequestContext();
         checkDuplicatedContext();
-        return new PromptResponse("My description", List.of(PromptMessage.user(new TextContent(val.toUpperCase()))));
+        return new PromptResponse("My description", List.of(PromptMessage.withUserRole(new TextContent(val.toUpperCase()))));
     }
 
     @Prompt
@@ -74,7 +74,8 @@ public class MyPrompts {
         checkRequestContext();
         checkDuplicatedContext();
         return Uni.createFrom()
-                .item(new PromptResponse("My description", List.of(PromptMessage.user(new TextContent(val.toUpperCase())))));
+                .item(new PromptResponse("My description",
+                        List.of(PromptMessage.withUserRole(new TextContent(val.toUpperCase())))));
     }
 
 }

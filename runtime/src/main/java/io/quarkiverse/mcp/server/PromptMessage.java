@@ -11,7 +11,7 @@ package io.quarkiverse.mcp.server;
  */
 public record PromptMessage(String role, Content content) {
 
-    public static PromptMessage user(Content content) {
+    public static PromptMessage withUserRole(Content content) {
         return new PromptMessage("user", content);
     }
 

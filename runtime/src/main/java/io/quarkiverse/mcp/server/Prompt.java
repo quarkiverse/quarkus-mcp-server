@@ -12,7 +12,8 @@ import io.smallrye.mutiny.Uni;
 /**
  * Annotates a business method of a CDI bean as an exposed prompt template.
  * <p>
- * A result of a "prompt get" is always represented as a {@link PromptResponse}. However, the annotated method can also return
+ * The result of a "prompt get" operation is always represented as a {@link PromptResponse}. However, the annotated method can
+ * also return
  * other types that are converted according to the following rules.
  * <ul>
  * <li>If the method returns a {@link PromptMessage} then the reponse has no description and contains the single
