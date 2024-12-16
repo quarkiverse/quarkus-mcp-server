@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
@@ -27,10 +28,13 @@ class McpMessagesHandler implements Handler<RoutingContext> {
 
     private final PromptMessageHandler promptHandler;
 
-    McpMessagesHandler(ConnectionManager connectionManager) {
+    private final McpBuildTimeConfig config;
+
+    McpMessagesHandler(ConnectionManager connectionManager, McpBuildTimeConfig config) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler();
         this.promptHandler = new PromptMessageHandler();
+        this.config = config;
     }
 
     @Override
@@ -165,8 +169,14 @@ class McpMessagesHandler implements Handler<RoutingContext> {
     private Map<String, Object> serverInfo() {
         Map<String, Object> info = new HashMap<>();
         info.put("protocolVersion", "2024-11-05");
-        info.put("serverInfo", Map.of("name", "Foo", "version", "999-SNAPSHOT"));
-        info.put("capabilities", Map.of("prompts", Map.of()));
+
+        String serverName = config.serverInfo().name()
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class).orElse("N/A"));
+        String serverVersion = config.serverInfo().version()
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class).orElse("N/A"));
+        info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
+
+        info.put("capabilities", Map.of("prompts", Map.of(), "tools", Map.of()));
         return info;
     }
 }

@@ -36,12 +36,12 @@ public @interface Tool {
     String ELEMENT_NAME = "<<element name>>";
 
     /**
-     *
+     * Each tool must have a unique name. By default, the name is derived from the name of the annotated method.
      */
     String name() default ELEMENT_NAME;
 
     /**
-     *
+     * An optional description.
      */
     String description() default "";
 
