@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.setJsonContentType;
 
 import java.util.List;
 
@@ -11,7 +12,6 @@ import io.quarkus.arc.Arc;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
@@ -25,7 +25,7 @@ public class PromptMessageHandler {
         LOG.infof("List prompts [id: %s]", id);
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();
         List<FeatureMethodInfo> prompts = promptManager.list();
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        setJsonContentType(ctx);
         ctx.end(newResult(id, new JsonObject()
                 .put("prompts", new JsonArray(prompts))).encode());
     }
@@ -36,7 +36,7 @@ public class PromptMessageHandler {
         String promptName = params.getString("name");
         LOG.infof("Get prompt %s [id: %s]", promptName, id);
 
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        setJsonContentType(ctx);
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
         PromptManager promptManager = Arc.container().instance(PromptManager.class).get();

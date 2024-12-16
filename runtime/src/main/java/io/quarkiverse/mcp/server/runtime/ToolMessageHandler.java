@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.setJsonContentType;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -19,7 +20,6 @@ import io.quarkus.arc.Arc;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
@@ -39,7 +39,8 @@ public class ToolMessageHandler {
         Object id = message.getValue("id");
         LOG.infof("List tools [id: %s]", id);
         ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        setJsonContentType(ctx);
+
         List<FeatureMethodInfo> tools = toolManager.list();
         JsonArray toolsArray = new JsonArray();
         for (FeatureMethodInfo info : tools) {
@@ -84,7 +85,7 @@ public class ToolMessageHandler {
         LOG.infof("Call tool %s [id: %s]", toolName, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        setJsonContentType(ctx);
 
         ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
         Future<ToolResponse> fu = toolManager.get(toolName, argProviders);

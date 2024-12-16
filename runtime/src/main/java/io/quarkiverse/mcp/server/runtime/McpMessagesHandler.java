@@ -94,7 +94,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // TODO schema validation
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            setJsonContentType(ctx);
             ctx.end(newResult(id, serverInfo()).encode());
         } else {
             ctx.fail(400);
@@ -140,7 +140,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.infof("Ping [id: %s]", id);
-        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        setJsonContentType(ctx);
         ctx.end(newResult(id, new JsonObject()).encode());
     }
 
@@ -165,6 +165,10 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         response.put("id", id);
         response.put("result", result);
         return response;
+    }
+
+    static void setJsonContentType(RoutingContext ctx) {
+        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
     }
 
     private Map<String, Object> serverInfo() {

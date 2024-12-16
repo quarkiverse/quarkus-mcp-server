@@ -24,7 +24,15 @@ import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
+import org.jboss.jandex.Type.Kind;
 
+import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.ResourceContent;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -54,6 +62,8 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
@@ -163,6 +173,68 @@ class McpServerProcessor {
         }
     }
 
+    @Record(RUNTIME_INIT)
+    @BuildStep
+    void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
+            List<FeatureMethodBuildItem> featureMethods,
+            TransformedAnnotationsBuildItem transformedAnnotations,
+            BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
+
+        // Note that the generated McpMetadata impl must be considered an application class
+        // so that it can see the generated invokers
+        ClassOutput classOutput = new GeneratedClassGizmoAdaptor(generatedClasses, true);
+
+        String metadataClassName = "io.quarkiverse.mcp.server.runtime.McpMetadata_Impl";
+        ClassCreator metadataCreator = ClassCreator.builder().classOutput(classOutput)
+                .className(metadataClassName)
+                .interfaces(McpMetadata.class)
+                .build();
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
+        MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
+        ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
+        for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
+            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations, DotNames.PROMPT_ARG);
+        }
+        promptsMethod.returnValue(retPrompts);
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
+        MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
+        ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
+        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
+            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations, DotNames.TOOL_ARG);
+        }
+        toolsMethod.returnValue(retTools);
+
+        metadataCreator.close();
+
+        syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
+                .scope(Singleton.class)
+                .setRuntimeInit()
+                .runtimeValue(recorderContext.newInstance(metadataClassName))
+                .done());
+    }
+
+    @BuildStep
+    void registerForReflection(List<FeatureMethodBuildItem> featureMethods,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
+            BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies) {
+        // FIXME this is not ideal, JsonObject.encode() may use Jackson under the hood which requires reflection
+        for (FeatureMethodBuildItem m : featureMethods) {
+            for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
+                if (paramType.kind() == Kind.PRIMITIVE) {
+                    continue;
+                }
+                reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
+            }
+        }
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
+                ResourceContent.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
+                FeatureArgument.class).methods().build());
+        reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
+        reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
+    }
+
     private void validateFeatureMethod(MethodInfo method, Feature feature) {
         if (Modifier.isStatic(method.flags())) {
             throw new IllegalStateException("MCP feature method must not be static: " + method);
@@ -213,48 +285,6 @@ class McpServerProcessor {
     private boolean hasFeatureMethod(BeanInfo bean) {
         ClassInfo beanClass = bean.getTarget().get().asClass();
         return beanClass.hasAnnotation(DotNames.PROMPT) || beanClass.hasAnnotation(DotNames.TOOL);
-    }
-
-    @Record(RUNTIME_INIT)
-    @BuildStep
-    void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
-            List<FeatureMethodBuildItem> featureMethods,
-            TransformedAnnotationsBuildItem transformedAnnotations,
-            BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
-
-        // Note that the generated McpMetadata impl must be considered an application class
-        // so that it can see the generated invokers
-        ClassOutput classOutput = new GeneratedClassGizmoAdaptor(generatedClasses, true);
-
-        String metadataClassName = "io.quarkiverse.mcp.server.runtime.McpMetadata_Impl";
-        ClassCreator metadataCreator = ClassCreator.builder().classOutput(classOutput)
-                .className(metadataClassName)
-                .interfaces(McpMetadata.class)
-                .build();
-
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
-        MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
-        ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
-        for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
-            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations, DotNames.PROMPT_ARG);
-        }
-        promptsMethod.returnValue(retPrompts);
-
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
-        MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
-        ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
-        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
-            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations, DotNames.TOOL_ARG);
-        }
-        toolsMethod.returnValue(retTools);
-
-        metadataCreator.close();
-
-        syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
-                .scope(Singleton.class)
-                .setRuntimeInit()
-                .runtimeValue(recorderContext.newInstance(metadataClassName))
-                .done());
     }
 
     private void processFeatureMethod(MethodCreator method, FeatureMethodBuildItem featureMethod, ResultHandle retList,
