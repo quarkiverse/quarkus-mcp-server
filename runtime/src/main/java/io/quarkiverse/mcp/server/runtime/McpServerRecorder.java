@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -10,8 +12,11 @@ import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.net.impl.ConnectionBase;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 
@@ -53,6 +58,8 @@ public class McpServerRecorder {
 
                 McpConnectionImpl connection = new McpConnectionImpl(id, response);
                 connectionManager.add(connection);
+                // TODO we cannot override the close handler set/used by Quarkus HTTP
+                setCloseHandler(ctx.request(), id, connectionManager);
 
                 // /mcp/messages?id=generatedId
                 String endpointPath = mcpPath + "/messages/" + id;
@@ -61,6 +68,33 @@ public class McpServerRecorder {
                 connection.sendEvent("endpoint", endpointPath);
             }
         };
+    }
+
+    private void setCloseHandler(HttpServerRequest request, String connectionId, ConnectionManager connectionManager) {
+        HttpConnection connection = request.connection();
+        if (connection instanceof ConnectionBase base) {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(ConnectionBase.class, MethodHandles.lookup());
+                VarHandle varHandle = lookup.findVarHandle(ConnectionBase.class, "closeHandler", Handler.class);
+                Handler<Void> closeHandler = (Handler<Void>) varHandle.get(base);
+                base.closeHandler(new Handler<Void>() {
+                    @Override
+                    public void handle(Void event) {
+                        if (closeHandler != null) {
+                            closeHandler.handle(event);
+                        }
+                        if (connectionManager.remove(connectionId)) {
+                            LOG.infof("Connection %s closed", connectionId);
+                        }
+                        // Connection may have been removed earlier...
+                    }
+                });
+            } catch (Exception e) {
+                LOG.warnf(e, "Unable to set close handler - client should close the connection [%s] explicitly", connectionId);
+            }
+        } else {
+            LOG.warnf("Unable to set close handler - client should close the connection [%s] explicitly", connectionId);
+        }
     }
 
     public Consumer<Route> addBodyHandler(Handler<RoutingContext> bodyHandler) {
