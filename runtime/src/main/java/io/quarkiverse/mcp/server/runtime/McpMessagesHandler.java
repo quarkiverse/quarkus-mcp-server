@@ -123,6 +123,8 @@ class McpMessagesHandler implements Handler<RoutingContext> {
     private static final String TOOLS_LIST = "tools/list";
     private static final String TOOLS_CALL = "tools/call";
     private static final String PING = "ping";
+    // non-standard messages
+    private static final String Q_CLOSE = "q/close";
 
     private void operation(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
         String method = message.getString("method");
@@ -132,6 +134,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
             case TOOLS_LIST -> toolHandler.toolsList(message, ctx);
             case TOOLS_CALL -> toolHandler.toolsCall(message, ctx, connection);
             case PING -> ping(message, ctx);
+            case Q_CLOSE -> close(ctx, connection);
             default -> throw new IllegalArgumentException("Unsupported method: " + method);
         }
     }
@@ -142,6 +145,16 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         LOG.infof("Ping [id: %s]", id);
         setJsonContentType(ctx);
         ctx.end(newResult(id, new JsonObject()).encode());
+    }
+
+    private void close(RoutingContext ctx, McpConnectionImpl connection) {
+        if (connectionManager.remove(connection.id())) {
+            LOG.infof("Connection %s closed", connection.id());
+            ctx.end();
+        } else {
+            LOG.errorf("Unable to close connection %s", connection.id());
+            ctx.fail(400);
+        }
     }
 
     private InitializeRequest decodeInitializeRequest(JsonObject params) {
