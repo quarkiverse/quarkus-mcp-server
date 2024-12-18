@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.client.SseEvent;
 
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
+import io.quarkus.test.QuarkusUnitTest;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonObject;
@@ -26,6 +27,15 @@ public abstract class McpServerTest {
 
     @TestHTTPResource
     URI testUri;
+
+    public static QuarkusUnitTest defaultConfig() {
+        QuarkusUnitTest config = new QuarkusUnitTest();
+        if (System.getProperty("logTraffic") != null) {
+            config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
+            config.overrideConfigKey("quarkus.log.category.\"io.quarkus.mcp.server.traffic\".level", "DEBUG");
+        }
+        return config;
+    }
 
     protected List<SseEvent<String>> sseMessages;
 

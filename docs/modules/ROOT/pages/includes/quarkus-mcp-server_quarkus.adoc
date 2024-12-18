@@ -7,12 +7,70 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-server-info-name]] [.property-path]##link:#quarkus-mcp-server_quarkus-server-info-name[`quarkus.server-info.name`]##
+
+[.description]
+--
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_NAME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SERVER_INFO_NAME+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-server-info-version]] [.property-path]##link:#quarkus-mcp-server_quarkus-server-info-version[`quarkus.server-info.version`]##
+
+[.description]
+--
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_VERSION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SERVER_INFO_VERSION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server_quarkus-traffic-logging-enabled[`quarkus.traffic-logging.enabled`]##
+
+[.description]
+--
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TRAFFIC_LOGGING_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`false`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server_quarkus-traffic-logging-text-limit[`quarkus.traffic-logging.text-limit`]##
+
+[.description]
+--
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_TEXT_LIMIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TRAFFIC_LOGGING_TEXT_LIMIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`100`
+
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-root-path]] [.property-path]##link:#quarkus-mcp-server_quarkus-root-path[`quarkus.root-path`]##
 
 [.description]
 --
-The root path.
-
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_ROOT_PATH+++[]

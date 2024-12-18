@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.runtime;
+package io.quarkiverse.mcp.server.runtime.config;
 
 import java.util.Optional;
 
@@ -7,17 +7,9 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
-@ConfigMapping(prefix = "quarkus.mcp-server")
-@ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
-public interface McpBuildTimeConfig {
-
-    /**
-     * The root path.
-     *
-     * @asciidoclet
-     */
-    @WithDefault("/mcp")
-    String rootPath();
+@ConfigMapping(prefix = "quarkus.mcp.server")
+@ConfigRoot(phase = ConfigPhase.RUN_TIME)
+public interface McpRuntimeConfig {
 
     /**
      * The server info is included in the response to an `initialize` request as defined by the
@@ -26,6 +18,11 @@ public interface McpBuildTimeConfig {
      * @asciidoclet
      */
     ServerInfo serverInfo();
+
+    /**
+     * Traffic logging config.
+     */
+    TrafficLogging trafficLogging();
 
     public interface ServerInfo {
 
@@ -47,6 +44,22 @@ public interface McpBuildTimeConfig {
          */
         Optional<String> version();
 
+    }
+
+    public interface TrafficLogging {
+
+        /**
+         * If set to true then JSON messages received/sent are logged if the {@code DEBUG} level is enabled for the
+         * logger {@code io.quarkus.mcp.server.traffic}.
+         */
+        @WithDefault("false")
+        public boolean enabled();
+
+        /**
+         * The number of characters of a text message which will be logged if traffic logging is enabled.
+         */
+        @WithDefault("100")
+        public int textLimit();
     }
 
 }

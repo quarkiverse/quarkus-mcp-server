@@ -1,6 +1,5 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -28,13 +27,8 @@ public class ToolManager extends FeatureManager<ToolResponse> {
         return tools.get(name);
     }
 
-    /**
-     *
-     * @return the list of tools sorted by name asc
-     */
-    public List<FeatureMethodInfo> list() {
-        return tools.values().stream().map(FeatureMetadata::info).sorted(Comparator.comparing(FeatureMethodInfo::name))
-                .toList();
+    public List<FeatureMetadata<ToolResponse>> list() {
+        return tools.values().stream().sorted().toList();
     }
 
 }

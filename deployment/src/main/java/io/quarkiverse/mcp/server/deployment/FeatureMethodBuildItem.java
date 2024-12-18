@@ -4,6 +4,8 @@ import java.util.Objects;
 
 import org.jboss.jandex.MethodInfo;
 
+import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
+import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;
@@ -14,17 +16,24 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final InvokerInfo invoker;
     private final String name;
     private final String description;
+
     private final MethodInfo method;
     private final Feature feature;
 
-    FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description,
-            Feature feature) {
+    // Resource-only
+    private final String uri;
+    private final String mimeType;
+
+    FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description, String uri,
+            String mimeType, FeatureMetadata.Feature feature) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
+        this.feature = Objects.requireNonNull(feature);
         this.name = Objects.requireNonNull(name);
         this.description = description;
-        this.feature = Objects.requireNonNull(feature);
+        this.uri = feature == Feature.RESOURCE ? Objects.requireNonNull(uri) : null;
+        this.mimeType = mimeType;
     }
 
     BeanInfo getBean() {
@@ -47,6 +56,14 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return description;
     }
 
+    String getUri() {
+        return uri;
+    }
+
+    String getMimeType() {
+        return mimeType;
+    }
+
     Feature getFeature() {
         return feature;
     }
@@ -59,15 +76,14 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature == Feature.PROMPT;
     }
 
+    boolean isResource() {
+        return feature == Feature.RESOURCE;
+    }
+
     @Override
     public String toString() {
         return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#" + method.name()
                 + "(), feature=" + feature + "]";
-    }
-
-    enum Feature {
-        PROMPT,
-        TOOL
     }
 
 }
