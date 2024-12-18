@@ -1,5 +1,13 @@
 package io.quarkiverse.mcp.server;
 
+/**
+ *
+ * @param uri
+ * @param mimeType
+ * @param text
+ * @see Prompt
+ * @see Tool
+ */
 public record ResourceContent(String uri, String mimeType, String text) implements Content {
 
     @Override

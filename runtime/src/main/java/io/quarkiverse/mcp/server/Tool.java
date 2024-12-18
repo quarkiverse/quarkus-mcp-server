@@ -13,8 +13,8 @@ import io.smallrye.mutiny.Uni;
  * Annotates a business method of a CDI bean as an exposed tool.
  * <p>
  * The result of a "tool call" operation is always represented as a {@link ToolResponse}. However, the annotated method can also
- * return
- * other types that are converted according to the following rules.
+ * return other types that are converted according to the following rules.
+ *
  * <ul>
  * <li>If the method returns an implementation of {@link Content} then the reponse is "success" and contains the single
  * content object.</li>

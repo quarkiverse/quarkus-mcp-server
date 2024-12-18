@@ -19,10 +19,10 @@ public class CustomServerInfoTest extends McpServerTest {
     private static final String VERSION = "1.0";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(McpClient.class))
-            .overrideConfigKey("quarkus.mcp-server.server-info.name", NAME)
-            .overrideConfigKey("quarkus.mcp-server.server-info.version", VERSION);
+            .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
+            .overrideConfigKey("quarkus.mcp.server.server-info.version", VERSION);
 
     @Test
     public void testServerInfo() throws URISyntaxException {

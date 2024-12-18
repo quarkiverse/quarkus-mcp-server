@@ -53,6 +53,12 @@ public abstract class FeatureManager<R> {
 
     }
 
+    public abstract List<FeatureMetadata<R>> list();
+
+    public boolean isEmpty() {
+        return list().isEmpty();
+    }
+
     @SuppressWarnings("unchecked")
     private Object[] prepareArguments(FeatureMethodInfo info, ArgumentProviders argProviders) {
         Object[] ret = new Object[info.arguments().size()];
@@ -92,7 +98,7 @@ public abstract class FeatureManager<R> {
         return ret;
     }
 
-    protected abstract FeatureMetadata<R> getMetadata(String name);
+    protected abstract FeatureMetadata<R> getMetadata(String identifier);
 
     protected Future<R> execute(ExecutionModel executionModel, Callable<Uni<R>> action) {
         Promise<R> ret = Promise.promise();

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.jboss.jandex.DotName;
 
+import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -12,8 +13,12 @@ import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceContent;
+import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -45,5 +50,11 @@ class DotNames {
     static final DotName TEXT_CONTENT = DotName.createSimple(TextContent.class);
     static final DotName IMAGE_CONTENT = DotName.createSimple(ImageContent.class);
     static final DotName RESOURCE_CONTENT = DotName.createSimple(ResourceContent.class);
+    static final DotName RESOURCE = DotName.createSimple(Resource.class);
+    static final DotName RESOURCE_RESPONSE = DotName.createSimple(ResourceResponse.class);
+    static final DotName RESOURCE_CONTENS = DotName.createSimple(ResourceContents.class);
+    static final DotName TEXT_RESOURCE_CONTENS = DotName.createSimple(TextResourceContents.class);
+    static final DotName BLOB_RESOURCE_CONTENS = DotName.createSimple(BlobResourceContents.class);
+    static final DotName STRING = DotName.createSimple(String.class);
 
 }

@@ -17,7 +17,7 @@ import io.vertx.core.json.JsonObject;
 public class CloseTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(McpClient.class));
 
     @Test

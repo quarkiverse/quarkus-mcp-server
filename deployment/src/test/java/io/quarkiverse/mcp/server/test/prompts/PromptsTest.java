@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
 public class PromptsTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(McpClient.class, FooService.class, Options.class, Checks.class, MyPrompts.class));
 

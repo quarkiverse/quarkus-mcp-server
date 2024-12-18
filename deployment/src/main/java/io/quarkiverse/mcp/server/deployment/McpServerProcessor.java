@@ -1,7 +1,8 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature.PROMPT;
-import static io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature.TOOL;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.reflect.Modifier;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,22 +35,24 @@ import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContent;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem.Feature;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
+import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
-import io.quarkiverse.mcp.server.runtime.McpBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
+import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.config.McpBuildTimeConfig;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
@@ -59,6 +63,7 @@ import io.quarkus.arc.processor.Types;
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.Consume;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
@@ -88,18 +93,19 @@ class McpServerProcessor {
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
-        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(PromptManager.class));
-        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(ToolManager.class));
+        additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
+                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class).build());
     }
 
     @BuildStep
     AutoAddScopeBuildItem autoAddScope() {
-        return AutoAddScopeBuildItem.builder().containsAnnotations(DotNames.PROMPT, DotNames.TOOL)
+        return AutoAddScopeBuildItem.builder().containsAnnotations(DotNames.PROMPT, DotNames.TOOL, DotNames.RESOURCE)
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
 
     @Record(RUNTIME_INIT)
+    @Consume(SyntheticBeansRuntimeInitBuildItem.class)
     @BuildStep
     void registerEndpoints(McpBuildTimeConfig config, HttpRootPathBuildItem rootPath, McpServerRecorder recorder,
             BodyHandlerBuildItem bodyHandler,
@@ -127,12 +133,22 @@ class McpServerProcessor {
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
             for (MethodInfo method : beanClass.methods()) {
+                Feature feature = null;
                 AnnotationInstance featureAnnotation = method.declaredAnnotation(DotNames.PROMPT);
-                if (featureAnnotation == null) {
+                if (featureAnnotation != null) {
+                    feature = PROMPT;
+                } else {
                     featureAnnotation = method.declaredAnnotation(DotNames.TOOL);
+                    if (featureAnnotation != null) {
+                        feature = TOOL;
+                    } else {
+                        featureAnnotation = method.declaredAnnotation(DotNames.RESOURCE);
+                        if (featureAnnotation != null) {
+                            feature = RESOURCE;
+                        }
+                    }
                 }
                 if (featureAnnotation != null) {
-                    Feature feature = featureAnnotation.name().equals(DotNames.PROMPT) ? PROMPT : TOOL;
                     validateFeatureMethod(method, feature);
                     AnnotationValue nameValue = featureAnnotation.value("name");
                     String name = nameValue != null ? nameValue.asString() : method.name();
@@ -140,8 +156,12 @@ class McpServerProcessor {
                     String description = descValue != null ? descValue.asString() : "";
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
+                    AnnotationValue uriValue = featureAnnotation.value("uri");
+                    String uri = uriValue != null ? uriValue.asString() : null;
+                    AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
+                    String mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                            description, feature);
+                            description, uri, mimeType, feature);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -171,6 +191,25 @@ class McpServerProcessor {
                 }
             }
         }
+
+        // Check duplicate uris for resources
+        List<FeatureMethodBuildItem> resources = found.get(RESOURCE);
+        if (resources != null) {
+            Map<String, List<FeatureMethodBuildItem>> byUri = resources.stream()
+                    .collect(Collectors.toMap(FeatureMethodBuildItem::getUri, List::of, (v1, v2) -> {
+                        List<FeatureMethodBuildItem> list = new ArrayList<>();
+                        list.addAll(v1);
+                        list.addAll(v2);
+                        return list;
+                    }));
+            for (List<FeatureMethodBuildItem> list : byUri.values()) {
+                if (list.size() > 1) {
+                    String message = "Duplicate resource uri found:\n\t%s"
+                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                }
+            }
+        }
     }
 
     @Record(RUNTIME_INIT)
@@ -190,11 +229,14 @@ class McpServerProcessor {
                 .interfaces(McpMetadata.class)
                 .build();
 
+        AtomicInteger counter = new AtomicInteger();
+
         // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
         MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
         ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
         for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
-            processFeatureMethod(promptsMethod, prompt, retPrompts, transformedAnnotations, DotNames.PROMPT_ARG);
+            processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts, transformedAnnotations,
+                    DotNames.PROMPT_ARG);
         }
         promptsMethod.returnValue(retPrompts);
 
@@ -202,9 +244,19 @@ class McpServerProcessor {
         MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
         ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
-            processFeatureMethod(toolsMethod, tool, retTools, transformedAnnotations, DotNames.TOOL_ARG);
+            processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools, transformedAnnotations,
+                    DotNames.TOOL_ARG);
         }
         toolsMethod.returnValue(retTools);
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.resources()
+        MethodCreator resourcesMethod = metadataCreator.getMethodCreator("resources", List.class);
+        ResultHandle retResources = Gizmo.newArrayList(resourcesMethod);
+        for (FeatureMethodBuildItem resource : featureMethods.stream().filter(FeatureMethodBuildItem::isResource).toList()) {
+            processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources, transformedAnnotations,
+                    null);
+        }
+        resourcesMethod.returnValue(retResources);
 
         metadataCreator.close();
 
@@ -245,6 +297,7 @@ class McpServerProcessor {
         switch (feature) {
             case PROMPT -> validatePromptMethod(method);
             case TOOL -> validateToolMethod(method);
+            case RESOURCE -> validateResourceMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
@@ -261,7 +314,7 @@ class McpServerProcessor {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!PROMPT_TYPES.contains(type)) {
-            throw new IllegalStateException("Unsupported prompt method return type: " + method.returnType());
+            throw new IllegalStateException("Unsupported prompt method return type: " + method);
         }
     }
 
@@ -278,73 +331,114 @@ class McpServerProcessor {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!TOOL_TYPES.contains(type)) {
-            throw new IllegalStateException("Unsupported Tool method return type: " + method.returnType());
+            throw new IllegalStateException("Unsupported Tool method return type: " + method);
+        }
+    }
+
+    private static final Set<org.jboss.jandex.Type> RESOURCE_TYPES = Set.of(ClassType.create(DotNames.RESOURCE_RESPONSE),
+            ClassType.create(DotNames.RESOURCE_CONTENS), ClassType.create(DotNames.TEXT_RESOURCE_CONTENS),
+            ClassType.create(DotNames.BLOB_RESOURCE_CONTENS));
+
+    private void validateResourceMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!RESOURCE_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported Resource method return type: " + method);
+        }
+        if (method.parametersCount() > 1
+                || (method.parametersCount() == 1
+                        && !method.parameterName(0).equals("uri")
+                        && !method.parameterType(0).name().equals(DotNames.STRING))) {
+            throw new IllegalStateException(
+                    "Resource method may accept zero paramateres or a single parameter of name 'uri' and type String: "
+                            + method);
         }
     }
 
     private boolean hasFeatureMethod(BeanInfo bean) {
         ClassInfo beanClass = bean.getTarget().get().asClass();
-        return beanClass.hasAnnotation(DotNames.PROMPT) || beanClass.hasAnnotation(DotNames.TOOL);
+        return beanClass.hasAnnotation(DotNames.PROMPT)
+                || beanClass.hasAnnotation(DotNames.TOOL)
+                || beanClass.hasAnnotation(DotNames.RESOURCE);
     }
 
-    private void processFeatureMethod(MethodCreator method, FeatureMethodBuildItem featureMethod, ResultHandle retList,
+    private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
+            FeatureMethodBuildItem featureMethod, ResultHandle retList,
             TransformedAnnotationsBuildItem transformedAnnotations, DotName argAnnotationName) {
-        ResultHandle args = Gizmo.newArrayList(method);
+        String methodName = "meta$" + counter.incrementAndGet();
+        MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
+
+        ResultHandle args = Gizmo.newArrayList(metaMethod);
         for (MethodParameterInfo pi : featureMethod.getMethod().parameters()) {
             String name = pi.name();
             String description = "";
             boolean required = true;
-            AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
-            if (argAnnotation != null) {
-                AnnotationValue nameValue = argAnnotation.value("name");
-                if (nameValue != null) {
-                    name = nameValue.asString();
-                }
-                AnnotationValue descriptionValue = argAnnotation.value("description");
-                if (descriptionValue != null) {
-                    description = descriptionValue.asString();
-                }
-                AnnotationValue requiredValue = argAnnotation.value("required");
-                if (requiredValue != null) {
-                    required = requiredValue.asBoolean();
+            if (argAnnotationName != null) {
+                AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
+                if (argAnnotation != null) {
+                    AnnotationValue nameValue = argAnnotation.value("name");
+                    if (nameValue != null) {
+                        name = nameValue.asString();
+                    }
+                    AnnotationValue descriptionValue = argAnnotation.value("description");
+                    if (descriptionValue != null) {
+                        description = descriptionValue.asString();
+                    }
+                    AnnotationValue requiredValue = argAnnotation.value("required");
+                    if (requiredValue != null) {
+                        required = requiredValue.asBoolean();
+                    }
                 }
             }
-            ResultHandle type = Types.getTypeHandle(method, pi.type());
+            ResultHandle type = Types.getTypeHandle(metaMethod, pi.type());
             ResultHandle provider;
             if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
-                provider = method.load(FeatureArgument.Provider.MCP_CONNECTION);
+                provider = metaMethod.load(FeatureArgument.Provider.MCP_CONNECTION);
             } else if (pi.type().name().equals(DotNames.REQUEST_ID)) {
-                provider = method.load(FeatureArgument.Provider.REQUEST_ID);
+                provider = metaMethod.load(FeatureArgument.Provider.REQUEST_ID);
             } else {
-                provider = method.load(FeatureArgument.Provider.PARAMS);
+                provider = metaMethod.load(FeatureArgument.Provider.PARAMS);
             }
-            ResultHandle arg = method.newInstance(
+            ResultHandle arg = metaMethod.newInstance(
                     MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
                             Type.class, FeatureArgument.Provider.class),
-                    method.load(name), method.load(description), method.load(required), type,
+                    metaMethod.load(name), metaMethod.load(description), metaMethod.load(required), type,
                     provider);
-            Gizmo.listOperations(method).on(args).add(arg);
+            Gizmo.listOperations(metaMethod).on(args).add(arg);
         }
-        ResultHandle info = method.newInstance(
-                MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, List.class),
-                method.load(featureMethod.getName()), method.load(featureMethod.getDescription()), args);
-        ResultHandle invoker = method
+        ResultHandle info = metaMethod.newInstance(
+                MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
+                        List.class),
+                metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
+                featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
+                featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
+                args);
+        ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
-        ResultHandle executionModel = method.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
-        ResultHandle resultMapper = getMapper(method, featureMethod.getMethod().returnType(), featureMethod.getFeature());
-        ResultHandle metadata = method.newInstance(
-                MethodDescriptor.ofConstructor(FeatureMetadata.class, FeatureMethodInfo.class, Invoker.class,
+        ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
+        ResultHandle resultMapper = getMapper(metaMethod, featureMethod.getMethod().returnType(), featureMethod.getFeature());
+        ResultHandle metadata = metaMethod.newInstance(
+                MethodDescriptor.ofConstructor(FeatureMetadata.class, Feature.class, FeatureMethodInfo.class, Invoker.class,
                         ExecutionModel.class, Function.class),
-                info, invoker, executionModel, resultMapper);
-        Gizmo.listOperations(method).on(retList).add(metadata);
+                metaMethod.load(featureMethod.getFeature()), info, invoker, executionModel, resultMapper);
+        metaMethod.returnValue(metadata);
+
+        Gizmo.listOperations(method).on(retList)
+                .add(method.invokeVirtualMethod(metaMethod.getMethodDescriptor(), method.getThis()));
     }
 
     private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
-            FeatureMethodBuildItem.Feature feature) {
+            Feature feature) {
         // At this point the method return type is already validated
         return switch (feature) {
             case PROMPT -> promptMapper(bytecode, returnType);
             case TOOL -> toolMapper(bytecode, returnType);
+            case RESOURCE -> resourceMapper(bytecode, returnType);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         };
     }
@@ -388,9 +482,34 @@ class McpServerProcessor {
         throw new IllegalArgumentException("Unsupported return type");
     }
 
+    private ResultHandle resourceMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.RESOURCE_RESPONSE)) {
+            return resultMapper(bytecode, "TO_UNI");
+        } else if (isResourceContents(returnType.name())) {
+            return resultMapper(bytecode, "RESOURCE_CONTENT");
+        } else if (returnType.name().equals(DotNames.LIST)) {
+            return resultMapper(bytecode, "RESOURCE_LIST_CONTENT");
+        } else if (returnType.name().equals(DotNames.UNI)) {
+            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
+            if (typeArg.name().equals(DotNames.RESOURCE_RESPONSE)) {
+                return resultMapper(bytecode, "IDENTITY");
+            } else if (isResourceContents(typeArg.name())) {
+                return resultMapper(bytecode, "RESOURCE_UNI_CONTENT");
+            } else if (typeArg.name().equals(DotNames.LIST)) {
+                return resultMapper(bytecode, "RESOURCE_UNI_LIST_CONTENT");
+            }
+        }
+        throw new IllegalArgumentException("Unsupported return type");
+    }
+
     private boolean isContent(DotName typeName) {
         return DotNames.CONTENT.equals(typeName) || DotNames.TEXT_CONTENT.equals(typeName)
                 || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.RESOURCE_CONTENT.equals(typeName);
+    }
+
+    private boolean isResourceContents(DotName typeName) {
+        return DotNames.RESOURCE_CONTENS.equals(typeName) || DotNames.TEXT_RESOURCE_CONTENS.equals(typeName)
+                || DotNames.BLOB_RESOURCE_CONTENS.equals(typeName);
     }
 
     private ResultHandle resultMapper(BytecodeCreator bytecode, String contantName) {

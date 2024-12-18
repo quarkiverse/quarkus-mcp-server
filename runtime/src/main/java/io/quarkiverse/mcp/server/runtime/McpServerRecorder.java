@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.annotations.Recorder;
@@ -25,9 +26,9 @@ public class McpServerRecorder {
 
     private static final Logger LOG = Logger.getLogger(McpServerRecorder.class);
 
-    private final McpBuildTimeConfig config;
+    private final McpRuntimeConfig config;
 
-    public McpServerRecorder(McpBuildTimeConfig config) {
+    public McpServerRecorder(McpRuntimeConfig config) {
         this.config = config;
     }
 
@@ -108,7 +109,10 @@ public class McpServerRecorder {
     }
 
     public Handler<RoutingContext> createMessagesEndpointHandler() {
-        return new McpMessagesHandler(Arc.container().instance(ConnectionManager.class).get(), config);
+        ArcContainer container = Arc.container();
+        return new McpMessagesHandler(config, container.instance(ConnectionManager.class).get(),
+                container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
+                container.instance(ResourceManager.class).get());
     }
 
 }

@@ -11,6 +11,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitializeRequest;
+import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -28,91 +29,96 @@ class McpMessagesHandler implements Handler<RoutingContext> {
 
     private final PromptMessageHandler promptHandler;
 
-    private final McpBuildTimeConfig config;
+    private final ResourceMessageHandler resourceHandler;
 
-    McpMessagesHandler(ConnectionManager connectionManager, McpBuildTimeConfig config) {
+    private final McpRuntimeConfig config;
+
+    private final Map<String, Object> serverInfo;
+
+    private final TrafficLogger trafficLogger;
+
+    McpMessagesHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
+            ToolManager toolManager, ResourceManager resourceManager) {
         this.connectionManager = connectionManager;
-        this.toolHandler = new ToolMessageHandler();
-        this.promptHandler = new PromptMessageHandler();
+        this.toolHandler = new ToolMessageHandler(toolManager);
+        this.promptHandler = new PromptMessageHandler(promptManager);
+        this.resourceHandler = new ResourceMessageHandler(resourceManager);
         this.config = config;
+        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager);
+        this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit()) : null;
     }
 
     @Override
     public void handle(RoutingContext ctx) {
+        Responder responder = new Responder(trafficLogger, ctx);
         HttpServerRequest request = ctx.request();
         String id = ctx.pathParam("id");
         if (id == null) {
-            LOG.error("Connection id is missing");
-            ctx.fail(400);
+            responder.badRequest("Connection id is missing");
             return;
         }
         if (request.method() != HttpMethod.POST) {
-            LOG.errorf("Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), id);
             ctx.response().putHeader(HttpHeaders.ALLOW, "POST");
-            ctx.fail(405);
+            responder.failure(405, id, "Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), id);
             return;
         }
         McpConnectionImpl connection = connectionManager.get(id);
         if (connection == null) {
-            LOG.errorf("Connection %s not found", id);
-            ctx.fail(400);
+            responder.badRequest("Connection %s not found", id);
             return;
         }
 
         JsonObject message = ctx.body().asJsonObject();
+        if (trafficLogger != null) {
+            trafficLogger.messageReceived(message);
+        }
         String jsonrpc = message.getString("jsonrpc");
         if (!"2.0".equals(jsonrpc)) {
-            LOG.errorf("Invalid jsonrpc version %s [connectionId: %s]", message, id);
-            ctx.fail(400);
+            responder.badRequest("Invalid jsonrpc version %s [connectionId: %s]", message, id);
             return;
         }
 
         switch (connection.status()) {
-            case NEW -> initializeNew(message, ctx, connection);
-            case INITIALIZING -> initializing(message, ctx, connection);
-            case IN_OPERATION -> operation(message, ctx, connection);
+            case NEW -> initializeNew(message, responder, connection);
+            case INITIALIZING -> initializing(message, responder, connection);
+            case IN_OPERATION -> operation(message, responder, connection);
             case SHUTDOWN -> ctx.fail(400);
         }
     }
 
-    private void initializeNew(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
+    private void initializeNew(JsonObject message, Responder responder, McpConnectionImpl connection) {
         // The first message must be "initialize"
         String method = message.getString("method");
         if (!INITIALIZE.equals(method)) {
-            LOG.errorf("The first message from the client must be \"initialize\": %s", method);
-            ctx.fail(400);
+            responder.badRequest("The first message from the client must be \"initialize\": %s", method);
             return;
         }
         Object id = message.getValue("id");
-
         JsonObject params = message.getJsonObject("params");
         if (params == null) {
-            LOG.error("Required params not found");
-            ctx.fail(400);
+            responder.badRequest("Initialization params not found");
             return;
         }
-        // TODO schema validation
+        // TODO schema validation?
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
-            setJsonContentType(ctx);
-            ctx.end(newResult(id, serverInfo()).encode());
+            responder.sucess(newResult(id, serverInfo));
         } else {
-            ctx.fail(400);
+            responder.error("Unable to initialize connection [connectionId: %s]", connection.id());
         }
     }
 
-    private void initializing(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
+    private void initializing(JsonObject message, Responder responder, McpConnectionImpl connection) {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.initialized()) {
+                responder.sucess();
                 LOG.infof("Client successfully initialized [%s]", connection.id());
-                ctx.end();
             }
         } else if (PING.equals(method)) {
-            ping(message, ctx);
+            ping(message, responder);
         } else {
-            LOG.infof("Client not initialized yet [%s]", connection.id());
-            ctx.fail(400);
+            responder.badRequest("Client not initialized yet [%s]", connection.id());
         }
     }
 
@@ -122,38 +128,40 @@ class McpMessagesHandler implements Handler<RoutingContext> {
     private static final String PROMPTS_GET = "prompts/get";
     private static final String TOOLS_LIST = "tools/list";
     private static final String TOOLS_CALL = "tools/call";
+    private static final String RESOURCES_LIST = "resources/list";
+    private static final String RESOURCES_READ = "resources/read";
     private static final String PING = "ping";
     // non-standard messages
     private static final String Q_CLOSE = "q/close";
 
-    private void operation(JsonObject message, RoutingContext ctx, McpConnectionImpl connection) {
+    private void operation(JsonObject message, Responder responder, McpConnectionImpl connection) {
         String method = message.getString("method");
         switch (method) {
-            case PROMPTS_LIST -> promptHandler.promptsList(message, ctx);
-            case PROMPTS_GET -> promptHandler.promptsGet(message, ctx, connection);
-            case TOOLS_LIST -> toolHandler.toolsList(message, ctx);
-            case TOOLS_CALL -> toolHandler.toolsCall(message, ctx, connection);
-            case PING -> ping(message, ctx);
-            case Q_CLOSE -> close(ctx, connection);
+            case PROMPTS_LIST -> promptHandler.promptsList(message, responder);
+            case PROMPTS_GET -> promptHandler.promptsGet(message, responder, connection);
+            case TOOLS_LIST -> toolHandler.toolsList(message, responder);
+            case TOOLS_CALL -> toolHandler.toolsCall(message, responder, connection);
+            case PING -> ping(message, responder);
+            case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
+            case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
+            case Q_CLOSE -> close(responder, connection);
             default -> throw new IllegalArgumentException("Unsupported method: " + method);
         }
     }
 
-    private void ping(JsonObject message, RoutingContext ctx) {
+    private void ping(JsonObject message, Responder responder) {
         // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.infof("Ping [id: %s]", id);
-        setJsonContentType(ctx);
-        ctx.end(newResult(id, new JsonObject()).encode());
+        responder.sucess(newResult(id, new JsonObject()));
     }
 
-    private void close(RoutingContext ctx, McpConnectionImpl connection) {
+    private void close(Responder responder, McpConnectionImpl connection) {
         if (connectionManager.remove(connection.id())) {
             LOG.infof("Connection %s closed", connection.id());
-            ctx.end();
+            responder.sucess();
         } else {
-            LOG.errorf("Unable to close connection %s", connection.id());
-            ctx.fail(400);
+            responder.badRequest("Unable to obain connection to be closed: %s", connection.id());
         }
     }
 
@@ -184,7 +192,8 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
     }
 
-    private Map<String, Object> serverInfo() {
+    private Map<String, Object> serverInfo(PromptManager promptManager, ToolManager toolManager,
+            ResourceManager resourceManager) {
         Map<String, Object> info = new HashMap<>();
         info.put("protocolVersion", "2024-11-05");
 
@@ -194,7 +203,61 @@ class McpMessagesHandler implements Handler<RoutingContext> {
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class).orElse("N/A"));
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
-        info.put("capabilities", Map.of("prompts", Map.of(), "tools", Map.of()));
+        Map<String, Map<String, Object>> capabilities = new HashMap<>();
+        if (!promptManager.isEmpty()) {
+            capabilities.put("prompts", Map.of());
+        }
+        if (!toolManager.isEmpty()) {
+            capabilities.put("tools", Map.of());
+        }
+        if (!resourceManager.isEmpty()) {
+            capabilities.put("resources", Map.of());
+        }
+        info.put("capabilities", capabilities);
         return info;
+    }
+
+    class Responder {
+
+        final RoutingContext ctx;
+        final TrafficLogger trafficLogger;
+
+        Responder(TrafficLogger trafficLogger, RoutingContext ctx) {
+            this.trafficLogger = trafficLogger;
+            this.ctx = ctx;
+        }
+
+        void sucess() {
+            ctx.end();
+        }
+
+        void sucess(JsonObject message) {
+            if (trafficLogger != null) {
+                trafficLogger.messageSent(message);
+            }
+            setJsonContentType(ctx);
+            ctx.end(message.toBuffer());
+        }
+
+        void badRequest(String logMessage, Object... params) {
+            LOG.errorf(logMessage, params);
+            ctx.fail(400);
+        }
+
+        void badRequest(Throwable throwable, String logMessage, Object... params) {
+            LOG.errorf(throwable, logMessage, params);
+            ctx.fail(400);
+        }
+
+        void error(String logMessage, Object... params) {
+            LOG.errorf(logMessage, params);
+            ctx.fail(500);
+        }
+
+        void failure(int statusCode, String logMessage, Object... params) {
+            LOG.errorf(logMessage, params);
+            ctx.fail(statusCode);
+        }
+
     }
 }
