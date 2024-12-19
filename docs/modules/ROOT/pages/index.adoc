@@ -17,7 +17,7 @@ For instance, with Maven, add the following dependency to your POM file:
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server</artifactId>
-    <version>${project-version}</version>
+    <version>{project-version}</version>
 </dependency>
 ----
 
