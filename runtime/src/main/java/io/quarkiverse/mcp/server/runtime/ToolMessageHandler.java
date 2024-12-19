@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+import static io.quarkiverse.mcp.server.runtime.Messages.internalError;
+import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
 import java.lang.reflect.Type;
 
@@ -56,7 +57,7 @@ class ToolMessageHandler {
                     .put("required", required));
             tools.add(tool);
         }
-        responder.ok(newResult(id, new JsonObject()
+        responder.ok(Messages.newResult(id, new JsonObject()
                 .put("tools", tools)));
     }
 
@@ -80,18 +81,23 @@ class ToolMessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
-        Future<ToolResponse> fu = toolManager.get(toolName, argProviders);
-        fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
-            @Override
-            public void handle(AsyncResult<ToolResponse> ar) {
-                if (ar.succeeded()) {
-                    ToolResponse toolResponse = ar.result();
-                    responder.ok(newResult(id, toolResponse));
-                } else {
-                    responder.badRequest(ar.cause(), "Unable to call tool %s", toolName);
+        try {
+            Future<ToolResponse> fu = toolManager.get(toolName, argProviders);
+            fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
+                @Override
+                public void handle(AsyncResult<ToolResponse> ar) {
+                    if (ar.succeeded()) {
+                        ToolResponse toolResponse = ar.result();
+                        responder.ok(Messages.newResult(id, toolResponse));
+                    } else {
+                        LOG.errorf(ar.cause(), "Unable to call tool %s", toolName);
+                        responder.ok(internalError(id));
+                    }
                 }
-            }
-        });
+            });
+        } catch (McpException e) {
+            responder.ok(newError(id, e.getJsonRpcError(), e.getMessage()));
+        }
     }
 
 }

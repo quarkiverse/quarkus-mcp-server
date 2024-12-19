@@ -49,8 +49,7 @@ public interface McpRuntimeConfig {
     public interface TrafficLogging {
 
         /**
-         * If set to true then JSON messages received/sent are logged if the {@code DEBUG} level is enabled for the
-         * logger {@code io.quarkus.mcp.server.traffic}.
+         * If set to true then JSON messages received/sent are logged.
          */
         @WithDefault("false")
         public boolean enabled();

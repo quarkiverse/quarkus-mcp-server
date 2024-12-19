@@ -65,6 +65,10 @@ public class ServerFeatures {
 
 Step #3 - run your Quarkus app!
 
+> [!NOTE]  
+> Currently, only the [HTTP/SSE](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) transport is supported.  
+
+
 Read the full [documentation](https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html).
 
 ## Contributors ✨

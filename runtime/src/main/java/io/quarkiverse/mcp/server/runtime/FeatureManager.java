@@ -37,20 +37,23 @@ public abstract class FeatureManager<R> {
         this.mapper = mapper;
     }
 
-    public Future<R> get(String name, ArgumentProviders argProviders) {
-        FeatureMetadata<R> metadata = getMetadata(name);
+    public Future<R> get(String id, ArgumentProviders argProviders) throws McpException {
+        FeatureMetadata<R> metadata = getMetadata(id);
         if (metadata == null) {
-            throw new IllegalArgumentException("Metadata not found: " + name);
+            throw notFound(id);
         }
         Invoker<Object, Object> invoker = metadata.invoker();
         Object[] arguments = prepareArguments(metadata.info(), argProviders);
         return execute(metadata.executionModel(), new Callable<Uni<R>>() {
             @Override
             public Uni<R> call() throws Exception {
-                return metadata.resultMapper().apply(invoker.invoke(null, arguments));
+                try {
+                    return metadata.resultMapper().apply(invoker.invoke(null, arguments));
+                } catch (Exception e) {
+                    return Uni.createFrom().failure(e);
+                }
             }
         });
-
     }
 
     public abstract List<FeatureMetadata<R>> list();
@@ -60,7 +63,10 @@ public abstract class FeatureManager<R> {
     }
 
     @SuppressWarnings("unchecked")
-    private Object[] prepareArguments(FeatureMethodInfo info, ArgumentProviders argProviders) {
+    private Object[] prepareArguments(FeatureMethodInfo info, ArgumentProviders argProviders) throws McpException {
+        if (info.arguments().isEmpty()) {
+            return new Object[0];
+        }
         Object[] ret = new Object[info.arguments().size()];
         int idx = 0;
         for (FeatureArgument arg : info.arguments()) {
@@ -69,9 +75,9 @@ public abstract class FeatureManager<R> {
             } else if (arg.provider() == Provider.REQUEST_ID) {
                 ret[idx] = new RequestId(argProviders.requestId());
             } else {
-                Object val = argProviders.args().get(arg.name());
+                Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {
-                    throw new IllegalStateException("Missing required argument: " + arg.name());
+                    throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
                 }
                 if (val instanceof Map map) {
                     // json object
@@ -98,7 +104,9 @@ public abstract class FeatureManager<R> {
         return ret;
     }
 
-    protected abstract FeatureMetadata<R> getMetadata(String identifier);
+    protected abstract FeatureMetadata<R> getMetadata(String id);
+
+    protected abstract McpException notFound(String id);
 
     protected Future<R> execute(ExecutionModel executionModel, Callable<Uni<R>> action) {
         Promise<R> ret = Promise.promise();

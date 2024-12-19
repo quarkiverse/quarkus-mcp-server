@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+import static io.quarkiverse.mcp.server.runtime.Messages.internalError;
+import static io.quarkiverse.mcp.server.runtime.Messages.newError;
+import static io.quarkiverse.mcp.server.runtime.Messages.newResult;
 
 import org.jboss.logging.Logger;
 
@@ -41,23 +43,29 @@ class PromptMessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
-        Future<PromptResponse> fu = promptManager.get(promptName, argProviders);
-        fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
-            @Override
-            public void handle(AsyncResult<PromptResponse> ar) {
-                if (ar.succeeded()) {
-                    PromptResponse promptResponse = ar.result();
-                    JsonObject result = new JsonObject();
-                    if (promptResponse.description() != null) {
-                        result.put("description", promptResponse.description());
+        try {
+            Future<PromptResponse> fu = promptManager.get(promptName, argProviders);
+            fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
+                @Override
+                public void handle(AsyncResult<PromptResponse> ar) {
+                    if (ar.succeeded()) {
+                        PromptResponse promptResponse = ar.result();
+                        JsonObject result = new JsonObject();
+                        if (promptResponse.description() != null) {
+                            result.put("description", promptResponse.description());
+                        }
+                        result.put("messages", promptResponse.messages());
+                        responder.ok(newResult(id, result));
+                    } else {
+                        LOG.errorf(ar.cause(), "Unable to obtain prompt %s", promptName);
+                        responder.ok(internalError(id));
                     }
-                    result.put("messages", promptResponse.messages());
-                    responder.ok(newResult(id, result));
-                } else {
-                    responder.badRequest(ar.cause(), "Unable to obtain prompt %s", promptName);
                 }
-            }
-        });
+            });
+        } catch (McpException e) {
+            responder.ok(newError(id, e.getJsonRpcError(), e.getMessage()));
+        }
+
     }
 
 }

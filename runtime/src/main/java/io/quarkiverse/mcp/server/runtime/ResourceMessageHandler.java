@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import static io.quarkiverse.mcp.server.runtime.McpMessagesHandler.newResult;
+import static io.quarkiverse.mcp.server.runtime.Messages.internalError;
+import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
 import java.util.Map;
 
@@ -31,7 +32,7 @@ class ResourceMessageHandler {
         for (FeatureMetadata<ResourceResponse> resource : resourceManager.list()) {
             resources.add(resource.asJson());
         }
-        responder.ok(newResult(id, new JsonObject()
+        responder.ok(Messages.newResult(id, new JsonObject()
                 .put("resources", resources)));
     }
 
@@ -47,18 +48,23 @@ class ResourceMessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id);
 
-        Future<ResourceResponse> fu = resourceManager.get(resourceUri, argProviders);
-        fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
-            @Override
-            public void handle(AsyncResult<ResourceResponse> ar) {
-                if (ar.succeeded()) {
-                    ResourceResponse resourceResponse = ar.result();
-                    responder.ok(newResult(id, resourceResponse));
-                } else {
-                    responder.badRequest(ar.cause(), "Unable to read resource %s", resourceUri);
+        try {
+            Future<ResourceResponse> fu = resourceManager.get(resourceUri, argProviders);
+            fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
+                @Override
+                public void handle(AsyncResult<ResourceResponse> ar) {
+                    if (ar.succeeded()) {
+                        ResourceResponse resourceResponse = ar.result();
+                        responder.ok(Messages.newResult(id, resourceResponse));
+                    } else {
+                        LOG.errorf(ar.cause(), "Unable to read resource %s", resourceUri);
+                        responder.ok(internalError(id));
+                    }
                 }
-            }
-        });
+            });
+        } catch (McpException e) {
+            responder.ok(newError(id, e.getJsonRpcError(), e.getMessage()));
+        }
     }
 
 }
