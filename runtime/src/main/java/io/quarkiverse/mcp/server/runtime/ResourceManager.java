@@ -35,4 +35,9 @@ public class ResourceManager extends FeatureManager<ResourceResponse> {
         return resources.values().stream().sorted().toList();
     }
 
+    @Override
+    protected McpException notFound(String id) {
+        return new McpException("Invalid resource uri: " + id, JsonRPC.RESOURCE_NOT_FOUND);
+    }
+
 }

@@ -278,7 +278,9 @@ class McpServerProcessor {
         // FIXME this is not ideal, JsonObject.encode() may use Jackson under the hood which requires reflection
         for (FeatureMethodBuildItem m : featureMethods) {
             for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
-                if (paramType.kind() == Kind.PRIMITIVE) {
+                if (paramType.kind() == Kind.PRIMITIVE
+                        || paramType.name().equals(DotNames.MCP_CONNECTION)
+                        || paramType.name().equals(DotNames.REQUEST_ID)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());

@@ -11,6 +11,10 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-server-info-
 
 [.description]
 --
+The name of the server is included in the response to an `initialize` request as defined by the
+https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+By default, the value of the `quarkus.application.name` config property is used.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_NAME+++[]
@@ -26,6 +30,10 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-server-info-
 
 [.description]
 --
+The version of the server is included in the response to an `initialize` request as defined by the
+https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+By default, the value of the `quarkus.application.version` config property is used.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_VERSION+++[]
@@ -41,6 +49,8 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-traffic-logg
 
 [.description]
 --
+If set to true then JSON messages received/sent are logged if the `DEBUG` level is enabled for the logger `io.quarkus.mcp.server.traffic`.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_ENABLED+++[]
@@ -56,6 +66,8 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-traffic-logg
 
 [.description]
 --
+The number of characters of a text message which will be logged if traffic logging is enabled.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_TEXT_LIMIT+++[]
@@ -71,6 +83,8 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server_quarkus-root-path]] 
 
 [.description]
 --
+The root path.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_ROOT_PATH+++[]

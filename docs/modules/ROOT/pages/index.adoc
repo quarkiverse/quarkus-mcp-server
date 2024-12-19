@@ -6,6 +6,8 @@ _"https://modelcontextprotocol.io/[Model Context Protocol]  (MCP) is an open pro
 
 This extension provides a declarative API that enables developers to implement the MCP server features easily.
 
+IMPORTANT: Currently, only the https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse[HTTP/SSE] transport is supported. 
+
 == Installation
 
 If you want to use this extension, you need to add the `io.quarkiverse.mcp:quarkus-mcp-server` extension to your build file first.

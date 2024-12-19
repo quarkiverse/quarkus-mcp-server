@@ -73,7 +73,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
             trafficLogger.messageReceived(message);
         }
         String jsonrpc = message.getString("jsonrpc");
-        if (!"2.0".equals(jsonrpc)) {
+        if (!JsonRPC.VERSION.equals(jsonrpc)) {
             responder.badRequest("Invalid jsonrpc version %s [connectionId: %s]", message, id);
             return;
         }
@@ -102,7 +102,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // TODO schema validation?
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
-            responder.ok(newResult(id, serverInfo));
+            responder.ok(Messages.newResult(id, serverInfo));
         } else {
             responder.error("Unable to initialize connection [connectionId: %s]", connection.id());
         }
@@ -153,7 +153,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.infof("Ping [id: %s]", id);
-        responder.ok(newResult(id, new JsonObject()));
+        responder.ok(Messages.newResult(id, new JsonObject()));
     }
 
     private void close(Responder responder, McpConnectionImpl connection) {
@@ -178,14 +178,6 @@ class McpMessagesHandler implements Handler<RoutingContext> {
             }
         }
         return new InitializeRequest(implementation, protocolVersion, clientCapabilities);
-    }
-
-    static JsonObject newResult(Object id, Object result) {
-        JsonObject response = new JsonObject();
-        response.put("jsonrpc", "2.0");
-        response.put("id", id);
-        response.put("result", result);
-        return response;
     }
 
     static void setJsonContentType(RoutingContext ctx) {

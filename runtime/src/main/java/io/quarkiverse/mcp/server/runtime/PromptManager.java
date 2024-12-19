@@ -30,4 +30,10 @@ public class PromptManager extends FeatureManager<PromptResponse> {
     public List<FeatureMetadata<PromptResponse>> list() {
         return prompts.values().stream().sorted().toList();
     }
+
+    @Override
+    protected McpException notFound(String id) {
+        return new McpException("Invalid prompt name: " + id, JsonRPC.INVALID_PARAMS);
+    }
+
 }

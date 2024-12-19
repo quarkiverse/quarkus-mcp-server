@@ -31,4 +31,9 @@ public class ToolManager extends FeatureManager<ToolResponse> {
         return tools.values().stream().sorted().toList();
     }
 
+    @Override
+    protected McpException notFound(String id) {
+        return new McpException("Invalid tool name: " + id, JsonRPC.INVALID_PARAMS);
+    }
+
 }
