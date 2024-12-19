@@ -24,16 +24,20 @@ Step #1 - add the following dependency to your POM file:
 Step #2 - add server features (prompts, resources and tools) represented by an _annotated business method_ of a CDI bean.
 
 ```java
-import java.nio.file.Files;
-
 import jakarta.inject.Inject;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.TextContent;
 
 // This class is automatically registered as a @Singleton CDI bean
 public class ServerFeatures {
@@ -52,7 +56,7 @@ public class ServerFeatures {
     }
 
     @Resource(uri = "file:///project/alpha")
-    BlobResourceContents alpha(String uri) {
+    BlobResourceContents alpha(String uri) throws IOException{
         return BlobResourceContents.create(uri, Files.readAllBytes(Paths.ALPHA));
     }
 
