@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -86,6 +87,32 @@ public class ServerFeaturesTest {
         assertToolCall(
                 "loop", endpoint, "toLowerCase", new JsonObject()
                         .put("value", "LooP"));
+    }
+
+    @Test
+    public void testResource() throws URISyntaxException {
+        URI endpoint = initClient();
+
+        JsonObject resourceListMessage = newMessage("resources/list");
+
+        JsonObject resourceListResponse = new JsonObject(given()
+                .contentType(ContentType.JSON)
+                .when()
+                .body(resourceListMessage.encode())
+                .post(endpoint)
+                .then()
+                .statusCode(200)
+                .extract().body().asString());
+
+        JsonObject resourceListResult = assertResponseMessage(resourceListMessage, resourceListResponse);
+        assertNotNull(resourceListResult);
+        JsonArray resources = resourceListResult.getJsonArray("resources");
+        assertEquals(1, resources.size());
+
+        assertResource(resources.getJsonObject(0), "alpha", null, "file:///project/alpha", null);
+
+        assertResourceRead(Base64.getMimeEncoder().encodeToString("data".getBytes()), "file:///project/alpha", endpoint,
+                "file:///project/alpha");
     }
 
     protected URI initClient() throws URISyntaxException {
@@ -213,5 +240,39 @@ public class ServerFeaturesTest {
         JsonObject textContent = content.getJsonObject(0);
         assertEquals("text", textContent.getString("type"));
         assertEquals(expectedText, textContent.getString("text"));
+    }
+
+    private void assertResource(JsonObject resource, String name, String description, String uri, String mimeType) {
+        assertEquals(name, resource.getString("name"));
+        if (description != null) {
+            assertEquals(description, resource.getString("description"));
+        }
+        assertEquals(uri, resource.getString("uri"));
+        if (mimeType != null) {
+            assertEquals(description, resource.getString("mimeType"));
+        }
+    }
+
+    private void assertResourceRead(String expectedBlob, String expectedUri, URI endpoint, String uri) {
+        JsonObject resourceReadMessage = newMessage("resources/read")
+                .put("params", new JsonObject()
+                        .put("uri", uri));
+
+        JsonObject resourceReadResponse = new JsonObject(given()
+                .contentType(ContentType.JSON)
+                .when()
+                .body(resourceReadMessage.encode())
+                .post(endpoint)
+                .then()
+                .statusCode(200)
+                .extract().body().asString());
+
+        JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
+        assertNotNull(resourceReadResult);
+        JsonArray contents = resourceReadResult.getJsonArray("contents");
+        assertEquals(1, contents.size());
+        JsonObject blobContent = contents.getJsonObject(0);
+        assertEquals(expectedBlob, blobContent.getString("blob"));
+        assertEquals(expectedUri, blobContent.getString("uri"));
     }
 }

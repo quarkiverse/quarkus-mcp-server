@@ -56,7 +56,7 @@ class ToolMessageHandler {
                     .put("required", required));
             tools.add(tool);
         }
-        responder.sucess(newResult(id, new JsonObject()
+        responder.ok(newResult(id, new JsonObject()
                 .put("tools", tools)));
     }
 
@@ -86,7 +86,7 @@ class ToolMessageHandler {
             public void handle(AsyncResult<ToolResponse> ar) {
                 if (ar.succeeded()) {
                     ToolResponse toolResponse = ar.result();
-                    responder.sucess(newResult(id, toolResponse));
+                    responder.ok(newResult(id, toolResponse));
                 } else {
                     responder.badRequest(ar.cause(), "Unable to call tool %s", toolName);
                 }

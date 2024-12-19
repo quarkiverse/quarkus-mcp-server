@@ -29,7 +29,7 @@ class PromptMessageHandler {
         for (FeatureMetadata<PromptResponse> resource : promptManager.list()) {
             prompts.add(resource.asJson());
         }
-        responder.sucess(newResult(id, new JsonObject()
+        responder.ok(newResult(id, new JsonObject()
                 .put("prompts", prompts)));
     }
 
@@ -52,7 +52,7 @@ class PromptMessageHandler {
                         result.put("description", promptResponse.description());
                     }
                     result.put("messages", promptResponse.messages());
-                    responder.sucess(newResult(id, result));
+                    responder.ok(newResult(id, result));
                 } else {
                     responder.badRequest(ar.cause(), "Unable to obtain prompt %s", promptName);
                 }

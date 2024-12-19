@@ -102,7 +102,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // TODO schema validation?
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
-            responder.sucess(newResult(id, serverInfo));
+            responder.ok(newResult(id, serverInfo));
         } else {
             responder.error("Unable to initialize connection [connectionId: %s]", connection.id());
         }
@@ -112,7 +112,7 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.initialized()) {
-                responder.sucess();
+                responder.ok();
                 LOG.infof("Client successfully initialized [%s]", connection.id());
             }
         } else if (PING.equals(method)) {
@@ -153,13 +153,13 @@ class McpMessagesHandler implements Handler<RoutingContext> {
         // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.infof("Ping [id: %s]", id);
-        responder.sucess(newResult(id, new JsonObject()));
+        responder.ok(newResult(id, new JsonObject()));
     }
 
     private void close(Responder responder, McpConnectionImpl connection) {
         if (connectionManager.remove(connection.id())) {
             LOG.infof("Connection %s closed", connection.id());
-            responder.sucess();
+            responder.ok();
         } else {
             responder.badRequest("Unable to obain connection to be closed: %s", connection.id());
         }
@@ -227,11 +227,11 @@ class McpMessagesHandler implements Handler<RoutingContext> {
             this.ctx = ctx;
         }
 
-        void sucess() {
+        void ok() {
             ctx.end();
         }
 
-        void sucess(JsonObject message) {
+        void ok(JsonObject message) {
             if (trafficLogger != null) {
                 trafficLogger.messageSent(message);
             }
