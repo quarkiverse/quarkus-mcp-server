@@ -15,15 +15,11 @@ class TrafficLogger {
     }
 
     void messageReceived(JsonObject message) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debugf("JSON message received:\n\n%s", messageToString(message));
-        }
+        LOG.infof("JSON message received:\n\n%s", messageToString(message));
     }
 
     void messageSent(JsonObject message) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debugf("JSON message sent:\n\n%s", messageToString(message));
-        }
+        LOG.debugf("JSON message sent:\n\n%s", messageToString(message));
     }
 
     private String messageToString(JsonObject message) {

@@ -7,7 +7,62 @@
 
 _"[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
 
-In this extension, we would like to provide a declarative API that enables developers to implement MCP server features easily.
+This extension provides a declarative API that enables developers to implement the MCP server features easily.
+
+## Get Started
+
+Step #1 - add the following dependency to your POM file:
+
+```xml
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server</artifactId>
+    <version>${project-version}</version>
+</dependency>
+```
+
+Step #2 - add server features (prompts, resources and tools) represented by an _annotated business method_ of a CDI bean.
+
+```java
+import java.nio.file.Files;
+
+import jakarta.inject.Inject;
+
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Resource;
+
+// This class is automatically registered as a @Singleton CDI bean
+public class ServerFeatures {
+
+    @Inject
+    CodeService codeService;
+
+    @Tool
+    TextContent toLowerCase(String value) {
+        return new TextContent(value.toLowerCase());
+    }
+
+    @Prompt(name = "code_assist")
+    PromptMessage codeAssist(@PromptArg(name = "lang") String language) {
+        return PromptMessage.withUserRole(new TextContent(codeService.assist(language)));
+    }
+
+    @Resource(uri = "file:///project/alpha")
+    BlobResourceContents alpha(String uri) {
+        return BlobResourceContents.create(uri, Files.readAllBytes(Paths.ALPHA));
+    }
+
+}
+```
+
+Step #3 - run your Quarkus app!
+
+Read the full [documentation](https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html).
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):

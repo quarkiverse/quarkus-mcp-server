@@ -31,7 +31,7 @@ class ResourceMessageHandler {
         for (FeatureMetadata<ResourceResponse> resource : resourceManager.list()) {
             resources.add(resource.asJson());
         }
-        responder.sucess(newResult(id, new JsonObject()
+        responder.ok(newResult(id, new JsonObject()
                 .put("resources", resources)));
     }
 
@@ -53,7 +53,7 @@ class ResourceMessageHandler {
             public void handle(AsyncResult<ResourceResponse> ar) {
                 if (ar.succeeded()) {
                     ResourceResponse resourceResponse = ar.result();
-                    responder.sucess(newResult(id, resourceResponse));
+                    responder.ok(newResult(id, resourceResponse));
                 } else {
                     responder.badRequest(ar.cause(), "Unable to read resource %s", resourceUri);
                 }

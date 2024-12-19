@@ -8,7 +8,7 @@ This extension provides a declarative API that enables developers to implement t
 
 == Installation
 
-If you want to use this extension, you need to add the `io.quarkiverse.mcp:quarkus-mcp-server` extension first to your build file.
+If you want to use this extension, you need to add the `io.quarkiverse.mcp:quarkus-mcp-server` extension to your build file first.
 
 For instance, with Maven, add the following dependency to your POM file:
 
@@ -17,14 +17,20 @@ For instance, with Maven, add the following dependency to your POM file:
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server</artifactId>
-    <version>{project-version}</version>
+    <version>${project-version}</version>
 </dependency>
 ----
 
-== Supported server features
+== Supported Server Features
 
-A server feature (prompt, resource, or tool) is represented by an _annotated business method_ of a CDI bean.
-Blocking and non-blocking logic is supported.
+An https://spec.modelcontextprotocol.io/specification/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
+In this extension, a _server feature_ (prompt, resource, tool) is represented by an _annotated business method_ of a CDI bean.
+The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
+For example, when a server feature is executed the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
+
+=== Execution Model
+
+A server feature method may use blocking or non-blocking logic.
 The execution model is determined by the method signature and additional annotations such as `@Blocking` and `@NonBlocking`.
 
 * Methods annotated with `@RunOnVirtualThread`, `@Blocking` or `@Transactional` are considered blocking.
@@ -51,6 +57,7 @@ MCP provides a https://spec.modelcontextprotocol.io/specification/server/prompts
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import jakarta.inject.Inject;
 
 // @Singleton <1>
 public class MyPrompts {
@@ -88,7 +95,37 @@ In other words, the return type must be one of the following list:
 
 === Resources
 
-TODO
+MCP provides a https://spec.modelcontextprotocol.io/specification/server/resources/[standardized way] for servers to expose resources to clients.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import jakarta.inject.Inject;
+import java.nio.file.Files;
+
+// @Singleton <1>
+public class MyResources {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Resource(uri = "file:///project/alpha") <3>
+    BlobResourceContents alpha(String uri) {
+        return BlobResourceContents.create(uri, Files.readAllBytes(Paths.ALPHA));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyResources` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Resource` annotates a business method of a CDI bean that should be exposed as a resource. By default, the name of the resource is derived from the method name.
+
+The result of a "resource read" operation is always represented as a `ResourceResponse`.
+However, the annotated method can also return other types that are converted according to the following rules.
+
+* If the method returns an implementation of `ResourceContents` then the reponse contains the single contents object.
+* If the method returns a `List` of `ResourceContents` implementations then the reponse contains the list of contents objects.
+* The method may return a `Uni` that wraps any of the type mentioned above.
 
 === Tools
 
@@ -99,6 +136,7 @@ MCP provides a https://spec.modelcontextprotocol.io/specification/server/tools/[
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Inject;
 
 // @Singleton <1>
 public class MyTools {
@@ -125,9 +163,21 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns a `List` of `Content` implementations then the reponse is "success" and contains the list of content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
-=== Utilities
+== Traffic Logging
 
-TODO
+The extension can log JSON messages sent and received for debugging purposes.
+To enable traffic logging, set the `quarkus.mcp.server.traffic-logging.enabled` configuration property to `true`.
+Note that the number of logged characters is limited.
+The default limit is 100, but you can change this limit with the `quarkus.mcp.server.traffic-logging.text-limit` configuration property.
+
+.Example server configuration
+[source, properties]
+----
+quarkus.mcp.server.traffic-logging.enabled=true <1>
+quarkus.mcp.server.traffic-logging.text-limit=50 <2>
+----
+<1> Enables traffic logging.
+<2> Set the number of characters of a JSON message which will be logged.
 
 [[extension-configuration-reference]]
 == Extension Configuration Reference

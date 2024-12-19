@@ -28,12 +28,16 @@ import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 import org.jboss.jandex.Type.Kind;
 
+import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContent;
+import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -282,7 +286,8 @@ class McpServerProcessor {
         }
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
                 ResourceContent.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
-                FeatureArgument.class).methods().build());
+                FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
+                BlobResourceContents.class).methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
     }
