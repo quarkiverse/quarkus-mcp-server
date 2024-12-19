@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URISyntaxException;
 
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -25,7 +26,8 @@ public class DefaultServerInfoTest extends McpServerTest {
             JsonObject serverInfo = result.getJsonObject("serverInfo");
             assertNotNull(serverInfo);
             assertEquals("quarkus-mcp-server-deployment", serverInfo.getString("name"));
-            assertEquals("999-SNAPSHOT", serverInfo.getString("version"));
+            assertEquals(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class).orElseThrow(),
+                    serverInfo.getString("version"));
         });
     }
 }
