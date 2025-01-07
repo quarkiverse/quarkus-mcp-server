@@ -1,0 +1,49 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`quarkus.mcp.server.server-info.name`]##
+
+[.description]
+--
+The name of the server is included in the response to an `initialize` request as defined by the
+https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+By default, the value of the `quarkus.application.name` config property is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_NAME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_NAME+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-version]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-version[`quarkus.mcp.server.server-info.version`]##
+
+[.description]
+--
+The version of the server is included in the response to an `initialize` request as defined by the
+https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+By default, the value of the `quarkus.application.version` config property is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_VERSION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_VERSION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+|===
+
