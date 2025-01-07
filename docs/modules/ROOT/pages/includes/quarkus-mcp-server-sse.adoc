@@ -1,0 +1,62 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-mcp-server-sse-root-path]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-mcp-server-sse-root-path[`quarkus.mcp.server.sse.root-path`]##
+
+[.description]
+--
+The root path.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SSE_ROOT_PATH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SSE_ROOT_PATH+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|`/mcp`
+
+a| [[quarkus-mcp-server-sse_quarkus-mcp-server-sse-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-mcp-server-sse-traffic-logging-enabled[`quarkus.mcp.server.sse.traffic-logging.enabled`]##
+
+[.description]
+--
+If set to true then JSON messages received/sent are logged.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SSE_TRAFFIC_LOGGING_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SSE_TRAFFIC_LOGGING_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`false`
+
+a| [[quarkus-mcp-server-sse_quarkus-mcp-server-sse-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-mcp-server-sse-traffic-logging-text-limit[`quarkus.mcp.server.sse.traffic-logging.text-limit`]##
+
+[.description]
+--
+The number of characters of a text message which will be logged if traffic logging is enabled.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SSE_TRAFFIC_LOGGING_TEXT_LIMIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SSE_TRAFFIC_LOGGING_TEXT_LIMIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`100`
+
+|===
+
