@@ -6,31 +6,46 @@ _"https://modelcontextprotocol.io/[Model Context Protocol]  (MCP) is an open pro
 
 This extension provides a declarative API that enables developers to implement the MCP server features easily.
 
-IMPORTANT: Currently, only the https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse[HTTP/SSE] transport is supported. 
+== Supported transports
 
-== Installation
+MCP currently defines two standard transports for client-server communication.
+This extension supports both transports and defines a unified declarative API.
+In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
 
-If you want to use this extension, you need to add the `io.quarkiverse.mcp:quarkus-mcp-server` extension to your build file first.
-
+If you want to use the https://spec.modelcontextprotocol.io/specification/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
 ----
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <artifactId>quarkus-mcp-server</artifactId>
+    <artifactId>quarkus-mcp-server-stdio</artifactId>
     <version>{project-version}</version>
 </dependency>
 ----
 
-== Supported Server Features
+IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Logging in the console is automatically disabled. And the standard output stream is set to "null" when the app is started by default. 
+
+If you want to use the https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse[HTTP/SSE] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-sse</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+== Supported server features
 
 An https://spec.modelcontextprotocol.io/specification/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
 In this extension, a _server feature_ (prompt, resource, tool) is represented by an _annotated business method_ of a CDI bean.
 The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
 For example, when a server feature is executed the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
 
-=== Execution Model
+=== Execution model
 
 A server feature method may use blocking or non-blocking logic.
 The execution model is determined by the method signature and additional annotations such as `@Blocking` and `@NonBlocking`.
@@ -165,7 +180,7 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns a `List` of `Content` implementations then the reponse is "success" and contains the list of content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
-== Traffic Logging
+== Traffic logging
 
 The extension can log JSON messages sent and received for debugging purposes.
 To enable traffic logging, set the `quarkus.mcp.server.traffic-logging.enabled` configuration property to `true`.
@@ -182,8 +197,10 @@ quarkus.mcp.server.traffic-logging.text-limit=50 <2>
 <2> Set the number of characters of a JSON message which will be logged.
 
 [[extension-configuration-reference]]
-== Extension Configuration Reference
+== Extension configuration reference
 
-TIP: Remove this section if you don't have Quarkus configuration properties in your extension.
+include::includes/quarkus-mcp-server-core.adoc[leveloffset=+1, opts=optional]
 
-include::includes/quarkus-mcp-server.adoc[leveloffset=+1, opts=optional]
+include::includes/quarkus-mcp-server-stdio.adoc[leveloffset=+1, opts=optional]
+
+include::includes/quarkus-mcp-server-sse.adoc[leveloffset=+1, opts=optional]

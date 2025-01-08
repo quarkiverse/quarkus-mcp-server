@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.sse.runtime;
+package io.quarkiverse.mcp.server.stdio.runtime;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,8 +34,8 @@ class StdioMcpMessageHandler extends McpMessageHandler {
         this.executor = Executors.newSingleThreadExecutor();
     }
 
-    void initialize() {
-        StdioResponder responder = new StdioResponder(System.out);
+    void initialize(PrintStream stdout) {
+        StdioResponder responder = new StdioResponder(stdout);
         StdioMcpConnection connection = new StdioMcpConnection(
                 Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes()));
         InputStream in = System.in;
