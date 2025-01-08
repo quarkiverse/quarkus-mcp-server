@@ -15,7 +15,7 @@ public class SseMcpConnection extends McpConnectionBase {
     public void sendEvent(String name, String data) {
         response.write("event: " + name + "\n");
         response.write("data: " + data + "\n");
-        response.write("\n\n");
+        response.write("\n");
     }
 
 }

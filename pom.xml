@@ -17,6 +17,7 @@
         <module>core</module>
         <module>transports/sse</module>
         <module>transports/stdio</module>
+        <module>test-utils</module>
     </modules>
 
     <scm>

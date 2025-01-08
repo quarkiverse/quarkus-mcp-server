@@ -9,7 +9,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -18,7 +17,7 @@ public class DefaultServerInfoTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class));
+            .withEmptyApplication();
 
     @Test
     public void testServerInfo() throws URISyntaxException {

@@ -49,13 +49,6 @@ public class SseMcpServerRecorder {
 
             @Override
             public void handle(RoutingContext ctx) {
-                String contentType = ctx.request().getHeader(HttpHeaders.CONTENT_TYPE);
-                if (!"text/event-stream".equals(contentType)) {
-                    LOG.errorf("Invalid content type: %s", contentType);
-                    ctx.fail(400);
-                    return;
-                }
-
                 HttpServerResponse response = ctx.response();
                 response.setChunked(true);
                 response.headers().add(HttpHeaders.TRANSFER_ENCODING, "chunked");

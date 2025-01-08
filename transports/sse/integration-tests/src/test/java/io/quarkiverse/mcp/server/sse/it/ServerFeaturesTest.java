@@ -7,24 +7,28 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Base64;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.test.SseClient;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @QuarkusTest
 public class ServerFeaturesTest {
 
+    private static final Logger LOG = Logger.getLogger(ServerFeaturesTest.class);
+
     @TestHTTPResource
     URI testUri;
 
-    AtomicInteger idGenerator = new AtomicInteger();
+    SseClient sseClient;
 
     @Test
     public void testPrompt() throws URISyntaxException {
@@ -32,14 +36,14 @@ public class ServerFeaturesTest {
 
         JsonObject promptListMessage = newMessage("prompts/list");
 
-        JsonObject promptListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(promptListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject promptListResponse = lastEventToJson();
 
         JsonObject promptListResult = assertResponseMessage(promptListMessage, promptListResponse);
         assertNotNull(promptListResult);
@@ -62,14 +66,14 @@ public class ServerFeaturesTest {
 
         JsonObject toolListMessage = newMessage("tools/list");
 
-        JsonObject toolListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(toolListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject toolListResponse = lastEventToJson();
 
         JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
@@ -95,14 +99,14 @@ public class ServerFeaturesTest {
 
         JsonObject resourceListMessage = newMessage("resources/list");
 
-        JsonObject resourceListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(resourceListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject resourceListResponse = lastEventToJson();
 
         JsonObject resourceListResult = assertResponseMessage(resourceListMessage, resourceListResponse);
         assertNotNull(resourceListResult);
@@ -116,13 +120,15 @@ public class ServerFeaturesTest {
     }
 
     protected URI initClient() throws URISyntaxException {
-        URI endpoint = new URI(given().baseUri(testUri.toString())
-                .contentType(ContentType.TEXT)
-                .when()
-                .get("test-init-mcp-client")
-                .then()
-                .statusCode(200)
-                .extract().body().asString());
+        String testUriStr = testUri.toString();
+        if (testUriStr.endsWith("/")) {
+            testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
+        }
+        sseClient = new SseClient(URI.create(testUriStr + "/mcp/sse"));
+        sseClient.connect();
+        var event = sseClient.waitForFirstEvent();
+        String messagesUri = testUriStr + event.data().strip();
+        URI endpoint = URI.create(messagesUri);
 
         JsonObject initMessage = newMessage("initialize")
                 .put("params",
@@ -132,14 +138,14 @@ public class ServerFeaturesTest {
                                         .put("version", "1.0"))
                                 .put("protocolVersion", "2024-11-05"));
 
-        JsonObject initResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(initMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject initResponse = lastEventToJson();
 
         JsonObject initResult = assertResponseMessage(initMessage, initResponse);
         assertNotNull(initResult);
@@ -159,6 +165,17 @@ public class ServerFeaturesTest {
         return endpoint;
     }
 
+    private JsonObject lastEventToJson() {
+        SseClient.SseEvent event = null;
+        try {
+            event = sseClient.waitForLastEvent();
+            return new JsonObject(event.data());
+        } catch (DecodeException e) {
+            LOG.errorf("Error parsing:\n%s", event);
+            throw e;
+        }
+    }
+
     protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
         assertEquals(message.getInteger("id"), response.getInteger("id"));
         assertEquals("2.0", response.getString("jsonrpc"));
@@ -166,10 +183,13 @@ public class ServerFeaturesTest {
     }
 
     protected JsonObject newMessage(String method) {
+        if (sseClient == null) {
+            throw new IllegalStateException();
+        }
         return new JsonObject()
                 .put("jsonrpc", "2.0")
                 .put("method", method)
-                .put("id", idGenerator.incrementAndGet());
+                .put("id", sseClient.nextId());
     }
 
     private void assertPrompt(JsonObject prompt, String name, String description, Consumer<JsonArray> argumentsAsserter) {
@@ -188,14 +208,14 @@ public class ServerFeaturesTest {
                         .put("name", name)
                         .put("arguments", arguments));
 
-        JsonObject promptGetResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(promptGetMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject promptGetResponse = lastEventToJson();
 
         JsonObject promptGetResult = assertResponseMessage(promptGetMessage, promptGetResponse);
         assertNotNull(promptGetResult);
@@ -224,14 +244,14 @@ public class ServerFeaturesTest {
                         .put("name", name)
                         .put("arguments", arguments));
 
-        JsonObject toolGetResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(toolGetMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject toolGetResponse = lastEventToJson();
 
         JsonObject toolGetResult = assertResponseMessage(toolGetMessage, toolGetResponse);
         assertNotNull(toolGetResult);
@@ -258,14 +278,14 @@ public class ServerFeaturesTest {
                 .put("params", new JsonObject()
                         .put("uri", uri));
 
-        JsonObject resourceReadResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(resourceReadMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject resourceReadResponse = lastEventToJson();
 
         JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
         assertNotNull(resourceReadResult);
