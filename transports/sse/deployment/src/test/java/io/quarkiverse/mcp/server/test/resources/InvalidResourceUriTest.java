@@ -1,7 +1,7 @@
 package io.quarkiverse.mcp.server.test.resources;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.Checks;
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.http.ContentType;
@@ -22,7 +21,7 @@ public class InvalidResourceUriTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(McpClient.class, Checks.class, MyResources.class));
+                    root -> root.addClasses(Checks.class, MyResources.class));
 
     @Test
     public void testError() throws URISyntaxException {
@@ -38,9 +37,11 @@ public class InvalidResourceUriTest extends McpServerTest {
                 .body(message.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .body("error.code", equalTo(JsonRPC.RESOURCE_NOT_FOUND), "error.message",
-                        equalTo("Invalid resource uri: file:///nonexistent"));
+                .statusCode(200);
+
+        JsonObject response = waitForLastJsonMessage();
+        assertEquals(JsonRPC.RESOURCE_NOT_FOUND, response.getJsonObject("error").getInteger("code"));
+        assertEquals("Invalid resource uri: file:///nonexistent", response.getJsonObject("error").getString("message"));
     }
 
 }

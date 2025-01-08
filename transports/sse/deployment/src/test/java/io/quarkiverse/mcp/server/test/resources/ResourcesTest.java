@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.Checks;
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.http.ContentType;
@@ -23,7 +22,7 @@ public class ResourcesTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(McpClient.class, MyResources.class, Checks.class));
+                    root -> root.addClasses(MyResources.class, Checks.class));
 
     @Test
     public void testResources() throws URISyntaxException {
@@ -31,14 +30,14 @@ public class ResourcesTest extends McpServerTest {
 
         JsonObject resourcesListMessage = newMessage("resources/list");
 
-        JsonObject resourcesListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(resourcesListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject resourcesListResponse = waitForLastJsonMessage();
 
         JsonObject resourcesListResult = assertResponseMessage(resourcesListMessage, resourcesListResponse);
         assertNotNull(resourcesListResult);
@@ -73,14 +72,14 @@ public class ResourcesTest extends McpServerTest {
                 .put("params", new JsonObject()
                         .put("uri", uri));
 
-        JsonObject resourceReadResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(resourceReadMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject resourceReadResponse = waitForLastJsonMessage();
 
         JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
         assertNotNull(resourceReadResult);

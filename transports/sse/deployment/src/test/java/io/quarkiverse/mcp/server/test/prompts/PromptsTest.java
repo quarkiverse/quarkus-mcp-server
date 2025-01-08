@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
@@ -26,7 +25,7 @@ public class PromptsTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(McpClient.class, FooService.class, Options.class, Checks.class, MyPrompts.class));
+                    root -> root.addClasses(FooService.class, Options.class, Checks.class, MyPrompts.class));
 
     @Test
     public void testPrompts() throws URISyntaxException {
@@ -34,14 +33,14 @@ public class PromptsTest extends McpServerTest {
 
         JsonObject promptListMessage = newMessage("prompts/list");
 
-        JsonObject promptListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(promptListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject promptListResponse = waitForLastJsonMessage();
 
         JsonObject promptListResult = assertResponseMessage(promptListMessage, promptListResponse);
         assertNotNull(promptListResult);
@@ -91,14 +90,14 @@ public class PromptsTest extends McpServerTest {
                         .put("name", name)
                         .put("arguments", arguments));
 
-        JsonObject promptGetResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(promptGetMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject promptGetResponse = waitForLastJsonMessage();
 
         JsonObject promptGetResult = assertResponseMessage(promptGetMessage, promptGetResponse);
         assertNotNull(promptGetResult);

@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
@@ -26,7 +25,7 @@ public class ToolsTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(McpClient.class, FooService.class, Options.class, Checks.class, MyTools.class));
+                    root -> root.addClasses(FooService.class, Options.class, Checks.class, MyTools.class));
 
     @Test
     public void testTools() throws URISyntaxException {
@@ -34,14 +33,14 @@ public class ToolsTest extends McpServerTest {
 
         JsonObject toolListMessage = newMessage("tools/list");
 
-        JsonObject toolListResponse = new JsonObject(given()
-                .contentType(ContentType.JSON)
+        given().contentType(ContentType.JSON)
                 .when()
                 .body(toolListMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject toolListResponse = waitForLastJsonMessage();
 
         JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
@@ -91,14 +90,15 @@ public class ToolsTest extends McpServerTest {
                         .put("name", name)
                         .put("arguments", arguments));
 
-        JsonObject toolGetResponse = new JsonObject(given()
+        given()
                 .contentType(ContentType.JSON)
                 .when()
                 .body(toolGetMessage.encode())
                 .post(endpoint)
                 .then()
-                .statusCode(200)
-                .extract().body().asString());
+                .statusCode(200);
+
+        JsonObject toolGetResponse = waitForLastJsonMessage();
 
         JsonObject toolGetResult = assertResponseMessage(toolGetMessage, toolGetResponse);
         assertNotNull(toolGetResult);

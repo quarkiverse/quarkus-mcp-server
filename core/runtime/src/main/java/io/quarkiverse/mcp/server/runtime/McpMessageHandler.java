@@ -79,7 +79,6 @@ public class McpMessageHandler {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
-                responder.send(null);
                 LOG.infof("Client successfully initialized [%s]", connection.id());
             }
         } else if (PING.equals(method)) {
@@ -128,7 +127,6 @@ public class McpMessageHandler {
     private void close(JsonObject message, Responder responder, McpConnection connection) {
         if (connectionManager.remove(connection.id())) {
             LOG.infof("Connection %s closed", connection.id());
-            responder.send(null);
         } else {
             responder.sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Unable to obtain the connection to be closed:" + connection.id());

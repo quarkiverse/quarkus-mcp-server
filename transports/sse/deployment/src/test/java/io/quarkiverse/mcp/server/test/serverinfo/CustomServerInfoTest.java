@@ -8,7 +8,6 @@ import java.net.URISyntaxException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.test.McpClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -20,7 +19,7 @@ public class CustomServerInfoTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClasses(McpClient.class))
+            .withEmptyApplication()
             .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
             .overrideConfigKey("quarkus.mcp.server.server-info.version", VERSION);
 

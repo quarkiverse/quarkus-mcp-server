@@ -34,24 +34,26 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
 
     @Override
     public void handle(RoutingContext ctx) {
-        SseResponder responder = new SseResponder(trafficLogger, ctx);
         HttpServerRequest request = ctx.request();
         String connectionId = ctx.pathParam("id");
         if (connectionId == null) {
-            responder.badRequest("Connection id is missing");
+            LOG.errorf("Connection id is missing: %s", ctx.normalizedPath());
+            ctx.fail(400);
             return;
         }
         if (request.method() != HttpMethod.POST) {
             ctx.response().putHeader(HttpHeaders.ALLOW, "POST");
-            responder.failure(405, "Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), connectionId);
+            LOG.errorf("Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), connectionId);
+            ctx.fail(405);
             return;
         }
         McpConnection connection = connectionManager.get(connectionId);
         if (connection == null) {
-            responder.sendError(null, JsonRPC.INTERNAL_ERROR,
-                    "Unable to obtain the connection: " + connectionId);
+            LOG.errorf("Connection not found: %s", connectionId);
+            ctx.fail(400);
             return;
         }
+        SseResponder responder = new SseResponder(trafficLogger, (SseMcpConnection) connection);
 
         JsonObject message;
         try {
@@ -60,6 +62,7 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
             String msg = "Unable to parse the JSON message";
             LOG.errorf(e, msg);
             responder.sendError(null, JsonRPC.PARSE_ERROR, msg);
+            ctx.end();
             return;
         }
         if (trafficLogger != null) {
@@ -68,43 +71,28 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
         if (JsonRPC.validate(message, responder)) {
             handle(message, connection, responder);
         }
+        ctx.end();
     }
 
     class SseResponder implements Responder {
 
-        final RoutingContext ctx;
+        final SseMcpConnection connection;
         final TrafficLogger trafficLogger;
 
-        SseResponder(TrafficLogger trafficLogger, RoutingContext ctx) {
+        SseResponder(TrafficLogger trafficLogger, SseMcpConnection connection) {
             this.trafficLogger = trafficLogger;
-            this.ctx = ctx;
+            this.connection = connection;
         }
 
         @Override
         public void send(JsonObject message) {
             if (message == null) {
-                ctx.end();
                 return;
             }
             if (trafficLogger != null) {
                 trafficLogger.messageSent(message);
             }
-            setJsonContentType(ctx);
-            ctx.end(message.toBuffer());
-        }
-
-        public void badRequest(String logMessage, Object... params) {
-            LOG.errorf(logMessage, params);
-            ctx.fail(400);
-        }
-
-        public void failure(int statusCode, String logMessage, Object... params) {
-            LOG.errorf(logMessage, params);
-            ctx.fail(statusCode);
-        }
-
-        private void setJsonContentType(RoutingContext ctx) {
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            connection.sendEvent("message", message.encode());
         }
 
     }
