@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.sse.runtime;
+package io.quarkiverse.mcp.server.stdio.runtime;
 
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 
