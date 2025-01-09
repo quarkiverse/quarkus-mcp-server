@@ -63,11 +63,11 @@ class StdioMcpMessageHandler extends McpMessageHandler {
         });
     }
 
-    class StdioResponder implements Responder {
+    private static class StdioResponder implements Responder {
 
-        final PrintStream out;
+        private final PrintStream out;
 
-        StdioResponder(PrintStream out) {
+        private StdioResponder(PrintStream out) {
             this.out = out;
         }
 
