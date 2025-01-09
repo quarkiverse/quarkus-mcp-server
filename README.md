@@ -16,7 +16,7 @@ Step #1 - add the following dependency to your POM file:
 ```xml
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <artifactId>quarkus-mcp-server</artifactId>
+    <artifactId>quarkus-mcp-server-sse</artifactId> <!-- use 'quarkus-mcp-server-stdio' if you want to use the STDIO transport instead of the SSE transport -->
     <version>${project-version}</version>
 </dependency>
 ```
@@ -64,10 +64,6 @@ public class ServerFeatures {
 ```
 
 Step #3 - run your Quarkus app!
-
-> [!NOTE]  
-> Currently, only the [HTTP/SSE](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) transport is supported.  
-
 
 Read the full [documentation](https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html).
 
