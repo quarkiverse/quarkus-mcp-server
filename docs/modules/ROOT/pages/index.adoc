@@ -84,7 +84,7 @@ public class MyPrompts {
 
     @Prompt(description = "Put you description here.") <3>
     PromptMessage foo(@PromptArg(description = "The name") String name) { <4>
-        return PromptMessage.withUserRole(new TextContent(fooService.ping(name));
+        return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
     }
 
 }
