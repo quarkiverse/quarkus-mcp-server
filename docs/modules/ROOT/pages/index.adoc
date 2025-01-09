@@ -176,8 +176,9 @@ public class MyTools {
 A result of a "tool call" operation is always represented as a `ToolResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
+* If the method returns `java.lang.String` then the reponse is "success" and contains the single `TextContent` object.
 * If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the reponse is "success" and contains the single content object.
-* If the method returns a `List` of `Content` implementations then the reponse is "success" and contains the list of content objects.
+* If the method returns a `List` of `Content` implementations or `String`s then the reponse is "success" and contains the list of relevant content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
 == Traffic logging

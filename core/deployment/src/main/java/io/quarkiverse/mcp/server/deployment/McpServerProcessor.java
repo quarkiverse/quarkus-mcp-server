@@ -279,10 +279,10 @@ class McpServerProcessor {
 
     private void validatePromptMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
-        if (DotNames.UNI.equals(type.name())) {
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
-        if (DotNames.LIST.equals(type.name())) {
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!PROMPT_TYPES.contains(type)) {
@@ -292,14 +292,15 @@ class McpServerProcessor {
 
     private static final Set<org.jboss.jandex.Type> TOOL_TYPES = Set.of(ClassType.create(DotNames.TOOL_RESPONSE),
             ClassType.create(DotNames.CONTENT), ClassType.create(DotNames.TEXT_CONTENT),
-            ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.RESOURCE_CONTENT));
+            ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.RESOURCE_CONTENT),
+            ClassType.create(DotNames.STRING));
 
     private void validateToolMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
-        if (DotNames.UNI.equals(type.name())) {
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
-        if (DotNames.LIST.equals(type.name())) {
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!TOOL_TYPES.contains(type)) {
@@ -313,10 +314,10 @@ class McpServerProcessor {
 
     private void validateResourceMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
-        if (DotNames.UNI.equals(type.name())) {
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
-        if (DotNames.LIST.equals(type.name())) {
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!RESOURCE_TYPES.contains(type)) {
@@ -439,7 +440,12 @@ class McpServerProcessor {
             return resultMapper(bytecode, "TO_UNI");
         } else if (isContent(returnType.name())) {
             return resultMapper(bytecode, "TOOL_CONTENT");
+        } else if (returnType.name().equals(DotNames.STRING)) {
+            return resultMapper(bytecode, "TOOL_STRING");
         } else if (returnType.name().equals(DotNames.LIST)) {
+            if (returnType.asParameterizedType().arguments().get(0).name().equals(DotNames.STRING)) {
+                return resultMapper(bytecode, "TOOL_LIST_STRING");
+            }
             return resultMapper(bytecode, "TOOL_LIST_CONTENT");
         } else if (returnType.name().equals(DotNames.UNI)) {
             org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
@@ -447,7 +453,12 @@ class McpServerProcessor {
                 return resultMapper(bytecode, "IDENTITY");
             } else if (isContent(typeArg.name())) {
                 return resultMapper(bytecode, "TOOL_UNI_CONTENT");
+            } else if (typeArg.name().equals(DotNames.STRING)) {
+                return resultMapper(bytecode, "TOOL_UNI_STRING");
             } else if (typeArg.name().equals(DotNames.LIST)) {
+                if (typeArg.asParameterizedType().arguments().get(0).name().equals(DotNames.STRING)) {
+                    return resultMapper(bytecode, "TOOL_UNI_LIST_STRING");
+                }
                 return resultMapper(bytecode, "TOOL_UNI_LIST_CONTENT");
             }
         }

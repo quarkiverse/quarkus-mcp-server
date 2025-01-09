@@ -4,6 +4,8 @@ import static io.quarkiverse.mcp.server.test.Checks.checkDuplicatedContext;
 import static io.quarkiverse.mcp.server.test.Checks.checkExecutionModel;
 import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
+import java.util.List;
+
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.Content;
@@ -53,4 +55,37 @@ public class MyTools {
         checkRequestContext();
         return Uni.createFrom().item(new TextContent(fooService.ping(price + "", 1, new Options(true))));
     }
+
+    @Tool
+    String charlie() {
+        checkExecutionModel(true);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return "charlie1";
+    }
+
+    @Tool
+    Uni<String> uni_charlie() {
+        checkExecutionModel(false);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return Uni.createFrom().item("charlie2");
+    }
+
+    @Tool
+    List<String> list_charlie() {
+        checkExecutionModel(true);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return List.of("charlie3");
+    }
+
+    @Tool
+    Uni<List<String>> uni_list_charlie() {
+        checkExecutionModel(false);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return Uni.createFrom().item(List.of("charlie4"));
+    }
+
 }
