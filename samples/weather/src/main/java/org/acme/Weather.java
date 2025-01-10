@@ -43,7 +43,7 @@ public class Weather {
                                 Wind: {p.windSpeed} {p.windDirection}
                                 Forecast: {p.detailedForecast}
                                 """,
-                        Map.of("p", period)).toString();
+                        Map.of("p", period));
             }).collect(Collectors.joining("\n---\n"));
     }
 
@@ -57,7 +57,7 @@ public class Weather {
                                 Description: {p.description}
                                 Instructions: {p.instruction}
                                 """,
-                        Map.of("p", feature.properties())).toString();
+                        Map.of("p", feature.properties()));
             }).collect(Collectors.joining("\n---\n"));
     }
 
@@ -76,7 +76,7 @@ public class Weather {
         Forecast getForecast(@Url String url);
     }
 
-    static record Properties(
+    public record Properties(
             String id,
             String areaDesc,
             String event,
@@ -85,14 +85,14 @@ public class Weather {
             String instruction) {
     }
 
-    static record Feature(
+    public record Feature(
             String id,
             String type,
             Object geometry,
             Properties properties) {
     }
 
-    static record Alerts(
+    public record Alerts(
             List<String> context,
             String type,
             List<Feature> features,
@@ -100,7 +100,7 @@ public class Weather {
             String updated) {
     }
 
-    static record Period(
+    public record Period(
             String name,
             int temperature,
             String temperatureUnit,
@@ -109,11 +109,11 @@ public class Weather {
             String detailedForecast) {
     }
 
-    static record ForecastProperties(
+    public record ForecastProperties(
             List<Period> periods) {
     }
 
-    static record Forecast(
+    public record Forecast(
             ForecastProperties properties) {
     }
 
