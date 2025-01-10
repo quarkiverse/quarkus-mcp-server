@@ -1,24 +1,24 @@
-package io.quarkiverse.mcp.server.sse.runtime;
+package io.quarkiverse.mcp.server.runtime;
 
 import org.jboss.logging.Logger;
 
 import io.vertx.core.json.JsonObject;
 
-class TrafficLogger {
+public class TrafficLogger {
 
-    private static final Logger LOG = Logger.getLogger("io.quarkus.mcp.server.sse.traffic");
+    private static final Logger LOG = Logger.getLogger("io.quarkus.mcp.server.traffic");
 
     private final int textPayloadLimit;
 
-    TrafficLogger(int textPayloadLimit) {
+    public TrafficLogger(int textPayloadLimit) {
         this.textPayloadLimit = textPayloadLimit;
     }
 
-    void messageReceived(JsonObject message) {
+    public void messageReceived(JsonObject message) {
         LOG.infof("JSON message received:\n\n%s", messageToString(message));
     }
 
-    void messageSent(JsonObject message) {
+    public void messageSent(JsonObject message) {
         LOG.infof("JSON message sent:\n\n%s", messageToString(message));
     }
 

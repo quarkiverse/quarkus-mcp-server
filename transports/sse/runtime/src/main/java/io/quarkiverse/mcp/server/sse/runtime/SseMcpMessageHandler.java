@@ -10,8 +10,8 @@ import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.Responder;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
-import io.quarkiverse.mcp.server.sse.runtime.config.McpSseRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -26,9 +26,9 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
     private final TrafficLogger trafficLogger;
 
     protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager, McpSseRuntimeConfig sseConfig) {
+            ToolManager toolManager, ResourceManager resourceManager) {
         super(config, connectionManager, promptManager, toolManager, resourceManager);
-        this.trafficLogger = sseConfig.trafficLogging().enabled() ? new TrafficLogger(sseConfig.trafficLogging().textLimit())
+        this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;
     }
 
@@ -53,7 +53,7 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
             ctx.fail(400);
             return;
         }
-        SseResponder responder = new SseResponder(trafficLogger, (SseMcpConnection) connection);
+        SseResponder responder = new SseResponder((SseMcpConnection) connection);
 
         JsonObject message;
         try {
@@ -74,13 +74,11 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
         ctx.end();
     }
 
-    class SseResponder implements Responder {
+    private class SseResponder implements Responder {
 
         final SseMcpConnection connection;
-        final TrafficLogger trafficLogger;
 
-        SseResponder(TrafficLogger trafficLogger, SseMcpConnection connection) {
-            this.trafficLogger = trafficLogger;
+        SseResponder(SseMcpConnection connection) {
             this.connection = connection;
         }
 
