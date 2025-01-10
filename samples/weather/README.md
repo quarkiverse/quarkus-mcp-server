@@ -1,4 +1,4 @@
-# Weather Model Context Protocol Server
+# Weather MCP Server
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
