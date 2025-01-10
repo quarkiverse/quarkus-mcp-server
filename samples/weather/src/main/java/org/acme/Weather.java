@@ -43,7 +43,7 @@ public class Weather {
                                 Wind: {p.windSpeed} {p.windDirection}
                                 Forecast: {p.detailedForecast}
                                 """,
-                        Map.of("p", period)).toString();
+                        Map.of("p", period));
             }).collect(Collectors.joining("\n---\n"));
     }
 
@@ -57,7 +57,7 @@ public class Weather {
                                 Description: {p.description}
                                 Instructions: {p.instruction}
                                 """,
-                        Map.of("p", feature.properties())).toString();
+                        Map.of("p", feature.properties()));
             }).collect(Collectors.joining("\n---\n"));
     }
 
