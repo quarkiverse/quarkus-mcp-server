@@ -13,11 +13,13 @@ import java.util.concurrent.Executors;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.Responder;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -28,10 +30,14 @@ class StdioMcpMessageHandler extends McpMessageHandler {
 
     private final ExecutorService executor;
 
+    private final TrafficLogger trafficLogger;
+
     protected StdioMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
             ToolManager toolManager, ResourceManager resourceManager) {
         super(config, connectionManager, promptManager, toolManager, resourceManager);
         this.executor = Executors.newSingleThreadExecutor();
+        this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
+                : null;
     }
 
     void initialize(PrintStream stdout) {
@@ -47,10 +53,22 @@ class StdioMcpMessageHandler extends McpMessageHandler {
                 try {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        JsonObject message;
                         try {
-                            message = new JsonObject(line);
-                            handle(message, connection, responder);
+                            JsonObject message;
+                            try {
+                                message = new JsonObject(line);
+                            } catch (Exception e) {
+                                String msg = "Unable to parse the JSON message";
+                                LOG.errorf(e, msg);
+                                responder.sendError(null, JsonRPC.PARSE_ERROR, msg);
+                                return;
+                            }
+                            if (trafficLogger != null) {
+                                trafficLogger.messageReceived(message);
+                            }
+                            if (JsonRPC.validate(message, responder)) {
+                                handle(message, connection, responder);
+                            }
                         } catch (DecodeException e) {
                             String msg = "Unable to parse the JSON message";
                             LOG.errorf(e, msg);
@@ -63,7 +81,7 @@ class StdioMcpMessageHandler extends McpMessageHandler {
         });
     }
 
-    private static class StdioResponder implements Responder {
+    private class StdioResponder implements Responder {
 
         private final PrintStream out;
 
@@ -75,6 +93,9 @@ class StdioMcpMessageHandler extends McpMessageHandler {
         public void send(JsonObject message) {
             if (message == null) {
                 return;
+            }
+            if (trafficLogger != null) {
+                trafficLogger.messageSent(message);
             }
             out.println(message.encode());
         }

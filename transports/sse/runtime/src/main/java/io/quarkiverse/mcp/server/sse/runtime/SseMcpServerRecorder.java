@@ -13,7 +13,6 @@ import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
-import io.quarkiverse.mcp.server.sse.runtime.config.McpSseRuntimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.annotations.Recorder;
@@ -33,11 +32,8 @@ public class SseMcpServerRecorder {
 
     private final McpRuntimeConfig config;
 
-    private final McpSseRuntimeConfig sseConfig;
-
-    public SseMcpServerRecorder(McpRuntimeConfig config, McpSseRuntimeConfig sseConfig) {
+    public SseMcpServerRecorder(McpRuntimeConfig config) {
         this.config = config;
-        this.sseConfig = sseConfig;
     }
 
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath) {
@@ -113,7 +109,7 @@ public class SseMcpServerRecorder {
         ArcContainer container = Arc.container();
         return new SseMcpMessageHandler(config, container.instance(ConnectionManager.class).get(),
                 container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
-                container.instance(ResourceManager.class).get(), sseConfig);
+                container.instance(ResourceManager.class).get());
     }
 
 }
