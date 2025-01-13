@@ -96,7 +96,11 @@ public abstract class FeatureManager<R> {
                         throw new IllegalStateException(e);
                     }
                 } else {
-                    ret[idx] = val;
+                    if (arg.type() instanceof Class clazz && clazz.isEnum()) {
+                        ret[idx] = Enum.valueOf(clazz, val.toString());
+                    } else {
+                        ret[idx] = val;
+                    }
                 }
             }
             idx++;
