@@ -12,6 +12,7 @@
     <version>999-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Quarkus MCP Server - Parent</name>
+    <description>A a declarative API that enables developers to implement the MCP server features easily</description>
 
     <modules>
         <module>core</module>
