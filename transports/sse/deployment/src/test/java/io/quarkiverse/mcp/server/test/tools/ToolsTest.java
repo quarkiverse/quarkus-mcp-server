@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.DayOfWeek;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -72,7 +73,8 @@ public class ToolsTest extends McpServerTest {
                 .put("price", 1));
         assertToolCall("Hello 1!", endpoint, "uni_bravo", new JsonObject()
                 .put("price", 1));
-        assertToolCall("charlie1", endpoint, "charlie", new JsonObject());
+        assertToolCall("charlie1", endpoint, "charlie", new JsonObject().put("day", DayOfWeek.FRIDAY.toString()));
+        assertToolCall("charlie11", endpoint, "charlie", new JsonObject().put("day", DayOfWeek.MONDAY.toString()));
         assertToolCall("charlie2", endpoint, "uni_charlie", new JsonObject());
         assertToolCall("charlie3", endpoint, "list_charlie", new JsonObject());
         assertToolCall("charlie4", endpoint, "uni_list_charlie", new JsonObject());

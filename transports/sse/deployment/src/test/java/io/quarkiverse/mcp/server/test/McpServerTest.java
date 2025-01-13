@@ -30,7 +30,7 @@ public abstract class McpServerTest {
         // but the test CL can see the class and we don't need Quarkus to analyze this util class
         QuarkusUnitTest config = new QuarkusUnitTest();
         if (System.getProperty("logTraffic") != null) {
-            config.overrideConfigKey("quarkus.mcp.server.sse.traffic-logging.enabled", "true");
+            config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
         }
         return config;
     }

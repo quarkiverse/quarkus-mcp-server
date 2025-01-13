@@ -4,6 +4,7 @@ import static io.quarkiverse.mcp.server.test.Checks.checkDuplicatedContext;
 import static io.quarkiverse.mcp.server.test.Checks.checkExecutionModel;
 import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
+import java.time.DayOfWeek;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -57,11 +58,11 @@ public class MyTools {
     }
 
     @Tool
-    String charlie() {
+    String charlie(DayOfWeek day) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
-        return "charlie1";
+        return DayOfWeek.MONDAY.equals(day) ? "charlie11" : "charlie1";
     }
 
     @Tool
