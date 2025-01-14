@@ -39,7 +39,7 @@ class PromptMessageHandler {
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
         try {
-            Future<PromptResponse> fu = promptManager.get(promptName, argProviders);
+            Future<PromptResponse> fu = promptManager.execute(promptName, argProviders);
             fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
                 @Override
                 public void handle(AsyncResult<PromptResponse> ar) {

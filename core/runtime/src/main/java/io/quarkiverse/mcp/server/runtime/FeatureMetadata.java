@@ -40,7 +40,8 @@ public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoke
     public enum Feature {
         PROMPT,
         TOOL,
-        RESOURCE
+        RESOURCE,
+        PROMPT_COMPLETE
     }
 
 }

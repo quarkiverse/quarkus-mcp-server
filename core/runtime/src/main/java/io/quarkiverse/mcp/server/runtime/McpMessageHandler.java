@@ -25,6 +25,8 @@ public class McpMessageHandler {
 
     private final PromptMessageHandler promptHandler;
 
+    private final PromptCompletionMessageHandler promptCompleteHandler;
+
     private final ResourceMessageHandler resourceHandler;
 
     protected final McpRuntimeConfig config;
@@ -32,10 +34,11 @@ public class McpMessageHandler {
     private final Map<String, Object> serverInfo;
 
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager) {
+            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager);
         this.promptHandler = new PromptMessageHandler(promptManager);
+        this.promptCompleteHandler = new PromptCompletionMessageHandler(promptCompleteManager);
         this.resourceHandler = new ResourceMessageHandler(resourceManager);
         this.config = config;
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager);
@@ -98,6 +101,7 @@ public class McpMessageHandler {
     private static final String RESOURCES_LIST = "resources/list";
     private static final String RESOURCES_READ = "resources/read";
     private static final String PING = "ping";
+    private static final String COMPLETION_COMPLETE = "completion/complete";
     // non-standard messages
     private static final String Q_CLOSE = "q/close";
 
@@ -111,9 +115,36 @@ public class McpMessageHandler {
             case PING -> ping(message, responder);
             case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
             case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
+            case COMPLETION_COMPLETE -> complete(message, responder, connection);
             case Q_CLOSE -> close(message, responder, connection);
             default -> responder.send(
                     Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
+        }
+    }
+
+    private void complete(JsonObject message, Responder responder, McpConnection connection) {
+        Object id = message.getValue("id");
+        JsonObject params = message.getJsonObject("params");
+        JsonObject ref = params.getJsonObject("ref");
+        if (ref == null) {
+            responder.sendError(id, JsonRPC.INVALID_REQUEST, "Reference not found");
+        } else {
+            String referenceType = ref.getString("type");
+            if (referenceType == null) {
+                responder.sendError(id, JsonRPC.INVALID_REQUEST, "Reference type not found");
+            } else {
+                JsonObject argument = params.getJsonObject("argument");
+                if (argument == null) {
+                    responder.sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
+                } else {
+                    if ("ref/prompt".equals(referenceType)) {
+                        promptCompleteHandler.promptComplete(id, ref, argument, responder, connection);
+                    } else {
+                        responder.sendError(id, JsonRPC.INVALID_REQUEST,
+                                "Unsupported reference found: " + ref.getString("type"));
+                    }
+                }
+            }
         }
     }
 

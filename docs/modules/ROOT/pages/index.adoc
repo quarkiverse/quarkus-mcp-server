@@ -110,6 +110,53 @@ In other words, the return type must be one of the following list:
 * `Uni<PromptMessage>`
 * `Uni<List<PromptMessage>>`
 
+==== Method parameters
+
+A `@Prompt` method must only accept `String` parameters that represent Prompt arguments.
+However, it may also accept the following parameters:
+
+* `McpConnection`
+* `RequestId`
+
+==== Prompt complete
+
+Arguments of a `@Prompt` method may be auto-completed through the completion API.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+import jakarta.inject.Inject;
+
+public class MyPrompts {
+
+    @Inject
+    FooService fooService;
+
+    @Prompt(description = "Put you description here.")
+    PromptMessage foo(@PromptArg(description = "The name") String name) {
+        return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
+    }
+    
+    @CompletePrompt("foo") <1>
+    List<String> completeName(@CompleteArg(name = "name") String val) { <2> <3>
+        return fooService.getNames().stream().filter(n -> n.startsWith(val)).toList();
+    }
+    
+}
+----
+<1> `"foo"` is the name reference to a prompt. If not such prompt exists then the build fails.
+<2> The method returns a list of values.
+<3> The `@CompleteArg` can be used to customize the name of an argument.
+
+The result of a "prompt complete" operation is always represented as a `CompleteResponse`.
+However, the annotated method can also return other types that are converted according to the following rules.
+
+* If the method returns `java.lang.String` then the reponse contains a single value.
+* If the method returns a `List` of `String`s then the reponse contains the list of values.
+* The method may return a `Uni` that wraps any of the type mentioned above.
+
 === Resources
 
 MCP provides a https://spec.modelcontextprotocol.io/specification/server/resources/[standardized way] for servers to expose resources to clients.
@@ -127,8 +174,8 @@ public class MyResources {
     FooService fooService;
 
     @Resource(uri = "file:///project/alpha") <3>
-    BlobResourceContents alpha(String uri) {
-        return BlobResourceContents.create(uri, Files.readAllBytes(Paths.ALPHA));
+    BlobResourceContents alpha() {
+        return BlobResourceContents.create("file:///project/alpha", Files.readAllBytes(Paths.ALPHA));
     }
 
 }
@@ -143,6 +190,13 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns an implementation of `ResourceContents` then the reponse contains the single contents object.
 * If the method returns a `List` of `ResourceContents` implementations then the reponse contains the list of contents objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
+
+==== Method parameters
+
+A `@Resource` method may accept the following parameters:
+
+* `McpConnection`
+* `RequestId`
 
 === Tools
 
@@ -180,6 +234,14 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the reponse is "success" and contains the single content object.
 * If the method returns a `List` of `Content` implementations or `String`s then the reponse is "success" and contains the list of relevant content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
+
+==== Method parameters
+
+A `@Tool` method may accept parameters that represent Tool arguments.
+However, it may also accept the following parameters:
+
+* `McpConnection`
+* `RequestId`
 
 == Traffic logging
 

@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
@@ -35,7 +36,7 @@ public class StdioMcpServerRecorder {
         StdioMcpMessageHandler messageHandler = new StdioMcpMessageHandler(config,
                 container.instance(ConnectionManager.class).get(),
                 container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
-                container.instance(ResourceManager.class).get());
+                container.instance(ResourceManager.class).get(), container.instance(PromptCompleteManager.class).get());
         messageHandler.initialize(stdout);
     }
 

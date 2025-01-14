@@ -5,6 +5,9 @@ import java.util.List;
 import org.jboss.jandex.DotName;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CompleteArg;
+import io.quarkiverse.mcp.server.CompletePrompt;
+import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -56,5 +59,8 @@ class DotNames {
     static final DotName TEXT_RESOURCE_CONTENS = DotName.createSimple(TextResourceContents.class);
     static final DotName BLOB_RESOURCE_CONTENS = DotName.createSimple(BlobResourceContents.class);
     static final DotName STRING = DotName.createSimple(String.class);
+    static final DotName COMPLETE_PROMPT = DotName.createSimple(CompletePrompt.class);
+    static final DotName COMPLETE_ARG = DotName.createSimple(CompleteArg.class);
+    static final DotName COMPLETE_RESPONSE = DotName.createSimple(CompletionResponse.class);
 
 }

@@ -45,7 +45,7 @@ class ResourceMessageHandler {
         ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id);
 
         try {
-            Future<ResourceResponse> fu = resourceManager.get(resourceUri, argProviders);
+            Future<ResourceResponse> fu = resourceManager.execute(resourceUri, argProviders);
             fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
                 @Override
                 public void handle(AsyncResult<ResourceResponse> ar) {

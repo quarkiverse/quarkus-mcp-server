@@ -37,7 +37,7 @@ public abstract class FeatureManager<R> {
         this.mapper = mapper;
     }
 
-    public Future<R> get(String id, ArgumentProviders argProviders) throws McpException {
+    public Future<R> execute(String id, ArgumentProviders argProviders) throws McpException {
         FeatureMetadata<R> metadata = getMetadata(id);
         if (metadata == null) {
             throw notFound(id);

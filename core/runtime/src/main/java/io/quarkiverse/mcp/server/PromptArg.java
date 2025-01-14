@@ -18,19 +18,10 @@ public @interface PromptArg {
      */
     String ELEMENT_NAME = "<<element name>>";
 
-    /**
-     *
-     */
     String name() default ELEMENT_NAME;
 
-    /**
-     *
-     */
     String description() default "";
 
-    /**
-     *
-     */
     boolean required() default true;
 
 }
