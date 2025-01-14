@@ -27,11 +27,11 @@ public class MyPrompts {
     FooService fooService;
 
     @Prompt(description = "Not much we can say here.")
-    PromptMessage foo(@PromptArg(description = "The name") String name, int repeat, Options options) {
+    PromptMessage foo(@PromptArg(description = "The name") String name, String repeat) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
-        return new PromptMessage("user", new TextContent(fooService.ping(name, repeat, options)));
+        return new PromptMessage("user", new TextContent(fooService.ping(name, Integer.parseInt(repeat), new Options(true))));
     }
 
     @Prompt(name = "BAR")

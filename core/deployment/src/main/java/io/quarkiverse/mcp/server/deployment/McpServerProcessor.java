@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.deployment;
 
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT_COMPLETE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -41,11 +43,13 @@ import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
+import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
+import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
@@ -85,12 +89,14 @@ class McpServerProcessor {
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class).build());
+                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class, PromptCompleteManager.class)
+                .build());
     }
 
     @BuildStep
     AutoAddScopeBuildItem autoAddScope() {
-        return AutoAddScopeBuildItem.builder().containsAnnotations(DotNames.PROMPT, DotNames.TOOL, DotNames.RESOURCE)
+        return AutoAddScopeBuildItem.builder()
+                .containsAnnotations(DotNames.PROMPT, DotNames.TOOL, DotNames.RESOURCE, DotNames.COMPLETE_PROMPT)
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
@@ -103,25 +109,17 @@ class McpServerProcessor {
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
             for (MethodInfo method : beanClass.methods()) {
-                Feature feature = null;
-                AnnotationInstance featureAnnotation = method.declaredAnnotation(DotNames.PROMPT);
+                AnnotationInstance featureAnnotation = getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
-                    feature = PROMPT;
-                } else {
-                    featureAnnotation = method.declaredAnnotation(DotNames.TOOL);
-                    if (featureAnnotation != null) {
-                        feature = TOOL;
-                    } else {
-                        featureAnnotation = method.declaredAnnotation(DotNames.RESOURCE);
-                        if (featureAnnotation != null) {
-                            feature = RESOURCE;
-                        }
-                    }
-                }
-                if (featureAnnotation != null) {
+                    Feature feature = getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature);
-                    AnnotationValue nameValue = featureAnnotation.value("name");
-                    String name = nameValue != null ? nameValue.asString() : method.name();
+                    String name;
+                    if (feature == PROMPT_COMPLETE) {
+                        name = featureAnnotation.value().asString();
+                    } else {
+                        AnnotationValue nameValue = featureAnnotation.value("name");
+                        name = nameValue != null ? nameValue.asString() : method.name();
+                    }
                     AnnotationValue descValue = featureAnnotation.value("description");
                     String description = descValue != null ? descValue.asString() : "";
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
@@ -147,16 +145,17 @@ class McpServerProcessor {
         // Check duplicate names
         for (List<FeatureMethodBuildItem> featureMethods : found.values()) {
             Map<String, List<FeatureMethodBuildItem>> byName = featureMethods.stream()
-                    .collect(Collectors.toMap(FeatureMethodBuildItem::getName, List::of, (v1, v2) -> {
+                    .collect(Collectors.toMap(this::getDuplicateValidationName, List::of, (v1, v2) -> {
                         List<FeatureMethodBuildItem> list = new ArrayList<>();
                         list.addAll(v1);
                         list.addAll(v2);
                         return list;
                     }));
-            for (List<FeatureMethodBuildItem> list : byName.values()) {
-                if (list.size() > 1) {
-                    String message = "Duplicate feature name found:\n\t%s"
-                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
+            for (Entry<String, List<FeatureMethodBuildItem>> e : byName.entrySet()) {
+                if (e.getValue().size() > 1) {
+                    String message = "Duplicate feature method found for %s:\n\t%s"
+                            .formatted(e.getKey(),
+                                    e.getValue().stream().map(Object::toString).collect(Collectors.joining("\n\t")));
                     errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
                 }
             }
@@ -180,6 +179,63 @@ class McpServerProcessor {
                 }
             }
         }
+
+        // Check existing prompts for prompt completions
+        List<FeatureMethodBuildItem> prompts = found.get(PROMPT);
+        List<FeatureMethodBuildItem> promptCompletions = found.get(PROMPT_COMPLETE);
+        if (promptCompletions != null) {
+            for (FeatureMethodBuildItem completion : promptCompletions) {
+                if (prompts == null || prompts.stream().noneMatch(p -> p.getName().equals(completion.getName()))) {
+                    String message = "Prompt %s does not exist for completion: %s"
+                            .formatted(completion.getName(), completion);
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                }
+            }
+        }
+    }
+
+    private String getDuplicateValidationName(FeatureMethodBuildItem featureMethod) {
+        if (featureMethod.getFeature() == PROMPT_COMPLETE) {
+            MethodParameterInfo argument = featureMethod.getMethod().parameters().stream()
+                    .filter(p -> providerFrom(p.type()) == Provider.PARAMS).findFirst().orElseThrow();
+            String argumentName = argument.name();
+            AnnotationInstance completeArg = argument.declaredAnnotation(DotNames.COMPLETE_ARG);
+            if (completeArg != null) {
+                AnnotationValue value = completeArg.value();
+                if (value != null) {
+                    argumentName = value.asString();
+                }
+            }
+            return featureMethod.getName() + argumentName;
+        }
+        return featureMethod.getName();
+    }
+
+    private AnnotationInstance getFeatureAnnotation(MethodInfo method) {
+        AnnotationInstance ret = method.declaredAnnotation(DotNames.PROMPT);
+        if (ret == null) {
+            ret = method.declaredAnnotation(DotNames.TOOL);
+            if (ret == null) {
+                ret = method.declaredAnnotation(DotNames.RESOURCE);
+                if (ret == null) {
+                    ret = method.declaredAnnotation(DotNames.COMPLETE_PROMPT);
+                }
+            }
+        }
+        return ret;
+    }
+
+    private Feature getFeature(AnnotationInstance annotation) {
+        if (annotation.name().equals(DotNames.PROMPT)) {
+            return PROMPT;
+        } else if (annotation.name().equals(DotNames.COMPLETE_PROMPT)) {
+            return PROMPT_COMPLETE;
+        } else if (annotation.name().equals(DotNames.TOOL)) {
+            return TOOL;
+        } else if (annotation.name().equals(DotNames.RESOURCE)) {
+            return RESOURCE;
+        }
+        throw new IllegalStateException();
     }
 
     @Record(RUNTIME_INIT)
@@ -208,6 +264,17 @@ class McpServerProcessor {
                     DotNames.PROMPT_ARG);
         }
         promptsMethod.returnValue(retPrompts);
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.promptCompletions()
+        MethodCreator promptCompletionsMethod = metadataCreator.getMethodCreator("promptCompletions", List.class);
+        ResultHandle retPromptCompletions = Gizmo.newArrayList(promptCompletionsMethod);
+        for (FeatureMethodBuildItem promptCompletion : featureMethods.stream().filter(FeatureMethodBuildItem::isPromptComplete)
+                .toList()) {
+            processFeatureMethod(counter, metadataCreator, promptCompletionsMethod, promptCompletion, retPromptCompletions,
+                    transformedAnnotations,
+                    DotNames.COMPLETE_ARG);
+        }
+        promptCompletionsMethod.returnValue(retPromptCompletions);
 
         // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
         MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
@@ -268,6 +335,7 @@ class McpServerProcessor {
         }
         switch (feature) {
             case PROMPT -> validatePromptMethod(method);
+            case PROMPT_COMPLETE -> validatePromptCompleteMethod(method);
             case TOOL -> validateToolMethod(method);
             case RESOURCE -> validateResourceMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
@@ -286,7 +354,37 @@ class McpServerProcessor {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!PROMPT_TYPES.contains(type)) {
-            throw new IllegalStateException("Unsupported prompt method return type: " + method);
+            throw new IllegalStateException("Unsupported Prompt method return type: " + method);
+        }
+
+        List<MethodParameterInfo> arguments = method.parameters().stream()
+                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
+        for (MethodParameterInfo arg : arguments) {
+            if (!arg.type().name().equals(DotNames.STRING)) {
+                throw new IllegalStateException("Prompt method must only consume String arguments: " + method);
+            }
+        }
+    }
+
+    private static final Set<org.jboss.jandex.Type> PROMPT_COMPLETE_TYPES = Set.of(ClassType.create(DotNames.COMPLETE_RESPONSE),
+            ClassType.create(DotNames.STRING));
+
+    private void validatePromptCompleteMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!PROMPT_COMPLETE_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported Prompt complete method return type: " + method);
+        }
+
+        List<MethodParameterInfo> arguments = method.parameters().stream()
+                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
+        if (arguments.size() != 1 || !arguments.get(0).type().name().equals(DotNames.STRING)) {
+            throw new IllegalStateException("Prompt complete must consume exactly one String argument: " + method);
         }
     }
 
@@ -369,14 +467,7 @@ class McpServerProcessor {
                 }
             }
             ResultHandle type = Types.getTypeHandle(metaMethod, pi.type());
-            ResultHandle provider;
-            if (pi.type().name().equals(DotNames.MCP_CONNECTION)) {
-                provider = metaMethod.load(FeatureArgument.Provider.MCP_CONNECTION);
-            } else if (pi.type().name().equals(DotNames.REQUEST_ID)) {
-                provider = metaMethod.load(FeatureArgument.Provider.REQUEST_ID);
-            } else {
-                provider = metaMethod.load(FeatureArgument.Provider.PARAMS);
-            }
+            ResultHandle provider = metaMethod.load(providerFrom(pi.type()));
             ResultHandle arg = metaMethod.newInstance(
                     MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
                             Type.class, FeatureArgument.Provider.class),
@@ -405,11 +496,22 @@ class McpServerProcessor {
                 .add(method.invokeVirtualMethod(metaMethod.getMethodDescriptor(), method.getThis()));
     }
 
+    private FeatureArgument.Provider providerFrom(org.jboss.jandex.Type type) {
+        if (type.name().equals(DotNames.MCP_CONNECTION)) {
+            return FeatureArgument.Provider.MCP_CONNECTION;
+        } else if (type.name().equals(DotNames.REQUEST_ID)) {
+            return FeatureArgument.Provider.REQUEST_ID;
+        } else {
+            return FeatureArgument.Provider.PARAMS;
+        }
+    }
+
     private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
             Feature feature) {
         // At this point the method return type is already validated
         return switch (feature) {
             case PROMPT -> promptMapper(bytecode, returnType);
+            case PROMPT_COMPLETE -> promptCompleteMapper(bytecode, returnType);
             case TOOL -> toolMapper(bytecode, returnType);
             case RESOURCE -> resourceMapper(bytecode, returnType);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
@@ -433,6 +535,27 @@ class McpServerProcessor {
         } else {
             return resultMapper(bytecode, "PROMPT_SINGLE_MESSAGE");
         }
+    }
+
+    private ResultHandle promptCompleteMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.COMPLETE_RESPONSE)) {
+            return resultMapper(bytecode, "TO_UNI");
+        } else if (returnType.name().equals(DotNames.STRING)) {
+            return resultMapper(bytecode, "PROMPT_COMPLETE_STRING");
+        } else if (returnType.name().equals(DotNames.LIST)) {
+            return resultMapper(bytecode, "PROMPT_COMPLETE_LIST_STRING");
+        } else if (returnType.name().equals(DotNames.UNI)) {
+            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
+            if (typeArg.name().equals(DotNames.COMPLETE_RESPONSE)) {
+                return resultMapper(bytecode, "IDENTITY");
+            }
+            if (returnType.name().equals(DotNames.STRING)) {
+                return resultMapper(bytecode, "PROMPT_COMPLETE_UNI_STRING");
+            } else if (typeArg.name().equals(DotNames.LIST)) {
+                return resultMapper(bytecode, "PROMPT_COMPLETE_UNI_LIST_STRING");
+            }
+        }
+        throw new IllegalArgumentException("Unsupported return type");
     }
 
     private ResultHandle toolMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {

@@ -78,7 +78,7 @@ class ToolMessageHandler {
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
         try {
-            Future<ToolResponse> fu = toolManager.get(toolName, argProviders);
+            Future<ToolResponse> fu = toolManager.execute(toolName, argProviders);
             fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
                 @Override
                 public void handle(AsyncResult<ToolResponse> ar) {

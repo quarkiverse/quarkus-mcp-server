@@ -54,14 +54,12 @@ public class PromptsTest extends McpServerTest {
             assertEquals(true, arg1.getBoolean("required"));
         });
         assertPrompt(prompts.getJsonObject(1), "foo", "Not much we can say here.", args -> {
-            assertEquals(3, args.size());
+            assertEquals(2, args.size());
         });
 
         assertPromptMessage("Hello Lu!", endpoint, "foo", new JsonObject()
                 .put("name", "Lu")
-                .put("repeat", 1)
-                .put("options", new JsonObject()
-                        .put("enabled", true)));
+                .put("repeat", "1"));
         assertPromptMessage("JACHYM", endpoint, "BAR", new JsonObject()
                 .put("val", "Jachym"));
         assertPromptMessage("VOJTECH", endpoint, "uni_bar", new JsonObject()

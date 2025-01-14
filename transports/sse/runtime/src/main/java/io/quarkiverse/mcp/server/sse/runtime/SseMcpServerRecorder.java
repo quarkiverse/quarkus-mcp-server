@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
@@ -109,7 +110,7 @@ public class SseMcpServerRecorder {
         ArcContainer container = Arc.container();
         return new SseMcpMessageHandler(config, container.instance(ConnectionManager.class).get(),
                 container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
-                container.instance(ResourceManager.class).get());
+                container.instance(ResourceManager.class).get(), container.instance(PromptCompleteManager.class).get());
     }
 
 }

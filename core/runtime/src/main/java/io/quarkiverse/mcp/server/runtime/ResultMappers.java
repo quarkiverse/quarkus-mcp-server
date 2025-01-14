@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.List;
 import java.util.function.Function;
 
+import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
@@ -35,36 +36,49 @@ public class ResultMappers {
     public static final Function<Content, Uni<Object>> TOOL_CONTENT = content -> Uni.createFrom()
             .item(ToolResponse.success(content));
 
-    public static final Function<String, Uni<Object>> TOOL_STRING = str -> Uni.createFrom()
+    public static final Function<String, Uni<ToolResponse>> TOOL_STRING = str -> Uni.createFrom()
             .item(ToolResponse.success(new TextContent(str)));
 
-    public static final Function<List<Content>, Uni<Object>> TOOL_LIST_CONTENT = list -> Uni.createFrom()
+    public static final Function<List<Content>, Uni<ToolResponse>> TOOL_LIST_CONTENT = list -> Uni.createFrom()
             .item(ToolResponse.success(list));
 
-    public static final Function<List<String>, Uni<Object>> TOOL_LIST_STRING = list -> Uni.createFrom()
+    public static final Function<List<String>, Uni<ToolResponse>> TOOL_LIST_STRING = list -> Uni.createFrom()
             .item(ToolResponse.success(list.stream().map(TextContent::new).toList()));
 
-    public static final Function<Uni<Content>, Uni<Object>> TOOL_UNI_CONTENT = uni -> uni.map(c -> ToolResponse.success(c));
+    public static final Function<Uni<Content>, Uni<ToolResponse>> TOOL_UNI_CONTENT = uni -> uni
+            .map(c -> ToolResponse.success(c));
 
-    public static final Function<Uni<String>, Uni<Object>> TOOL_UNI_STRING = uni -> uni
+    public static final Function<Uni<String>, Uni<ToolResponse>> TOOL_UNI_STRING = uni -> uni
             .map(str -> ToolResponse.success(new TextContent(str)));
 
-    public static final Function<Uni<List<Content>>, Uni<Object>> TOOL_UNI_LIST_CONTENT = uni -> uni
+    public static final Function<Uni<List<Content>>, Uni<ToolResponse>> TOOL_UNI_LIST_CONTENT = uni -> uni
             .map(l -> ToolResponse.success(l));
 
-    public static final Function<Uni<List<String>>, Uni<Object>> TOOL_UNI_LIST_STRING = uni -> uni
+    public static final Function<Uni<List<String>>, Uni<ToolResponse>> TOOL_UNI_LIST_STRING = uni -> uni
             .map(l -> ToolResponse.success(l.stream().map(TextContent::new).toList()));
 
-    public static final Function<ResourceContents, Uni<Object>> RESOURCE_CONTENT = content -> Uni.createFrom()
+    public static final Function<ResourceContents, Uni<ResourceResponse>> RESOURCE_CONTENT = content -> Uni.createFrom()
             .item(new ResourceResponse(List.of(content)));
 
-    public static final Function<List<ResourceContents>, Uni<Object>> RESOURCE_LIST_CONTENT = list -> Uni.createFrom()
+    public static final Function<List<ResourceContents>, Uni<ResourceResponse>> RESOURCE_LIST_CONTENT = list -> Uni.createFrom()
             .item(new ResourceResponse(list));
 
-    public static final Function<Uni<ResourceContents>, Uni<Object>> RESOURCE_UNI_CONTENT = uni -> uni
+    public static final Function<Uni<ResourceContents>, Uni<ResourceResponse>> RESOURCE_UNI_CONTENT = uni -> uni
             .map(c -> new ResourceResponse(List.of(c)));
 
-    public static final Function<Uni<List<ResourceContents>>, Uni<Object>> RESOURCE_UNI_LIST_CONTENT = uni -> uni
+    public static final Function<Uni<List<ResourceContents>>, Uni<ResourceResponse>> RESOURCE_UNI_LIST_CONTENT = uni -> uni
             .map(l -> new ResourceResponse(l));
+
+    public static final Function<String, Uni<CompletionResponse>> PROMPT_COMPLETE_STRING = str -> Uni.createFrom()
+            .item(new CompletionResponse(List.of(str), null, null));
+
+    public static final Function<List<String>, Uni<CompletionResponse>> PROMPT_COMPLETE_LIST_STRING = list -> Uni.createFrom()
+            .item(new CompletionResponse(list, null, null));
+
+    public static final Function<Uni<String>, Uni<CompletionResponse>> PROMPT_COMPLETE_UNI_STRING = uni -> uni
+            .map(str -> new CompletionResponse(List.of(str), null, null));
+
+    public static final Function<Uni<List<String>>, Uni<CompletionResponse>> PROMPT_COMPLETE_UNI_LIST_STRING = uni -> uni
+            .map(list -> new CompletionResponse(list, null, null));
 
 }

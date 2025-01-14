@@ -12,13 +12,18 @@ import io.quarkus.builder.item.MultiBuildItem;
 
 final class FeatureMethodBuildItem extends MultiBuildItem {
 
+    private final Feature feature;
+
+    // invocation info
     private final BeanInfo bean;
     private final InvokerInfo invoker;
-    private final String name;
-    private final String description;
-
     private final MethodInfo method;
-    private final Feature feature;
+
+    // The name of the feature
+    private final String name;
+
+    // Optional description
+    private final String description;
 
     // Resource-only
     private final String uri;
@@ -76,13 +81,18 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature == Feature.PROMPT;
     }
 
+    boolean isPromptComplete() {
+        return feature == Feature.PROMPT_COMPLETE;
+    }
+
     boolean isResource() {
         return feature == Feature.RESOURCE;
     }
 
     @Override
     public String toString() {
-        return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#" + method.name()
+        return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#"
+                + method.name()
                 + "(), feature=" + feature + "]";
     }
 
