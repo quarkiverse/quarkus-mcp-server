@@ -11,6 +11,10 @@
     <artifactId>quarkus-mcp-server-docs</artifactId>
     <name>Quarkus MCP Server - Documentation</name>
 
+    <properties>
+        <quarkus.mcp.server.transport>stdio</quarkus.mcp.server.transport> <!-- added just to have the build pass -->
+    </properties>
+
     <dependencies>
         <!-- Make sure the doc is built after the other artifacts -->
         <dependency>

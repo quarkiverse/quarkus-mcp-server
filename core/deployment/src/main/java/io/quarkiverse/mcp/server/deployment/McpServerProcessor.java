@@ -82,6 +82,33 @@ import io.quarkus.gizmo.ResultHandle;
 class McpServerProcessor {
 
     @BuildStep
+    SelectedTransportBuildItem selectTransport(McpBuildTimeConfig buildTimeConfig,
+            List<TransportCandidateBuildItem> transportCandidates) {
+        if (transportCandidates.isEmpty()) {
+            throw new IllegalStateException(
+                    "At least one MCP transport must be used. Consider adding the one of the 'quarkus-mcp-server-stdio', 'quarkus-mcp-server-sse' extensions");
+        }
+        if (transportCandidates.size() == 1) {
+            return new SelectedTransportBuildItem(transportCandidates.get(0).getName());
+        }
+        if (buildTimeConfig.transport().isPresent()) {
+            String selectedTransportName = buildTimeConfig.transport().get();
+            for (TransportCandidateBuildItem transportCandidate : transportCandidates) {
+                if (transportCandidate.getName().equals(selectedTransportName)) {
+                    return new SelectedTransportBuildItem(transportCandidate.getName());
+                }
+            }
+            throw new IllegalStateException(
+                    "Selected transport '" + selectedTransportName + "' does not correspond to any of the added extensions");
+        } else {
+            throw new IllegalStateException(
+                    "Multiple transport candidates were found, please select one by setting 'quarkus.mcp.server.transport' to one of the following values: "
+                            + transportCandidates.stream().map(TransportCandidateBuildItem::getName)
+                                    .collect(Collectors.joining(", ")));
+        }
+    }
+
+    @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()

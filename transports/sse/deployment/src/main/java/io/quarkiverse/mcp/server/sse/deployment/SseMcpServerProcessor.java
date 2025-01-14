@@ -2,6 +2,8 @@ package io.quarkiverse.mcp.server.sse.deployment;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
+import io.quarkiverse.mcp.server.deployment.SelectedTransportBuildItem;
+import io.quarkiverse.mcp.server.deployment.TransportCandidateBuildItem;
 import io.quarkiverse.mcp.server.sse.runtime.SseMcpServerRecorder;
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseBuildTimeConfig;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
@@ -21,12 +23,21 @@ public class SseMcpServerProcessor {
         return new FeatureBuildItem("mcp-server-sse");
     }
 
+    @BuildStep
+    TransportCandidateBuildItem transportCandidate() {
+        return new TransportCandidateBuildItem("sse");
+    }
+
     @Record(RUNTIME_INIT)
     @Consume(SyntheticBeansRuntimeInitBuildItem.class)
     @BuildStep
-    void registerEndpoints(McpSseBuildTimeConfig config, HttpRootPathBuildItem rootPath, SseMcpServerRecorder recorder,
+    void registerEndpoints(SelectedTransportBuildItem selectedTransportCandidateBuildItem,
+            McpSseBuildTimeConfig config, HttpRootPathBuildItem rootPath, SseMcpServerRecorder recorder,
             BodyHandlerBuildItem bodyHandler,
             BuildProducer<RouteBuildItem> routes) {
+        if (!selectedTransportCandidateBuildItem.getName().equals("sse")) {
+            return;
+        }
         String mcpPath = rootPath.relativePath(config.rootPath());
 
         routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath + "/" + "sse")
