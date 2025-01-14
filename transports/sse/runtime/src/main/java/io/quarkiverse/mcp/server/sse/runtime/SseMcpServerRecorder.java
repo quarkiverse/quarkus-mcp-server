@@ -48,7 +48,6 @@ public class SseMcpServerRecorder {
             public void handle(RoutingContext ctx) {
                 HttpServerResponse response = ctx.response();
                 response.setChunked(true);
-                response.headers().add(HttpHeaders.TRANSFER_ENCODING, "chunked");
                 response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
 
                 String id = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
