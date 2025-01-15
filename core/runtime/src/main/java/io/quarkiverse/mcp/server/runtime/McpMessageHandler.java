@@ -82,7 +82,7 @@ public class McpMessageHandler {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
-                LOG.infof("Client successfully initialized [%s]", connection.id());
+                LOG.debugf("Client successfully initialized [%s]", connection.id());
             }
         } else if (PING.equals(method)) {
             ping(message, responder);
@@ -153,13 +153,13 @@ public class McpMessageHandler {
     private void ping(JsonObject message, Responder responder) {
         // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
         Object id = message.getValue("id");
-        LOG.infof("Ping [id: %s]", id);
+        LOG.debugf("Ping [id: %s]", id);
         responder.sendResult(id, new JsonObject());
     }
 
     private void close(JsonObject message, Responder responder, McpConnection connection) {
         if (connectionManager.remove(connection.id())) {
-            LOG.infof("Connection %s closed", connection.id());
+            LOG.debugf("Connection %s closed", connection.id());
         } else {
             responder.sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Unable to obtain the connection to be closed:" + connection.id());

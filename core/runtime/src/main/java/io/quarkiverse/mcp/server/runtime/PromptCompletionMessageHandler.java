@@ -25,7 +25,7 @@ class PromptCompletionMessageHandler {
         String promptName = ref.getString("name");
         String argumentName = argument.getString("name");
 
-        LOG.infof("Complete prompt %s for argument %s [id: %s]", promptName, argumentName, id);
+        LOG.debugf("Complete prompt %s for argument %s [id: %s]", promptName, argumentName, id);
 
         String key = promptName + "_" + argumentName;
 

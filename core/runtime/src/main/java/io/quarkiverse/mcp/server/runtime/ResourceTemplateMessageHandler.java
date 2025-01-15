@@ -18,7 +18,7 @@ class ResourceTemplateMessageHandler {
 
     void resourceTemplatesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.infof("List resource templates [id: %s]", id);
+        LOG.debugf("List resource templates [id: %s]", id);
         JsonArray resources = new JsonArray();
         for (FeatureMetadata<ResourceResponse> resource : manager.list()) {
             resources.add(resource.asJson());
