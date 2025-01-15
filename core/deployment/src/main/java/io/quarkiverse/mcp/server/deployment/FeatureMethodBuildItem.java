@@ -37,7 +37,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.feature = Objects.requireNonNull(feature);
         this.name = Objects.requireNonNull(name);
         this.description = description;
-        this.uri = feature == Feature.RESOURCE ? Objects.requireNonNull(uri) : null;
+        this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
     }
 
@@ -87,6 +87,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     boolean isResource() {
         return feature == Feature.RESOURCE;
+    }
+
+    boolean isResourceTemplate() {
+        return feature == Feature.RESOURCE_TEMPLATE;
     }
 
     @Override

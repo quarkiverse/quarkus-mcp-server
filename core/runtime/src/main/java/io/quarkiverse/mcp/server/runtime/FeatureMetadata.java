@@ -33,6 +33,9 @@ public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoke
         } else if (feature == Feature.RESOURCE) {
             json.put("uri", info.uri())
                     .put("mimeType", info.mimeType());
+        } else if (feature == Feature.RESOURCE_TEMPLATE) {
+            json.put("uriTemplate", info.uri())
+                    .put("mimeType", info.mimeType());
         }
         return json;
     }
@@ -41,7 +44,12 @@ public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoke
         PROMPT,
         TOOL,
         RESOURCE,
-        PROMPT_COMPLETE
+        RESOURCE_TEMPLATE,
+        PROMPT_COMPLETE;
+
+        public boolean requiresUri() {
+            return this == RESOURCE || this == RESOURCE_TEMPLATE;
+        }
     }
 
 }

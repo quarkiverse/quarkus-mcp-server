@@ -20,6 +20,8 @@ import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceContent;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
@@ -55,12 +57,14 @@ class DotNames {
     static final DotName RESOURCE_CONTENT = DotName.createSimple(ResourceContent.class);
     static final DotName RESOURCE = DotName.createSimple(Resource.class);
     static final DotName RESOURCE_RESPONSE = DotName.createSimple(ResourceResponse.class);
-    static final DotName RESOURCE_CONTENS = DotName.createSimple(ResourceContents.class);
-    static final DotName TEXT_RESOURCE_CONTENS = DotName.createSimple(TextResourceContents.class);
-    static final DotName BLOB_RESOURCE_CONTENS = DotName.createSimple(BlobResourceContents.class);
+    static final DotName RESOURCE_CONTENTS = DotName.createSimple(ResourceContents.class);
+    static final DotName TEXT_RESOURCE_CONTENTS = DotName.createSimple(TextResourceContents.class);
+    static final DotName BLOB_RESOURCE_CONTENTS = DotName.createSimple(BlobResourceContents.class);
     static final DotName STRING = DotName.createSimple(String.class);
     static final DotName COMPLETE_PROMPT = DotName.createSimple(CompletePrompt.class);
     static final DotName COMPLETE_ARG = DotName.createSimple(CompleteArg.class);
     static final DotName COMPLETE_RESPONSE = DotName.createSimple(CompletionResponse.class);
+    static final DotName RESOURCE_TEMPLATE = DotName.createSimple(ResourceTemplate.class);
+    static final DotName RESOURCE_TEMPLATE_ARG = DotName.createSimple(ResourceTemplateArg.class);
 
 }
