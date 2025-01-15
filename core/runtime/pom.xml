@@ -25,6 +25,11 @@
             <artifactId>jsonschema-generator</artifactId>
             <version>${jsonschema-generator.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

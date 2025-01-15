@@ -43,7 +43,7 @@ public abstract class FeatureManager<R> {
             throw notFound(id);
         }
         Invoker<Object, Object> invoker = metadata.invoker();
-        Object[] arguments = prepareArguments(metadata.info(), argProviders);
+        Object[] arguments = prepareArguments(metadata, argProviders);
         return execute(metadata.executionModel(), new Callable<Uni<R>>() {
             @Override
             public Uni<R> call() throws Exception {
@@ -63,13 +63,13 @@ public abstract class FeatureManager<R> {
     }
 
     @SuppressWarnings("unchecked")
-    private Object[] prepareArguments(FeatureMethodInfo info, ArgumentProviders argProviders) throws McpException {
-        if (info.arguments().isEmpty()) {
+    protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
+        if (metadata.info().arguments().isEmpty()) {
             return new Object[0];
         }
-        Object[] ret = new Object[info.arguments().size()];
+        Object[] ret = new Object[metadata.info().arguments().size()];
         int idx = 0;
-        for (FeatureArgument arg : info.arguments()) {
+        for (FeatureArgument arg : metadata.info().arguments()) {
             if (arg.provider() == Provider.MCP_CONNECTION) {
                 ret[idx] = argProviders.connection();
             } else if (arg.provider() == Provider.REQUEST_ID) {

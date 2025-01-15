@@ -15,13 +15,13 @@ import io.smallrye.mutiny.Uni;
 
 public class ResultMappers {
 
-    public static final Function<PromptMessage, Uni<PromptResponse>> PROMPT_SINGLE_MESSAGE = message -> Uni.createFrom()
+    public static final Function<PromptMessage, Uni<PromptResponse>> PROMPT_MESSAGE = message -> Uni.createFrom()
             .item(new PromptResponse(null, List.of(message)));
 
     public static final Function<List<PromptMessage>, Uni<PromptResponse>> PROMPT_LIST_MESSAGE = messages -> Uni.createFrom()
             .item(PromptResponse.withMessages(messages));
 
-    public static final Function<Uni<PromptMessage>, Uni<PromptResponse>> PROMPT_UNI_SINGLE_MESSAGE = uni -> {
+    public static final Function<Uni<PromptMessage>, Uni<PromptResponse>> PROMPT_UNI_MESSAGE = uni -> {
         return uni.map(m -> new PromptResponse(null, List.of(m)));
     };
 

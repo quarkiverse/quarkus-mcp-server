@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.deployment;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT_COMPLETE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE_TEMPLATE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
@@ -52,6 +53,7 @@ import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
 import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -85,18 +87,26 @@ import io.quarkus.gizmo.ResultHandle;
 
 class McpServerProcessor {
 
+    private static final Map<DotName, FeatureMetadata.Feature> FEATURES = Map.of(
+            DotNames.PROMPT, PROMPT,
+            DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
+            DotNames.RESOURCE, RESOURCE,
+            DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
+            DotNames.TOOL, TOOL);
+
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class, PromptCompleteManager.class)
+                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class, PromptCompleteManager.class,
+                        ResourceTemplateManager.class)
                 .build());
     }
 
     @BuildStep
     AutoAddScopeBuildItem autoAddScope() {
         return AutoAddScopeBuildItem.builder()
-                .containsAnnotations(DotNames.PROMPT, DotNames.TOOL, DotNames.RESOURCE, DotNames.COMPLETE_PROMPT)
+                .containsAnnotations(FEATURES.keySet().toArray(DotName[]::new))
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
@@ -122,12 +132,23 @@ class McpServerProcessor {
                     }
                     AnnotationValue descValue = featureAnnotation.value("description");
                     String description = descValue != null ? descValue.asString() : "";
+
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
-                    AnnotationValue uriValue = featureAnnotation.value("uri");
-                    String uri = uriValue != null ? uriValue.asString() : null;
-                    AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
-                    String mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+
+                    String uri = null;
+                    String mimeType = null;
+                    if (feature == RESOURCE) {
+                        AnnotationValue uriValue = featureAnnotation.value("uri");
+                        uri = uriValue != null ? uriValue.asString() : null;
+                        AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
+                        mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+                    } else if (feature == RESOURCE_TEMPLATE) {
+                        AnnotationValue uriValue = featureAnnotation.value("uriTemplate");
+                        uri = uriValue != null ? uriValue.asString() : null;
+                        AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
+                        mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+                    }
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
                             description, uri, mimeType, feature);
                     features.produce(fm);
@@ -212,28 +233,18 @@ class McpServerProcessor {
     }
 
     private AnnotationInstance getFeatureAnnotation(MethodInfo method) {
-        AnnotationInstance ret = method.declaredAnnotation(DotNames.PROMPT);
-        if (ret == null) {
-            ret = method.declaredAnnotation(DotNames.TOOL);
-            if (ret == null) {
-                ret = method.declaredAnnotation(DotNames.RESOURCE);
-                if (ret == null) {
-                    ret = method.declaredAnnotation(DotNames.COMPLETE_PROMPT);
-                }
+        for (AnnotationInstance annotation : method.declaredAnnotations()) {
+            if (FEATURES.containsKey(annotation.name())) {
+                return annotation;
             }
         }
-        return ret;
+        return null;
     }
 
     private Feature getFeature(AnnotationInstance annotation) {
-        if (annotation.name().equals(DotNames.PROMPT)) {
-            return PROMPT;
-        } else if (annotation.name().equals(DotNames.COMPLETE_PROMPT)) {
-            return PROMPT_COMPLETE;
-        } else if (annotation.name().equals(DotNames.TOOL)) {
-            return TOOL;
-        } else if (annotation.name().equals(DotNames.RESOURCE)) {
-            return RESOURCE;
+        Feature ret = FEATURES.get(annotation.name());
+        if (ret != null) {
+            return ret;
         }
         throw new IllegalStateException();
     }
@@ -294,6 +305,17 @@ class McpServerProcessor {
         }
         resourcesMethod.returnValue(retResources);
 
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.resourceTemplates()
+        MethodCreator resourceTemplatesMethod = metadataCreator.getMethodCreator("resourceTemplates", List.class);
+        ResultHandle retResourceTemplates = Gizmo.newArrayList(resourceTemplatesMethod);
+        for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isResourceTemplate).toList()) {
+            processFeatureMethod(counter, metadataCreator, resourceTemplatesMethod, resourceTemplate, retResourceTemplates,
+                    transformedAnnotations,
+                    DotNames.RESOURCE_TEMPLATE_ARG);
+        }
+        resourceTemplatesMethod.returnValue(retResourceTemplates);
+
         metadataCreator.close();
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
@@ -338,6 +360,7 @@ class McpServerProcessor {
             case PROMPT_COMPLETE -> validatePromptCompleteMethod(method);
             case TOOL -> validateToolMethod(method);
             case RESOURCE -> validateResourceMethod(method);
+            case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
@@ -406,9 +429,9 @@ class McpServerProcessor {
         }
     }
 
-    private static final Set<org.jboss.jandex.Type> RESOURCE_TYPES = Set.of(ClassType.create(DotNames.RESOURCE_RESPONSE),
-            ClassType.create(DotNames.RESOURCE_CONTENS), ClassType.create(DotNames.TEXT_RESOURCE_CONTENS),
-            ClassType.create(DotNames.BLOB_RESOURCE_CONTENS));
+    static final Set<org.jboss.jandex.Type> RESOURCE_TYPES = Set.of(ClassType.create(DotNames.RESOURCE_RESPONSE),
+            ClassType.create(DotNames.RESOURCE_CONTENTS), ClassType.create(DotNames.TEXT_RESOURCE_CONTENTS),
+            ClassType.create(DotNames.BLOB_RESOURCE_CONTENTS));
 
     private void validateResourceMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
@@ -431,11 +454,27 @@ class McpServerProcessor {
         }
     }
 
+    private void validateResourceTemplateMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!RESOURCE_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported Resource template method return type: " + method);
+        }
+        // TODO validate params
+    }
+
     private boolean hasFeatureMethod(BeanInfo bean) {
         ClassInfo beanClass = bean.getTarget().get().asClass();
         return beanClass.hasAnnotation(DotNames.PROMPT)
+                || beanClass.hasAnnotation(DotNames.COMPLETE_PROMPT)
                 || beanClass.hasAnnotation(DotNames.TOOL)
-                || beanClass.hasAnnotation(DotNames.RESOURCE);
+                || beanClass.hasAnnotation(DotNames.RESOURCE)
+                || beanClass.hasAnnotation(DotNames.RESOURCE_TEMPLATE);
     }
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
@@ -508,104 +547,44 @@ class McpServerProcessor {
 
     private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
             Feature feature) {
-        // At this point the method return type is already validated
+        // IMPL NOTE: at this point the method return type is already validated
         return switch (feature) {
-            case PROMPT -> promptMapper(bytecode, returnType);
-            case PROMPT_COMPLETE -> promptCompleteMapper(bytecode, returnType);
-            case TOOL -> toolMapper(bytecode, returnType);
-            case RESOURCE -> resourceMapper(bytecode, returnType);
+            case PROMPT -> readResultMapper(bytecode,
+                    createMapperField(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> "MESSAGE"));
+            case PROMPT_COMPLETE -> readResultMapper(bytecode,
+                    createMapperField(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "STRING"));
+            case TOOL -> readResultMapper(bytecode, createMapperField(TOOL, returnType, DotNames.TOOL_RESPONSE, c -> {
+                return isContent(c) ? "CONTENT" : "STRING";
+            }));
+            case RESOURCE, RESOURCE_TEMPLATE -> readResultMapper(bytecode,
+                    createMapperField(RESOURCE, returnType, DotNames.RESOURCE_RESPONSE, c -> "CONTENT"));
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         };
     }
 
-    private ResultHandle promptMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.PROMPT_RESPONSE)) {
-            return resultMapper(bytecode, "TO_UNI");
-        } else if (returnType.name().equals(DotNames.LIST)) {
-            return resultMapper(bytecode, "PROMPT_LIST_MESSAGE");
-        } else if (returnType.name().equals(DotNames.UNI)) {
-            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
-            if (typeArg.name().equals(DotNames.PROMPT_RESPONSE)) {
-                return resultMapper(bytecode, "IDENTITY");
-            } else if (typeArg.name().equals(DotNames.LIST)) {
-                return resultMapper(bytecode, "PROMPT_UNI_LIST_MESSAGE");
-            } else {
-                return resultMapper(bytecode, "PROMPT_UNI_SINGLE_MESSAGE");
-            }
-        } else {
-            return resultMapper(bytecode, "PROMPT_SINGLE_MESSAGE");
+    static String createMapperField(FeatureMetadata.Feature feature, org.jboss.jandex.Type returnType,
+            DotName baseType, Function<DotName, String> componentMapper) {
+        if (returnType.name().equals(baseType)) {
+            return "TO_UNI";
         }
-    }
+        org.jboss.jandex.Type type = returnType;
+        StringBuilder ret = new StringBuilder(feature.toString())
+                .append("_");
 
-    private ResultHandle promptCompleteMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.COMPLETE_RESPONSE)) {
-            return resultMapper(bytecode, "TO_UNI");
-        } else if (returnType.name().equals(DotNames.STRING)) {
-            return resultMapper(bytecode, "PROMPT_COMPLETE_STRING");
-        } else if (returnType.name().equals(DotNames.LIST)) {
-            return resultMapper(bytecode, "PROMPT_COMPLETE_LIST_STRING");
-        } else if (returnType.name().equals(DotNames.UNI)) {
-            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
-            if (typeArg.name().equals(DotNames.COMPLETE_RESPONSE)) {
-                return resultMapper(bytecode, "IDENTITY");
+        if (DotNames.UNI.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+            if (type.name().equals(baseType)) {
+                return "IDENTITY";
             }
-            if (returnType.name().equals(DotNames.STRING)) {
-                return resultMapper(bytecode, "PROMPT_COMPLETE_UNI_STRING");
-            } else if (typeArg.name().equals(DotNames.LIST)) {
-                return resultMapper(bytecode, "PROMPT_COMPLETE_UNI_LIST_STRING");
-            }
+            ret.append("UNI_");
         }
-        throw new IllegalArgumentException("Unsupported return type");
-    }
+        if (DotNames.LIST.equals(type.name())) {
+            type = type.asParameterizedType().arguments().get(0);
+            ret.append("LIST_");
+        }
+        ret.append(componentMapper.apply(type.name()));
 
-    private ResultHandle toolMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.TOOL_RESPONSE)) {
-            return resultMapper(bytecode, "TO_UNI");
-        } else if (isContent(returnType.name())) {
-            return resultMapper(bytecode, "TOOL_CONTENT");
-        } else if (returnType.name().equals(DotNames.STRING)) {
-            return resultMapper(bytecode, "TOOL_STRING");
-        } else if (returnType.name().equals(DotNames.LIST)) {
-            if (returnType.asParameterizedType().arguments().get(0).name().equals(DotNames.STRING)) {
-                return resultMapper(bytecode, "TOOL_LIST_STRING");
-            }
-            return resultMapper(bytecode, "TOOL_LIST_CONTENT");
-        } else if (returnType.name().equals(DotNames.UNI)) {
-            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
-            if (typeArg.name().equals(DotNames.TOOL_RESPONSE)) {
-                return resultMapper(bytecode, "IDENTITY");
-            } else if (isContent(typeArg.name())) {
-                return resultMapper(bytecode, "TOOL_UNI_CONTENT");
-            } else if (typeArg.name().equals(DotNames.STRING)) {
-                return resultMapper(bytecode, "TOOL_UNI_STRING");
-            } else if (typeArg.name().equals(DotNames.LIST)) {
-                if (typeArg.asParameterizedType().arguments().get(0).name().equals(DotNames.STRING)) {
-                    return resultMapper(bytecode, "TOOL_UNI_LIST_STRING");
-                }
-                return resultMapper(bytecode, "TOOL_UNI_LIST_CONTENT");
-            }
-        }
-        throw new IllegalArgumentException("Unsupported return type");
-    }
-
-    private ResultHandle resourceMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.RESOURCE_RESPONSE)) {
-            return resultMapper(bytecode, "TO_UNI");
-        } else if (isResourceContents(returnType.name())) {
-            return resultMapper(bytecode, "RESOURCE_CONTENT");
-        } else if (returnType.name().equals(DotNames.LIST)) {
-            return resultMapper(bytecode, "RESOURCE_LIST_CONTENT");
-        } else if (returnType.name().equals(DotNames.UNI)) {
-            org.jboss.jandex.Type typeArg = returnType.asParameterizedType().arguments().get(0);
-            if (typeArg.name().equals(DotNames.RESOURCE_RESPONSE)) {
-                return resultMapper(bytecode, "IDENTITY");
-            } else if (isResourceContents(typeArg.name())) {
-                return resultMapper(bytecode, "RESOURCE_UNI_CONTENT");
-            } else if (typeArg.name().equals(DotNames.LIST)) {
-                return resultMapper(bytecode, "RESOURCE_UNI_LIST_CONTENT");
-            }
-        }
-        throw new IllegalArgumentException("Unsupported return type");
+        return ret.toString();
     }
 
     private boolean isContent(DotName typeName) {
@@ -613,12 +592,7 @@ class McpServerProcessor {
                 || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.RESOURCE_CONTENT.equals(typeName);
     }
 
-    private boolean isResourceContents(DotName typeName) {
-        return DotNames.RESOURCE_CONTENS.equals(typeName) || DotNames.TEXT_RESOURCE_CONTENS.equals(typeName)
-                || DotNames.BLOB_RESOURCE_CONTENS.equals(typeName);
-    }
-
-    private ResultHandle resultMapper(BytecodeCreator bytecode, String contantName) {
+    private ResultHandle readResultMapper(BytecodeCreator bytecode, String contantName) {
         return bytecode.readStaticField(FieldDescriptor.of(ResultMappers.class, contantName, Function.class));
     }
 

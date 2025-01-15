@@ -22,26 +22,26 @@ public class McpMessageHandler {
     protected final ConnectionManager connectionManager;
 
     private final ToolMessageHandler toolHandler;
-
     private final PromptMessageHandler promptHandler;
-
     private final PromptCompletionMessageHandler promptCompleteHandler;
-
     private final ResourceMessageHandler resourceHandler;
+    private final ResourceTemplateMessageHandler resourceTemplateHandler;
 
     protected final McpRuntimeConfig config;
 
     private final Map<String, Object> serverInfo;
 
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager) {
+            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
+            ResourceTemplateManager resourceTemplateManager) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager);
         this.promptHandler = new PromptMessageHandler(promptManager);
         this.promptCompleteHandler = new PromptCompletionMessageHandler(promptCompleteManager);
         this.resourceHandler = new ResourceMessageHandler(resourceManager);
+        this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager);
         this.config = config;
-        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager);
+        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager);
     }
 
     public void handle(JsonObject message, McpConnection connection, Responder responder) {
@@ -99,6 +99,7 @@ public class McpMessageHandler {
     private static final String TOOLS_LIST = "tools/list";
     private static final String TOOLS_CALL = "tools/call";
     private static final String RESOURCES_LIST = "resources/list";
+    private static final String RESOURCE_TEMPLATES_LIST = "resources/templates/list";
     private static final String RESOURCES_READ = "resources/read";
     private static final String PING = "ping";
     private static final String COMPLETION_COMPLETE = "completion/complete";
@@ -115,6 +116,7 @@ public class McpMessageHandler {
             case PING -> ping(message, responder);
             case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
             case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
+            case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, responder);
             case COMPLETION_COMPLETE -> complete(message, responder, connection);
             case Q_CLOSE -> close(message, responder, connection);
             default -> responder.send(
@@ -180,7 +182,7 @@ public class McpMessageHandler {
     }
 
     private Map<String, Object> serverInfo(PromptManager promptManager, ToolManager toolManager,
-            ResourceManager resourceManager) {
+            ResourceManager resourceManager, ResourceTemplateManager resourceTemplateManager) {
         Map<String, Object> info = new HashMap<>();
         info.put("protocolVersion", "2024-11-05");
 
@@ -197,7 +199,7 @@ public class McpMessageHandler {
         if (!toolManager.isEmpty()) {
             capabilities.put("tools", Map.of());
         }
-        if (!resourceManager.isEmpty()) {
+        if (!resourceManager.isEmpty() || resourceTemplateManager.isEmpty()) {
             capabilities.put("resources", Map.of());
         }
         info.put("capabilities", capabilities);

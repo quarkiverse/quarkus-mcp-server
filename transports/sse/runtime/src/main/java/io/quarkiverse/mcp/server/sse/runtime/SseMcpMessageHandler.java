@@ -9,6 +9,7 @@ import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.runtime.Responder;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
@@ -27,8 +28,10 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
     private final TrafficLogger trafficLogger;
 
     protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager) {
-        super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager);
+            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
+            ResourceTemplateManager resourceTemplateManager) {
+        super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
+                resourceTemplateManager);
         this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;
     }
