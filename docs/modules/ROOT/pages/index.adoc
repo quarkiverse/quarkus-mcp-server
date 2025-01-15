@@ -38,6 +38,8 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
+TIP: The SSE endpoint is exposed at `/{rootPath}/sse` and the `{rootPath}` is set to `mcp` by default. However, it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+
 == Supported server features
 
 An https://spec.modelcontextprotocol.io/specification/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
