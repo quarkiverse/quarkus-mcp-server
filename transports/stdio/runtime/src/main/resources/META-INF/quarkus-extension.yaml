@@ -1,0 +1,8 @@
+name: Model Context Protocol (MCP) Server for standard input/output (stdio)
+metadata:
+  keywords:
+    - mcp-server
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html
+  categories:
+    - "miscellaneous"
+  status: "preview"

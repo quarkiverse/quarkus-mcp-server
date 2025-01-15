@@ -11,6 +11,7 @@
     <artifactId>quarkus-mcp-server-stdio-parent</artifactId>
     <packaging>pom</packaging>
     <name>Quarkus MCP Server Transport - stdio - Parent</name>
+    <description>This extension enables developers to implement the MCP server features easily using stanard input/output (stdio).</description>
 
     <modules>
         <module>deployment</module>
