@@ -24,7 +24,7 @@ class ResourceMessageHandler {
 
     void resourcesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.infof("List resources [id: %s]", id);
+        LOG.debugf("List resources [id: %s]", id);
         JsonArray resources = new JsonArray();
         for (FeatureMetadata<ResourceResponse> resource : resourceManager.list()) {
             resources.add(resource.asJson());
@@ -40,7 +40,7 @@ class ResourceMessageHandler {
             responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
             return;
         }
-        LOG.infof("Read resource %s [id: %s]", resourceUri, id);
+        LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id);
 

@@ -22,7 +22,7 @@ class PromptMessageHandler {
 
     void promptsList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.infof("List prompts [id: %s]", id);
+        LOG.debugf("List prompts [id: %s]", id);
         JsonArray prompts = new JsonArray();
         for (FeatureMetadata<PromptResponse> resource : promptManager.list()) {
             prompts.add(resource.asJson());
@@ -34,7 +34,7 @@ class PromptMessageHandler {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String promptName = params.getString("name");
-        LOG.infof("Get prompt %s [id: %s]", promptName, id);
+        LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 

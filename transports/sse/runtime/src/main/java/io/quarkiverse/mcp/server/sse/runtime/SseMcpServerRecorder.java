@@ -53,7 +53,7 @@ public class SseMcpServerRecorder {
 
                 String id = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
 
-                LOG.infof("Client connection initialized [%s]", id);
+                LOG.debugf("Client connection initialized [%s]", id);
 
                 SseMcpConnection connection = new SseMcpConnection(id, response);
                 connectionManager.add(connection);
@@ -83,7 +83,7 @@ public class SseMcpServerRecorder {
                             closeHandler.handle(event);
                         }
                         if (connectionManager.remove(connectionId)) {
-                            LOG.infof("Connection %s closed", connectionId);
+                            LOG.debugf("Connection %s closed", connectionId);
                         }
                         // Connection may have been removed earlier...
                     }

@@ -35,7 +35,7 @@ class ToolMessageHandler {
 
     void toolsList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.infof("List tools [id: %s]", id);
+        LOG.debugf("List tools [id: %s]", id);
 
         JsonArray tools = new JsonArray();
         for (FeatureMetadata<ToolResponse> toolMetadata : toolManager.list()) {
@@ -73,7 +73,7 @@ class ToolMessageHandler {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String toolName = params.getString("name");
-        LOG.infof("Call tool %s [id: %s]", toolName, id);
+        LOG.debugf("Call tool %s [id: %s]", toolName, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
 
