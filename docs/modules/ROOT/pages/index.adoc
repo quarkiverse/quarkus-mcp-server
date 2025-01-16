@@ -303,13 +303,21 @@ public class MyTools {
 
     @Tool
     String up(String name, McpLog log) {
-        log.info("Name accepted %s", name); <1>
+        log.info("UP name accepted %s", name); <1>
         return name.toUpperCase();
+    }
+    
+    @Tool
+    String down(String name, McpLog log) {
+        log.send(LogLevel.INFO, "DOWN name accepted %s", name); <2>
+        return name.toLoweCase();
     }
 
 }
 ----
-<1> If the tool is called with argument `name=Lu` then (A) an equivalent of `org.jboss.logging.Logger.getLogger("tool:up").infof("Name accepted %s", name)` is called, and (B) subsequently, a notification with parameters `{"level":"info","logger":"tool:up","data":"Name accepted: Lu"}` is sent to the connected client.
+<1> If the tool method is called with argument `name=Lu` then (A) an equivalent of `org.jboss.logging.Logger.getLogger("tool:up").infof("UP name accepted %s", name)` is called, and (B) subsequently, a notification with parameters `{"level":"info","logger":"tool:up","data":"UP name accepted: Lu"}` is sent to the connected client.
+<2> If the tool method is called with argument `name=Foo` then a log message notification with parameters `{"level":"info","logger":"tool:down","data":"DOWN name accepted: Foo"}` is sent to the connected client.
+
 
 TIP: The default log level can be set with the `quarkus.mcp.server.client-logging.default-level` configuration property.
 

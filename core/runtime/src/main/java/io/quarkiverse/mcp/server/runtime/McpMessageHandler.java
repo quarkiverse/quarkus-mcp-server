@@ -226,9 +226,10 @@ public class McpMessageHandler {
         if (!toolManager.isEmpty()) {
             capabilities.put("tools", Map.of());
         }
-        if (!resourceManager.isEmpty() || resourceTemplateManager.isEmpty()) {
+        if (!resourceManager.isEmpty() || !resourceTemplateManager.isEmpty()) {
             capabilities.put("resources", Map.of());
         }
+        capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);
         return info;
     }
