@@ -294,6 +294,8 @@ There are also convenient methods that log the message first (using JBoss Loggin
 
 [source,java]
 ----
+package org.acme;
+
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -315,7 +317,7 @@ public class MyTools {
 
 }
 ----
-<1> If the tool method is called with argument `name=Lu` then (A) an equivalent of `org.jboss.logging.Logger.getLogger("tool:up").infof("UP name accepted %s", name)` is called, and (B) subsequently, a notification with parameters `{"level":"info","logger":"tool:up","data":"UP name accepted: Lu"}` is sent to the connected client.
+<1> If the tool method is called with argument `name=Lu` then (A) an equivalent of `org.jboss.logging.Logger.getLogger("org.acme.MyTools").infof("UP name accepted %s", name)` is called, and (B) subsequently, a notification with parameters `{"level":"info","logger":"tool:up","data":"UP name accepted: Lu"}` is sent to the connected client.
 <2> If the tool method is called with argument `name=Foo` then a log message notification with parameters `{"level":"info","logger":"tool:down","data":"DOWN name accepted: Foo"}` is sent to the connected client.
 
 

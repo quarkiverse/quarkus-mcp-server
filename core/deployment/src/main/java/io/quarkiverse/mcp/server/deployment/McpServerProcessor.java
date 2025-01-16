@@ -517,11 +517,11 @@ class McpServerProcessor {
         }
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        List.class),
+                        List.class, String.class),
                 metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
-                args);
+                args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()));
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));

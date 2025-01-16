@@ -7,7 +7,8 @@ import org.jboss.logging.Logger;
  * <p>
  * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/server/utilities/logging">Logging</a>.
  * <p>
- * The logger name is derived from the method. For example, if there is a method {@code myTool()} annotated with {@code @Tool}
+ * The MCP logger name is derived from the method. For example, if there is a method {@code myTool()} annotated with
+ * {@code @Tool}
  * then the logger name will be {@code tool:myTool}.
  */
 public interface McpLog {
