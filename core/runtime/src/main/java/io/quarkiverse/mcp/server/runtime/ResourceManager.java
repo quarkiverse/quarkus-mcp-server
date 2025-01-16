@@ -43,8 +43,7 @@ public class ResourceManager extends FeatureManager<ResourceResponse> {
                     .matchVariables(argProviders.args().get("uri").toString());
             matchedVariables.putIfAbsent("uri", argProviders.args().get("uri"));
             argProviders = new ArgumentProviders(
-                    matchedVariables,
-                    argProviders.connection(), argProviders.requestId());
+                    matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.responder());
         }
         return super.prepareArguments(metadata, argProviders);
     }

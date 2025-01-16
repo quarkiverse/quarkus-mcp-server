@@ -12,6 +12,7 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaVersion;
 
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -75,7 +76,8 @@ class ToolMessageHandler {
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
+        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id,
+                responder);
 
         try {
             Future<ToolResponse> fu = toolManager.execute(toolName, argProviders);
@@ -87,7 +89,12 @@ class ToolMessageHandler {
                         responder.sendResult(id, toolResponse);
                     } else {
                         LOG.errorf(ar.cause(), "Unable to call tool %s", toolName);
-                        responder.sendInternalError(id);
+                        if (ar.cause() instanceof ToolCallException tce) {
+                            // Business logic error should result in ToolResponse with isError:true
+                            responder.sendResult(id, ToolResponse.error(tce.getMessage()));
+                        } else {
+                            responder.sendInternalError(id);
+                        }
                     }
                 }
             });

@@ -42,7 +42,7 @@ class ResourceMessageHandler {
         }
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id);
+        ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id, responder);
 
         try {
             Future<ResourceResponse> fu = resourceManager.execute(resourceUri, argProviders);

@@ -55,7 +55,7 @@ public class SseMcpServerRecorder {
 
                 LOG.debugf("Client connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, response);
+                SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), response);
                 connectionManager.add(connection);
                 // TODO we cannot override the close handler set/used by Quarkus HTTP
                 setCloseHandler(ctx.request(), id, connectionManager);

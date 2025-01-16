@@ -44,10 +44,10 @@ class StdioMcpMessageHandler extends McpMessageHandler {
                 : null;
     }
 
-    void initialize(PrintStream stdout) {
+    void initialize(PrintStream stdout, McpRuntimeConfig config) {
         StdioResponder responder = new StdioResponder(stdout);
-        StdioMcpConnection connection = new StdioMcpConnection(
-                Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes()));
+        String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
+        StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel());
         InputStream in = System.in;
         executor.submit(new Runnable() {
 

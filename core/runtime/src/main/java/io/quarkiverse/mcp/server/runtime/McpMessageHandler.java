@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitializeRequest;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.vertx.core.json.JsonObject;
 
@@ -92,19 +93,21 @@ public class McpMessageHandler {
         }
     }
 
-    private static final String INITIALIZE = "initialize";
-    private static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
-    private static final String PROMPTS_LIST = "prompts/list";
-    private static final String PROMPTS_GET = "prompts/get";
-    private static final String TOOLS_LIST = "tools/list";
-    private static final String TOOLS_CALL = "tools/call";
-    private static final String RESOURCES_LIST = "resources/list";
-    private static final String RESOURCE_TEMPLATES_LIST = "resources/templates/list";
-    private static final String RESOURCES_READ = "resources/read";
-    private static final String PING = "ping";
-    private static final String COMPLETION_COMPLETE = "completion/complete";
+    static final String INITIALIZE = "initialize";
+    static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
+    static final String NOTIFICATIONS_MESSAGE = "notifications/message";
+    static final String PROMPTS_LIST = "prompts/list";
+    static final String PROMPTS_GET = "prompts/get";
+    static final String TOOLS_LIST = "tools/list";
+    static final String TOOLS_CALL = "tools/call";
+    static final String RESOURCES_LIST = "resources/list";
+    static final String RESOURCE_TEMPLATES_LIST = "resources/templates/list";
+    static final String RESOURCES_READ = "resources/read";
+    static final String PING = "ping";
+    static final String COMPLETION_COMPLETE = "completion/complete";
+    static final String LOGGING_SET_LEVEL = "logging/setLevel";
     // non-standard messages
-    private static final String Q_CLOSE = "q/close";
+    static final String Q_CLOSE = "q/close";
 
     private void operation(JsonObject message, Responder responder, McpConnection connection) {
         String method = message.getString("method");
@@ -118,10 +121,34 @@ public class McpMessageHandler {
             case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
             case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, responder);
             case COMPLETION_COMPLETE -> complete(message, responder, connection);
+            case LOGGING_SET_LEVEL -> setLogLevel(message, responder, connection);
             case Q_CLOSE -> close(message, responder, connection);
             default -> responder.send(
                     Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
         }
+    }
+
+    private void setLogLevel(JsonObject message, Responder responder, McpConnection connection) {
+        Object id = message.getValue("id");
+        JsonObject params = message.getJsonObject("params");
+        String level = params.getString("level");
+        if (level == null) {
+            responder.sendError(id, JsonRPC.INVALID_REQUEST, "Log level not set");
+        } else {
+            LogLevel logLevel = LogLevel.from(level);
+            if (logLevel == null) {
+                responder.sendError(id, JsonRPC.INVALID_REQUEST, "Invalid log level set: " + level);
+            } else {
+                if (connection instanceof McpConnectionBase connectionBase) {
+                    connectionBase.setLogLevel(logLevel);
+                    // Send empty result
+                    responder.sendResult(id, new JsonObject());
+                } else {
+                    throw new IllegalStateException();
+                }
+            }
+        }
+
     }
 
     private void complete(JsonObject message, Responder responder, McpConnection connection) {

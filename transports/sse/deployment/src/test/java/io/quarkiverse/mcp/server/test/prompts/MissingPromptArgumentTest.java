@@ -41,7 +41,7 @@ public class MissingPromptArgumentTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject response = waitForLastJsonMessage();
+        JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Missing required argument: val", response.getJsonObject("error").getString("message"));
     }

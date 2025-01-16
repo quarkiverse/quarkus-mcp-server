@@ -20,5 +20,6 @@ public record FeatureArgument(String name, String description, boolean required,
         PARAMS,
         REQUEST_ID,
         MCP_CONNECTION,
+        MCP_LOG
     }
 }

@@ -22,4 +22,11 @@ public class Messages {
         return response;
     }
 
+    static JsonObject newNotification(String method, Object params) {
+        return new JsonObject()
+                .put("jsonrpc", JsonRPC.VERSION)
+                .put("method", method)
+                .put("params", params);
+    }
+
 }

@@ -43,7 +43,7 @@ public class PromptCompleteTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject completeResponse = waitForLastJsonMessage();
+        JsonObject completeResponse = waitForLastResponse();
 
         JsonObject completeResult = assertResponseMessage(completeMessage, completeResponse);
         assertNotNull(completeResult);
@@ -67,7 +67,7 @@ public class PromptCompleteTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        completeResponse = waitForLastJsonMessage();
+        completeResponse = waitForLastResponse();
 
         completeResult = assertResponseMessage(completeMessage, completeResponse);
         assertNotNull(completeResult);

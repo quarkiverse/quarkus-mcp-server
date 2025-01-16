@@ -11,6 +11,7 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -50,6 +51,7 @@ class DotNames {
     static final DotName NON_BLOCKING = DotName.createSimple(NonBlocking.class);
     static final DotName TRANSACTIONAL = DotName.createSimple("jakarta.transaction.Transactional");
     static final DotName MCP_CONNECTION = DotName.createSimple(McpConnection.class);
+    static final DotName MCP_LOG = DotName.createSimple(McpLog.class);
     static final DotName REQUEST_ID = DotName.createSimple(RequestId.class);
     static final DotName CONTENT = DotName.createSimple(Content.class);
     static final DotName TEXT_CONTENT = DotName.createSimple(TextContent.class);

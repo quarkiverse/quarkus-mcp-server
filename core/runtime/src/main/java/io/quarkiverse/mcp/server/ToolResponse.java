@@ -14,4 +14,12 @@ public record ToolResponse(boolean isError, List<? extends Content> content) {
         return new ToolResponse(false, content);
     }
 
+    public static ToolResponse error(String message) {
+        return new ToolResponse(true, List.of(new TextContent(message)));
+    }
+
+    public static ToolResponse success(String message) {
+        return new ToolResponse(false, List.of(new TextContent(message)));
+    }
+
 }

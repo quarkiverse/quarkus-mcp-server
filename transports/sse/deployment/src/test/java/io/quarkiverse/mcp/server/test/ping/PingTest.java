@@ -34,7 +34,7 @@ public class PingTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject pingResponse = waitForLastJsonMessage();
+        JsonObject pingResponse = waitForLastResponse();
 
         JsonObject pingResult = assertResponseMessage(pingMessage, pingResponse);
         assertNotNull(pingResult);
