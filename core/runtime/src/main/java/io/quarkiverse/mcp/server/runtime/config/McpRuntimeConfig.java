@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime.config;
 
 import java.util.Optional;
 
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
@@ -23,6 +24,11 @@ public interface McpRuntimeConfig {
      * Traffic logging config.
      */
     TrafficLogging trafficLogging();
+
+    /**
+     * Client logging config.
+     */
+    ClientLogging clientLogging();
 
     public interface TrafficLogging {
 
@@ -58,6 +64,16 @@ public interface McpRuntimeConfig {
          * @asciidoclet
          */
         Optional<String> version();
+
+    }
+
+    public interface ClientLogging {
+
+        /**
+         * The default log level.
+         */
+        @WithDefault("INFO")
+        public LogLevel defaultLevel();
 
     }
 

@@ -30,7 +30,7 @@ class PromptCompletionMessageHandler {
         String key = promptName + "_" + argumentName;
 
         ArgumentProviders argProviders = new ArgumentProviders(
-                Map.of(argumentName, argument.getString("value")), connection, id);
+                Map.of(argumentName, argument.getString("value")), connection, id, responder);
 
         try {
             Future<CompletionResponse> fu = manager.execute(key, argProviders);

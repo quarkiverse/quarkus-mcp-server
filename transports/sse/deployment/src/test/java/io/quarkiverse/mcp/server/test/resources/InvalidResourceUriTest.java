@@ -39,7 +39,7 @@ public class InvalidResourceUriTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject response = waitForLastJsonMessage();
+        JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.RESOURCE_NOT_FOUND, response.getJsonObject("error").getInteger("code"));
         assertEquals("Invalid resource uri: file:///nonexistent", response.getJsonObject("error").getString("message"));
     }

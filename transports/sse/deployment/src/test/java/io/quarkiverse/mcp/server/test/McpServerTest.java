@@ -23,7 +23,7 @@ public abstract class McpServerTest {
     @TestHTTPResource
     URI testUri;
 
-    SseClient sseClient;
+    private McpSseClient client;
 
     public static QuarkusUnitTest defaultConfig() {
         // TODO in theory, we should also add SseClient to all test archives
@@ -37,19 +37,19 @@ public abstract class McpServerTest {
 
     @AfterEach
     void cleanup() {
-        sseClient = null;
+        client = null;
     }
 
     protected URI initClient() throws URISyntaxException {
         return initClient(null);
     }
 
-    protected JsonObject waitForLastJsonMessage() {
-        SseClient.SseEvent event = sseClient.waitForLastEvent();
-        if ("message".equals(event.name())) {
-            return new JsonObject(event.data());
-        }
-        throw new IllegalStateException("Message event not received: " + event);
+    protected JsonObject waitForLastResponse() {
+        return client.waitForLastResponse();
+    }
+
+    protected McpSseClient client() {
+        return client;
     }
 
     protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
@@ -57,9 +57,9 @@ public abstract class McpServerTest {
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
-        sseClient = new SseClient(URI.create(testUriStr + "/mcp/sse"));
-        sseClient.connect();
-        var event = sseClient.waitForFirstEvent();
+        client = new McpSseClient(URI.create(testUriStr + "/mcp/sse"));
+        client.connect();
+        var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
         URI endpoint = URI.create(messagesUri);
 
@@ -81,7 +81,7 @@ public abstract class McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject initResponse = waitForLastJsonMessage();
+        JsonObject initResponse = waitForLastResponse();
 
         JsonObject initResult = assertResponseMessage(initMessage, initResponse);
         assertNotNull(initResult);
@@ -112,13 +112,13 @@ public abstract class McpServerTest {
     }
 
     protected JsonObject newMessage(String method) {
-        if (sseClient == null) {
+        if (client == null) {
             throw new IllegalStateException("SSE client not initialized");
         }
         return new JsonObject()
                 .put("jsonrpc", "2.0")
                 .put("method", method)
-                .put("id", sseClient.nextId());
+                .put("id", client.nextRequestId());
     }
 
 }

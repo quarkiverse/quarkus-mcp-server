@@ -118,6 +118,7 @@ A `@Prompt` method must only accept `String` parameters that represent Prompt ar
 However, it may also accept the following parameters:
 
 * `McpConnection`
+* `McpLog`
 * `RequestId`
 
 ==== Prompt complete
@@ -198,6 +199,7 @@ However, the annotated method can also return other types that are converted acc
 A `@Resource` method may accept the following parameters:
 
 * `McpConnection`
+* `McpLog`
 * `RequestId`
 
 ==== Resource templates
@@ -273,13 +275,43 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns a `List` of `Content` implementations or `String`s then the reponse is "success" and contains the list of relevant content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
+TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response "failure" and the message of the exception is used as the text of the result content.
+
 ==== Method parameters
 
 A `@Tool` method may accept parameters that represent Tool arguments.
 However, it may also accept the following parameters:
 
 * `McpConnection`
+* `McpLog`
 * `RequestId`
+
+== Client logging
+
+Methods annotated with `@Tool`, `@Resource`, `@ResourceTemplate`, `@Prompt` and `@CompletePrompt` may accept a parameter of type `io.quarkiverse.mcp.server.McpLog`.
+`McpLog` is a utility class that can send log message notifications to a connected MCP client.
+There are also convenient methods that log the message first (using JBoss Logging) and afterwards send a notification message with the same content.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Tool
+    String up(String name, McpLog log) {
+        log.info("Name accepted %s", name); <1>
+        return name.toUpperCase();
+    }
+
+}
+----
+<1> If the tool is called with argument `name=Lu` then (A) an equivalent of `org.jboss.logging.Logger.getLogger("tool:up").infof("Name accepted %s", name)` is called, and (B) subsequently, a notification with parameters `{"level":"info","logger":"tool:up","data":"Name accepted: Lu"}` is sent to the connected client.
+
+TIP: The default log level can be set with the `quarkus.mcp.server.client-logging.default-level` configuration property.
 
 == Traffic logging
 

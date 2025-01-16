@@ -42,7 +42,7 @@ public class InvalidPromptCompleteTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject response = waitForLastJsonMessage();
+        JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Prompt completion does not exist: bar_name", response.getJsonObject("error").getString("message"));
     }

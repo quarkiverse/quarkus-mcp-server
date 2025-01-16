@@ -3,6 +3,8 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import jakarta.enterprise.invoke.Invoker;
 
@@ -32,9 +34,12 @@ public abstract class FeatureManager<R> {
 
     final ObjectMapper mapper;
 
+    final ConcurrentMap<String, McpLogImpl> logs;
+
     protected FeatureManager(Vertx vertx, ObjectMapper mapper) {
         this.vertx = vertx;
         this.mapper = mapper;
+        this.logs = new ConcurrentHashMap<>();
     }
 
     public Future<R> execute(String id, ArgumentProviders argProviders) throws McpException {
@@ -49,7 +54,7 @@ public abstract class FeatureManager<R> {
             public Uni<R> call() throws Exception {
                 try {
                     return metadata.resultMapper().apply(invoker.invoke(null, arguments));
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     return Uni.createFrom().failure(e);
                 }
             }
@@ -74,6 +79,9 @@ public abstract class FeatureManager<R> {
                 ret[idx] = argProviders.connection();
             } else if (arg.provider() == Provider.REQUEST_ID) {
                 ret[idx] = new RequestId(argProviders.requestId());
+            } else if (arg.provider() == Provider.MCP_LOG) {
+                ret[idx] = logs.computeIfAbsent(logKey(metadata),
+                        key -> new McpLogImpl(argProviders.connection()::logLevel, key, argProviders.responder()));
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {
@@ -163,6 +171,10 @@ public abstract class FeatureManager<R> {
             });
         }
         return ret.future();
+    }
+
+    private String logKey(FeatureMetadata<?> metadata) {
+        return metadata.feature().toString().toLowerCase() + ":" + metadata.info().name();
     }
 
     private class ActivateRequestContext<T> implements Callable<Uni<T>> {

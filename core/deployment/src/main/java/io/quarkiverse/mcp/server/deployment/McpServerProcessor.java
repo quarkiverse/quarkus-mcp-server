@@ -334,6 +334,7 @@ class McpServerProcessor {
             for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
                 if (paramType.kind() == Kind.PRIMITIVE
                         || paramType.name().equals(DotNames.MCP_CONNECTION)
+                        || paramType.name().equals(DotNames.MCP_LOG)
                         || paramType.name().equals(DotNames.REQUEST_ID)) {
                     continue;
                 }
@@ -540,6 +541,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.MCP_CONNECTION;
         } else if (type.name().equals(DotNames.REQUEST_ID)) {
             return FeatureArgument.Provider.REQUEST_ID;
+        } else if (type.name().equals(DotNames.MCP_LOG)) {
+            return FeatureArgument.Provider.MCP_LOG;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

@@ -42,7 +42,7 @@ public class InvalidPromptNameTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject response = waitForLastJsonMessage();
+        JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Invalid prompt name: nonexistent", response.getJsonObject("error").getString("message"));
     }

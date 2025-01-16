@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.test.tools;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
@@ -41,7 +42,7 @@ public class ToolsTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject toolListResponse = waitForLastJsonMessage();
+        JsonObject toolListResponse = waitForLastResponse();
 
         JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
@@ -104,11 +105,12 @@ public class ToolsTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject toolGetResponse = waitForLastJsonMessage();
+        JsonObject toolCallResponse = waitForLastResponse();
 
-        JsonObject toolGetResult = assertResponseMessage(toolGetMessage, toolGetResponse);
-        assertNotNull(toolGetResult);
-        JsonArray content = toolGetResult.getJsonArray("content");
+        JsonObject toolCallResult = assertResponseMessage(toolGetMessage, toolCallResponse);
+        assertNotNull(toolCallResult);
+        assertFalse(toolCallResult.getBoolean("isError"));
+        JsonArray content = toolCallResult.getJsonArray("content");
         assertEquals(1, content.size());
         JsonObject textContent = content.getJsonObject(0);
         assertEquals("text", textContent.getString("type"));

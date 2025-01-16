@@ -42,7 +42,7 @@ public class PromptInternalErrorTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject response = waitForLastJsonMessage();
+        JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INTERNAL_ERROR, response.getJsonObject("error").getInteger("code"));
         assertEquals("Internal error", response.getJsonObject("error").getString("message"));
     }

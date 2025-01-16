@@ -36,7 +36,8 @@ class PromptMessageHandler {
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id);
+        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id,
+                responder);
 
         try {
             Future<PromptResponse> fu = promptManager.execute(promptName, argProviders);

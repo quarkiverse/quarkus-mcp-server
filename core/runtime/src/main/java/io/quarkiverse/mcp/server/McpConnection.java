@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server;
 
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
+
 /**
  * Connection from an MCP client.
  */
@@ -15,8 +17,10 @@ public interface McpConnection {
 
     InitializeRequest initializeRequest();
 
+    LogLevel logLevel();
+
     /**
-     * https://spec.modelcontextprotocol.io/specification/basic/lifecycle/
+     * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/">Lifecycle</a>
      */
     enum Status {
         NEW,

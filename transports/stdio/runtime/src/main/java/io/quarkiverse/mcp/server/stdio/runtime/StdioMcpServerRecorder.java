@@ -39,7 +39,7 @@ public class StdioMcpServerRecorder {
                 container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
                 container.instance(ResourceManager.class).get(), container.instance(PromptCompleteManager.class).get(),
                 container.instance(ResourceTemplateManager.class).get());
-        messageHandler.initialize(stdout);
+        messageHandler.initialize(stdout, config);
     }
 
 }

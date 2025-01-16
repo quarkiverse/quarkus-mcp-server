@@ -8,44 +8,21 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.awaitility.Awaitility;
 import org.jboss.logging.Logger;
 
-public class SseClient {
+public abstract class SseClient {
 
     private static final Logger LOG = Logger.getLogger(SseClient.class);
 
     private final URI testUri;
 
-    private final AtomicInteger idGenerator;
-
-    public final List<SseEvent> events;
-
     public SseClient(URI uri) {
         this.testUri = uri;
-        this.idGenerator = new AtomicInteger();
-        this.events = new CopyOnWriteArrayList<>();
     }
 
-    public int nextId() {
-        return idGenerator.incrementAndGet();
-    }
-
-    public SseEvent waitForFirstEvent() {
-        nextId();
-        Awaitility.await().until(() -> !events.isEmpty());
-        return events.get(0);
-    }
-
-    public SseEvent waitForLastEvent() {
-        int lastId = idGenerator.get();
-        Awaitility.await().until(() -> events.size() >= lastId);
-        return events.get(lastId - 1);
-    }
+    protected abstract void process(SseEvent event);
 
     public void connect() {
         HttpClient client = HttpClient.newHttpClient();
@@ -94,7 +71,7 @@ public class SseClient {
                 // Skip comments
             } else if (line.isBlank()) {
                 // Flush
-                events.add(new SseEvent(event, dataBuffer.toString()));
+                process(new SseEvent(event, dataBuffer.toString()));
                 event = "message";
                 dataBuffer = new StringBuilder();
             } else if (line.contains(":")) {

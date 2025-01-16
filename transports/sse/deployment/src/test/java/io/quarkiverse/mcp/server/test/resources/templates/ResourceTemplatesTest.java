@@ -37,7 +37,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject resourceTemplatesListResponse = waitForLastJsonMessage();
+        JsonObject resourceTemplatesListResponse = waitForLastResponse();
 
         JsonObject resourceTemplatesListResult = assertResponseMessage(resourceTemplatesListMessage,
                 resourceTemplatesListResponse);
@@ -61,7 +61,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject resourceReadResponse = waitForLastJsonMessage();
+        JsonObject resourceReadResponse = waitForLastResponse();
 
         JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
         assertNotNull(resourceReadResult);

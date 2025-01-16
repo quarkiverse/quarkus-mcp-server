@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitializeRequest;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
 
 public abstract class McpConnectionBase implements McpConnection {
 
@@ -13,10 +14,13 @@ public abstract class McpConnectionBase implements McpConnection {
 
     private final AtomicReference<InitializeRequest> initializeRequest;
 
-    protected McpConnectionBase(String id) {
+    private final AtomicReference<LogLevel> logLevel;
+
+    protected McpConnectionBase(String id, LogLevel defaultLogLevel) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.initializeRequest = new AtomicReference<>();
+        this.logLevel = new AtomicReference<>(defaultLogLevel);
     }
 
     @Override
@@ -40,6 +44,15 @@ public abstract class McpConnectionBase implements McpConnection {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public LogLevel logLevel() {
+        return logLevel.get();
+    }
+
+    void setLogLevel(LogLevel level) {
+        this.logLevel.set(level);
     }
 
     public boolean setInitialized() {

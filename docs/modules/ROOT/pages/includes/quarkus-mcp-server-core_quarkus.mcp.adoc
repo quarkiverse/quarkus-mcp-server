@@ -79,5 +79,22 @@ endif::add-copy-button-to-env-var[]
 |int
 |`100`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`quarkus.mcp.server.client-logging.default-level`]##
+
+[.description]
+--
+The default log level.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_CLIENT_LOGGING_DEFAULT_LEVEL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_CLIENT_LOGGING_DEFAULT_LEVEL+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
+|`info`
+
 |===
 

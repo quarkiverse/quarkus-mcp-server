@@ -9,26 +9,22 @@ import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.function.Consumer;
 
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
-import io.quarkiverse.mcp.server.test.SseClient;
+import io.quarkiverse.mcp.server.test.McpSseClient;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @QuarkusTest
 public class ServerFeaturesTest {
 
-    private static final Logger LOG = Logger.getLogger(ServerFeaturesTest.class);
-
     @TestHTTPResource
     URI testUri;
 
-    SseClient sseClient;
+    McpSseClient client;
 
     @Test
     public void testPrompt() throws URISyntaxException {
@@ -43,7 +39,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject promptListResponse = lastEventToJson();
+        JsonObject promptListResponse = client.waitForLastResponse();
 
         JsonObject promptListResult = assertResponseMessage(promptListMessage, promptListResponse);
         assertNotNull(promptListResult);
@@ -73,7 +69,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject toolListResponse = lastEventToJson();
+        JsonObject toolListResponse = client.waitForLastResponse();
 
         JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
@@ -106,7 +102,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject resourceListResponse = lastEventToJson();
+        JsonObject resourceListResponse = client.waitForLastResponse();
 
         JsonObject resourceListResult = assertResponseMessage(resourceListMessage, resourceListResponse);
         assertNotNull(resourceListResult);
@@ -124,9 +120,9 @@ public class ServerFeaturesTest {
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
-        sseClient = new SseClient(URI.create(testUriStr + "/mcp/sse"));
-        sseClient.connect();
-        var event = sseClient.waitForFirstEvent();
+        client = new McpSseClient(URI.create(testUriStr + "/mcp/sse"));
+        client.connect();
+        var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
         URI endpoint = URI.create(messagesUri);
 
@@ -145,7 +141,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject initResponse = lastEventToJson();
+        JsonObject initResponse = client.waitForLastResponse();
 
         JsonObject initResult = assertResponseMessage(initMessage, initResponse);
         assertNotNull(initResult);
@@ -165,17 +161,6 @@ public class ServerFeaturesTest {
         return endpoint;
     }
 
-    private JsonObject lastEventToJson() {
-        SseClient.SseEvent event = null;
-        try {
-            event = sseClient.waitForLastEvent();
-            return new JsonObject(event.data());
-        } catch (DecodeException e) {
-            LOG.errorf("Error parsing:\n%s", event);
-            throw e;
-        }
-    }
-
     protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
         assertEquals(message.getInteger("id"), response.getInteger("id"));
         assertEquals("2.0", response.getString("jsonrpc"));
@@ -183,13 +168,13 @@ public class ServerFeaturesTest {
     }
 
     protected JsonObject newMessage(String method) {
-        if (sseClient == null) {
+        if (client == null) {
             throw new IllegalStateException();
         }
         return new JsonObject()
                 .put("jsonrpc", "2.0")
                 .put("method", method)
-                .put("id", sseClient.nextId());
+                .put("id", client.nextRequestId());
     }
 
     private void assertPrompt(JsonObject prompt, String name, String description, Consumer<JsonArray> argumentsAsserter) {
@@ -215,7 +200,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject promptGetResponse = lastEventToJson();
+        JsonObject promptGetResponse = client.waitForLastResponse();
 
         JsonObject promptGetResult = assertResponseMessage(promptGetMessage, promptGetResponse);
         assertNotNull(promptGetResult);
@@ -251,7 +236,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject toolGetResponse = lastEventToJson();
+        JsonObject toolGetResponse = client.waitForLastResponse();
 
         JsonObject toolGetResult = assertResponseMessage(toolGetMessage, toolGetResponse);
         assertNotNull(toolGetResult);
@@ -285,7 +270,7 @@ public class ServerFeaturesTest {
                 .then()
                 .statusCode(200);
 
-        JsonObject resourceReadResponse = lastEventToJson();
+        JsonObject resourceReadResponse = client.waitForLastResponse();
 
         JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
         assertNotNull(resourceReadResult);
