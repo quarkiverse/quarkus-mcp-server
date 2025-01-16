@@ -81,7 +81,8 @@ public abstract class FeatureManager<R> {
                 ret[idx] = new RequestId(argProviders.requestId());
             } else if (arg.provider() == Provider.MCP_LOG) {
                 ret[idx] = logs.computeIfAbsent(logKey(metadata),
-                        key -> new McpLogImpl(argProviders.connection()::logLevel, key, argProviders.responder()));
+                        key -> new McpLogImpl(argProviders.connection()::logLevel, metadata.info().declaringClassName(), key,
+                                argProviders.responder()));
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {

@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.test.serverinfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URISyntaxException;
 
@@ -27,6 +28,8 @@ public class DefaultServerInfoTest extends McpServerTest {
             assertEquals("quarkus-mcp-server-sse-deployment", serverInfo.getString("name"));
             assertEquals(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class).orElseThrow(),
                     serverInfo.getString("version"));
+            JsonObject capabilities = result.getJsonObject("capabilities");
+            assertTrue(capabilities.containsKey("logging"));
         });
     }
 }

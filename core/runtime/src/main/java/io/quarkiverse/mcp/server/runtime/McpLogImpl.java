@@ -12,7 +12,7 @@ import io.vertx.core.json.JsonObject;
 
 class McpLogImpl implements McpLog {
 
-    private final String loggerName;
+    private final String mcpLoggerName;
 
     private final Supplier<LogLevel> level;
 
@@ -20,8 +20,8 @@ class McpLogImpl implements McpLog {
 
     private final Responder responder;
 
-    McpLogImpl(Supplier<LogLevel> level, String loggerName, Responder responder) {
-        this.loggerName = loggerName;
+    McpLogImpl(Supplier<LogLevel> level, String loggerName, String mcpLoggerName, Responder responder) {
+        this.mcpLoggerName = mcpLoggerName;
         this.level = level;
         this.log = Logger.getLogger(loggerName);
         this.responder = responder;
@@ -31,7 +31,7 @@ class McpLogImpl implements McpLog {
     public void send(LogLevel level, Object data) {
         if (isEnabled(Objects.requireNonNull(level))) {
             responder.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
-                    newLog(level, loggerName, encode(data))));
+                    newLog(level, mcpLoggerName, encode(data))));
         }
     }
 
@@ -39,7 +39,7 @@ class McpLogImpl implements McpLog {
     public void send(LogLevel level, String format, Object... params) {
         if (isEnabled(Objects.requireNonNull(level))) {
             responder.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
-                    newLog(level, loggerName, format.formatted(params))));
+                    newLog(level, mcpLoggerName, format.formatted(params))));
         }
     }
 
