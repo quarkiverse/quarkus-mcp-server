@@ -1,9 +1,9 @@
 # Quarkus Model Context Protocol (MCP) Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-[![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
+[![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
 _"[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
 
@@ -63,9 +63,11 @@ public class ServerFeatures {
 }
 ```
 
-Step #3 - run your Quarkus app!
+Step #3 - run your Quarkus app and have fun!
 
-Read the full [documentation](https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html).
+## Documentation
+
+The full documentation is available at https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html.
 
 ## Contributors ✨
 
