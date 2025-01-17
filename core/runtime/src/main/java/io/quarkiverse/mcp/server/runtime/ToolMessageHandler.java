@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.lang.reflect.Type;
+import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
@@ -24,12 +25,12 @@ class ToolMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ToolMessageHandler.class);
 
-    private final ToolManager toolManager;
+    private final ToolManager manager;
 
     private final SchemaGenerator schemaGenerator;
 
-    ToolMessageHandler(ToolManager toolManager) {
-        this.toolManager = toolManager;
+    ToolMessageHandler(ToolManager manager) {
+        this.manager = Objects.requireNonNull(manager);
         this.schemaGenerator = new SchemaGenerator(
                 new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON).build());
     }
@@ -39,7 +40,7 @@ class ToolMessageHandler {
         LOG.debugf("List tools [id: %s]", id);
 
         JsonArray tools = new JsonArray();
-        for (FeatureMetadata<ToolResponse> toolMetadata : toolManager.list()) {
+        for (FeatureMetadata<ToolResponse> toolMetadata : manager.list()) {
             JsonObject tool = toolMetadata.asJson();
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
@@ -80,7 +81,7 @@ class ToolMessageHandler {
                 responder);
 
         try {
-            Future<ToolResponse> fu = toolManager.execute(toolName, argProviders);
+            Future<ToolResponse> fu = manager.execute(toolName, argProviders);
             fu.onComplete(new Handler<AsyncResult<ToolResponse>>() {
                 @Override
                 public void handle(AsyncResult<ToolResponse> ar) {

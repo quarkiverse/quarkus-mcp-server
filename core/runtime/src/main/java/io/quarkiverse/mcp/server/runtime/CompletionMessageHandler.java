@@ -11,29 +11,25 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
-class PromptCompletionMessageHandler {
+public abstract class CompletionMessageHandler {
 
-    private static final Logger LOG = Logger.getLogger(PromptCompletionMessageHandler.class);
+    private static final Logger LOG = Logger.getLogger(CompletionMessageHandler.class);
 
-    private final PromptCompleteManager manager;
+    protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders) throws McpException;
 
-    PromptCompletionMessageHandler(PromptCompleteManager manager) {
-        this.manager = manager;
-    }
-
-    void promptComplete(Object id, JsonObject ref, JsonObject argument, Responder responder, McpConnection connection) {
-        String promptName = ref.getString("name");
+    void complete(Object id, JsonObject ref, JsonObject argument, Responder responder, McpConnection connection) {
+        String referenceName = ref.getString("name");
         String argumentName = argument.getString("name");
 
-        LOG.debugf("Complete prompt %s for argument %s [id: %s]", promptName, argumentName, id);
+        LOG.debugf("Complete %s for argument %s [id: %s]", referenceName, argumentName, id);
 
-        String key = promptName + "_" + argumentName;
+        String key = referenceName + "_" + argumentName;
 
         ArgumentProviders argProviders = new ArgumentProviders(
                 Map.of(argumentName, argument.getString("value")), connection, id, responder);
 
         try {
-            Future<CompletionResponse> fu = manager.execute(key, argProviders);
+            Future<CompletionResponse> fu = execute(key, argProviders);
             fu.onComplete(new Handler<AsyncResult<CompletionResponse>>() {
                 @Override
                 public void handle(AsyncResult<CompletionResponse> ar) {
@@ -51,7 +47,7 @@ class PromptCompletionMessageHandler {
                         result.put("completion", completion);
                         responder.sendResult(id, result);
                     } else {
-                        LOG.errorf(ar.cause(), "Unable to complete prompt %s", promptName);
+                        LOG.errorf(ar.cause(), "Unable to complete prompt %s", referenceName);
                         responder.sendInternalError(id);
                     }
                 }

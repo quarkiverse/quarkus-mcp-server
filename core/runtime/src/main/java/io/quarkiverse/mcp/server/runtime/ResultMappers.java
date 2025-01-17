@@ -69,16 +69,16 @@ public class ResultMappers {
     public static final Function<Uni<List<ResourceContents>>, Uni<ResourceResponse>> RESOURCE_UNI_LIST_CONTENT = uni -> uni
             .map(l -> new ResourceResponse(l));
 
-    public static final Function<String, Uni<CompletionResponse>> PROMPT_COMPLETE_STRING = str -> Uni.createFrom()
+    public static final Function<String, Uni<CompletionResponse>> COMPLETE_STRING = str -> Uni.createFrom()
             .item(new CompletionResponse(List.of(str), null, null));
 
-    public static final Function<List<String>, Uni<CompletionResponse>> PROMPT_COMPLETE_LIST_STRING = list -> Uni.createFrom()
+    public static final Function<List<String>, Uni<CompletionResponse>> COMPLETE_LIST_STRING = list -> Uni.createFrom()
             .item(new CompletionResponse(list, null, null));
 
-    public static final Function<Uni<String>, Uni<CompletionResponse>> PROMPT_COMPLETE_UNI_STRING = uni -> uni
+    public static final Function<Uni<String>, Uni<CompletionResponse>> COMPLETE_UNI_STRING = uni -> uni
             .map(str -> new CompletionResponse(List.of(str), null, null));
 
-    public static final Function<Uni<List<String>>, Uni<CompletionResponse>> PROMPT_COMPLETE_UNI_LIST_STRING = uni -> uni
+    public static final Function<Uni<List<String>>, Uni<CompletionResponse>> COMPLETE_UNI_LIST_STRING = uni -> uni
             .map(list -> new CompletionResponse(list, null, null));
 
 }

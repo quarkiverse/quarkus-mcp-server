@@ -45,7 +45,8 @@ public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoke
         TOOL,
         RESOURCE,
         RESOURCE_TEMPLATE,
-        PROMPT_COMPLETE;
+        PROMPT_COMPLETE,
+        RESOURCE_TEMPLATE_COMPLETE;
 
         public boolean requiresUri() {
             return this == RESOURCE || this == RESOURCE_TEMPLATE;
