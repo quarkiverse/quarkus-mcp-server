@@ -24,9 +24,10 @@ public class McpMessageHandler {
 
     private final ToolMessageHandler toolHandler;
     private final PromptMessageHandler promptHandler;
-    private final PromptCompletionMessageHandler promptCompleteHandler;
+    private final PromptCompleteMessageHandler promptCompleteHandler;
     private final ResourceMessageHandler resourceHandler;
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
+    private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
     protected final McpRuntimeConfig config;
 
@@ -34,13 +35,14 @@ public class McpMessageHandler {
 
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
             ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
-            ResourceTemplateManager resourceTemplateManager) {
+            ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager);
         this.promptHandler = new PromptMessageHandler(promptManager);
-        this.promptCompleteHandler = new PromptCompletionMessageHandler(promptCompleteManager);
+        this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompleteManager);
         this.resourceHandler = new ResourceMessageHandler(resourceManager);
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager);
+        this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
         this.config = config;
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager);
     }
@@ -167,7 +169,9 @@ public class McpMessageHandler {
                     responder.sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
                 } else {
                     if ("ref/prompt".equals(referenceType)) {
-                        promptCompleteHandler.promptComplete(id, ref, argument, responder, connection);
+                        promptCompleteHandler.complete(id, ref, argument, responder, connection);
+                    } else if ("ref/resource".equals(referenceType)) {
+                        resourceTemplateCompleteHandler.complete(id, ref, argument, responder, connection);
                     } else {
                         responder.sendError(id, JsonRPC.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));

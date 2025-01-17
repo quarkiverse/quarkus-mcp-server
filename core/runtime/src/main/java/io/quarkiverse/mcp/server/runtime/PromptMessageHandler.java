@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Objects;
+
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpConnection;
@@ -14,17 +16,17 @@ class PromptMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(PromptMessageHandler.class);
 
-    private final PromptManager promptManager;
+    private final PromptManager manager;
 
-    PromptMessageHandler(PromptManager promptManager) {
-        this.promptManager = promptManager;
+    PromptMessageHandler(PromptManager manager) {
+        this.manager = Objects.requireNonNull(manager);
     }
 
     void promptsList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
         LOG.debugf("List prompts [id: %s]", id);
         JsonArray prompts = new JsonArray();
-        for (FeatureMetadata<PromptResponse> resource : promptManager.list()) {
+        for (FeatureMetadata<PromptResponse> resource : manager.list()) {
             prompts.add(resource.asJson());
         }
         responder.sendResult(id, new JsonObject().put("prompts", prompts));
@@ -40,7 +42,7 @@ class PromptMessageHandler {
                 responder);
 
         try {
-            Future<PromptResponse> fu = promptManager.execute(promptName, argProviders);
+            Future<PromptResponse> fu = manager.execute(promptName, argProviders);
             fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
                 @Override
                 public void handle(AsyncResult<PromptResponse> ar) {

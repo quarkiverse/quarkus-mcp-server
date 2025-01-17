@@ -93,6 +93,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature == Feature.RESOURCE_TEMPLATE;
     }
 
+    boolean isResourceTemplateComplete() {
+        return feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
+    }
+
     @Override
     public String toString() {
         return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#"

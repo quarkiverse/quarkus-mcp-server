@@ -4,6 +4,7 @@ import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT_COMPLETE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE_TEMPLATE;
+import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE_TEMPLATE_COMPLETE;
 import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
@@ -53,6 +54,7 @@ import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
 import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
@@ -92,6 +94,7 @@ class McpServerProcessor {
             DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
             DotNames.RESOURCE, RESOURCE,
             DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
+            DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
             DotNames.TOOL, TOOL);
 
     @BuildStep
@@ -99,7 +102,7 @@ class McpServerProcessor {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
                 .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class, PromptCompleteManager.class,
-                        ResourceTemplateManager.class)
+                        ResourceTemplateManager.class, ResourceTemplateCompleteManager.class)
                 .build());
     }
 
@@ -124,7 +127,7 @@ class McpServerProcessor {
                     Feature feature = getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature);
                     String name;
-                    if (feature == PROMPT_COMPLETE) {
+                    if (feature == PROMPT_COMPLETE || feature == RESOURCE_TEMPLATE_COMPLETE) {
                         name = featureAnnotation.value().asString();
                     } else {
                         AnnotationValue nameValue = featureAnnotation.value("name");
@@ -201,7 +204,7 @@ class McpServerProcessor {
             }
         }
 
-        // Check existing prompts for prompt completions
+        // Check existing prompts for completions
         List<FeatureMethodBuildItem> prompts = found.get(PROMPT);
         List<FeatureMethodBuildItem> promptCompletions = found.get(PROMPT_COMPLETE);
         if (promptCompletions != null) {
@@ -213,10 +216,24 @@ class McpServerProcessor {
                 }
             }
         }
+
+        // Check existing resource templates for completions
+        List<FeatureMethodBuildItem> resourceTemplates = found.get(RESOURCE_TEMPLATE);
+        List<FeatureMethodBuildItem> resourceTemplateCompletions = found.get(RESOURCE_TEMPLATE_COMPLETE);
+        if (resourceTemplateCompletions != null) {
+            for (FeatureMethodBuildItem completion : resourceTemplateCompletions) {
+                if (resourceTemplates == null
+                        || resourceTemplates.stream().noneMatch(p -> p.getName().equals(completion.getName()))) {
+                    String message = "Resource template %s does not exist for completion: %s"
+                            .formatted(completion.getName(), completion);
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                }
+            }
+        }
     }
 
     private String getDuplicateValidationName(FeatureMethodBuildItem featureMethod) {
-        if (featureMethod.getFeature() == PROMPT_COMPLETE) {
+        if (featureMethod.getFeature() == PROMPT_COMPLETE || featureMethod.getFeature() == RESOURCE_TEMPLATE_COMPLETE) {
             MethodParameterInfo argument = featureMethod.getMethod().parameters().stream()
                     .filter(p -> providerFrom(p.type()) == Provider.PARAMS).findFirst().orElseThrow();
             String argumentName = argument.name();
@@ -316,6 +333,20 @@ class McpServerProcessor {
         }
         resourceTemplatesMethod.returnValue(retResourceTemplates);
 
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.resourceTemplateCompletions()
+        MethodCreator resourceTemplateCompletionsMethod = metadataCreator.getMethodCreator("resourceTemplateCompletions",
+                List.class);
+        ResultHandle retResourceTemplateCompletions = Gizmo.newArrayList(resourceTemplateCompletionsMethod);
+        for (FeatureMethodBuildItem resourceTemplateCompletion : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isResourceTemplateComplete)
+                .toList()) {
+            processFeatureMethod(counter, metadataCreator, resourceTemplateCompletionsMethod, resourceTemplateCompletion,
+                    retResourceTemplateCompletions,
+                    transformedAnnotations,
+                    DotNames.COMPLETE_ARG);
+        }
+        resourceTemplateCompletionsMethod.returnValue(retResourceTemplateCompletions);
+
         metadataCreator.close();
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
@@ -362,6 +393,7 @@ class McpServerProcessor {
             case TOOL -> validateToolMethod(method);
             case RESOURCE -> validateResourceMethod(method);
             case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method);
+            case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
@@ -390,7 +422,7 @@ class McpServerProcessor {
         }
     }
 
-    private static final Set<org.jboss.jandex.Type> PROMPT_COMPLETE_TYPES = Set.of(ClassType.create(DotNames.COMPLETE_RESPONSE),
+    private static final Set<org.jboss.jandex.Type> COMPLETE_TYPES = Set.of(ClassType.create(DotNames.COMPLETE_RESPONSE),
             ClassType.create(DotNames.STRING));
 
     private void validatePromptCompleteMethod(MethodInfo method) {
@@ -401,7 +433,7 @@ class McpServerProcessor {
         if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
-        if (!PROMPT_COMPLETE_TYPES.contains(type)) {
+        if (!COMPLETE_TYPES.contains(type)) {
             throw new IllegalStateException("Unsupported Prompt complete method return type: " + method);
         }
 
@@ -409,6 +441,25 @@ class McpServerProcessor {
                 .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
         if (arguments.size() != 1 || !arguments.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException("Prompt complete must consume exactly one String argument: " + method);
+        }
+    }
+
+    private void validateResourceTemplateCompleteMethod(MethodInfo method) {
+        org.jboss.jandex.Type type = method.returnType();
+        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+            type = type.asParameterizedType().arguments().get(0);
+        }
+        if (!COMPLETE_TYPES.contains(type)) {
+            throw new IllegalStateException("Unsupported Resource template complete method return type: " + method);
+        }
+
+        List<MethodParameterInfo> arguments = method.parameters().stream()
+                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
+        if (arguments.size() != 1 || !arguments.get(0).type().name().equals(DotNames.STRING)) {
+            throw new IllegalStateException("Resource template complete must consume exactly one String argument: " + method);
         }
     }
 
@@ -475,7 +526,8 @@ class McpServerProcessor {
                 || beanClass.hasAnnotation(DotNames.COMPLETE_PROMPT)
                 || beanClass.hasAnnotation(DotNames.TOOL)
                 || beanClass.hasAnnotation(DotNames.RESOURCE)
-                || beanClass.hasAnnotation(DotNames.RESOURCE_TEMPLATE);
+                || beanClass.hasAnnotation(DotNames.RESOURCE_TEMPLATE)
+                || beanClass.hasAnnotation(DotNames.COMPLETE_RESOURCE_TEMPLATE);
     }
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
@@ -561,6 +613,8 @@ class McpServerProcessor {
             }));
             case RESOURCE, RESOURCE_TEMPLATE -> readResultMapper(bytecode,
                     createMapperField(RESOURCE, returnType, DotNames.RESOURCE_RESPONSE, c -> "CONTENT"));
+            case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bytecode,
+                    createMapperField(RESOURCE_TEMPLATE_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "STRING"));
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         };
     }
@@ -571,9 +625,13 @@ class McpServerProcessor {
             return "TO_UNI";
         }
         org.jboss.jandex.Type type = returnType;
-        StringBuilder ret = new StringBuilder(feature.toString())
-                .append("_");
-
+        StringBuilder ret;
+        if (feature == PROMPT_COMPLETE || feature == RESOURCE_TEMPLATE_COMPLETE) {
+            ret = new StringBuilder("COMPLETE_");
+        } else {
+            ret = new StringBuilder(feature.toString())
+                    .append("_");
+        }
         if (DotNames.UNI.equals(type.name())) {
             type = type.asParameterizedType().arguments().get(0);
             if (type.name().equals(baseType)) {

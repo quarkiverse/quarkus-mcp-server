@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
@@ -111,7 +112,8 @@ public class SseMcpServerRecorder {
         return new SseMcpMessageHandler(config, container.instance(ConnectionManager.class).get(),
                 container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
                 container.instance(ResourceManager.class).get(), container.instance(PromptCompleteManager.class).get(),
-                container.instance(ResourceTemplateManager.class).get());
+                container.instance(ResourceTemplateManager.class).get(),
+                container.instance(ResourceTemplateCompleteManager.class).get());
     }
 
 }

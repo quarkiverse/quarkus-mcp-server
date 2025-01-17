@@ -19,4 +19,6 @@ public interface McpMetadata {
 
     List<FeatureMetadata<ResourceResponse>> resourceTemplates();
 
+    List<FeatureMetadata<CompletionResponse>> resourceTemplateCompletions();
+
 }

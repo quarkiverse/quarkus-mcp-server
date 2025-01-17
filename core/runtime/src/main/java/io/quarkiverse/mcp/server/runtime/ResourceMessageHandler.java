@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
@@ -16,17 +17,17 @@ class ResourceMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ResourceMessageHandler.class);
 
-    private final ResourceManager resourceManager;
+    private final ResourceManager manager;
 
-    ResourceMessageHandler(ResourceManager resourceManager) {
-        this.resourceManager = resourceManager;
+    ResourceMessageHandler(ResourceManager manager) {
+        this.manager = Objects.requireNonNull(manager);
     }
 
     void resourcesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
         LOG.debugf("List resources [id: %s]", id);
         JsonArray resources = new JsonArray();
-        for (FeatureMetadata<ResourceResponse> resource : resourceManager.list()) {
+        for (FeatureMetadata<ResourceResponse> resource : manager.list()) {
             resources.add(resource.asJson());
         }
         responder.sendResult(id, new JsonObject().put("resources", resources));
@@ -45,7 +46,7 @@ class ResourceMessageHandler {
         ArgumentProviders argProviders = new ArgumentProviders(Map.of("uri", resourceUri), connection, id, responder);
 
         try {
-            Future<ResourceResponse> fu = resourceManager.execute(resourceUri, argProviders);
+            Future<ResourceResponse> fu = manager.execute(resourceUri, argProviders);
             fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
                 @Override
                 public void handle(AsyncResult<ResourceResponse> ar) {
