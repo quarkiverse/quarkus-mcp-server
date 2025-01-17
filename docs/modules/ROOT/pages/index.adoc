@@ -38,7 +38,7 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-TIP: The SSE endpoint is exposed at `/{rootPath}/sse` and the `{rootPath}` is set to `mcp` by default. However, it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+TIP: The SSE endpoint is exposed at `/{rootPath}/sse`. The `{rootPath}` is set to `mcp` by default but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
 == Supported server features
 
@@ -229,7 +229,7 @@ public class MyResourceTemplates {
 <2> `MyResourceTemplates` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
 <3> `@ResourceTemplate` annotates a business method of a CDI bean that should be exposed as a resource template. By default, the name of the resource template is derived from the method name.
 <4> `ResourceTemplate#uriTemplate()` contains a  Level 1 URI template (https://datatracker.ietf.org/doc/html/rfc6570#section-1.2[RFC 6570]) that can be used to construct resource URIs.
-<5> The `String uri` parameter refers to the actual resource URI. 
+<5> The `name` parameter refers to the expression from the URI template. The `uri` parameter refers to the actual resource URI. 
 
 The result of a "resource read" operation is always represented as a `ResourceResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
