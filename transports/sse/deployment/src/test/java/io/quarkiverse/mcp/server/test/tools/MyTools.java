@@ -10,6 +10,8 @@ import java.util.List;
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
@@ -58,7 +60,7 @@ public class MyTools {
     }
 
     @Tool
-    String charlie(DayOfWeek day) {
+    String charlie(DayOfWeek day, McpConnection connection, McpLog log) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
