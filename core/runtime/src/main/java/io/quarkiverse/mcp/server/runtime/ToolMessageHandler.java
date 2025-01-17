@@ -43,7 +43,7 @@ class ToolMessageHandler {
             JsonObject tool = toolMetadata.asJson();
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
-            for (FeatureArgument a : toolMetadata.info().arguments()) {
+            for (FeatureArgument a : toolMetadata.info().serializedArguments()) {
                 properties.put(a.name(), generateSchema(a.type(), a));
                 if (a.required()) {
                     required.add(a.name());

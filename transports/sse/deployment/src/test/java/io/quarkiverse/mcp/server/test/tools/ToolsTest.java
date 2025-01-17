@@ -50,7 +50,7 @@ public class ToolsTest extends McpServerTest {
         assertEquals(8, tools.size());
 
         // alpha, bravo, charlie, list_charlie, uni_alpha, uni_bravo, uni_charlie, uni_list_charlie
-        assertTool(tools.getJsonObject(0), "alpha", null, schema -> {
+        assertTool(tools, "alpha", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");
             assertEquals(1, properties.size());
             JsonObject priceProperty = properties.getJsonObject("price");
@@ -58,12 +58,19 @@ public class ToolsTest extends McpServerTest {
             assertEquals("integer", priceProperty.getString("type"));
             assertEquals("Define the price...", priceProperty.getString("description"));
         });
-        assertTool(tools.getJsonObject(4), "uni_alpha", null, schema -> {
+        assertTool(tools, "uni_alpha", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");
             assertEquals(1, properties.size());
             JsonObject priceProperty = properties.getJsonObject("uni_price");
             assertNotNull(priceProperty);
             assertEquals("number", priceProperty.getString("type"));
+        });
+        assertTool(tools, "charlie", null, schema -> {
+            JsonObject properties = schema.getJsonObject("properties");
+            assertEquals(1, properties.size());
+            JsonObject dayProperty = properties.getJsonObject("day");
+            assertNotNull(dayProperty);
+            assertEquals("string", dayProperty.getString("type"));
         });
 
         assertToolCall("Hello 1!", endpoint, "alpha", new JsonObject()
@@ -81,8 +88,14 @@ public class ToolsTest extends McpServerTest {
         assertToolCall("charlie4", endpoint, "uni_list_charlie", new JsonObject());
     }
 
-    private void assertTool(JsonObject tool, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
-        assertEquals(name, tool.getString("name"));
+    private void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
+        JsonObject tool = null;
+        for (int i = 0; i < tools.size(); i++) {
+            JsonObject t = tools.getJsonObject(i);
+            if (name.equals(t.getString("name"))) {
+                tool = t;
+            }
+        }
         if (description != null) {
             assertEquals(description, tool.getString("description"));
         }
