@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import static io.quarkiverse.mcp.server.runtime.Messages.isResponse;
+
 import io.vertx.core.json.JsonObject;
 
 public class JsonRPC {
@@ -21,9 +23,11 @@ public class JsonRPC {
             responder.sendError(id, INVALID_REQUEST, "Invalid jsonrpc version: " + jsonrpc);
             return false;
         }
-        if (message.getString("method") == null) {
-            responder.sendError(id, METHOD_NOT_FOUND, "Method not set");
-            return false;
+        if (!isResponse(message)) {
+            if (message.getString("method") == null) {
+                responder.sendError(id, METHOD_NOT_FOUND, "Method not set");
+                return false;
+            }
         }
         return true;
     }
