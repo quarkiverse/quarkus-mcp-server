@@ -2,8 +2,10 @@ package io.quarkiverse.mcp.server.sse.deployment;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
+import io.quarkiverse.mcp.server.sse.runtime.SseMcpMessageHandler;
 import io.quarkiverse.mcp.server.sse.runtime.SseMcpServerRecorder;
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseBuildTimeConfig;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -19,6 +21,11 @@ public class SseMcpServerProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem("mcp-server-sse");
+    }
+
+    @BuildStep
+    void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(SseMcpMessageHandler.class));
     }
 
     @Record(RUNTIME_INIT)

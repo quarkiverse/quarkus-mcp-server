@@ -48,12 +48,18 @@ public class McpMessageHandler {
     }
 
     public void handle(JsonObject message, McpConnection connection, Responder responder) {
-        switch (connection.status()) {
-            case NEW -> initializeNew(message, responder, connection);
-            case INITIALIZING -> initializing(message, responder, connection);
-            case IN_OPERATION -> operation(message, responder, connection);
-            case SHUTDOWN -> responder.send(
-                    Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
+        if (Messages.isResponse(message)) {
+            // Reponse from a client
+            // Currently we discard all responses, including pong responses
+            LOG.debugf("Discard client response: %s", message);
+        } else {
+            switch (connection.status()) {
+                case NEW -> initializeNew(message, responder, connection);
+                case INITIALIZING -> initializing(message, responder, connection);
+                case IN_OPERATION -> operation(message, responder, connection);
+                case SHUTDOWN -> responder.send(
+                        Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
+            }
         }
     }
 

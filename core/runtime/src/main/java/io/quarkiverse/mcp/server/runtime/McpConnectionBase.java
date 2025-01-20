@@ -1,26 +1,35 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitializeRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 
-public abstract class McpConnectionBase implements McpConnection {
+public abstract class McpConnectionBase implements McpConnection, Responder {
 
-    private final String id;
+    protected final String id;
 
-    private final AtomicReference<Status> status;
+    protected final AtomicReference<Status> status;
 
-    private final AtomicReference<InitializeRequest> initializeRequest;
+    protected final AtomicReference<InitializeRequest> initializeRequest;
 
-    private final AtomicReference<LogLevel> logLevel;
+    protected final AtomicReference<LogLevel> logLevel;
 
-    protected McpConnectionBase(String id, LogLevel defaultLogLevel) {
+    protected final TrafficLogger trafficLogger;
+
+    protected final Optional<Duration> autoPingInterval;
+
+    protected McpConnectionBase(String id, LogLevel defaultLogLevel, TrafficLogger trafficLogger,
+            Optional<Duration> autoPingInterval) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.initializeRequest = new AtomicReference<>();
         this.logLevel = new AtomicReference<>(defaultLogLevel);
+        this.trafficLogger = trafficLogger;
+        this.autoPingInterval = autoPingInterval;
     }
 
     @Override
@@ -57,6 +66,14 @@ public abstract class McpConnectionBase implements McpConnection {
 
     public boolean setInitialized() {
         return status.compareAndSet(Status.INITIALIZING, Status.IN_OPERATION);
+    }
+
+    public TrafficLogger trafficLogger() {
+        return trafficLogger;
+    }
+
+    public Optional<Duration> autoPingInterval() {
+        return autoPingInterval;
     }
 
 }

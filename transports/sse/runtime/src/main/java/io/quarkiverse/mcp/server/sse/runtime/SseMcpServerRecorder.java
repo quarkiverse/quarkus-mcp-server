@@ -9,12 +9,7 @@ import java.util.function.Consumer;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
-import io.quarkiverse.mcp.server.runtime.PromptManager;
-import io.quarkiverse.mcp.server.runtime.ResourceManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
@@ -43,6 +38,8 @@ public class SseMcpServerRecorder {
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
+        TrafficLogger trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
+                : null;
 
         return new Handler<RoutingContext>() {
 
@@ -56,7 +53,8 @@ public class SseMcpServerRecorder {
 
                 LOG.debugf("Client connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), response);
+                SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), trafficLogger,
+                        config.autoPingInterval(), response);
                 connectionManager.add(connection);
                 // TODO we cannot override the close handler set/used by Quarkus HTTP
                 setCloseHandler(ctx.request(), id, connectionManager);
@@ -108,12 +106,7 @@ public class SseMcpServerRecorder {
     }
 
     public Handler<RoutingContext> createMessagesEndpointHandler() {
-        ArcContainer container = Arc.container();
-        return new SseMcpMessageHandler(config, container.instance(ConnectionManager.class).get(),
-                container.instance(PromptManager.class).get(), container.instance(ToolManager.class).get(),
-                container.instance(ResourceManager.class).get(), container.instance(PromptCompleteManager.class).get(),
-                container.instance(ResourceTemplateManager.class).get(),
-                container.instance(ResourceTemplateCompleteManager.class).get());
+        return Arc.container().instance(SseMcpMessageHandler.class).get();
     }
 
 }

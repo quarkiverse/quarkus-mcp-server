@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.awaitility.Awaitility;
 
@@ -14,15 +16,23 @@ public class McpSseClient extends SseClient {
     private final AtomicInteger requestIdGenerator;
 
     private final List<SseEvent> allEvents;
+    private final List<JsonObject> requests;
     private final List<JsonObject> responses;
     private final List<JsonObject> notifications;
+
+    private final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
 
     public McpSseClient(URI uri) {
         super(uri);
         this.requestIdGenerator = new AtomicInteger();
         this.allEvents = new CopyOnWriteArrayList<>();
+        this.requests = new CopyOnWriteArrayList<>();
         this.responses = new CopyOnWriteArrayList<>();
         this.notifications = new CopyOnWriteArrayList<>();
+    }
+
+    public void setRequestConsumer(Consumer<JsonObject> value) {
+        this.requestConsumer.set(value);
     }
 
     public int nextRequestId() {
@@ -43,6 +53,11 @@ public class McpSseClient extends SseClient {
         return notifications;
     }
 
+    public List<JsonObject> waitForRequests(int count) {
+        Awaitility.await().until(() -> requests.size() >= count);
+        return requests;
+    }
+
     public SseEvent waitForFirstEvent() {
         Awaitility.await().until(() -> !allEvents.isEmpty());
         return allEvents.get(0);
@@ -54,7 +69,16 @@ public class McpSseClient extends SseClient {
         if ("message".equals(event.name())) {
             JsonObject json = new JsonObject(event.data());
             if (json.containsKey("id")) {
-                responses.add(json);
+                if (json.containsKey("result") || json.containsKey("error")) {
+                    responses.add(json);
+                } else {
+                    // Request from the server
+                    requests.add(json);
+                    Consumer<JsonObject> c = requestConsumer.get();
+                    if (c != null) {
+                        c.accept(json);
+                    }
+                }
             } else {
                 notifications.add(json);
             }

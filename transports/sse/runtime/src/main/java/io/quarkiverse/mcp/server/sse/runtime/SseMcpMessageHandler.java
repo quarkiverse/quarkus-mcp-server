@@ -1,19 +1,19 @@
 package io.quarkiverse.mcp.server.sse.runtime;
 
+import jakarta.inject.Singleton;
+
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
 import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.runtime.Responder;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -22,19 +22,16 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
-class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingContext> {
+@Singleton
+public class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingContext> {
 
     private static final Logger LOG = Logger.getLogger(SseMcpMessageHandler.class);
-
-    private final TrafficLogger trafficLogger;
 
     protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
             ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
             ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager);
-        this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
-                : null;
     }
 
     @Override
@@ -52,51 +49,29 @@ class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingC
             ctx.fail(405);
             return;
         }
-        McpConnection connection = connectionManager.get(connectionId);
+        McpConnectionBase connection = connectionManager.get(connectionId);
         if (connection == null) {
             LOG.errorf("Connection not found: %s", connectionId);
             ctx.fail(400);
             return;
         }
-        SseResponder responder = new SseResponder((SseMcpConnection) connection);
-
         JsonObject message;
         try {
             message = ctx.body().asJsonObject();
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
             LOG.errorf(e, msg);
-            responder.sendError(null, JsonRPC.PARSE_ERROR, msg);
+            connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
             ctx.end();
             return;
         }
-        if (trafficLogger != null) {
-            trafficLogger.messageReceived(message);
+        if (connection.trafficLogger() != null) {
+            connection.trafficLogger().messageReceived(message);
         }
-        if (JsonRPC.validate(message, responder)) {
-            handle(message, connection, responder);
+        if (JsonRPC.validate(message, connection)) {
+            handle(message, connection, connection);
         }
         ctx.end();
     }
 
-    private class SseResponder implements Responder {
-
-        final SseMcpConnection connection;
-
-        SseResponder(SseMcpConnection connection) {
-            this.connection = connection;
-        }
-
-        @Override
-        public void send(JsonObject message) {
-            if (message == null) {
-                return;
-            }
-            if (trafficLogger != null) {
-                trafficLogger.messageSent(message);
-            }
-            connection.sendEvent("message", message.encode());
-        }
-
-    }
 }

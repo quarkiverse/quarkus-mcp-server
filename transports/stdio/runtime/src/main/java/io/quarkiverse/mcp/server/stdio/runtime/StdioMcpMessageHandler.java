@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import jakarta.inject.Singleton;
+
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
@@ -20,14 +22,15 @@ import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.runtime.Responder;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
-class StdioMcpMessageHandler extends McpMessageHandler {
+@Singleton
+public class StdioMcpMessageHandler extends McpMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(StdioMcpMessageHandler.class);
 
@@ -35,20 +38,24 @@ class StdioMcpMessageHandler extends McpMessageHandler {
 
     private final TrafficLogger trafficLogger;
 
+    private final Vertx vertx;
+
     protected StdioMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
             ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
-            ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager) {
+            ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager,
+            Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager);
         this.executor = Executors.newSingleThreadExecutor();
         this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;
+        this.vertx = vertx;
     }
 
     void initialize(PrintStream stdout, McpRuntimeConfig config) {
-        StdioResponder responder = new StdioResponder(stdout);
         String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-        StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel());
+        StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel(),
+                trafficLogger, config.autoPingInterval(), stdout, vertx);
         InputStream in = System.in;
         executor.submit(new Runnable() {
 
@@ -65,14 +72,14 @@ class StdioMcpMessageHandler extends McpMessageHandler {
                             } catch (Exception e) {
                                 String msg = "Unable to parse the JSON message";
                                 LOG.errorf(e, msg);
-                                responder.sendError(null, JsonRPC.PARSE_ERROR, msg);
+                                connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
                                 return;
                             }
                             if (trafficLogger != null) {
                                 trafficLogger.messageReceived(message);
                             }
-                            if (JsonRPC.validate(message, responder)) {
-                                handle(message, connection, responder);
+                            if (JsonRPC.validate(message, connection)) {
+                                handle(message, connection, connection);
                             }
                         } catch (DecodeException e) {
                             String msg = "Unable to parse the JSON message";
@@ -84,27 +91,6 @@ class StdioMcpMessageHandler extends McpMessageHandler {
                 }
             }
         });
-    }
-
-    private class StdioResponder implements Responder {
-
-        private final PrintStream out;
-
-        private StdioResponder(PrintStream out) {
-            this.out = out;
-        }
-
-        @Override
-        public void send(JsonObject message) {
-            if (message == null) {
-                return;
-            }
-            if (trafficLogger != null) {
-                trafficLogger.messageSent(message);
-            }
-            out.println(message.encode());
-        }
-
     }
 
 }

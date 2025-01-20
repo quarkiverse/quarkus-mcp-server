@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime.config;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
@@ -29,6 +30,13 @@ public interface McpRuntimeConfig {
      * Client logging config.
      */
     ClientLogging clientLogging();
+
+    /**
+     * The interval after which, when set, the server sends a ping message to the connected client automatically.
+     * <p>
+     * Ping messages are not sent automatically by default.
+     */
+    Optional<Duration> autoPingInterval();
 
     public interface TrafficLogging {
 
