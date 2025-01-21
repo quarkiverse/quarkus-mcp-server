@@ -24,7 +24,7 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Logging in the console is automatically disabled. And the standard output stream is set to "null" when the app is started by default. 
+IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default. 
 
 If you want to use the https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse[HTTP/SSE] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
