@@ -26,7 +26,7 @@ public abstract class CompletionMessageHandler {
         String key = referenceName + "_" + argumentName;
 
         ArgumentProviders argProviders = new ArgumentProviders(
-                Map.of(argumentName, argument.getString("value")), connection, id, responder);
+                Map.of(argumentName, argument.getString("value")), connection, id, null, responder);
 
         try {
             Future<CompletionResponse> fu = execute(key, argProviders);

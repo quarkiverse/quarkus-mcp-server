@@ -19,6 +19,7 @@ public record FeatureArgument(String name, String description, boolean required,
     public enum Provider {
         PARAMS,
         REQUEST_ID,
+        REQUEST_URI,
         MCP_CONNECTION,
         MCP_LOG
     }

@@ -6,6 +6,7 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
@@ -26,8 +27,8 @@ public class ServerFeatures {
     }
 
     @Resource(uri = "file:///project/alpha")
-    BlobResourceContents alpha(String uri) {
-        return BlobResourceContents.create(uri, "data".getBytes());
+    BlobResourceContents alpha(RequestUri uri) {
+        return BlobResourceContents.create(uri.value(), "data".getBytes());
     }
 
 }

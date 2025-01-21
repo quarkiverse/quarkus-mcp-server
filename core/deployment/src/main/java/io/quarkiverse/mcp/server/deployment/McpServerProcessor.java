@@ -56,6 +56,7 @@ import io.quarkiverse.mcp.server.runtime.PromptManager;
 import io.quarkiverse.mcp.server.runtime.ResourceManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager.VariableMatcher;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -125,7 +126,7 @@ class McpServerProcessor {
                 AnnotationInstance featureAnnotation = getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
                     Feature feature = getFeature(featureAnnotation);
-                    validateFeatureMethod(method, feature);
+                    validateFeatureMethod(method, feature, featureAnnotation);
                     String name;
                     if (feature == PROMPT_COMPLETE || feature == RESOURCE_TEMPLATE_COMPLETE) {
                         name = featureAnnotation.value().asString();
@@ -364,9 +365,11 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem m : featureMethods) {
             for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
                 if (paramType.kind() == Kind.PRIMITIVE
+                        || paramType.name().equals(DotNames.STRING)
                         || paramType.name().equals(DotNames.MCP_CONNECTION)
                         || paramType.name().equals(DotNames.MCP_LOG)
-                        || paramType.name().equals(DotNames.REQUEST_ID)) {
+                        || paramType.name().equals(DotNames.REQUEST_ID)
+                        || paramType.name().equals(DotNames.REQUEST_URI)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -380,7 +383,7 @@ class McpServerProcessor {
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
     }
 
-    private void validateFeatureMethod(MethodInfo method, Feature feature) {
+    private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation) {
         if (Modifier.isStatic(method.flags())) {
             throw new IllegalStateException("MCP feature method must not be static: " + method);
         }
@@ -392,7 +395,7 @@ class McpServerProcessor {
             case PROMPT_COMPLETE -> validatePromptCompleteMethod(method);
             case TOOL -> validateToolMethod(method);
             case RESOURCE -> validateResourceMethod(method);
-            case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method);
+            case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation);
             case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
@@ -413,11 +416,10 @@ class McpServerProcessor {
             throw new IllegalStateException("Unsupported Prompt method return type: " + method);
         }
 
-        List<MethodParameterInfo> arguments = method.parameters().stream()
-                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
-        for (MethodParameterInfo arg : arguments) {
-            if (!arg.type().name().equals(DotNames.STRING)) {
-                throw new IllegalStateException("Prompt method must only consume String arguments: " + method);
+        List<MethodParameterInfo> parameters = parameters(method);
+        for (MethodParameterInfo param : parameters) {
+            if (!param.type().name().equals(DotNames.STRING)) {
+                throw new IllegalStateException("Prompt method must only consume String parameters: " + method);
             }
         }
     }
@@ -437,9 +439,8 @@ class McpServerProcessor {
             throw new IllegalStateException("Unsupported Prompt complete method return type: " + method);
         }
 
-        List<MethodParameterInfo> arguments = method.parameters().stream()
-                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
-        if (arguments.size() != 1 || !arguments.get(0).type().name().equals(DotNames.STRING)) {
+        List<MethodParameterInfo> parameters = parameters(method);
+        if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException("Prompt complete must consume exactly one String argument: " + method);
         }
     }
@@ -456,9 +457,8 @@ class McpServerProcessor {
             throw new IllegalStateException("Unsupported Resource template complete method return type: " + method);
         }
 
-        List<MethodParameterInfo> arguments = method.parameters().stream()
-                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
-        if (arguments.size() != 1 || !arguments.get(0).type().name().equals(DotNames.STRING)) {
+        List<MethodParameterInfo> parameters = parameters(method);
+        if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException("Resource template complete must consume exactly one String argument: " + method);
         }
     }
@@ -496,17 +496,15 @@ class McpServerProcessor {
         if (!RESOURCE_TYPES.contains(type)) {
             throw new IllegalStateException("Unsupported Resource method return type: " + method);
         }
-        if (method.parametersCount() > 1
-                || (method.parametersCount() == 1
-                        && !method.parameterName(0).equals("uri")
-                        && !method.parameterType(0).name().equals(DotNames.STRING))) {
+
+        List<MethodParameterInfo> parameters = parameters(method);
+        if (!parameters.isEmpty()) {
             throw new IllegalStateException(
-                    "Resource method may accept zero paramateres or a single parameter of name 'uri' and type String: "
-                            + method);
+                    "Resource method may only accept built-in parameter types" + method);
         }
     }
 
-    private void validateResourceTemplateMethod(MethodInfo method) {
+    private void validateResourceTemplateMethod(MethodInfo method, AnnotationInstance featureAnnotation) {
         org.jboss.jandex.Type type = method.returnType();
         if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
@@ -517,7 +515,28 @@ class McpServerProcessor {
         if (!RESOURCE_TYPES.contains(type)) {
             throw new IllegalStateException("Unsupported Resource template method return type: " + method);
         }
-        // TODO validate params
+
+        AnnotationValue uriTemplateValue = featureAnnotation.value("uriTemplate");
+        if (uriTemplateValue == null) {
+            throw new IllegalStateException("URI template not found");
+        }
+        VariableMatcher variableMatcher = ResourceTemplateManager.createMatcherFromUriTemplate(uriTemplateValue.asString());
+
+        List<MethodParameterInfo> parameters = parameters(method);
+        for (MethodParameterInfo param : parameters) {
+            if (!param.type().name().equals(DotNames.STRING)) {
+                throw new IllegalStateException("Resource template method must only consume String parameters: " + method);
+            }
+            if (!variableMatcher.variables().contains(param.name())) {
+                throw new IllegalStateException(
+                        "Parameter [" + param.name() + "] does not match an URI template variable: " + method);
+            }
+        }
+    }
+
+    private List<MethodParameterInfo> parameters(MethodInfo method) {
+        return method.parameters().stream()
+                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
     }
 
     private boolean hasFeatureMethod(BeanInfo bean) {
@@ -595,6 +614,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.REQUEST_ID;
         } else if (type.name().equals(DotNames.MCP_LOG)) {
             return FeatureArgument.Provider.MCP_LOG;
+        } else if (type.name().equals(DotNames.REQUEST_URI)) {
+            return FeatureArgument.Provider.REQUEST_URI;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

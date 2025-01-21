@@ -78,7 +78,7 @@ class ToolMessageHandler {
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id,
-                responder);
+                null, responder);
 
         try {
             Future<ToolResponse> fu = manager.execute(toolName, argProviders);

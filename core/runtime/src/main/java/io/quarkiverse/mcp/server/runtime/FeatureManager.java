@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
@@ -79,6 +80,8 @@ public abstract class FeatureManager<R> {
                 ret[idx] = argProviders.connection();
             } else if (arg.provider() == Provider.REQUEST_ID) {
                 ret[idx] = new RequestId(argProviders.requestId());
+            } else if (arg.provider() == Provider.REQUEST_URI) {
+                ret[idx] = new RequestUri(argProviders.uri());
             } else if (arg.provider() == Provider.MCP_LOG) {
                 ret[idx] = logs.computeIfAbsent(logKey(metadata),
                         key -> new McpLogImpl(argProviders.connection()::logLevel, metadata.info().declaringClassName(), key,

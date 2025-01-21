@@ -55,7 +55,7 @@ public class ResourceTemplateManager extends FeatureManager<ResourceResponse> {
         return new McpException("Invalid resource uri: " + id, JsonRPC.RESOURCE_NOT_FOUND);
     }
 
-    static VariableMatcher createMatcherFromUriTemplate(String uriTemplate) {
+    public static VariableMatcher createMatcherFromUriTemplate(String uriTemplate) {
         // Find variables
         List<String> variables = new ArrayList<>();
         Matcher m = Pattern.compile("\\{(\\w+)\\}").matcher(uriTemplate);
@@ -71,7 +71,7 @@ public class ResourceTemplateManager extends FeatureManager<ResourceResponse> {
     record ResourceTemplateMetadata(VariableMatcher variableMatcher, FeatureMetadata<ResourceResponse> metadata) {
     }
 
-    record VariableMatcher(Pattern pattern, List<String> variables) {
+    public record VariableMatcher(Pattern pattern, List<String> variables) {
 
         boolean matches(String uri) {
             return pattern.matcher(uri).matches();

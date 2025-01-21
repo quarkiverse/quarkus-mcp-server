@@ -160,6 +160,13 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns a `List` of `String`s then the reponse contains the list of values.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
+A `@CompletePrompt` method must only accept a single `String` parameter that represents a completed Prompt argument.
+However, it may also accept the following parameters:
+
+* `McpConnection`
+* `McpLog`
+* `RequestId`
+
 === Resources
 
 MCP provides a https://spec.modelcontextprotocol.io/specification/server/resources/[standardized way] for servers to expose resources to clients.
@@ -201,6 +208,7 @@ A `@Resource` method may accept the following parameters:
 * `McpConnection`
 * `McpLog`
 * `RequestId`
+* `RequestUri`
 
 ==== Resource templates
 
@@ -239,6 +247,14 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns a `List` of `ResourceContents` implementations then the reponse contains the list of contents objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
+A `@ResourceTemplate` method must only accept `String` parameters that represent template variables.
+However, it may also accept the following parameters:
+
+* `McpConnection`
+* `McpLog`
+* `RequestId`
+* `RequestUri`
+
 Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.
 
 [source,java]
@@ -274,6 +290,14 @@ However, the annotated method can also return other types that are converted acc
 * If the method returns `java.lang.String` then the reponse contains a single value.
 * If the method returns a `List` of `String`s then the reponse contains the list of values.
 * The method may return a `Uni` that wraps any of the type mentioned above.
+
+A `@CompleteResourceTemplate` method must only accept a single `String` parameter that represents a completed Resource template variable.
+However, it may also accept the following parameters:
+
+* `McpConnection`
+* `McpLog`
+* `RequestId`
+* `RequestUri`
 
 === Tools
 
