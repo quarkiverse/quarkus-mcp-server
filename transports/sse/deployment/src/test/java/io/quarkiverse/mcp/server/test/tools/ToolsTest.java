@@ -1,11 +1,9 @@
 package io.quarkiverse.mcp.server.test.tools;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.DayOfWeek;
 import java.util.function.Consumer;
@@ -18,7 +16,6 @@ import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -31,16 +28,9 @@ public class ToolsTest extends McpServerTest {
 
     @Test
     public void testTools() throws URISyntaxException {
-        URI endpoint = initClient();
-
+        initClient();
         JsonObject toolListMessage = newMessage("tools/list");
-
-        given().contentType(ContentType.JSON)
-                .when()
-                .body(toolListMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(toolListMessage);
 
         JsonObject toolListResponse = waitForLastResponse();
 
@@ -73,19 +63,19 @@ public class ToolsTest extends McpServerTest {
             assertEquals("string", dayProperty.getString("type"));
         });
 
-        assertToolCall("Hello 1!", endpoint, "alpha", new JsonObject()
+        assertToolCall("Hello 1!", "alpha", new JsonObject()
                 .put("price", 1));
-        assertToolCall("Hello 1.0!", endpoint, "uni_alpha", new JsonObject()
+        assertToolCall("Hello 1.0!", "uni_alpha", new JsonObject()
                 .put("uni_price", 1));
-        assertToolCall("Hello 1!", endpoint, "bravo", new JsonObject()
+        assertToolCall("Hello 1!", "bravo", new JsonObject()
                 .put("price", 1));
-        assertToolCall("Hello 1!", endpoint, "uni_bravo", new JsonObject()
+        assertToolCall("Hello 1!", "uni_bravo", new JsonObject()
                 .put("price", 1));
-        assertToolCall("charlie1", endpoint, "charlie", new JsonObject().put("day", DayOfWeek.FRIDAY.toString()));
-        assertToolCall("charlie11", endpoint, "charlie", new JsonObject().put("day", DayOfWeek.MONDAY.toString()));
-        assertToolCall("charlie2", endpoint, "uni_charlie", new JsonObject());
-        assertToolCall("charlie3", endpoint, "list_charlie", new JsonObject());
-        assertToolCall("charlie4", endpoint, "uni_list_charlie", new JsonObject());
+        assertToolCall("charlie1", "charlie", new JsonObject().put("day", DayOfWeek.FRIDAY.toString()));
+        assertToolCall("charlie11", "charlie", new JsonObject().put("day", DayOfWeek.MONDAY.toString()));
+        assertToolCall("charlie2", "uni_charlie", new JsonObject());
+        assertToolCall("charlie3", "list_charlie", new JsonObject());
+        assertToolCall("charlie4", "uni_list_charlie", new JsonObject());
     }
 
     private void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
@@ -104,19 +94,12 @@ public class ToolsTest extends McpServerTest {
         }
     }
 
-    private void assertToolCall(String expectedText, URI endpoint, String name, JsonObject arguments) {
+    private void assertToolCall(String expectedText, String name, JsonObject arguments) {
         JsonObject toolGetMessage = newMessage("tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", arguments));
-
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(toolGetMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(toolGetMessage);
 
         JsonObject toolCallResponse = waitForLastResponse();
 

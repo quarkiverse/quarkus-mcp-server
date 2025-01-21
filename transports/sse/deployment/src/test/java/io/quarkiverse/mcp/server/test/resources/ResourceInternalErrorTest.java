@@ -1,9 +1,7 @@
 package io.quarkiverse.mcp.server.test.resources;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
@@ -14,7 +12,6 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonObject;
 
 public class ResourceInternalErrorTest extends McpServerTest {
@@ -26,20 +23,11 @@ public class ResourceInternalErrorTest extends McpServerTest {
 
     @Test
     public void testError() throws URISyntaxException {
-        URI endpoint = initClient();
-
+        initClient();
         JsonObject message = newMessage("resources/read")
                 .put("params", new JsonObject()
                         .put("uri", "file:///project/alpha"));
-
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(message.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
-
+        send(message);
         JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INTERNAL_ERROR, response.getJsonObject("error").getInteger("code"));
         assertEquals("Internal error", response.getJsonObject("error").getString("message"));

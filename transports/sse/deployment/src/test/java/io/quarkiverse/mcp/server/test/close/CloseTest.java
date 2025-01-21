@@ -24,14 +24,7 @@ public class CloseTest extends McpServerTest {
         URI endpoint = initClient();
 
         JsonObject closeMessage = newMessage("q/close");
-
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(closeMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(closeMessage);
 
         given()
                 .contentType(ContentType.JSON)

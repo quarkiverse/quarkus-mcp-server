@@ -1,6 +1,5 @@
 package io.quarkiverse.mcp.server.test;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -13,7 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 
 import io.quarkus.test.QuarkusUnitTest;
 import io.quarkus.test.common.http.TestHTTPResource;
-import io.restassured.http.ContentType;
+import io.restassured.RestAssured;
 import io.vertx.core.json.JsonObject;
 
 public abstract class McpServerTest {
@@ -23,7 +22,8 @@ public abstract class McpServerTest {
     @TestHTTPResource
     URI testUri;
 
-    private McpSseClient client;
+    private volatile McpSseClient client;
+    private volatile URI messageEndpoint;
 
     public static QuarkusUnitTest defaultConfig() {
         // TODO in theory, we should also add SseClient to all test archives
@@ -38,6 +38,7 @@ public abstract class McpServerTest {
     @AfterEach
     void cleanup() {
         client = null;
+        messageEndpoint = null;
     }
 
     protected URI initClient() throws URISyntaxException {
@@ -52,6 +53,18 @@ public abstract class McpServerTest {
         return client;
     }
 
+    public void send(JsonObject data) {
+        if (messageEndpoint == null || client == null) {
+            throw new IllegalStateException("SSE client not initialized");
+        }
+        RestAssured.given()
+                .when()
+                .body(data.encode())
+                .post(messageEndpoint)
+                .then()
+                .statusCode(200);
+    }
+
     protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
@@ -62,6 +75,7 @@ public abstract class McpServerTest {
         var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
         URI endpoint = URI.create(messagesUri);
+        this.messageEndpoint = endpoint;
 
         LOG.infof("Client received endpoint: %s", endpoint);
 
@@ -73,13 +87,7 @@ public abstract class McpServerTest {
                                         .put("version", "1.0"))
                                 .put("protocolVersion", "2024-11-05"));
 
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(initMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(initMessage);
 
         JsonObject initResponse = waitForLastResponse();
 
@@ -92,15 +100,9 @@ public abstract class McpServerTest {
         }
 
         // Send "notifications/initialized"
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(new JsonObject()
-                        .put("jsonrpc", "2.0")
-                        .put("method", "notifications/initialized").encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("method", "notifications/initialized"));
 
         return endpoint;
     }
