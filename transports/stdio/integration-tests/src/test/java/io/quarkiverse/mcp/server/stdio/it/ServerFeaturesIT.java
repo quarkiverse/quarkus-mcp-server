@@ -1,7 +1,9 @@
 package io.quarkiverse.mcp.server.stdio.it;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,7 +12,9 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +38,9 @@ public class ServerFeaturesIT {
 
     static Process process;
     static PrintStream out;
-    static BlockingQueue<JsonObject> synchronizer = new LinkedBlockingQueue<>();
+    static List<String> stderrLines;
+
+    static final BlockingQueue<JsonObject> synchronizer = new LinkedBlockingQueue<>();
 
     @BeforeAll
     static void startServer() throws IOException {
@@ -45,14 +51,16 @@ public class ServerFeaturesIT {
         ProcessBuilder builder = new ProcessBuilder("java", "-jar", quarkusRunJar.toString());
         process = builder.start();
         out = new PrintStream(process.getOutputStream(), true);
+        stderrLines = new CopyOnWriteArrayList<>();
+
         Executors.newSingleThreadExecutor().submit(new Runnable() {
 
             @Override
             public void run() {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 try {
                     String line;
-                    while ((line = reader.readLine()) != null) {
+                    while ((line = stdout.readLine()) != null) {
                         System.out.println(String.format("JSON message received:\n%s", line));
                         synchronizer.put(new JsonObject(line));
                     }
@@ -61,13 +69,34 @@ public class ServerFeaturesIT {
                 }
             }
         });
+
+        Executors.newSingleThreadExecutor().submit(new Runnable() {
+
+            @Override
+            public void run() {
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                try {
+                    String line;
+                    while ((line = stderr.readLine()) != null) {
+                        System.out.println(line);
+                        stderrLines.add(line);
+                    }
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        });
+
     }
 
     @AfterAll
     static void stopServer() {
         if (process != null) {
             process.destroy();
+            process = null;
         }
+        out = null;
+        stderrLines = null;
     }
 
     @Order(1)
@@ -93,6 +122,10 @@ public class ServerFeaturesIT {
         });
         assertPromptMessage("System.out.println(\"Hello world!\");", "code_assist", new JsonObject()
                 .put("lang", "java"));
+
+        // Assert that quarkus log is redirected to stderr by default
+        assertFalse(stderrLines.isEmpty());
+        assertTrue(stderrLines.stream().anyMatch(l -> l.contains("Log from code assist...")));
     }
 
     @Order(2)

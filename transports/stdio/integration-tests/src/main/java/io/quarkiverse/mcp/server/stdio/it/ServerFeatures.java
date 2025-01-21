@@ -9,6 +9,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkus.logging.Log;
 
 public class ServerFeatures {
 
@@ -22,6 +23,7 @@ public class ServerFeatures {
 
     @Prompt(name = "code_assist")
     PromptMessage codeAssist(@PromptArg(name = "lang") String language) {
+        Log.info("Log from code assist...");
         return PromptMessage.withUserRole(new TextContent(codeService.assist(language)));
     }
 
