@@ -1,10 +1,8 @@
 package io.quarkiverse.mcp.server.test.complete;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
@@ -12,7 +10,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -25,8 +22,7 @@ public class PromptCompleteTest extends McpServerTest {
 
     @Test
     public void testCompletion() throws URISyntaxException {
-        URI endpoint = initClient();
-
+        initClient();
         JsonObject completeMessage = newMessage("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
@@ -35,13 +31,7 @@ public class PromptCompleteTest extends McpServerTest {
                         .put("argument", new JsonObject()
                                 .put("name", "name")
                                 .put("value", "Vo")));
-
-        given().contentType(ContentType.JSON)
-                .when()
-                .body(completeMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(completeMessage);
 
         JsonObject completeResponse = waitForLastResponse();
 
@@ -59,13 +49,7 @@ public class PromptCompleteTest extends McpServerTest {
                         .put("argument", new JsonObject()
                                 .put("name", "suffix")
                                 .put("value", "Vo")));
-
-        given().contentType(ContentType.JSON)
-                .when()
-                .body(completeMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
+        send(completeMessage);
 
         completeResponse = waitForLastResponse();
 

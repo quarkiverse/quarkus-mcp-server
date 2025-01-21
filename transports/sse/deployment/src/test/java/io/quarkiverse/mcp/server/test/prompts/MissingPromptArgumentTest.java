@@ -1,9 +1,7 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
@@ -15,7 +13,6 @@ import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
 import io.vertx.core.json.JsonObject;
 
 public class MissingPromptArgumentTest extends McpServerTest {
@@ -27,20 +24,12 @@ public class MissingPromptArgumentTest extends McpServerTest {
 
     @Test
     public void testError() throws URISyntaxException {
-        URI endpoint = initClient();
-
+        initClient();
         JsonObject message = newMessage("prompts/get")
                 .put("params", new JsonObject()
                         .put("name", "uni_bar")
                         .put("arguments", new JsonObject()));
-
-        given().contentType(ContentType.JSON)
-                .when()
-                .body(message.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(200);
-
+        send(message);
         JsonObject response = waitForLastResponse();
         assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Missing required argument: val", response.getJsonObject("error").getString("message"));
