@@ -93,7 +93,7 @@ ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++`
 endif::add-copy-button-to-env-var[]
 --
-a|`alert`, `critical`, `debug`, `emergency`, `error`, `info`, `notice`, `warning`
+a|`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
 |`info`
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-auto-ping-interval[`quarkus.auto-ping-interval`]##

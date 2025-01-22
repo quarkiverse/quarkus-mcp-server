@@ -39,7 +39,7 @@ class PromptMessageHandler {
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id,
-                responder);
+                null, responder);
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName, argProviders);

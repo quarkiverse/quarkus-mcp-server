@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
@@ -36,7 +37,7 @@ public class ResourceInternalErrorTest extends McpServerTest {
     public static class MyResources {
 
         @Resource(uri = "file:///project/alpha")
-        ResourceResponse alpha(String uri) {
+        ResourceResponse alpha(RequestUri uri) {
             throw new NullPointerException();
         }
 

@@ -18,6 +18,7 @@ import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceContent;
 import io.quarkiverse.mcp.server.ResourceContents;
@@ -54,6 +55,7 @@ class DotNames {
     static final DotName MCP_CONNECTION = DotName.createSimple(McpConnection.class);
     static final DotName MCP_LOG = DotName.createSimple(McpLog.class);
     static final DotName REQUEST_ID = DotName.createSimple(RequestId.class);
+    static final DotName REQUEST_URI = DotName.createSimple(RequestUri.class);
     static final DotName CONTENT = DotName.createSimple(Content.class);
     static final DotName TEXT_CONTENT = DotName.createSimple(TextContent.class);
     static final DotName IMAGE_CONTENT = DotName.createSimple(ImageContent.class);

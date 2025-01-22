@@ -40,10 +40,10 @@ public class ResourceManager extends FeatureManager<ResourceResponse> {
         if (metadata.feature() == Feature.RESOURCE_TEMPLATE) {
             // Use variable matching to extract method arguments
             Map<String, Object> matchedVariables = resourceTemplateManager.getVariableMatcher(metadata.info().name())
-                    .matchVariables(argProviders.args().get("uri").toString());
-            matchedVariables.putIfAbsent("uri", argProviders.args().get("uri"));
+                    .matchVariables(argProviders.uri());
             argProviders = new ArgumentProviders(
-                    matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.responder());
+                    matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
+                    argProviders.responder());
         }
         return super.prepareArguments(metadata, argProviders);
     }
