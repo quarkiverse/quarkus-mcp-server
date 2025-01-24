@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
 
@@ -54,12 +55,19 @@ public abstract class FeatureManager<R> {
             @Override
             public Uni<R> call() throws Exception {
                 try {
-                    return metadata.resultMapper().apply(invoker.invoke(null, arguments));
+                    Function<Object, Uni<R>> resultMapper = metadata.resultMapper();
+                    Object ret = invoker.invoke(null, arguments);
+                    ret = wrapResult(ret, metadata, argProviders);
+                    return resultMapper.apply(ret);
                 } catch (Throwable e) {
                     return Uni.createFrom().failure(e);
                 }
             }
         });
+    }
+
+    protected Object wrapResult(Object ret, FeatureMetadata<R> metadata, ArgumentProviders argProviders) {
+        return ret;
     }
 
     public abstract List<FeatureMetadata<R>> list();

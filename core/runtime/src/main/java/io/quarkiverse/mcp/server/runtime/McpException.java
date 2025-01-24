@@ -1,6 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
-class McpException extends Exception {
+class McpException extends RuntimeException {
 
     private static final long serialVersionUID = 3142589829095593984L;
 

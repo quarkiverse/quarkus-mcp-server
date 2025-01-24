@@ -16,12 +16,21 @@ import io.smallrye.mutiny.Uni;
  * can also return other types that are converted according to the following rules.
  *
  * <ul>
- * <li>If the method returns an implementation of {@link ResourceContents} then the reponse contains the single contents
+ * <li>If it returns an implementation of {@link ResourceContents} then the reponse contains the single contents
  * object.</li>
- * <li>If the method returns a {@link List} of {@link ResourceContents} implementations then the reponse contains the list of
+ * <li>If it returns a {@link List} of {@link ResourceContents} implementations then the reponse contains the list of
  * contents objects.</li>
+ * <li>If it returns any other type {@code X} or {@code List<X>} then {@code X} is encoded using the
+ * {@link ResourceContentsEncoder} API and afterwards the rules above apply.</li>
  * <li>The method may return a {@link Uni} that wraps any of the type mentioned above.</li>
  * </ul>
+ *
+ * <p>
+ * There is a default resource contents encoder registered; it encodes the returned value as JSON.
+ *
+ * @see Resource
+ * @see ResourceResponse
+ * @see ResourceContentsEncoder
  */
 @Retention(RUNTIME)
 @Target(METHOD)

@@ -12,21 +12,27 @@ import io.smallrye.mutiny.Uni;
 /**
  * Annotates a business method of a CDI bean as an exposed tool.
  * <p>
- * The result of a "tool call" operation is always represented as a {@link ToolResponse}. However, the annotated method can also
+ * A result of a "tool call" operation is always represented as a {@link ToolResponse}. However, the annotated method can also
  * return other types that are converted according to the following rules.
- *
+ * <p>
  * <ul>
- * <li>If the method returns {@link String} then the reponse is {@code success} and contains the single {@link TextContent}
- * object.</li>
- * <li>If the method returns an implementation of {@link Content} then the reponse is {@code success} and contains the single
+ * <li>If it returns {@link String} then the reponse is {@code success} and contains a single {@link TextContent}.</li>
+ * <li>If it returns an implementation of {@link Content} then the reponse is {@code success} and contains a single
  * content object.</li>
- * <li>If the method returns a {@link List} of {@link Content} implementations or {@link String}s then the reponse is
- * {@code success} and contains the list of relevant content objects.</li>
- * <li>The method may return a {@link Uni} that wraps any of the type mentioned above.</li>
+ * <li>If it returns a {@link List} of {@link Content} implementations or strings then the reponse is
+ * {@code success} and contains a list of relevant content objects.</li>
+ * <li>If it returns any other type {@code X} or {@code List<X>} then {@code X} is encoded using the {@link ToolResponseEncoder}
+ * and {@link ContentEncoder} API and afterwards the rules above apply.</li>
+ * <li>It may also return a {@link Uni} that wraps any of the type mentioned above.</li>
  * </ul>
+ *
+ * <p>
+ * There is a default content encoder registered; it encodes the returned value as JSON.
  *
  * @see ToolResponse
  * @see ToolArg
+ * @see ToolResponseEncoder
+ * @see ContentEncoder
  */
 @Retention(RUNTIME)
 @Target(METHOD)

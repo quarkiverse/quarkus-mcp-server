@@ -14,25 +14,19 @@ import io.smallrye.mutiny.Uni;
  * <p>
  * The result of a "prompt get" operation is always represented as a {@link PromptResponse}. However, the annotated method can
  * also return other types that are converted according to the following rules.
+ * <p>
  * <ul>
- * <li>If the method returns a {@link PromptMessage} then the reponse has no description and contains the single
+ * <li>If it returns a {@link PromptMessage} then the reponse has no description and contains the single
  * message object.</li>
- * <li>If the method returns a {@link List} of {@link PromptMessage}s then the reponse has no description and contains the
+ * <li>If it returns a {@link List} of {@link PromptMessage}s then the reponse has no description and contains the
  * list of messages.</li>
- * <li>The method may return a {@link Uni} that wraps any of the type mentioned above.</li>
- * </ul>
- * In other words, the return type must be one of the following list:
- * <ul>
- * <li>{@code PromptResponse}</li>
- * <li>{@code PromptMessage}</li>
- * <li>{@code List<PromptMessage>}</li>
- * <li>{@code Uni<PromptResponse>}</li>
- * <li>{@code Uni<PromptMessage>}</li>
- * <li>{@code Uni<List<PromptMessage>>}</li>
+ * <li>If it returns any other type {@code X} then {@code X} is encoded using the {@link PromptResponseEncoder} API.</li>
+ * <li>It may also return a {@link Uni} that wraps any of the type mentioned above.</li>
  * </ul>
  *
  * @see PromptResponse
  * @see PromptArg
+ * @see PromptResponseEncoder
  */
 @Retention(RUNTIME)
 @Target(METHOD)
