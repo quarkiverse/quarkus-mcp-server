@@ -25,6 +25,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -61,10 +62,15 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
 
             @Override
             public void run() {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                try {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
+
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+                    while (true) {
+                        String line = reader.readLine();
+                        if (line == null) {
+                            LOG.debug("EOF received, exiting");
+                            Quarkus.asyncExit(0);
+                            return;
+                        }
                         try {
                             JsonObject message;
                             try {
