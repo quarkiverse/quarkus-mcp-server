@@ -12,9 +12,9 @@ The application can be packaged and installed using:
 ./mvnw install
 ```
 
-This builds an uber jar and you can run it directly using `jbang org.acme:weather:1.0.0-SNAPSHOT:runner`
+This builds an uber-jar which you can run directly using `jbang org.acme:weather:1.0.0-SNAPSHOT:runner`
 
-To use in a MCP host client, you can use the following command:
+To utilize in an MCP client (such as Claude Desktop), you can use the following command:
 
 ```shell script
 jbang --quiet org.acme:weather:1.0.0-SNAPSHOT:runner 
