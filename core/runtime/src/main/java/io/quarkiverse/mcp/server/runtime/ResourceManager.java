@@ -9,8 +9,11 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 
 @Singleton
@@ -33,6 +36,30 @@ public class ResourceManager extends FeatureManager<ResourceResponse> {
             ret = resourceTemplateManager.getMetadata(identifier);
         }
         return ret;
+    }
+
+    @Override
+    protected Object wrapResult(Object ret, FeatureMetadata<ResourceResponse> metadata, ArgumentProviders argProviders) {
+        if (metadata.resultMapper() instanceof EncoderMapper) {
+            // We need to wrap the returned value with ResourceContentsData
+            // Supported variants are Uni<X>, List<X>, Uni<List<X>
+            if (ret instanceof Uni<?> uni) {
+                return uni.map(i -> {
+                    if (i instanceof List<?> list) {
+                        return list.stream().map(
+                                e -> new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), e))
+                                .toList();
+                    }
+                    return new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), i);
+                });
+            } else if (ret instanceof List<?> list) {
+                return list.stream()
+                        .map(e -> new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), e))
+                        .toList();
+            }
+            return new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), ret);
+        }
+        return super.wrapResult(ret, metadata, argProviders);
     }
 
     @Override
