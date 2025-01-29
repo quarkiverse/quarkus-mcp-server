@@ -39,13 +39,9 @@
             <artifactId>quarkus-qute</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-arc</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
             <artifactId>quarkus-mcp-server-stdio</artifactId>
-            <version>1.0.0.Alpha2</version>
+            <version>1.0.0.Alpha6</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

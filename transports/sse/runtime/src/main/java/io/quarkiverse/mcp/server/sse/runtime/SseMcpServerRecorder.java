@@ -59,10 +59,11 @@ public class SseMcpServerRecorder {
                 // TODO we cannot override the close handler set/used by Quarkus HTTP
                 setCloseHandler(ctx.request(), id, connectionManager);
 
-                // /mcp/messages?id=generatedId
+                // /mcp/messages/{generatedId}
                 String endpointPath = mcpPath + "/messages/" + id;
+                LOG.debugf("POST endpoint path: %s [%s]", endpointPath, id);
 
-                // https://spec.modelcontextprotocol.io/specification/basic/transports/#http-with-sse
+                // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse
                 connection.sendEvent("endpoint", endpointPath);
             }
         };
