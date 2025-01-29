@@ -359,6 +359,12 @@ However, it may also accept the following parameters:
 * `McpLog`
 * `RequestId`
 
+==== Support `@Tool`/`@P` annotations from Lanchain4j
+
+The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
+However, keep in mind that semantics may vary and follows the rules defined in this documentation.
+For example, `void` methods are not supported. 
+
 == Client logging
 
 Methods annotated with `@Tool`, `@Resource`, `@ResourceTemplate`, `@Prompt` and `@CompletePrompt` may accept a parameter of type `io.quarkiverse.mcp.server.McpLog`.

@@ -73,4 +73,7 @@ class DotNames {
     static final DotName RESOURCE_TEMPLATE = DotName.createSimple(ResourceTemplate.class);
     static final DotName RESOURCE_TEMPLATE_ARG = DotName.createSimple(ResourceTemplateArg.class);
 
+    static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
+    static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");
+
 }
