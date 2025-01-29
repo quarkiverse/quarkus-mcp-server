@@ -34,9 +34,10 @@ public class SseMcpServerProcessor {
     void registerEndpoints(McpSseBuildTimeConfig config, HttpRootPathBuildItem rootPath, SseMcpServerRecorder recorder,
             BodyHandlerBuildItem bodyHandler,
             BuildProducer<RouteBuildItem> routes) {
+        // By default /mcp
         String mcpPath = rootPath.relativePath(config.rootPath());
 
-        routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath + "/" + "sse")
+        routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath.endsWith("/") ? mcpPath + "sse" : mcpPath + "/sse")
                 .withRequestHandler(recorder.createSseEndpointHandler(mcpPath))
                 .build());
 

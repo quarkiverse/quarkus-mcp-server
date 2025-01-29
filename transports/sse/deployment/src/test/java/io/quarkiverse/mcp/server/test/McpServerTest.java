@@ -53,6 +53,10 @@ public abstract class McpServerTest {
         return client;
     }
 
+    protected String sseRootPath() {
+        return "/mcp";
+    }
+
     public void send(JsonObject data) {
         if (messageEndpoint == null || client == null) {
             throw new IllegalStateException("SSE client not initialized");
@@ -70,7 +74,9 @@ public abstract class McpServerTest {
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
-        client = new McpSseClient(URI.create(testUriStr + "/mcp/sse"));
+        String sseRootPath = sseRootPath();
+        client = new McpSseClient(
+                URI.create(testUriStr + (sseRootPath.endsWith("/") ? sseRootPath + "sse" : sseRootPath + "/sse")));
         client.connect();
         var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
