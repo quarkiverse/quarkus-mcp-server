@@ -12,7 +12,7 @@ MCP currently defines two standard transports for client-server communication.
 This extension supports both transports and defines a unified declarative API.
 In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
 
-If you want to use the https://spec.modelcontextprotocol.io/specification/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
+If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
@@ -26,7 +26,7 @@ For instance, with Maven, add the following dependency to your POM file:
 
 IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default. 
 
-If you want to use the https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse[HTTP/SSE] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
+If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse[HTTP/SSE] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
