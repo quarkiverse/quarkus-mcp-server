@@ -9,6 +9,7 @@ import java.util.List;
 
 import jakarta.inject.Inject;
 
+import dev.langchain4j.agent.tool.P;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
@@ -59,12 +60,12 @@ public class MyTools {
         return Uni.createFrom().item(new TextContent(fooService.ping(price + "", 1, new Options(true))));
     }
 
-    @Tool
-    String charlie(DayOfWeek day, McpConnection connection, McpLog log) {
+    @dev.langchain4j.agent.tool.Tool(name = "charlie", value = { "My description" })
+    String langchain4jCharlie(@P(value = "day") DayOfWeek d, McpConnection connection, McpLog log) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
-        return DayOfWeek.MONDAY.equals(day) ? "charlie11" : "charlie1";
+        return DayOfWeek.MONDAY.equals(d) ? "charlie11" : "charlie1";
     }
 
     @Tool

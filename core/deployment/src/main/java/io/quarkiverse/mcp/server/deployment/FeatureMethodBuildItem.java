@@ -14,7 +14,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     private final Feature feature;
 
-    // invocation info
+    // Invocation info
     private final BeanInfo bean;
     private final InvokerInfo invoker;
     private final MethodInfo method;

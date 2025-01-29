@@ -12,6 +12,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,13 +101,14 @@ import io.quarkus.gizmo.ResultHandle;
 
 class McpServerProcessor {
 
-    private static final Map<DotName, FeatureMetadata.Feature> FEATURES = Map.of(
+    private static final Map<DotName, FeatureMetadata.Feature> ANNOTATION_TO_FEATURE = Map.of(
             DotNames.PROMPT, PROMPT,
             DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
             DotNames.RESOURCE, RESOURCE,
             DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
             DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
-            DotNames.TOOL, TOOL);
+            DotNames.TOOL, TOOL,
+            DotNames.LANGCHAIN4J_TOOL, TOOL);
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
@@ -122,7 +124,7 @@ class McpServerProcessor {
     @BuildStep
     AutoAddScopeBuildItem autoAddScope() {
         return AutoAddScopeBuildItem.builder()
-                .containsAnnotations(FEATURES.keySet().toArray(DotName[]::new))
+                .containsAnnotations(ANNOTATION_TO_FEATURE.keySet().toArray(DotName[]::new))
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
@@ -146,8 +148,15 @@ class McpServerProcessor {
                         AnnotationValue nameValue = featureAnnotation.value("name");
                         name = nameValue != null ? nameValue.asString() : method.name();
                     }
-                    AnnotationValue descValue = featureAnnotation.value("description");
-                    String description = descValue != null ? descValue.asString() : "";
+
+                    String description;
+                    if (feature == TOOL && method.hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)) {
+                        AnnotationValue value = featureAnnotation.value();
+                        description = value != null ? Arrays.stream(value.asStringArray()).collect(Collectors.joining()) : "";
+                    } else {
+                        AnnotationValue descValue = featureAnnotation.value("description");
+                        description = descValue != null ? descValue.asString() : "";
+                    }
 
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
@@ -264,7 +273,7 @@ class McpServerProcessor {
 
     private AnnotationInstance getFeatureAnnotation(MethodInfo method) {
         for (AnnotationInstance annotation : method.declaredAnnotations()) {
-            if (FEATURES.containsKey(annotation.name())) {
+            if (ANNOTATION_TO_FEATURE.containsKey(annotation.name())) {
                 return annotation;
             }
         }
@@ -272,7 +281,7 @@ class McpServerProcessor {
     }
 
     private Feature getFeature(AnnotationInstance annotation) {
-        Feature ret = FEATURES.get(annotation.name());
+        Feature ret = ANNOTATION_TO_FEATURE.get(annotation.name());
         if (ret != null) {
             return ret;
         }
@@ -322,7 +331,8 @@ class McpServerProcessor {
         ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
             processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools, transformedAnnotations,
-                    DotNames.TOOL_ARG);
+                    tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL) ? DotNames.LANGCHAIN4J_P
+                            : DotNames.TOOL_ARG);
         }
         toolsMethod.returnValue(retTools);
 
@@ -530,12 +540,12 @@ class McpServerProcessor {
 
     private boolean hasFeatureMethod(BeanInfo bean) {
         ClassInfo beanClass = bean.getTarget().get().asClass();
-        return beanClass.hasAnnotation(DotNames.PROMPT)
-                || beanClass.hasAnnotation(DotNames.COMPLETE_PROMPT)
-                || beanClass.hasAnnotation(DotNames.TOOL)
-                || beanClass.hasAnnotation(DotNames.RESOURCE)
-                || beanClass.hasAnnotation(DotNames.RESOURCE_TEMPLATE)
-                || beanClass.hasAnnotation(DotNames.COMPLETE_RESOURCE_TEMPLATE);
+        for (DotName annotationName : ANNOTATION_TO_FEATURE.keySet()) {
+            if (beanClass.hasAnnotation(annotationName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
@@ -552,7 +562,12 @@ class McpServerProcessor {
             if (argAnnotationName != null) {
                 AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
                 if (argAnnotation != null) {
-                    AnnotationValue nameValue = argAnnotation.value("name");
+                    AnnotationValue nameValue;
+                    if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
+                        nameValue = argAnnotation.value();
+                    } else {
+                        nameValue = argAnnotation.value("name");
+                    }
                     if (nameValue != null) {
                         name = nameValue.asString();
                     }
