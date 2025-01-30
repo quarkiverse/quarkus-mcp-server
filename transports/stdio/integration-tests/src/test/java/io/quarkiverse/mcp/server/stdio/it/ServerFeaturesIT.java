@@ -61,7 +61,7 @@ public class ServerFeaturesIT {
                 try {
                     String line;
                     while ((line = stdout.readLine()) != null) {
-                        System.out.println(String.format("JSON message received:\n%s", line));
+                        System.out.printf("JSON message received:%n%s%n", line);
                         synchronizer.put(new JsonObject(line));
                     }
                 } catch (IOException | InterruptedException e) {
@@ -296,7 +296,7 @@ public class ServerFeaturesIT {
     }
 
     private void sendMessage(JsonObject message) {
-        System.out.println(String.format("JSON message sent:\n%s", message));
+        System.out.printf("JSON message sent:%n%s%n", message);
         out.println(message);
     }
 
