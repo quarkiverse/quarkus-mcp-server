@@ -23,7 +23,6 @@ public interface McpLog {
      * Sends a log message notification to the client if the specified level is higher or equal to the current level.
      *
      * @param level
-     * @param logger
      * @param data
      */
     void send(LogLevel level, Object data);
@@ -32,8 +31,8 @@ public interface McpLog {
      * Sends a log message notification to the client if the specified level is higher or equal to the current level.
      *
      * @param level
-     * @param logger
-     * @param data
+     * @param format
+     * @param params
      */
     void send(LogLevel level, String format, Object... params);
 
