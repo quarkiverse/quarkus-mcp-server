@@ -5,7 +5,7 @@ import jakarta.annotation.Priority;
 /**
  * Encodes an object as {@link PromptResponse}.
  * <p>
- * If a propmpt response encoder exists and matches a specific return type then it always takes precedence over matching
+ * If a prompt response encoder exists and matches a specific return type then it always takes precedence over matching
  * {@link ContentEncoder}.
  * <p>
  * Implementation classes must be CDI beans. Qualifiers are ignored. {@link jakarta.enterprise.context.Dependent} beans are

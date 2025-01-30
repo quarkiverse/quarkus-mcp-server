@@ -55,7 +55,7 @@ public class ResultMappers {
 
         @Override
         public Uni<PromptResponse> apply(Uni<List<PromptMessage>> uni) {
-            return uni.map(messages -> PromptResponse.withMessages(messages));
+            return uni.map(PromptResponse::withMessages);
         }
 
     }
@@ -133,7 +133,7 @@ public class ResultMappers {
 
         @Override
         public Uni<ToolResponse> apply(Uni<Content> uni) {
-            return uni.map(c -> ToolResponse.success(c));
+            return uni.map(ToolResponse::success);
         }
 
     }
@@ -155,7 +155,7 @@ public class ResultMappers {
 
         @Override
         public Uni<ToolResponse> apply(Uni<List<Content>> uni) {
-            return uni.map(l -> ToolResponse.success(l));
+            return uni.map(ToolResponse::success);
         }
 
     }
@@ -210,7 +210,7 @@ public class ResultMappers {
 
         @Override
         public Uni<ResourceResponse> apply(Uni<List<ResourceContents>> uni) {
-            return uni.map(l -> new ResourceResponse(l));
+            return uni.map(ResourceResponse::new);
         }
 
     }

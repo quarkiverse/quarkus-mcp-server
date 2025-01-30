@@ -16,9 +16,9 @@ import io.smallrye.mutiny.Uni;
  * also return other types that are converted according to the following rules.
  * <p>
  * <ul>
- * <li>If it returns a {@link PromptMessage} then the reponse has no description and contains the single
+ * <li>If it returns a {@link PromptMessage} then the response has no description and contains the single
  * message object.</li>
- * <li>If it returns a {@link List} of {@link PromptMessage}s then the reponse has no description and contains the
+ * <li>If it returns a {@link List} of {@link PromptMessage}s then the response has no description and contains the
  * list of messages.</li>
  * <li>If it returns any other type {@code X} then {@code X} is encoded using the {@link PromptResponseEncoder} API.</li>
  * <li>It may also return a {@link Uni} that wraps any of the type mentioned above.</li>

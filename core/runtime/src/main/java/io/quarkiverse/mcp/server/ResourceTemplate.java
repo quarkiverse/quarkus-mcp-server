@@ -16,9 +16,9 @@ import io.smallrye.mutiny.Uni;
  * can also return other types that are converted according to the following rules.
  *
  * <ul>
- * <li>If it returns an implementation of {@link ResourceContents} then the reponse contains the single contents
+ * <li>If it returns an implementation of {@link ResourceContents} then the response contains the single contents
  * object.</li>
- * <li>If it returns a {@link List} of {@link ResourceContents} implementations then the reponse contains the list of
+ * <li>If it returns a {@link List} of {@link ResourceContents} implementations then the response contains the list of
  * contents objects.</li>
  * <li>If it returns any other type {@code X} or {@code List<X>} then {@code X} is encoded using the
  * {@link ResourceContentsEncoder} API and afterwards the rules above apply.</li>

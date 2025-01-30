@@ -49,7 +49,7 @@ public class McpMessageHandler {
 
     public void handle(JsonObject message, McpConnection connection, Responder responder) {
         if (Messages.isResponse(message)) {
-            // Reponse from a client
+            // Response from a client
             // Currently we discard all responses, including pong responses
             LOG.debugf("Discard client response: %s", message);
         } else {
@@ -188,7 +188,7 @@ public class McpMessageHandler {
     }
 
     private void ping(JsonObject message, Responder responder) {
-        // https://spec.modelcontextprotocol.io/specification/basic/utilities/ping/
+        // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.debugf("Ping [id: %s]", id);
         responder.sendResult(id, new JsonObject());

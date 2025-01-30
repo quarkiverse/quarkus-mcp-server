@@ -12,7 +12,7 @@ MCP currently defines two standard transports for client-server communication.
 This extension supports both transports and defines a unified declarative API.
 In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
 
-If you want to use the https://spec.modelcontextprotocol.io/specification/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
+If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
@@ -38,11 +38,11 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-TIP: The SSE endpoint is exposed at `/{rootPath}/sse`. The `{rootPath}` is set to `mcp` by default but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+TIP: The SSE endpoint is exposed at `/{rootPath}/sse`. The `{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
 == Supported server features
 
-An https://spec.modelcontextprotocol.io/specification/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
+An https://spec.modelcontextprotocol.io/specification/2024-11-05/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
 In this extension, a _server feature_ (prompt, resource, tool) is represented by an _annotated business method_ of a CDI bean.
 The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
 For example, when a server feature is executed the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
@@ -69,7 +69,7 @@ The execution model is determined by the method signature and additional annotat
 
 === Prompts
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/prompts/[standardized way] for servers to expose prompt templates to clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/prompts/[standardized way] for servers to expose prompt templates to clients.
 
 [source,java]
 ----
@@ -99,8 +99,8 @@ public class MyPrompts {
 The result of a "prompt get" operation is always represented as a `PromptResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns a `PromptMessage` then the reponse has no description and contains the single message object.
-* If the method returns a `List` of ``PromptMessage``s then the reponse has no description and contains the list of messages.
+* If the method returns a `PromptMessage` then the response has no description and contains the single message object.
+* If the method returns a `List` of ``PromptMessage``s then the response has no description and contains the list of messages.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
 In other words, the return type must be one of the following list:
@@ -156,8 +156,8 @@ public class MyPrompts {
 The result of a "prompt complete" operation is always represented as a `CompleteResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns `java.lang.String` then the reponse contains a single value.
-* If the method returns a `List` of `String`s then the reponse contains the list of values.
+* If the method returns `java.lang.String` then the response contains a single value.
+* If the method returns a `List` of `String`s then the response contains the list of values.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
 A `@CompletePrompt` method must only accept a single `String` parameter that represents a completed Prompt argument.
@@ -169,7 +169,7 @@ However, it may also accept the following parameters:
 
 === Resources
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/resources/[standardized way] for servers to expose resources to clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/[standardized way] for servers to expose resources to clients.
 
 [source,java]
 ----
@@ -197,8 +197,8 @@ public class MyResources {
 The result of a "resource read" operation is always represented as a `ResourceResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns an implementation of `ResourceContents` then the reponse contains the single contents object.
-* If the method returns a `List` of `ResourceContents` implementations then the reponse contains the list of contents objects.
+* If the method returns an implementation of `ResourceContents` then the response contains the single contents object.
+* If the method returns a `List` of `ResourceContents` implementations then the response contains the list of contents objects.
 * If it returns any other type `X` or `List<X>` then `X` is encoded using the `ResourceContentsEncoder` API and afterwards the rules above apply.
 * It may also return a `Uni` that wraps any of the type mentioned above.
 
@@ -246,8 +246,8 @@ public class MyResourceTemplates {
 The result of a "resource read" operation is always represented as a `ResourceResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns an implementation of `ResourceContents` then the reponse contains the single contents object.
-* If the method returns a `List` of `ResourceContents` implementations then the reponse contains the list of contents objects.
+* If the method returns an implementation of `ResourceContents` then the response contains the single contents object.
+* If the method returns a `List` of `ResourceContents` implementations then the response contains the list of contents objects.
 * If it returns any other type `X` or `List<X>` then `X` is encoded using the `ResourceContentsEncoder` API and afterwards the rules above apply.
 * It may also return a `Uni` that wraps any of the type mentioned above.
 
@@ -291,8 +291,8 @@ public class MyTemplates {
 The result of a "prompt complete" operation is always represented as a `CompleteResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns `java.lang.String` then the reponse contains a single value.
-* If the method returns a `List` of `String`s then the reponse contains the list of values.
+* If the method returns `java.lang.String` then the response contains a single value.
+* If the method returns a `List` of `String`s then the response contains the list of values.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
 A `@CompleteResourceTemplate` method must only accept a single `String` parameter that represents a completed Resource template variable.
@@ -305,7 +305,7 @@ However, it may also accept the following parameters:
 
 === Tools
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
 
 [source,java]
 ----
@@ -337,14 +337,14 @@ TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.Tool
 A result of a "tool call" operation is always represented as a `ToolResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
 
-* If the method returns `java.lang.String` then the reponse is "success" and contains the single `TextContent` object.
-* If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the reponse is "success" and contains the single content object.
-* If the method returns a `List` of `Content` implementations or `String`s then the reponse is "success" and contains the list of relevant content objects.
+* If the method returns `java.lang.String` then the response is "success" and contains the single `TextContent` object.
+* If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the response is "success" and contains the single content object.
+* If the method returns a `List` of `Content` implementations or `String`s then the response is "success" and contains the list of relevant content objects.
 * The method may return a `Uni` that wraps any of the type mentioned above.
 
-* If it returns `java.lang.String` then the reponse is "success" and contains a single `TextContent`.
-* If it returns an implementation of `Content` then the reponse is "success" and contains a single content object.
-* If it returns a `List` of `Content` implementations or strings then the reponse is "success" and contains a list of relevant content objects.
+* If it returns `java.lang.String` then the response is "success" and contains a single `TextContent`.
+* If it returns an implementation of `Content` then the response is "success" and contains a single content object.
+* If it returns a `List` of `Content` implementations or strings then the response is "success" and contains a list of relevant content objects.
 * If it returns any other type `X` or `List<X>` then `X` is encoded using the `ToolResponseEncoder` and `ContentEncoder` API and afterwards the rules above apply.
 * It may also return a `Uni` that wraps any of the type mentioned above.
 
