@@ -631,7 +631,7 @@ class McpServerProcessor {
         // where the RESPONSE is one of ToolResponse, PromptResponse, ResourceResponse, CompleteResponse
         // IMPL NOTE: at this point the method return type is already validated
         return switch (feature) {
-            case PROMPT -> propmpResultMapper(bytecode, returnType);
+            case PROMPT -> promptResultMapper(bytecode, returnType);
             case PROMPT_COMPLETE -> readResultMapper(bytecode,
                     createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "String"));
             case TOOL -> toolResultMapper(bytecode, returnType);
@@ -687,7 +687,7 @@ class McpServerProcessor {
         }
     }
 
-    ResultHandle propmpResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+    ResultHandle promptResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, PROMPT_TYPES)) {
             return encoderResultMapper(bytecode, returnType, PromptEncoderResultMapper.class);
         } else {
