@@ -15,7 +15,7 @@ public interface McpRuntimeConfig {
 
     /**
      * The server info is included in the response to an `initialize` request as defined by the
-     * https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+     * https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/#initialization[spec].
      *
      * @asciidoclet
      */
@@ -57,7 +57,7 @@ public interface McpRuntimeConfig {
 
         /**
          * The name of the server is included in the response to an `initialize` request as defined by the
-         * https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+         * https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/#initialization[spec].
          * By default, the value of the `quarkus.application.name` config property is used.
          *
          * @asciidoclet
@@ -66,7 +66,7 @@ public interface McpRuntimeConfig {
 
         /**
          * The version of the server is included in the response to an `initialize` request as defined by the
-         * https://spec.modelcontextprotocol.io/specification/basic/lifecycle/#initialization[spec].
+         * https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/#initialization[spec].
          * By default, the value of the `quarkus.application.version` config property is used.
          *
          * @asciidoclet

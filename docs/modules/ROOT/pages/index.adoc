@@ -12,7 +12,7 @@ MCP currently defines two standard transports for client-server communication.
 This extension supports both transports and defines a unified declarative API.
 In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
 
-If you want to use the https://spec.modelcontextprotocol.io/specification/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
+If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
@@ -42,7 +42,7 @@ TIP: The SSE endpoint is exposed at `/{rootPath}/sse`. The `{rootPath}` is set t
 
 == Supported server features
 
-An https://spec.modelcontextprotocol.io/specification/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
+An https://spec.modelcontextprotocol.io/specification/2024-11-05/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
 In this extension, a _server feature_ (prompt, resource, tool) is represented by an _annotated business method_ of a CDI bean.
 The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
 For example, when a server feature is executed the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
@@ -69,7 +69,7 @@ The execution model is determined by the method signature and additional annotat
 
 === Prompts
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/prompts/[standardized way] for servers to expose prompt templates to clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/prompts/[standardized way] for servers to expose prompt templates to clients.
 
 [source,java]
 ----
@@ -169,7 +169,7 @@ However, it may also accept the following parameters:
 
 === Resources
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/resources/[standardized way] for servers to expose resources to clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/[standardized way] for servers to expose resources to clients.
 
 [source,java]
 ----
@@ -305,7 +305,7 @@ However, it may also accept the following parameters:
 
 === Tools
 
-MCP provides a https://spec.modelcontextprotocol.io/specification/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
+MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
 
 [source,java]
 ----
