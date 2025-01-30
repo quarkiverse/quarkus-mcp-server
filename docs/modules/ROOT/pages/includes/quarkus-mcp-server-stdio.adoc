@@ -7,6 +7,27 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
+a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled[`quarkus.mcp.server.stdio.enabled`]##
+
+[.description]
+--
+If set to `false` then the stdio transport is completely disabled, i.e. the application does not read/write messages
+from/to the standard input/output.
+
+Keep in mind that console logging is still automatically redirected to the standard error. You will need to set the
+`quarkus.log.console.stderr` to `false` to suppress this behavior.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_STDIO_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_STDIO_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
+
 a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out[`quarkus.mcp.server.stdio.null-system-out`]##
 
 [.description]
