@@ -16,10 +16,10 @@ import io.smallrye.mutiny.Uni;
  * return other types that are converted according to the following rules.
  * <p>
  * <ul>
- * <li>If it returns {@link String} then the reponse is {@code success} and contains a single {@link TextContent}.</li>
- * <li>If it returns an implementation of {@link Content} then the reponse is {@code success} and contains a single
+ * <li>If it returns {@link String} then the response is {@code success} and contains a single {@link TextContent}.</li>
+ * <li>If it returns an implementation of {@link Content} then the response is {@code success} and contains a single
  * content object.</li>
- * <li>If it returns a {@link List} of {@link Content} implementations or strings then the reponse is
+ * <li>If it returns a {@link List} of {@link Content} implementations or strings then the response is
  * {@code success} and contains a list of relevant content objects.</li>
  * <li>If it returns any other type {@code X} or {@code List<X>} then {@code X} is encoded using the {@link ToolResponseEncoder}
  * and {@link ContentEncoder} API and afterwards the rules above apply.</li>

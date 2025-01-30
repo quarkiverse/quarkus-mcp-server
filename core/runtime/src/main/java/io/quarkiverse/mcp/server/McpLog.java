@@ -46,7 +46,7 @@ public interface McpLog {
     void debug(String format, Object... params);
 
     /**
-     * Logs a message and and sends a {@link LogLevel#INFO} log message notification to the client.
+     * Logs a message and sends a {@link LogLevel#INFO} log message notification to the client.
      *
      * @param format
      * @param params

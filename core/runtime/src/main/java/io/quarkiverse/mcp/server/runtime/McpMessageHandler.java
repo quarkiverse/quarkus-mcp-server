@@ -49,7 +49,7 @@ public class McpMessageHandler {
 
     public void handle(JsonObject message, McpConnection connection, Responder responder) {
         if (Messages.isResponse(message)) {
-            // Reponse from a client
+            // Response from a client
             // Currently we discard all responses, including pong responses
             LOG.debugf("Discard client response: %s", message);
         } else {
