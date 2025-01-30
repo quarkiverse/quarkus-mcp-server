@@ -29,7 +29,7 @@ public class TrafficLogger {
         } else if (textPayloadLimit < 0 || encoded.length() <= textPayloadLimit) {
             return encoded;
         } else {
-            return encoded.substring(0, encoded.length()) + "...";
+            return encoded.substring(0, textPayloadLimit) + "...";
         }
     }
 
