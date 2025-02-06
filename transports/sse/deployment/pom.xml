@@ -12,7 +12,7 @@
     <name>Quarkus MCP Server Transport - SSE - Deployment</name>
     
     <properties>
-        <langchain4j.version>1.0.0-alpha1</langchain4j.version>
+        <langchain4j.version>1.0.0-beta1</langchain4j.version>
     </properties>
 
     <dependencies>
