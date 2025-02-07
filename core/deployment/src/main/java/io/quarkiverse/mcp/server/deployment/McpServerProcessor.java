@@ -45,6 +45,7 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.EncoderMapper;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -67,6 +68,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager.VariableMatcher
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InstanceHandle;
@@ -119,6 +121,8 @@ class McpServerProcessor {
                         JsonTextResourceContentsEncoder.class, ToolEncoderResultMapper.class,
                         ResourceContentsEncoderResultMapper.class, PromptEncoderResultMapper.class)
                 .build());
+        additionalBeans
+                .produce(new AdditionalBeanBuildItem(WrapBusinessError.class, WrapBusinessErrorInterceptor.class));
     }
 
     @BuildStep

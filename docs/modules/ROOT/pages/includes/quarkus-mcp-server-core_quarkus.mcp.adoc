@@ -77,7 +77,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_TRAFFIC_LOGGING_TEXT_LIMIT+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`100`
+|`200`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`quarkus.mcp.server.client-logging.default-level`]##
 

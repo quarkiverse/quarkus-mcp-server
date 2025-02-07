@@ -89,11 +89,11 @@ class ToolMessageHandler {
                         ToolResponse toolResponse = ar.result();
                         responder.sendResult(id, toolResponse);
                     } else {
-                        LOG.errorf(ar.cause(), "Unable to call tool %s", toolName);
                         if (ar.cause() instanceof ToolCallException tce) {
                             // Business logic error should result in ToolResponse with isError:true
                             responder.sendResult(id, ToolResponse.error(tce.getMessage()));
                         } else {
+                            LOG.errorf(ar.cause(), "Unable to call tool %s", toolName);
                             responder.sendInternalError(id);
                         }
                     }
