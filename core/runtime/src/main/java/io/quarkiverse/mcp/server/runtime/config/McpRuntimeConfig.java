@@ -49,7 +49,7 @@ public interface McpRuntimeConfig {
         /**
          * The number of characters of a text message which will be logged if traffic logging is enabled.
          */
-        @WithDefault("100")
+        @WithDefault("200")
         public int textLimit();
     }
 
