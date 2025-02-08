@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,7 +12,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 @Singleton
-public class ConnectionManager {
+public class ConnectionManager implements Iterable<McpConnectionBase> {
 
     @Inject
     Vertx vertx;
@@ -20,6 +21,11 @@ public class ConnectionManager {
 
     // TODO we might need to extract this in a global component in the future
     private final AtomicInteger idGenerator = new AtomicInteger();
+
+    @Override
+    public Iterator<McpConnectionBase> iterator() {
+        return connections.values().stream().map(ConnectionTimerId::connection).iterator();
+    }
 
     public McpConnectionBase get(String id) {
         ConnectionTimerId connectionTimerId = connections.get(id);

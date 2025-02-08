@@ -6,6 +6,7 @@ import java.util.Objects;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -17,9 +18,9 @@ class ResourceMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ResourceMessageHandler.class);
 
-    private final ResourceManager manager;
+    private final ResourceManagerImpl manager;
 
-    ResourceMessageHandler(ResourceManager manager) {
+    ResourceMessageHandler(ResourceManagerImpl manager) {
         this.manager = Objects.requireNonNull(manager);
     }
 
@@ -27,8 +28,8 @@ class ResourceMessageHandler {
         Object id = message.getValue("id");
         LOG.debugf("List resources [id: %s]", id);
         JsonArray resources = new JsonArray();
-        for (FeatureMetadata<ResourceResponse> resource : manager.list()) {
-            resources.add(resource.asJson());
+        for (ResourceInfo info : manager) {
+            resources.add(info.asJson());
         }
         responder.sendResult(id, new JsonObject().put("resources", resources));
     }
@@ -54,8 +55,13 @@ class ResourceMessageHandler {
                         ResourceResponse resourceResponse = ar.result();
                         responder.sendResult(id, resourceResponse);
                     } else {
-                        LOG.errorf(ar.cause(), "Unable to read resource %s", resourceUri);
-                        responder.sendInternalError(id);
+                        Throwable cause = ar.cause();
+                        if (cause instanceof McpException mcp) {
+                            responder.sendError(id, mcp.getJsonRpcError(), mcp.getMessage());
+                        } else {
+                            LOG.errorf(ar.cause(), "Unable to read resource %s", resourceUri);
+                            responder.sendInternalError(id);
+                        }
                     }
                 }
             });

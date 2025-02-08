@@ -7,7 +7,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager.VariableMatcher;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
 
 public class ResourceTemplateManagerTest {
 
@@ -18,11 +18,11 @@ public class ResourceTemplateManagerTest {
 
     }
 
-    private void assertVariableMatcher(String uriTemplate, String uri, Map<String, Object> expectedVars) {
-        VariableMatcher matcher = ResourceTemplateManager.createMatcherFromUriTemplate(uriTemplate);
+    private void assertVariableMatcher(String uriTemplate, String uri, Map<String, String> expectedVars) {
+        VariableMatcher matcher = ResourceTemplateManagerImpl.createMatcherFromUriTemplate(uriTemplate);
         assertTrue(expectedVars.keySet().containsAll(matcher.variables()));
         assertTrue(matcher.pattern().matcher(uri).matches());
-        Map<String, Object> matchedVars = matcher.matchVariables(uri);
+        Map<String, String> matchedVars = matcher.matchVariables(uri);
         assertEquals(expectedVars, matchedVars);
     }
 

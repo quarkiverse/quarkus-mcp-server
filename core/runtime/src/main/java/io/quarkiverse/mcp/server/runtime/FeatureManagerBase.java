@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -13,6 +14,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.FeatureManager;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -30,51 +34,41 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public abstract class FeatureManager<R> {
+public abstract class FeatureManagerBase<R> {
 
-    final Vertx vertx;
+    protected final Vertx vertx;
 
-    final ObjectMapper mapper;
+    protected final ObjectMapper mapper;
 
-    final ConcurrentMap<String, McpLogImpl> logs;
+    protected final ConnectionManager connectionManager;
 
-    protected FeatureManager(Vertx vertx, ObjectMapper mapper) {
+    protected final ConcurrentMap<String, McpLogImpl> logs;
+
+    protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager) {
         this.vertx = vertx;
         this.mapper = mapper;
+        this.connectionManager = connectionManager;
         this.logs = new ConcurrentHashMap<>();
     }
 
     public Future<R> execute(String id, ArgumentProviders argProviders) throws McpException {
-        FeatureMetadata<R> metadata = getMetadata(id);
-        if (metadata == null) {
-            throw notFound(id);
-        }
-        Invoker<Object, Object> invoker = metadata.invoker();
-        Object[] arguments = prepareArguments(metadata, argProviders);
-        return execute(metadata.executionModel(), new Callable<Uni<R>>() {
-            @Override
-            public Uni<R> call() throws Exception {
-                try {
-                    Function<Object, Uni<R>> resultMapper = metadata.resultMapper();
-                    Object ret = invoker.invoke(null, arguments);
-                    ret = wrapResult(ret, metadata, argProviders);
-                    return resultMapper.apply(ret);
-                } catch (Throwable e) {
-                    return Uni.createFrom().failure(e);
+        FeatureInvoker<R> invoker = getInvoker(id);
+        if (invoker != null) {
+            return execute(invoker.executionModel(), new Callable<Uni<R>>() {
+                @Override
+                public Uni<R> call() throws Exception {
+                    return invoker.call(argProviders);
                 }
-            }
-        });
+            });
+        }
+        throw notFound(id);
     }
 
-    protected Object wrapResult(Object ret, FeatureMetadata<R> metadata, ArgumentProviders argProviders) {
+    protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
         return ret;
     }
 
-    public abstract List<FeatureMetadata<R>> list();
-
-    public boolean isEmpty() {
-        return list().isEmpty();
-    }
+    public abstract boolean isEmpty();
 
     @SuppressWarnings("unchecked")
     protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
@@ -91,9 +85,7 @@ public abstract class FeatureManager<R> {
             } else if (arg.provider() == Provider.REQUEST_URI) {
                 ret[idx] = new RequestUri(argProviders.uri());
             } else if (arg.provider() == Provider.MCP_LOG) {
-                ret[idx] = logs.computeIfAbsent(logKey(metadata),
-                        key -> new McpLogImpl(argProviders.connection()::logLevel, metadata.info().declaringClassName(), key,
-                                argProviders.responder()));
+                ret[idx] = log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {
@@ -128,7 +120,7 @@ public abstract class FeatureManager<R> {
         return ret;
     }
 
-    protected abstract FeatureMetadata<R> getMetadata(String id);
+    protected abstract FeatureInvoker<R> getInvoker(String id);
 
     protected abstract McpException notFound(String id);
 
@@ -185,8 +177,20 @@ public abstract class FeatureManager<R> {
         return ret.future();
     }
 
+    protected McpLog log(String key, String loggerName, ArgumentProviders argProviders) {
+        return logs.computeIfAbsent(key, k -> new McpLogImpl(argProviders.connection()::logLevel, loggerName, key,
+                argProviders.responder()));
+    }
+
     private String logKey(FeatureMetadata<?> metadata) {
         return metadata.feature().toString().toLowerCase() + ":" + metadata.info().name();
+    }
+
+    protected void notifyConnections(String method) {
+        // Notify all connections
+        for (McpConnectionBase c : connectionManager) {
+            c.send(Messages.newNotification(method));
+        }
     }
 
     private class ActivateRequestContext<T> implements Callable<Uni<T>> {
@@ -211,6 +215,147 @@ public abstract class FeatureManager<R> {
                     throw e;
                 }
             }
+        }
+
+    }
+
+    interface FeatureInvoker<R> {
+
+        ExecutionModel executionModel();
+
+        Uni<R> call(ArgumentProviders argumentProviders);
+
+    }
+
+    class FeatureMetadataInvoker<RESPONSE> implements FeatureInvoker<RESPONSE> {
+
+        protected final FeatureMetadata<RESPONSE> metadata;
+
+        FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata) {
+            this.metadata = metadata;
+        }
+
+        @Override
+        public ExecutionModel executionModel() {
+            return metadata.executionModel();
+        }
+
+        @Override
+        public Uni<RESPONSE> call(ArgumentProviders argProviders) {
+            Invoker<Object, Object> invoker = metadata.invoker();
+            Object[] arguments = prepareArguments(metadata, argProviders);
+            try {
+                Function<Object, Uni<RESPONSE>> resultMapper = metadata.resultMapper();
+                Object ret = invoker.invoke(null, arguments);
+                ret = wrapResult(ret, metadata, argProviders);
+                return resultMapper.apply(ret);
+            } catch (Throwable e) {
+                return Uni.createFrom().failure(e);
+            }
+        }
+
+    }
+
+    protected static abstract class FeatureDefinitionBase<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinitionBase<INFO, ARGUMENTS, RESPONSE, THIS>> {
+
+        protected final String name;
+        protected String description;
+        protected Function<ARGUMENTS, RESPONSE> fun;
+        protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
+        protected boolean runOnVirtualThread;
+
+        protected FeatureDefinitionBase(String name) {
+            this.name = Objects.requireNonNull(name);
+        }
+
+        @SuppressWarnings("unchecked")
+        protected THIS self() {
+            return (THIS) this;
+        }
+
+        public THIS setDescription(String description) {
+            this.description = Objects.requireNonNull(description);
+            return self();
+        }
+
+        public THIS setHandler(Function<ARGUMENTS, RESPONSE> fun, boolean runOnVirtualThread) {
+            this.fun = Objects.requireNonNull(fun);
+            this.runOnVirtualThread = runOnVirtualThread;
+            return self();
+        }
+
+        public THIS setAsyncHandler(Function<ARGUMENTS, Uni<RESPONSE>> asyncFun) {
+            this.asyncFun = Objects.requireNonNull(asyncFun);
+            return self();
+        }
+
+        protected void validate() {
+            if (fun == null && asyncFun == null) {
+                throw new IllegalStateException("Either sync or async logic must be set");
+            }
+            if (name == null) {
+                throw new IllegalStateException("Name must be set");
+            }
+            if (description == null) {
+                throw new IllegalStateException("Description must be set");
+            }
+        }
+
+    }
+
+    protected static abstract class FeatureDefinitionInfoBase<ARGUMENTS, RESPONSE>
+            implements FeatureManager.FeatureInfo, FeatureInvoker<RESPONSE> {
+
+        protected final String name;
+        protected final String description;
+        protected final Function<ARGUMENTS, RESPONSE> fun;
+        protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
+        protected final boolean runOnVirtualThread;
+
+        protected FeatureDefinitionInfoBase(String name, String description, Function<ARGUMENTS, RESPONSE> fun,
+                Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread) {
+            this.name = name;
+            this.description = description;
+            this.fun = fun;
+            this.asyncFun = asyncFun;
+            this.runOnVirtualThread = runOnVirtualThread;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String description() {
+            return description;
+        }
+
+        @Override
+        public boolean isMethod() {
+            return false;
+        }
+
+        @Override
+        public ExecutionModel executionModel() {
+            if (runOnVirtualThread) {
+                return ExecutionModel.VIRTUAL_THREAD;
+            }
+            return fun != null ? ExecutionModel.WORKER_THREAD : ExecutionModel.EVENT_LOOP;
+        }
+
+        protected abstract ARGUMENTS createArguments(ArgumentProviders argumentProviders);
+
+        @Override
+        public Uni<RESPONSE> call(ArgumentProviders argumentProviders) {
+            Uni<RESPONSE> ret;
+            ARGUMENTS args = createArguments(argumentProviders);
+            if (fun != null) {
+                ret = Uni.createFrom().item(fun.apply(args));
+            } else {
+                ret = asyncFun.apply(args);
+            }
+            return ret;
         }
 
     }

@@ -11,7 +11,7 @@ a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-root-pat
 
 [.description]
 --
-The SSE endpoint is exposed at `/{rootPath}/sse`. By default, it's `/mcp/sse`.
+The SSE endpoint is exposed at `{rootPath}/sse`. By default, it's `/mcp/sse`.
 
 
 ifdef::add-copy-button-to-env-var[]

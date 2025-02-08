@@ -31,6 +31,7 @@ public abstract class McpServerTest {
         QuarkusUnitTest config = new QuarkusUnitTest();
         if (System.getProperty("logTraffic") != null) {
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
+            config.overrideConfigKey("quarkus.mcp.server.traffic-logging.text-limit", "500");
         }
         return config;
     }

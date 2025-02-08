@@ -2,7 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -10,20 +10,20 @@ class ResourceTemplateMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ResourceTemplateMessageHandler.class);
 
-    private final ResourceTemplateManager manager;
+    private final ResourceTemplateManagerImpl manager;
 
-    ResourceTemplateMessageHandler(ResourceTemplateManager manager) {
+    ResourceTemplateMessageHandler(ResourceTemplateManagerImpl manager) {
         this.manager = manager;
     }
 
     void resourceTemplatesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
         LOG.debugf("List resource templates [id: %s]", id);
-        JsonArray resources = new JsonArray();
-        for (FeatureMetadata<ResourceResponse> resource : manager.list()) {
-            resources.add(resource.asJson());
+        JsonArray templates = new JsonArray();
+        for (ResourceTemplateManager.ResourceTemplateInfo info : manager) {
+            templates.add(info.asJson());
         }
-        responder.sendResult(id, new JsonObject().put("resourceTemplates", resources));
+        responder.sendResult(id, new JsonObject().put("resourceTemplates", templates));
     }
 
 }

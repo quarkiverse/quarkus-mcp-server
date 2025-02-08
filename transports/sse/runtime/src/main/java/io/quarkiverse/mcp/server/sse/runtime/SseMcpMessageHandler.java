@@ -8,12 +8,13 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
-import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
-import io.quarkiverse.mcp.server.runtime.PromptManager;
-import io.quarkiverse.mcp.server.runtime.ResourceManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
+import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -27,11 +28,14 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
 
     private static final Logger LOG = Logger.getLogger(SseMcpMessageHandler.class);
 
-    protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
-            ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager) {
+    protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
+            PromptManagerImpl promptManager,
+            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
+            ResourceTemplateManagerImpl resourceTemplateManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager);
+                resourceTemplateManager, resourceTemplateCompleteManager, metadata);
     }
 
     @Override

@@ -95,15 +95,15 @@ public class ToolsTest extends McpServerTest {
     }
 
     private void assertToolCall(String expectedText, String name, JsonObject arguments) {
-        JsonObject toolGetMessage = newMessage("tools/call")
+        JsonObject toolCallMessage = newMessage("tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", arguments));
-        send(toolGetMessage);
+        send(toolCallMessage);
 
         JsonObject toolCallResponse = waitForLastResponse();
 
-        JsonObject toolCallResult = assertResponseMessage(toolGetMessage, toolCallResponse);
+        JsonObject toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");
