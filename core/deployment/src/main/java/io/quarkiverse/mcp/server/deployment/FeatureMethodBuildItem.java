@@ -4,8 +4,7 @@ import java.util.Objects;
 
 import org.jboss.jandex.MethodInfo;
 
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
+import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;
@@ -30,7 +29,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final String mimeType;
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description, String uri,
-            String mimeType, FeatureMetadata.Feature feature) {
+            String mimeType, Feature feature) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);

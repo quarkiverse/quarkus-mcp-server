@@ -21,7 +21,6 @@ import com.github.victools.jsonschema.generator.SchemaVersion;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;

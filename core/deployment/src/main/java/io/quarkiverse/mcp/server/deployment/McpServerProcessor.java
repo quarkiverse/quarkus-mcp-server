@@ -1,11 +1,11 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT;
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.PROMPT_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE;
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE_TEMPLATE;
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.RESOURCE_TEMPLATE_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature.TOOL;
+import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
+import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE;
+import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE;
+import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE_COMPLETE;
+import static io.quarkiverse.mcp.server.runtime.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.annotation.Annotation;
@@ -48,10 +48,10 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.EncoderMapper;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
+import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
 import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
@@ -104,7 +104,7 @@ import io.quarkus.gizmo.ResultHandle;
 
 class McpServerProcessor {
 
-    private static final Map<DotName, FeatureMetadata.Feature> ANNOTATION_TO_FEATURE = Map.of(
+    private static final Map<DotName, Feature> ANNOTATION_TO_FEATURE = Map.of(
             DotNames.PROMPT, PROMPT,
             DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
             DotNames.RESOURCE, RESOURCE,
@@ -115,15 +115,18 @@ class McpServerProcessor {
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
-        additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                .addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
-                        PromptCompletionManagerImpl.class,
-                        ResourceTemplateManagerImpl.class, ResourceTemplateCompleteManagerImpl.class,
-                        JsonTextContentEncoder.class,
-                        JsonTextResourceContentsEncoder.class, ToolEncoderResultMapper.class,
-                        ResourceContentsEncoderResultMapper.class, PromptEncoderResultMapper.class)
-                .build());
+        AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
+        unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
+        // Managers
+        unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
+                PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
+                ResourceTemplateCompleteManagerImpl.class);
+        // Encoders
+        unremovable.addBeanClasses(JsonTextContentEncoder.class, JsonTextResourceContentsEncoder.class);
+        // Result mappers
+        unremovable.addBeanClasses(ToolEncoderResultMapper.class, ResourceContentsEncoderResultMapper.class,
+                PromptEncoderResultMapper.class);
+        additionalBeans.produce(unremovable.build());
         additionalBeans
                 .produce(new AdditionalBeanBuildItem(WrapBusinessError.class, WrapBusinessErrorInterceptor.class));
     }
@@ -737,7 +740,7 @@ class McpServerProcessor {
         }
     }
 
-    static String createMapperClassSimpleName(FeatureMetadata.Feature feature, org.jboss.jandex.Type returnType,
+    static String createMapperClassSimpleName(Feature feature, org.jboss.jandex.Type returnType,
             DotName baseType, Function<DotName, String> componentMapper) {
         if (returnType.name().equals(baseType)) {
             return "ToUni";

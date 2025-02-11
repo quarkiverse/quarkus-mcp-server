@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
