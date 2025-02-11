@@ -6,7 +6,7 @@ import org.jboss.jandex.ClassType;
 import org.jboss.jandex.ParameterizedType;
 import org.junit.jupiter.api.Test;
 
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
+import io.quarkiverse.mcp.server.runtime.Feature;
 
 public class McpServerProcessorTest {
 

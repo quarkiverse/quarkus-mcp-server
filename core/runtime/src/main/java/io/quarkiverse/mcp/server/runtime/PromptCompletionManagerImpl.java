@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.vertx.core.Vertx;
 
 @Singleton

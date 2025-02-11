@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
-import io.quarkiverse.mcp.server.runtime.FeatureMetadata.Feature;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.ResourceTemplateMetadata;
 import io.vertx.core.Vertx;
 
