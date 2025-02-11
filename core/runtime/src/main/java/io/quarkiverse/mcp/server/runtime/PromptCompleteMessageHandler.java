@@ -7,9 +7,9 @@ import io.vertx.core.Future;
 
 class PromptCompleteMessageHandler extends CompletionMessageHandler {
 
-    private final PromptCompleteManager manager;
+    private final PromptCompletionManagerImpl manager;
 
-    PromptCompleteMessageHandler(PromptCompleteManager manager) {
+    PromptCompleteMessageHandler(PromptCompletionManagerImpl manager) {
         this.manager = Objects.requireNonNull(manager);
     }
 

@@ -33,9 +33,11 @@ public class McpMessageHandler {
 
     private final Map<String, Object> serverInfo;
 
-    protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManager promptManager,
-            ToolManager toolManager, ResourceManager resourceManager, PromptCompleteManager promptCompleteManager,
-            ResourceTemplateManager resourceTemplateManager, ResourceTemplateCompleteManager resourceTemplateCompleteManager) {
+    protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
+            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
+            ResourceTemplateManagerImpl resourceTemplateManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            McpMetadata metadata) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager);
         this.promptHandler = new PromptMessageHandler(promptManager);
@@ -44,7 +46,7 @@ public class McpMessageHandler {
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager);
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
         this.config = config;
-        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager);
+        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
 
     public void handle(JsonObject message, McpConnection connection, Responder responder) {
@@ -218,8 +220,8 @@ public class McpMessageHandler {
         return new InitializeRequest(implementation, protocolVersion, clientCapabilities);
     }
 
-    private Map<String, Object> serverInfo(PromptManager promptManager, ToolManager toolManager,
-            ResourceManager resourceManager, ResourceTemplateManager resourceTemplateManager) {
+    private Map<String, Object> serverInfo(PromptManagerImpl promptManager, ToolManagerImpl toolManager,
+            ResourceManagerImpl resourceManager, ResourceTemplateManagerImpl resourceTemplateManager, McpMetadata metadata) {
         Map<String, Object> info = new HashMap<>();
         info.put("protocolVersion", "2024-11-05");
 
@@ -230,14 +232,14 @@ public class McpMessageHandler {
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
-        if (!promptManager.isEmpty()) {
-            capabilities.put("prompts", Map.of());
+        if (!promptManager.isEmpty() || metadata.isPromptManagerUsed()) {
+            capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!toolManager.isEmpty()) {
-            capabilities.put("tools", Map.of());
+        if (!toolManager.isEmpty() || metadata.isToolManagerUsed()) {
+            capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!resourceManager.isEmpty() || !resourceTemplateManager.isEmpty()) {
-            capabilities.put("resources", Map.of());
+        if (!resourceManager.isEmpty() || !resourceTemplateManager.isEmpty() || metadata.isResourceManagerUsed()) {
+            capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);

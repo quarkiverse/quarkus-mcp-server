@@ -23,10 +23,17 @@ public class Messages {
     }
 
     public static JsonObject newNotification(String method, Object params) {
-        return new JsonObject()
+        JsonObject ret = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("method", method)
-                .put("params", params);
+                .put("method", method);
+        if (params != null) {
+            ret.put("params", params);
+        }
+        return ret;
+    }
+
+    public static JsonObject newNotification(String method) {
+        return newNotification(method, null);
     }
 
     public static JsonObject newPing(Object id) {

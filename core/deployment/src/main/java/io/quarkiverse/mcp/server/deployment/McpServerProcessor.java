@@ -57,17 +57,17 @@ import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
 import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
-import io.quarkiverse.mcp.server.runtime.PromptCompleteManager;
+import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptEncoderResultMapper;
-import io.quarkiverse.mcp.server.runtime.PromptManager;
+import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceContentsEncoderResultMapper;
-import io.quarkiverse.mcp.server.runtime.ResourceManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateManager.VariableMatcher;
+import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
-import io.quarkiverse.mcp.server.runtime.ToolManager;
+import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
@@ -81,6 +81,7 @@ import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.BuiltinScope;
+import io.quarkus.arc.processor.InjectionPointInfo;
 import io.quarkus.arc.processor.InvokerBuilder;
 import io.quarkus.arc.processor.KotlinUtils;
 import io.quarkus.arc.processor.Types;
@@ -116,8 +117,10 @@ class McpServerProcessor {
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf("io.quarkiverse.mcp.server.runtime.ConnectionManager"));
         additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                .addBeanClasses(PromptManager.class, ToolManager.class, ResourceManager.class, PromptCompleteManager.class,
-                        ResourceTemplateManager.class, ResourceTemplateCompleteManager.class, JsonTextContentEncoder.class,
+                .addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
+                        PromptCompletionManagerImpl.class,
+                        ResourceTemplateManagerImpl.class, ResourceTemplateCompleteManagerImpl.class,
+                        JsonTextContentEncoder.class,
                         JsonTextResourceContentsEncoder.class, ToolEncoderResultMapper.class,
                         ResourceContentsEncoderResultMapper.class, PromptEncoderResultMapper.class)
                 .build());
@@ -295,6 +298,7 @@ class McpServerProcessor {
     @Record(RUNTIME_INIT)
     @BuildStep
     void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
+            BeanDiscoveryFinishedBuildItem beanDiscovery,
             List<FeatureMethodBuildItem> featureMethods, TransformedAnnotationsBuildItem transformedAnnotations,
             BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
 
@@ -307,6 +311,38 @@ class McpServerProcessor {
                 .className(metadataClassName)
                 .interfaces(McpMetadata.class)
                 .build();
+
+        boolean isResourceManagerUsed = false, isResourceTemplateManagerUsed = false, isPromptManagerUsed = false,
+                isToolManagerUsed = false;
+        for (InjectionPointInfo ip : beanDiscovery.getInjectionPoints()) {
+            if (ip.getRequiredType().name().equals(DotNames.RESOURCE_MANAGER)) {
+                isResourceManagerUsed = true;
+            } else if (ip.getRequiredType().name().equals(DotNames.RESOURCE_TEMPLATE_MANAGER)) {
+                isResourceTemplateManagerUsed = true;
+            } else if (ip.getRequiredType().name().equals(DotNames.PROMPT_MANAGER)) {
+                isPromptManagerUsed = true;
+            } else if (ip.getRequiredType().name().equals(DotNames.TOOL_MANAGER)) {
+                isToolManagerUsed = true;
+            }
+        }
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.isResourceManagerUsed()
+        MethodCreator isResourceManagerUsedMethod = metadataCreator.getMethodCreator("isResourceManagerUsed", boolean.class);
+        isResourceManagerUsedMethod.returnValue(isResourceManagerUsedMethod.load(isResourceManagerUsed));
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.isResourceManagerUsed()
+        MethodCreator isResourceTemplateManagerUsedMethod = metadataCreator.getMethodCreator("isResourceTemplateManagerUsed",
+                boolean.class);
+        isResourceTemplateManagerUsedMethod
+                .returnValue(isResourceTemplateManagerUsedMethod.load(isResourceTemplateManagerUsed));
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.isPromptManagerUsed()
+        MethodCreator isPromptManagerUsedMethod = metadataCreator.getMethodCreator("isPromptManagerUsed", boolean.class);
+        isPromptManagerUsedMethod.returnValue(isPromptManagerUsedMethod.load(isPromptManagerUsed));
+
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.isToolManagerUsed()
+        MethodCreator isToolManagerUsedMethod = metadataCreator.getMethodCreator("isToolManagerUsed", boolean.class);
+        isToolManagerUsedMethod.returnValue(isToolManagerUsedMethod.load(isToolManagerUsed));
 
         AtomicInteger counter = new AtomicInteger();
 
@@ -523,7 +559,7 @@ class McpServerProcessor {
         if (uriTemplateValue == null) {
             throw new IllegalStateException("URI template not found");
         }
-        VariableMatcher variableMatcher = ResourceTemplateManager.createMatcherFromUriTemplate(uriTemplateValue.asString());
+        VariableMatcher variableMatcher = ResourceTemplateManagerImpl.createMatcherFromUriTemplate(uriTemplateValue.asString());
 
         List<MethodParameterInfo> parameters = parameters(method);
         for (MethodParameterInfo param : parameters) {
@@ -649,14 +685,15 @@ class McpServerProcessor {
 
     ResultHandle resourceResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, RESOURCE_TYPES)) {
-            return encoderResultMapper(bytecode, returnType, ResourceContentsEncoderResultMapper.class);
+            return encoderResultMapper(RESOURCE, bytecode, returnType, ResourceContentsEncoderResultMapper.class);
         } else {
             return readResultMapper(bytecode,
                     createMapperClassSimpleName(RESOURCE, returnType, DotNames.RESOURCE_RESPONSE, c -> "Content"));
         }
     }
 
-    ResultHandle encoderResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType, Class<?> mapperClazz) {
+    ResultHandle encoderResultMapper(Feature feature, BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
+            Class<?> mapperClazz) {
         // Arc.container().instance(mapperClazz).get();
         ResultHandle container = bytecode
                 .invokeStaticMethod(MethodDescriptor.ofMethod(Arc.class, "container", ArcContainer.class));
@@ -667,14 +704,14 @@ class McpServerProcessor {
                 MethodDescriptor.ofMethod(InstanceHandle.class, "get", Object.class),
                 instance);
         if (DotNames.UNI.equals(returnType.name())) {
-            if (DotNames.LIST.equals(returnType.asParameterizedType().arguments().get(0).name())) {
+            if (feature != PROMPT && DotNames.LIST.equals(returnType.asParameterizedType().arguments().get(0).name())) {
                 mapper = bytecode.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(mapperClazz, "uniList", EncoderMapper.class), mapper);
             } else {
                 mapper = bytecode.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(mapperClazz, "uni", EncoderMapper.class), mapper);
             }
-        } else if (DotNames.LIST.equals(returnType.name())) {
+        } else if (feature != PROMPT && DotNames.LIST.equals(returnType.name())) {
             mapper = bytecode.invokeVirtualMethod(
                     MethodDescriptor.ofMethod(mapperClazz, "list", EncoderMapper.class), mapper);
         }
@@ -683,7 +720,7 @@ class McpServerProcessor {
 
     ResultHandle toolResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, TOOL_TYPES)) {
-            return encoderResultMapper(bytecode, returnType, ToolEncoderResultMapper.class);
+            return encoderResultMapper(TOOL, bytecode, returnType, ToolEncoderResultMapper.class);
         } else {
             return readResultMapper(bytecode, createMapperClassSimpleName(TOOL, returnType, DotNames.TOOL_RESPONSE, c -> {
                 return isContent(c) ? "Content" : "String";
@@ -693,7 +730,7 @@ class McpServerProcessor {
 
     ResultHandle promptResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, PROMPT_TYPES)) {
-            return encoderResultMapper(bytecode, returnType, PromptEncoderResultMapper.class);
+            return encoderResultMapper(PROMPT, bytecode, returnType, PromptEncoderResultMapper.class);
         } else {
             return readResultMapper(bytecode,
                     createMapperClassSimpleName(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> "OfMessage"));

@@ -1,10 +1,12 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -16,9 +18,9 @@ class PromptMessageHandler {
 
     private static final Logger LOG = Logger.getLogger(PromptMessageHandler.class);
 
-    private final PromptManager manager;
+    private final PromptManagerImpl manager;
 
-    PromptMessageHandler(PromptManager manager) {
+    PromptMessageHandler(PromptManagerImpl manager) {
         this.manager = Objects.requireNonNull(manager);
     }
 
@@ -26,8 +28,8 @@ class PromptMessageHandler {
         Object id = message.getValue("id");
         LOG.debugf("List prompts [id: %s]", id);
         JsonArray prompts = new JsonArray();
-        for (FeatureMetadata<PromptResponse> resource : manager.list()) {
-            prompts.add(resource.asJson());
+        for (PromptManager.PromptInfo prompt : manager) {
+            prompts.add(prompt.asJson());
         }
         responder.sendResult(id, new JsonObject().put("prompts", prompts));
     }
@@ -38,8 +40,8 @@ class PromptMessageHandler {
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(params.getJsonObject("arguments").getMap(), connection, id,
-                null, responder);
+        Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
+        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, responder);
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName, argProviders);
@@ -55,8 +57,13 @@ class PromptMessageHandler {
                         result.put("messages", promptResponse.messages());
                         responder.sendResult(id, result);
                     } else {
-                        LOG.errorf(ar.cause(), "Unable to obtain prompt %s", promptName);
-                        responder.sendInternalError(id);
+                        Throwable cause = ar.cause();
+                        if (cause instanceof McpException mcp) {
+                            responder.sendError(id, mcp.getJsonRpcError(), mcp.getMessage());
+                        } else {
+                            LOG.errorf(ar.cause(), "Unable to obtain prompt %s", promptName);
+                            responder.sendInternalError(id);
+                        }
                     }
                 }
             });
