@@ -1,4 +1,4 @@
-name: Model Context Protocol (MCP) Server for server side events (SSE)
+name: MCP Server - HTTP/SSE Transport
 metadata:
   keywords:
     - mcp-server

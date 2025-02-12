@@ -1,4 +1,4 @@
-name: Model Context Protocol (MCP) Server
+name: MCP Server
 description: This extension enables developers to implement the MCP server features easily.
 metadata:
   keywords:

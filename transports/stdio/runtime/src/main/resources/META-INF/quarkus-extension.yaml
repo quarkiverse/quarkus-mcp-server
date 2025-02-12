@@ -1,4 +1,4 @@
-name: Model Context Protocol (MCP) Server for standard input/output (stdio)
+name: MCP Server - stdio Transport
 metadata:
   keywords:
     - mcp-server
