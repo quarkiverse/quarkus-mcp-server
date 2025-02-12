@@ -4,12 +4,12 @@ include::./includes/attributes.adoc[]
 
 _"https://modelcontextprotocol.io/[Model Context Protocol]  (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
 
-This extension provides a declarative API that enables developers to implement the MCP server features easily.
+This extension provides declarative and programmatic APIs that enable developers to implement the MCP server features easily.
 
 == Supported transports
 
 MCP currently defines two standard transports for client-server communication.
-This extension supports both transports and defines a unified declarative API.
+This extension supports both transports and defines a unified API to define server features.
 In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
 
 If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
@@ -38,7 +38,9 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-TIP: The SSE endpoint is exposed at `{rootPath}/sse`. The `{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+// We need to escape the {rootPath}
+// https://github.com/quarkiverse/quarkus-mcp-server/issues/105
+TIP: The SSE endpoint is exposed at `\{rootPath}/sse`. The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
 == Supported server features
 

@@ -7,7 +7,7 @@
 
 _"[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
 
-This extension provides a declarative API that enables developers to implement the MCP server features easily.
+This extension provides declarative and programmatic APIs that enable developers to implement the MCP server features easily.
 
 ## Get Started
 
@@ -45,9 +45,9 @@ public class ServerFeatures {
     @Inject
     CodeService codeService;
 
-    @Tool
-    TextContent toLowerCase(String value) {
-        return new TextContent(value.toLowerCase());
+    @Tool(description = "Converts the string value to lower case")
+    String toLowerCase(String value) {
+        return value.toLowerCase();
     }
 
     @Prompt(name = "code_assist")
@@ -56,8 +56,8 @@ public class ServerFeatures {
     }
 
     @Resource(uri = "file:///project/alpha")
-    BlobResourceContents alpha(String uri) throws IOException{
-        return BlobResourceContents.create(uri, Files.readAllBytes(Paths.ALPHA));
+    BlobResourceContents alpha(RequestUri uri) throws IOException{
+        return BlobResourceContents.create(uri.value(), Files.readAllBytes(Paths.ALPHA));
     }
 
 }
