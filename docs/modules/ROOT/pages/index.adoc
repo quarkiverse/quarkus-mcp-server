@@ -529,10 +529,38 @@ The default limit is 100, but you can change this limit with the `quarkus.mcp.se
 [source, properties]
 ----
 quarkus.mcp.server.traffic-logging.enabled=true <1>
-quarkus.mcp.server.traffic-logging.text-limit=50 <2>
+quarkus.mcp.server.traffic-logging.text-limit=500 <2>
 ----
 <1> Enables traffic logging.
 <2> Set the number of characters of a JSON message which will be logged.
+
+== MCP Inspector
+
+The https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] is a developer tool for testing and debugging MCP servers.
+It's a Node.js app that can be run locally:
+
+[source,console]
+----
+$ npx @modelcontextprotocol/inspector
+----
+ 
+The UI is then available at `locahost:5173` by default.
+
+If you don't have the `npm` installed locally you can also use the official Node.js Docker image.
+Linux developers will need to add the `--network=host` option because the inspector app needs to access your MCP server running on the localhost:
+
+[source,console]
+----
+$ docker run --rm --network=host node:18 npx @modelcontextprotocol/inspector
+----
+
+However, `--network=host` does not work for Mac and Windows.
+Mac and Windows developers will need to export the default MCP inspector port (`5137`) and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
+
+[source,console]
+----
+$ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
+----
 
 [[extension-configuration-reference]]
 == Extension configuration reference
