@@ -49,7 +49,7 @@ a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.prop
 
 [.description]
 --
-If set to true then JSON messages received/sent are logged.
+If set to `true` then JSON messages received/sent are logged.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -114,6 +114,24 @@ endif::add-copy-button-to-env-var[]
 --
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
+
+[.description]
+--
+If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
+the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
 
 |===
 

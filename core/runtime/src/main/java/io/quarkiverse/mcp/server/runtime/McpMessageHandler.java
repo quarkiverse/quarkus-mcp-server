@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.InitializeRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkus.runtime.LaunchMode;
 import io.vertx.core.json.JsonObject;
 
 public class McpMessageHandler {
@@ -70,6 +71,17 @@ public class McpMessageHandler {
         // The first message must be "initialize"
         String method = message.getString("method");
         if (!INITIALIZE.equals(method)) {
+            // In the dev mode, if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
+            // we could perform a "dummy" initialization
+            if (LaunchMode.current() == LaunchMode.DEVELOPMENT && config.devMode().dummyInit()) {
+                InitializeRequest dummy = new InitializeRequest(new Implementation("dummy", "1"), DEFAULT_PROTOCOL_VERSION,
+                        List.of());
+                if (connection.initialize(dummy) && connection.setInitialized()) {
+                    LOG.infof("Connection initialized with dummy info [%s]", connection.id());
+                    operation(message, responder, connection);
+                    return;
+                }
+            }
             responder.sendError(id, JsonRPC.METHOD_NOT_FOUND,
                     "The first message from the client must be \"initialize\": " + method);
             return;
@@ -198,7 +210,7 @@ public class McpMessageHandler {
 
     private void close(JsonObject message, Responder responder, McpConnection connection) {
         if (connectionManager.remove(connection.id())) {
-            LOG.debugf("Connection %s closed", connection.id());
+            LOG.debugf("Connection %s explicitly closed ", connection.id());
         } else {
             responder.sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Unable to obtain the connection to be closed:" + connection.id());
@@ -220,10 +232,12 @@ public class McpMessageHandler {
         return new InitializeRequest(implementation, protocolVersion, clientCapabilities);
     }
 
+    private static final String DEFAULT_PROTOCOL_VERSION = "2024-11-05";
+
     private Map<String, Object> serverInfo(PromptManagerImpl promptManager, ToolManagerImpl toolManager,
             ResourceManagerImpl resourceManager, ResourceTemplateManagerImpl resourceTemplateManager, McpMetadata metadata) {
         Map<String, Object> info = new HashMap<>();
-        info.put("protocolVersion", "2024-11-05");
+        info.put("protocolVersion", DEFAULT_PROTOCOL_VERSION);
 
         String serverName = config.serverInfo().name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class).orElse("N/A"));

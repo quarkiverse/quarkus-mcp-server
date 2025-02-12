@@ -38,16 +38,25 @@ public interface McpRuntimeConfig {
      */
     Optional<Duration> autoPingInterval();
 
+    /**
+     * Dev mode config.
+     */
+    DevMode devMode();
+
     public interface TrafficLogging {
 
         /**
-         * If set to true then JSON messages received/sent are logged.
+         * If set to `true` then JSON messages received/sent are logged.
+         *
+         * @asciidoclet
          */
         @WithDefault("false")
         public boolean enabled();
 
         /**
          * The number of characters of a text message which will be logged if traffic logging is enabled.
+         *
+         * @asciidoclet
          */
         @WithDefault("200")
         public int textLimit();
@@ -79,9 +88,24 @@ public interface McpRuntimeConfig {
 
         /**
          * The default log level.
+         *
+         * @asciidoclet
          */
         @WithDefault("INFO")
         public LogLevel defaultLevel();
+
+    }
+
+    public interface DevMode {
+
+        /**
+         * If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
+         * the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+         *
+         * @asciidoclet
+         */
+        @WithDefault("true")
+        public boolean dummyInit();
 
     }
 
