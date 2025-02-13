@@ -1,3 +1,3 @@
-:project-version: 1.0.0.Beta1
+:project-version: 1.0.0.Beta2
 
 :examples-dir: ./../examples/
