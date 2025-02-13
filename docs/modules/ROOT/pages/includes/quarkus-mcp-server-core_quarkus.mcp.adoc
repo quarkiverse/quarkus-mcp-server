@@ -119,7 +119,7 @@ a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property
 
 [.description]
 --
-If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
+If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
 the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
 
 
