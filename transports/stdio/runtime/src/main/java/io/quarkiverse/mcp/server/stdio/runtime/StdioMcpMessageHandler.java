@@ -86,7 +86,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
                                 return;
                             }
                             if (trafficLogger != null) {
-                                trafficLogger.messageReceived(message);
+                                trafficLogger.messageReceived(message, connection);
                             }
                             if (JsonRPC.validate(message, connection)) {
                                 handle(message, connection, connection);

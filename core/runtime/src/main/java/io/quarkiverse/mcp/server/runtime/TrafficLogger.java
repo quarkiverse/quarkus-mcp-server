@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.vertx.core.json.JsonObject;
 
 public class TrafficLogger {
@@ -14,12 +15,12 @@ public class TrafficLogger {
         this.textPayloadLimit = textPayloadLimit;
     }
 
-    public void messageReceived(JsonObject message) {
-        LOG.infof("JSON message received:\n\n%s", messageToString(message));
+    public void messageReceived(JsonObject message, McpConnection connection) {
+        LOG.infof("MCP message received [%s]:\n\n%s", connection.id(), messageToString(message));
     }
 
-    public void messageSent(JsonObject message) {
-        LOG.infof("JSON message sent:\n\n%s", messageToString(message));
+    public void messageSent(JsonObject message, McpConnection connection) {
+        LOG.infof("MCP message sent [%s]:\n\n%s", connection.id(), messageToString(message));
     }
 
     private String messageToString(JsonObject message) {

@@ -51,17 +51,18 @@ public class SseMcpServerRecorder {
 
                 String id = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
 
-                LOG.debugf("Client connection initialized [%s]", id);
+                LOG.debugf("Connection initialized [%s]", id);
 
                 SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), trafficLogger,
                         config.autoPingInterval(), response);
                 connectionManager.add(connection);
+
                 // TODO we cannot override the close handler set/used by Quarkus HTTP
                 setCloseHandler(ctx.request(), id, connectionManager);
 
                 // By default /mcp/messages/{generatedId}
                 String endpointPath = mcpPath.endsWith("/") ? (mcpPath + "messages/" + id) : (mcpPath + "/messages/" + id);
-                LOG.debugf("POST endpoint path: %s [%s]", endpointPath, id);
+                LOG.debugf("POST endpoint path: %s", endpointPath);
 
                 // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse
                 connection.sendEvent("endpoint", endpointPath);

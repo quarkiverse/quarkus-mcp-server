@@ -70,7 +70,7 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
             return;
         }
         if (connection.trafficLogger() != null) {
-            connection.trafficLogger().messageReceived(message);
+            connection.trafficLogger().messageReceived(message, connection);
         }
         if (JsonRPC.validate(message, connection)) {
             handle(message, connection, connection);

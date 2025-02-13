@@ -30,7 +30,7 @@ public class SseMcpConnection extends McpConnectionBase {
             return;
         }
         if (trafficLogger != null) {
-            trafficLogger.messageSent(message);
+            trafficLogger.messageSent(message, this);
         }
         sendEvent("message", message.encode());
     }
