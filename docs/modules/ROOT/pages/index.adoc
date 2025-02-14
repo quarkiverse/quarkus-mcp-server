@@ -475,7 +475,7 @@ public class MyTools {
 <2> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API. 
 <3> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
 
-==== Support `@Tool`/`@P` annotations from Lanchain4j
+==== Support `@Tool`/`@P` annotations from LangChain4j
 
 The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
