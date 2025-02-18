@@ -8,6 +8,10 @@ h|Type
 h|Default
 
 a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled[`quarkus.mcp.server.stdio.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.stdio.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -29,6 +33,10 @@ endif::add-copy-button-to-env-var[]
 |`true`
 
 a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out[`quarkus.mcp.server.stdio.null-system-out`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.stdio.null-system-out+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
