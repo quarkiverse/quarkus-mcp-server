@@ -40,11 +40,12 @@ public class McpMessageHandler {
             ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
             McpMetadata metadata) {
         this.connectionManager = connectionManager;
-        this.toolHandler = new ToolMessageHandler(toolManager);
-        this.promptHandler = new PromptMessageHandler(promptManager);
+        this.toolHandler = new ToolMessageHandler(toolManager, config.tools().pageSize());
+        this.promptHandler = new PromptMessageHandler(promptManager, config.prompts().pageSize());
         this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompleteManager);
-        this.resourceHandler = new ResourceMessageHandler(resourceManager);
-        this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager);
+        this.resourceHandler = new ResourceMessageHandler(resourceManager, config.resources().pageSize());
+        this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager,
+                config.resourceTemplates().pageSize());
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
         this.config = config;
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);

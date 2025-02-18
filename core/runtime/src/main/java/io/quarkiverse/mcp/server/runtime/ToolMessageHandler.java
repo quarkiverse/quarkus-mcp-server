@@ -21,19 +21,30 @@ class ToolMessageHandler {
 
     private final ToolManagerImpl manager;
 
-    ToolMessageHandler(ToolManagerImpl manager) {
+    private final int pageSize;
+
+    ToolMessageHandler(ToolManagerImpl manager, int pageSize) {
         this.manager = Objects.requireNonNull(manager);
+        this.pageSize = pageSize;
     }
 
     void toolsList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.debugf("List tools [id: %s]", id);
+        Cursor cursor = Messages.getCursor(message, responder);
+
+        LOG.debugf("List tools [id: %s, cursor: %s]", id, cursor);
 
         JsonArray tools = new JsonArray();
-        for (ToolManager.ToolInfo tool : manager) {
-            tools.add(tool.asJson());
+        JsonObject result = new JsonObject().put("tools", tools);
+        Page<ToolManager.ToolInfo> page = manager.fetchPage(cursor, pageSize);
+        for (ToolManager.ToolInfo info : page) {
+            tools.add(info.asJson());
         }
-        responder.sendResult(id, new JsonObject().put("tools", tools));
+        if (page.hasNextCursor()) {
+            ToolManager.ToolInfo last = page.lastInfo();
+            result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
+        }
+        responder.sendResult(id, result);
     }
 
     void toolsCall(JsonObject message, Responder responder, McpConnection connection) {

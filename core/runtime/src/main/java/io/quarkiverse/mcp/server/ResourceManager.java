@@ -16,11 +16,11 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
     /**
      *
-     * @param uri The uri must be unique
+     * @param name The name must be unique
      * @return a new definition builder
      * @see ResourceDefinition#register()
      */
-    ResourceDefinition newResource(String uri);
+    ResourceDefinition newResource(String name);
 
     /**
      * Removes a resource previously added with {@link #newResource(String)}.

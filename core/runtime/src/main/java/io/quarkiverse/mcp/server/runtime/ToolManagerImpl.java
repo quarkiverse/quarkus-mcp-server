@@ -2,11 +2,11 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import jakarta.inject.Singleton;
 
@@ -20,6 +20,7 @@ import com.github.victools.jsonschema.generator.SchemaVersion;
 
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -27,7 +28,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
-public class ToolManagerImpl extends FeatureManagerBase<ToolResponse> implements ToolManager {
+public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> implements ToolManager {
 
     private final SchemaGenerator schemaGenerator;
 
@@ -44,8 +45,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse> implements
     }
 
     @Override
-    public Iterator<ToolInfo> iterator() {
-        return tools.values().stream().sorted().iterator();
+    Stream<ToolInfo> infoStream() {
+        return tools.values().stream();
+    }
+
+    @Override
+    public int size() {
+        return tools.size();
     }
 
     @Override
@@ -74,11 +80,6 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse> implements
             }
             return value;
         });
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return tools.isEmpty();
     }
 
     @SuppressWarnings("unchecked")

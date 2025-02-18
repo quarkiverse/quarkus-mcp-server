@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.time.Instant;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -7,6 +9,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import jakarta.enterprise.invoke.Invoker;
 
@@ -34,7 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public abstract class FeatureManagerBase<R> {
+public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.FeatureInfo> {
 
     protected final Vertx vertx;
 
@@ -51,12 +54,12 @@ public abstract class FeatureManagerBase<R> {
         this.logs = new ConcurrentHashMap<>();
     }
 
-    public Future<R> execute(String id, ArgumentProviders argProviders) throws McpException {
-        FeatureInvoker<R> invoker = getInvoker(id);
+    public Future<RESULT> execute(String id, ArgumentProviders argProviders) throws McpException {
+        FeatureInvoker<RESULT> invoker = getInvoker(id);
         if (invoker != null) {
-            return execute(invoker.executionModel(), new Callable<Uni<R>>() {
+            return execute(invoker.executionModel(), new Callable<Uni<RESULT>>() {
                 @Override
-                public Uni<R> call() throws Exception {
+                public Uni<RESULT> call() throws Exception {
                     return invoker.call(argProviders);
                 }
             });
@@ -68,7 +71,39 @@ public abstract class FeatureManagerBase<R> {
         return ret;
     }
 
-    public abstract boolean isEmpty();
+    public Iterator<INFO> iterator() {
+        return infoStream().sorted().iterator();
+    }
+
+    public Page<INFO> fetchPage(Cursor cursor, int pageSize) {
+        if (isEmpty()) {
+            return Page.empty();
+        }
+        if (size() <= pageSize) {
+            // Pagination is not needed
+            return new Page<>(infoStream().sorted().toList(), true);
+        }
+        List<INFO> result = infoStream()
+                .filter(r -> r.createdAt().isAfter(cursor.createdAt())
+                        && (cursor.name() == null
+                                || r.name().compareTo(cursor.name()) > 0))
+                .sorted()
+                // (pageSize + 1) so that we know if a next page exists
+                .limit(pageSize + 1)
+                .toList();
+        if (result.size() > pageSize) {
+            return new Page<>(result.subList(0, result.size() - 1), false);
+        }
+        return new Page<>(result, true);
+    }
+
+    abstract Stream<INFO> infoStream();
+
+    public abstract int size();
+
+    public boolean isEmpty() {
+        return size() < 1;
+    }
 
     @SuppressWarnings("unchecked")
     protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
@@ -120,13 +155,13 @@ public abstract class FeatureManagerBase<R> {
         return ret;
     }
 
-    protected abstract FeatureInvoker<R> getInvoker(String id);
+    protected abstract FeatureInvoker<RESULT> getInvoker(String id);
 
     protected abstract McpException notFound(String id);
 
-    protected Future<R> execute(ExecutionModel executionModel, Callable<Uni<R>> action) {
-        Promise<R> ret = Promise.promise();
-        ActivateRequestContext<R> activate = new ActivateRequestContext<>(action);
+    protected Future<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
+        Promise<RESULT> ret = Promise.promise();
+        ActivateRequestContext<RESULT> activate = new ActivateRequestContext<>(action);
 
         Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -231,13 +266,20 @@ public abstract class FeatureManagerBase<R> {
 
         protected final FeatureMetadata<RESPONSE> metadata;
 
+        private final Instant createdAt;
+
         FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata) {
             this.metadata = metadata;
+            this.createdAt = Instant.now();
         }
 
         @Override
         public ExecutionModel executionModel() {
             return metadata.executionModel();
+        }
+
+        public Instant createdAt() {
+            return createdAt;
         }
 
         @Override
@@ -308,6 +350,7 @@ public abstract class FeatureManagerBase<R> {
 
         protected final String name;
         protected final String description;
+        protected final Instant createdAt;
         protected final Function<ARGUMENTS, RESPONSE> fun;
         protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected final boolean runOnVirtualThread;
@@ -316,6 +359,7 @@ public abstract class FeatureManagerBase<R> {
                 Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread) {
             this.name = name;
             this.description = description;
+            this.createdAt = Instant.now();
             this.fun = fun;
             this.asyncFun = asyncFun;
             this.runOnVirtualThread = runOnVirtualThread;
@@ -334,6 +378,11 @@ public abstract class FeatureManagerBase<R> {
         @Override
         public boolean isMethod() {
             return false;
+        }
+
+        @Override
+        public Instant createdAt() {
+            return createdAt;
         }
 
         @Override

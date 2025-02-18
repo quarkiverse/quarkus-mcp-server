@@ -12,18 +12,30 @@ class ResourceTemplateMessageHandler {
 
     private final ResourceTemplateManagerImpl manager;
 
-    ResourceTemplateMessageHandler(ResourceTemplateManagerImpl manager) {
+    private final int pageSize;
+
+    ResourceTemplateMessageHandler(ResourceTemplateManagerImpl manager, int pageSize) {
         this.manager = manager;
+        this.pageSize = pageSize;
     }
 
     void resourceTemplatesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.debugf("List resource templates [id: %s]", id);
+        Cursor cursor = Messages.getCursor(message, responder);
+
+        LOG.debugf("List resource templates [id: %s, cursor: %s]", id, cursor);
+
         JsonArray templates = new JsonArray();
-        for (ResourceTemplateManager.ResourceTemplateInfo info : manager) {
+        JsonObject result = new JsonObject().put("resourceTemplates", templates);
+        Page<ResourceTemplateManager.ResourceTemplateInfo> page = manager.fetchPage(cursor, pageSize);
+        for (ResourceTemplateManager.ResourceTemplateInfo info : page) {
             templates.add(info.asJson());
         }
-        responder.sendResult(id, new JsonObject().put("resourceTemplates", templates));
+        if (page.hasNextCursor()) {
+            ResourceTemplateManager.ResourceTemplateInfo last = page.lastInfo();
+            result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
+        }
+        responder.sendResult(id, result);
     }
 
 }

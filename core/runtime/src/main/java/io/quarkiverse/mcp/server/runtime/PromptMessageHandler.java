@@ -20,18 +20,30 @@ class PromptMessageHandler {
 
     private final PromptManagerImpl manager;
 
-    PromptMessageHandler(PromptManagerImpl manager) {
+    private final int pageSize;
+
+    PromptMessageHandler(PromptManagerImpl manager, int pageSize) {
         this.manager = Objects.requireNonNull(manager);
+        this.pageSize = pageSize;
     }
 
     void promptsList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.debugf("List prompts [id: %s]", id);
+        Cursor cursor = Messages.getCursor(message, responder);
+
+        LOG.debugf("List prompts [id: %s, cursor: %s]", id, cursor);
+
         JsonArray prompts = new JsonArray();
-        for (PromptManager.PromptInfo prompt : manager) {
-            prompts.add(prompt.asJson());
+        JsonObject result = new JsonObject().put("prompts", prompts);
+        Page<PromptManager.PromptInfo> page = manager.fetchPage(cursor, pageSize);
+        for (PromptManager.PromptInfo info : page) {
+            prompts.add(info.asJson());
         }
-        responder.sendResult(id, new JsonObject().put("prompts", prompts));
+        if (page.hasNextCursor()) {
+            PromptManager.PromptInfo last = page.lastInfo();
+            result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
+        }
+        responder.sendResult(id, result);
     }
 
     void promptsGet(JsonObject message, Responder responder, McpConnection connection) {

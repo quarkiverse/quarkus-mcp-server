@@ -133,6 +133,74 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`true`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size[`quarkus.mcp.server.resources.page-size`]##
+
+[.description]
+--
+If the number of resources exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`quarkus.mcp.server.resource-templates.page-size`]##
+
+[.description]
+--
+If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`quarkus.mcp.server.tools.page-size`]##
+
+[.description]
+--
+If the number of tools exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
+
+[.description]
+--
+If the number of prompts exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_PROMPTS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_PROMPTS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
 |===
 
 ifndef::no-duration-note[]

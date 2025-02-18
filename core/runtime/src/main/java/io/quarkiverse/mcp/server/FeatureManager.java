@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server;
 
+import java.time.Instant;
 import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
@@ -18,6 +19,11 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
      */
     interface FeatureInfo extends Comparable<FeatureInfo> {
 
+        /**
+         * It is guaranteed that name is uniqe for a specific feature.
+         *
+         * @return the name
+         */
         String name();
 
         String description();
@@ -27,12 +33,20 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          */
         boolean isMethod();
 
+        /**
+         * @return the timestamp this feature was registered
+         */
+        Instant createdAt();
+
         @Override
         default int compareTo(FeatureInfo o) {
-            return name().compareTo(o.name());
+            // Sort by timestamp and name asc
+            int result = createdAt().compareTo(o.createdAt());
+            return result == 0 ? name().compareTo(o.name()) : result;
         }
 
         JsonObject asJson();
+
     }
 
     interface FeatureDefinition<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinition<INFO, ARGUMENTS, RESPONSE, THIS>> {

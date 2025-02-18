@@ -481,6 +481,12 @@ The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annot
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
 For example, `void` methods are not supported. 
 
+=== Pagination
+
+Pagination is automatically enabled if the number of results exceeds the configured page size.
+See the <<extension-configuration-reference>> for relevant config properties.
+The following MCP operations support pagination: `resources/list`, `resources/templates/list`, `prompts/list` and `tools/list`. 
+
 == Client logging
 
 Methods annotated with `@Tool`, `@Resource`, `@ResourceTemplate`, `@Prompt` and `@CompletePrompt` may accept a parameter of type `io.quarkiverse.mcp.server.McpLog`.

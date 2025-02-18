@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,6 +12,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import jakarta.inject.Singleton;
 
@@ -23,12 +23,14 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
-public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResponse> implements ResourceTemplateManager {
+public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResponse, ResourceTemplateInfo>
+        implements ResourceTemplateManager {
 
     final ConcurrentMap<String, ResourceTemplateMetadata> templates;
 
@@ -42,13 +44,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     @Override
-    public Iterator<ResourceTemplateInfo> iterator() {
-        return templates.values().stream().map(ResourceTemplateMetadata::info).sorted().iterator();
+    Stream<ResourceTemplateInfo> infoStream() {
+        return templates.values().stream().map(ResourceTemplateMetadata::info);
     }
 
     @Override
-    public boolean isEmpty() {
-        return templates.isEmpty();
+    public int size() {
+        return templates.size();
     }
 
     @Override
