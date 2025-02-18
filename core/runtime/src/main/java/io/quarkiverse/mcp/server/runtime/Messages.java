@@ -1,8 +1,12 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import org.jboss.logging.Logger;
+
 import io.vertx.core.json.JsonObject;
 
 public class Messages {
+
+    private static final Logger LOG = Logger.getLogger(Messages.class);
 
     public static JsonObject newResult(Object id, Object result) {
         JsonObject response = new JsonObject();
@@ -45,6 +49,25 @@ public class Messages {
 
     public static boolean isResponse(JsonObject message) {
         return message.containsKey("result") && message.containsKey("error");
+    }
+
+    static Cursor getCursor(JsonObject message, Responder responder) {
+        JsonObject params = message.getJsonObject("params");
+        if (params != null) {
+            String cursorVal = params.getString("cursor");
+            if (cursorVal != null) {
+                try {
+                    return Cursor.decode(cursorVal);
+                } catch (Exception e) {
+                    // Invalid cursors should result in an error with code -32602 (Invalid params).
+                    LOG.warnf("Invalid cursor detected %s: %s", cursorVal, e.toString());
+                    responder.sendError(message.getValue("id"), JsonRPC.INVALID_PARAMS,
+                            "Invalid cursor detected: " + cursorVal);
+                    return null;
+                }
+            }
+        }
+        return Cursor.FIRST_PAGE;
     }
 
 }

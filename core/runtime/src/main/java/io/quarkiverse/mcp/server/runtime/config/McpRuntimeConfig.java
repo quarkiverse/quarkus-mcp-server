@@ -43,6 +43,26 @@ public interface McpRuntimeConfig {
      */
     DevMode devMode();
 
+    /**
+     * Resources config.
+     */
+    Resources resources();
+
+    /**
+     * Resource templates config.
+     */
+    ResourceTemplates resourceTemplates();
+
+    /**
+     * Tools config.
+     */
+    Tools tools();
+
+    /**
+     * Prompts config.
+     */
+    Prompts prompts();
+
     public interface TrafficLogging {
 
         /**
@@ -106,6 +126,46 @@ public interface McpRuntimeConfig {
          */
         @WithDefault("true")
         public boolean dummyInit();
+
+    }
+
+    public interface Resources {
+
+        /**
+         * If the number of resources exceeds the page size then pagination is enabled and the given page size is used.
+         */
+        @WithDefault("50")
+        int pageSize();
+
+    }
+
+    public interface ResourceTemplates {
+
+        /**
+         * If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used.
+         */
+        @WithDefault("50")
+        int pageSize();
+
+    }
+
+    public interface Prompts {
+
+        /**
+         * If the number of prompts exceeds the page size then pagination is enabled and the given page size is used.
+         */
+        @WithDefault("50")
+        int pageSize();
+
+    }
+
+    public interface Tools {
+
+        /**
+         * If the number of tools exceeds the page size then pagination is enabled and the given page size is used.
+         */
+        @WithDefault("50")
+        int pageSize();
 
     }
 

@@ -20,18 +20,30 @@ class ResourceMessageHandler {
 
     private final ResourceManagerImpl manager;
 
-    ResourceMessageHandler(ResourceManagerImpl manager) {
+    private final int pageSize;
+
+    ResourceMessageHandler(ResourceManagerImpl manager, int pageSize) {
         this.manager = Objects.requireNonNull(manager);
+        this.pageSize = pageSize;
     }
 
     void resourcesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
-        LOG.debugf("List resources [id: %s]", id);
+        Cursor cursor = Messages.getCursor(message, responder);
+
+        LOG.debugf("List resources [id: %s, cursor: %s]", id, cursor);
+
         JsonArray resources = new JsonArray();
-        for (ResourceInfo info : manager) {
+        JsonObject result = new JsonObject().put("resources", resources);
+        Page<ResourceInfo> page = manager.fetchPage(cursor, pageSize);
+        for (ResourceInfo info : page) {
             resources.add(info.asJson());
         }
-        responder.sendResult(id, new JsonObject().put("resources", resources));
+        if (page.hasNextCursor()) {
+            ResourceInfo last = page.lastInfo();
+            result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
+        }
+        responder.sendResult(id, result);
     }
 
     void resourcesRead(JsonObject message, Responder responder, McpConnection connection) {

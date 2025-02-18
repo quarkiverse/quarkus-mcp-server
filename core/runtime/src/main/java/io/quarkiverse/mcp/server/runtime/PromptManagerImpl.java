@@ -1,18 +1,19 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
 import io.smallrye.mutiny.Uni;
@@ -21,7 +22,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
-public class PromptManagerImpl extends FeatureManagerBase<PromptResponse> implements PromptManager {
+public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, PromptInfo> implements PromptManager {
 
     final ConcurrentMap<String, PromptInfo> prompts;
 
@@ -34,8 +35,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse> implem
     }
 
     @Override
-    public Iterator<PromptInfo> iterator() {
-        return prompts.values().stream().sorted().iterator();
+    Stream<PromptInfo> infoStream() {
+        return prompts.values().stream();
+    }
+
+    @Override
+    public int size() {
+        return prompts.size();
     }
 
     @Override

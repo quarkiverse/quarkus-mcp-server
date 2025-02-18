@@ -1,21 +1,23 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.CompletionManager;
+import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.RequestId;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse> implements CompletionManager {
+abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
+        implements CompletionManager {
 
     // key = prompt name + "_" + argument name
     protected final ConcurrentMap<String, CompletionInfo> completions;
@@ -36,13 +38,13 @@ abstract class CompletionManagerBase extends FeatureManagerBase<CompletionRespon
     }
 
     @Override
-    public Iterator<CompletionInfo> iterator() {
-        return completions.values().stream().sorted().iterator();
+    Stream<CompletionInfo> infoStream() {
+        return completions.values().stream();
     }
 
     @Override
-    public boolean isEmpty() {
-        return completions.isEmpty();
+    public int size() {
+        return completions.size();
     }
 
     @SuppressWarnings("unchecked")

@@ -1,11 +1,11 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import jakarta.inject.Singleton;
 
@@ -15,16 +15,18 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
-public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse> implements ResourceManager {
+public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, ResourceInfo> implements ResourceManager {
 
     final ResourceTemplateManagerImpl resourceTemplateManager;
 
+    // uri -> resource
     final ConcurrentMap<String, ResourceInfo> resources;
 
     ResourceManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
@@ -38,13 +40,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse> im
     }
 
     @Override
-    public Iterator<ResourceInfo> iterator() {
-        return resources.values().stream().sorted().iterator();
+    Stream<ResourceInfo> infoStream() {
+        return resources.values().stream();
     }
 
     @Override
-    public boolean isEmpty() {
-        return resources.isEmpty();
+    public int size() {
+        return resources.size();
     }
 
     @Override
