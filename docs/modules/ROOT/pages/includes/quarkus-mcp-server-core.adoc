@@ -8,6 +8,10 @@ h|Type
 h|Default
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`quarkus.mcp.server.server-info.name`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.name+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -27,6 +31,10 @@ endif::add-copy-button-to-env-var[]
 |
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-version]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-version[`quarkus.mcp.server.server-info.version`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.version+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -46,6 +54,10 @@ endif::add-copy-button-to-env-var[]
 |
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled[`quarkus.mcp.server.traffic-logging.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.traffic-logging.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -63,6 +75,10 @@ endif::add-copy-button-to-env-var[]
 |`false`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit[`quarkus.mcp.server.traffic-logging.text-limit`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.traffic-logging.text-limit+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -80,6 +96,10 @@ endif::add-copy-button-to-env-var[]
 |`200`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`quarkus.mcp.server.client-logging.default-level`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -97,6 +117,10 @@ a|`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency
 |`info`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval[`quarkus.mcp.server.auto-ping-interval`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -116,6 +140,10 @@ endif::add-copy-button-to-env-var[]
 |
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -134,6 +162,10 @@ endif::add-copy-button-to-env-var[]
 |`true`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size[`quarkus.mcp.server.resources.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -151,6 +183,10 @@ endif::add-copy-button-to-env-var[]
 |`50`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`quarkus.mcp.server.resource-templates.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -168,6 +204,10 @@ endif::add-copy-button-to-env-var[]
 |`50`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`quarkus.mcp.server.tools.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -185,6 +225,10 @@ endif::add-copy-button-to-env-var[]
 |`50`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
