@@ -18,13 +18,14 @@
         <module>transports/sse</module>
         <module>transports/stdio</module>
         <module>test-utils</module>
+        <module>devtools/stdio-sse-proxy</module>
     </modules>
 
     <scm>
         <connection>scm:git:git@github.com:quarkiverse/quarkus-mcp-server.git</connection>
         <developerConnection>scm:git:git@github.com:quarkiverse/quarkus-mcp-server.git</developerConnection>
         <url>https://github.com/quarkiverse/quarkus-mcp-server</url>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
   </scm>
 
     <properties>
