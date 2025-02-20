@@ -8,6 +8,10 @@ h|Type
 h|Default
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-enabled[`quarkus.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --
@@ -29,6 +33,10 @@ endif::add-copy-button-to-env-var[]
 |`true`
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-null-system-out[`quarkus.null-system-out`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.null-system-out+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --

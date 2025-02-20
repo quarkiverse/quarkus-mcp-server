@@ -267,6 +267,28 @@ public class MyResources {
 <2> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API. 
 <3> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
 
+==== Subscriptions
+
+MCP clients can subscribe to a specific resource and receive update notifications.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ResourceManager;
+import jakarta.inject.Inject;
+
+public class MyResources {
+
+    @Inject
+    ResourceManager resourceManager; <1>
+    
+    void alphaUpdated() {
+       resourceManager.getResource("file:///alpha.txt").sendUpdate(); <2>
+    }
+}
+----
+<1> The injected manager can be used to obtain resource info for a specific URI.
+<2> Sends update notifications to all subscribers.
+
 ==== Resource templates
 
 You can also use https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/#resource-templates[resource templates]  to expose parameterized resources.
