@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.inject.Singleton;
@@ -29,11 +31,15 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     // uri -> resource
     final ConcurrentMap<String, ResourceInfo> resources;
 
+    // uri -> subscribers (connection ids)
+    final ConcurrentMap<String, List<String>> subscribers;
+
     ResourceManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
             ResourceTemplateManagerImpl resourceTemplateManager, ConnectionManager connectionManager) {
         super(vertx, mapper, connectionManager);
         this.resourceTemplateManager = resourceTemplateManager;
         this.resources = new ConcurrentHashMap<>();
+        this.subscribers = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
             this.resources.put(f.info().uri(), new ResourceMethod(f));
         }
@@ -54,6 +60,23 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         return resources.get(uri);
     }
 
+    void subscribe(String uri, String connectionId) {
+        if (getResource(uri) == null) {
+            throw notFound(uri);
+        }
+        List<String> ids = new CopyOnWriteArrayList<>();
+        ids.add(connectionId);
+        subscribers.merge(uri, ids, (old, val) -> Stream.concat(old.stream(), val.stream())
+                .collect(Collectors.toCollection(CopyOnWriteArrayList::new)));
+    }
+
+    void unsubscribe(String uri, String connectionId) {
+        List<String> ids = subscribers.get(uri);
+        if (ids != null) {
+            ids.remove(connectionId);
+        }
+    }
+
     @Override
     public ResourceDefinition newResource(String name) {
         for (ResourceInfo resource : resources.values()) {
@@ -62,6 +85,19 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             }
         }
         return new ResourceDefinitionImpl(name);
+    }
+
+    private void sendUpdateNotifications(String uri) {
+        JsonObject updated = Messages.newNotification("notifications/resources/updated", new JsonObject().put("uri", uri));
+        List<String> ids = subscribers.get(uri);
+        for (String connectionId : ids) {
+            McpConnectionBase connection = connectionManager.get(connectionId);
+            if (connection != null) {
+                connection.send(updated);
+            } else {
+                unsubscribe(uri, connectionId);
+            }
+        }
     }
 
     IllegalArgumentException resourceWithNameAlreadyExists(String name) {
@@ -158,6 +194,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             return metadata.asJson();
         }
 
+        @Override
+        public void sendUpdate() {
+            ResourceManagerImpl.this.sendUpdateNotifications(uri());
+        }
+
     }
 
     class ResourceDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<ResourceArguments, ResourceResponse>
@@ -201,6 +242,10 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     new RequestUri(argumentProviders.uri()));
         }
 
+        @Override
+        public void sendUpdate() {
+            ResourceManagerImpl.this.sendUpdateNotifications(uri());
+        }
     }
 
     class ResourceDefinitionImpl extends

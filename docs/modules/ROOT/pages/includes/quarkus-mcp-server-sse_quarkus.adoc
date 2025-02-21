@@ -8,6 +8,10 @@ h|Type
 h|Default
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-root-path]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-root-path[`quarkus.root-path`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.root-path+++[]
+endif::add-copy-button-to-config-props[]
+
 
 [.description]
 --

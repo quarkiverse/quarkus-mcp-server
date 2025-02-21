@@ -38,6 +38,14 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
         String mimeType();
 
+        /**
+         * Sends update notifications to all subscribers.
+         * <p>
+         * See <a href=
+         * "https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/#subscriptions">Subscriptions</a>.
+         */
+        void sendUpdate();
+
     }
 
     /**

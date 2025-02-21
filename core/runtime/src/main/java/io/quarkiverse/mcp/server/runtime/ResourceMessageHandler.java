@@ -27,6 +27,30 @@ class ResourceMessageHandler {
         this.pageSize = pageSize;
     }
 
+    void resourcesSubscribe(JsonObject message, Responder responder, McpConnection connection) {
+        Object id = message.getValue("id");
+        JsonObject params = message.getJsonObject("params");
+        String resourceUri = params.getString("uri");
+        if (resourceUri == null) {
+            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
+            return;
+        }
+        LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
+        manager.subscribe(resourceUri, connection.id());
+    }
+
+    void resourcesUnsubscribe(JsonObject message, Responder responder, McpConnection connection) {
+        Object id = message.getValue("id");
+        JsonObject params = message.getJsonObject("params");
+        String resourceUri = params.getString("uri");
+        if (resourceUri == null) {
+            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
+            return;
+        }
+        LOG.debugf("Unsubscribe to resource %s [id: %s]", resourceUri, id);
+        manager.unsubscribe(resourceUri, connection.id());
+    }
+
     void resourcesList(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
         Cursor cursor = Messages.getCursor(message, responder);

@@ -126,6 +126,8 @@ public class McpMessageHandler {
     static final String RESOURCES_LIST = "resources/list";
     static final String RESOURCE_TEMPLATES_LIST = "resources/templates/list";
     static final String RESOURCES_READ = "resources/read";
+    static final String RESOURCES_SUBSCRIBE = "resources/subscribe";
+    static final String RESOURCES_UNSUBSCRIBE = "resources/unsubscribe";
     static final String PING = "ping";
     static final String COMPLETION_COMPLETE = "completion/complete";
     static final String LOGGING_SET_LEVEL = "logging/setLevel";
@@ -142,6 +144,8 @@ public class McpMessageHandler {
             case PING -> ping(message, responder);
             case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
             case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
+            case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, responder, connection);
+            case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, responder, connection);
             case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, responder);
             case COMPLETION_COMPLETE -> complete(message, responder, connection);
             case LOGGING_SET_LEVEL -> setLogLevel(message, responder, connection);

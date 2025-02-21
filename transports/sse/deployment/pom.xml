@@ -12,7 +12,8 @@
     <name>Quarkus MCP Server Transport - SSE - Deployment</name>
     
     <properties>
-        <langchain4j.version>1.0.0-beta1</langchain4j.version>
+        <version.langchain4j>1.0.0-beta1</version.langchain4j>
+        <version.assertj>3.27.3</version.assertj>
     </properties>
 
     <dependencies>
@@ -48,9 +49,15 @@
         </dependency>
         <!-- Tests for @Tool/@P from Langchain4j -->
         <dependency>
-             <groupId>dev.langchain4j</groupId>
+            <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-core</artifactId>
-            <version>${langchain4j.version}</version>
+            <version>${version.langchain4j}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${version.assertj}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
