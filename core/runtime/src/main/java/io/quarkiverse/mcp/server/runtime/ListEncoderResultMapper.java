@@ -23,8 +23,7 @@ abstract class ListEncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCOD
 
             @Override
             public Uni<RESPONSE> apply(List<Object> list) {
-                return Uni.createFrom()
-                        .item(toResponse(list.stream().map(ListEncoderResultMapper.this::convert).toList()));
+                return Uni.createFrom().item(ListEncoderResultMapper.this.convertList(list));
             }
         };
         this.uniList = new EncoderMapper<Uni<List<Object>>, RESPONSE>() {
@@ -32,7 +31,7 @@ abstract class ListEncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCOD
             @Override
             public Uni<RESPONSE> apply(Uni<List<Object>> uni) {
                 return uni.map(
-                        list -> toResponse(list.stream().map(ListEncoderResultMapper.this::convert).toList()));
+                        list -> ListEncoderResultMapper.this.convertList(list));
             }
         };
     }
@@ -49,6 +48,18 @@ abstract class ListEncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCOD
             throw new UnsupportedOperationException();
         }
         return uniList;
+    }
+
+    protected RESPONSE convertList(List<Object> list) {
+        RESPONSE container = convertContainer(list);
+        if (container != null) {
+            return container;
+        }
+        return toResponse(list.stream().map(ListEncoderResultMapper.this::convert).toList());
+    }
+
+    protected RESPONSE convertContainer(Object obj) {
+        return null;
     }
 
     @Override
