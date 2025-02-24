@@ -6,7 +6,7 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-class ResourceTemplateMessageHandler {
+class ResourceTemplateMessageHandler extends MessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ResourceTemplateMessageHandler.class);
 

@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,7 @@ import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -35,8 +37,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     final ConcurrentMap<String, List<String>> subscribers;
 
     ResourceManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ResourceTemplateManagerImpl resourceTemplateManager, ConnectionManager connectionManager) {
-        super(vertx, mapper, connectionManager);
+            ResourceTemplateManagerImpl resourceTemplateManager, ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation);
         this.resourceTemplateManager = resourceTemplateManager;
         this.resources = new ConcurrentHashMap<>();
         this.subscribers = new ConcurrentHashMap<>();

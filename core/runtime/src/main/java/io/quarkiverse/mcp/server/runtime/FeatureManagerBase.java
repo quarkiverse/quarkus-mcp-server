@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.invoke.Invoker;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,6 +26,7 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.common.vertx.VertxContext;
@@ -47,24 +49,31 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected final ConcurrentMap<String, McpLogImpl> logs;
 
-    protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager) {
+    protected final CurrentIdentityAssociation currentIdentityAssociation;
+
+    protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
         this.logs = new ConcurrentHashMap<>();
+        this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 
-    public Future<RESULT> execute(String id, ArgumentProviders argProviders) throws McpException {
+    public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
         FeatureInvoker<RESULT> invoker = getInvoker(id);
         if (invoker != null) {
-            return execute(invoker.executionModel(), new Callable<Uni<RESULT>>() {
+            return execute(invoker.executionModel(), executionContext, new Callable<Uni<RESULT>>() {
                 @Override
                 public Uni<RESULT> call() throws Exception {
-                    return invoker.call(argProviders);
+                    return invoker.call(executionContext.argProviders());
                 }
             });
         }
         throw notFound(id);
+    }
+
+    record FeatureExecutionContext(ArgumentProviders argProviders, SecuritySupport securitySupport) {
     }
 
     protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
@@ -159,9 +168,10 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected abstract McpException notFound(String id);
 
-    protected Future<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
+    protected Future<RESULT> execute(ExecutionModel executionModel, FeatureExecutionContext executionContext,
+            Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();
-        ActivateRequestContext<RESULT> activate = new ActivateRequestContext<>(action);
+        ActivationSupport<RESULT> activation = new ActivationSupport<>(action, executionContext.securitySupport());
 
         Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -176,7 +186,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                         @Override
                         public void run() {
                             try {
-                                activate.call().subscribe().with(ret::complete, ret::fail);
+                                activation.call().subscribe().with(ret::complete, ret::fail);
                             } catch (Throwable e) {
                                 ret.fail(e);
                             }
@@ -189,7 +199,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 @Override
                 public Void call() {
                     try {
-                        activate.call().subscribe().with(ret::complete, ret::fail);
+                        activation.call().subscribe().with(ret::complete, ret::fail);
                     } catch (Throwable e) {
                         ret.fail(e);
                     }
@@ -202,7 +212,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 @Override
                 public void handle(Void event) {
                     try {
-                        activate.call().subscribe().with(ret::complete, ret::fail);
+                        activation.call().subscribe().with(ret::complete, ret::fail);
                     } catch (Throwable e) {
                         ret.fail(e);
                     }
@@ -228,21 +238,30 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
     }
 
-    private class ActivateRequestContext<T> implements Callable<Uni<T>> {
+    private class ActivationSupport<T> implements Callable<Uni<T>> {
 
         private final Callable<Uni<T>> delegate;
 
-        private ActivateRequestContext(Callable<Uni<T>> delegate) {
+        private final SecuritySupport securitySupport;
+
+        private ActivationSupport(Callable<Uni<T>> delegate, SecuritySupport securitySupport) {
             this.delegate = delegate;
+            this.securitySupport = securitySupport;
         }
 
         @Override
         public Uni<T> call() throws Exception {
             ManagedContext requestContext = Arc.container().requestContext();
             if (requestContext.isActive()) {
+                if (securitySupport != null && currentIdentityAssociation != null) {
+                    securitySupport.setCurrentIdentity(currentIdentityAssociation);
+                }
                 return delegate.call();
             } else {
                 requestContext.activate();
+                if (securitySupport != null && currentIdentityAssociation != null) {
+                    securitySupport.setCurrentIdentity(currentIdentityAssociation);
+                }
                 try {
                     return delegate.call().eventually(requestContext::terminate);
                 } catch (Throwable e) {
@@ -258,7 +277,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         ExecutionModel executionModel();
 
-        Uni<R> call(ArgumentProviders argumentProviders);
+        Uni<R> call(ArgumentProviders argProviders);
 
     }
 

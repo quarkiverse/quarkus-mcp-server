@@ -8,13 +8,14 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-class ResourceMessageHandler {
+class ResourceMessageHandler extends MessageHandler {
 
     private static final Logger LOG = Logger.getLogger(ResourceMessageHandler.class);
 
@@ -70,7 +71,7 @@ class ResourceMessageHandler {
         responder.sendResult(id, result);
     }
 
-    void resourcesRead(JsonObject message, Responder responder, McpConnection connection) {
+    void resourcesRead(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
@@ -83,7 +84,8 @@ class ResourceMessageHandler {
         ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, id, resourceUri, responder);
 
         try {
-            Future<ResourceResponse> fu = manager.execute(resourceUri, argProviders);
+            Future<ResourceResponse> fu = manager.execute(resourceUri,
+                    new FeatureExecutionContext(argProviders, securitySupport));
             fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
                 @Override
                 public void handle(AsyncResult<ResourceResponse> ar) {
@@ -91,13 +93,7 @@ class ResourceMessageHandler {
                         ResourceResponse resourceResponse = ar.result();
                         responder.sendResult(id, resourceResponse);
                     } else {
-                        Throwable cause = ar.cause();
-                        if (cause instanceof McpException mcp) {
-                            responder.sendError(id, mcp.getJsonRpcError(), mcp.getMessage());
-                        } else {
-                            LOG.errorf(ar.cause(), "Unable to read resource %s", resourceUri);
-                            responder.sendInternalError(id);
-                        }
+                        handleFailure(id, responder, connection, ar.cause(), LOG, "Unable to read resource %s", resourceUri);
                     }
                 }
             });

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import io.quarkus.test.QuarkusUnitTest;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.restassured.RestAssured;
+import io.restassured.response.ValidatableResponse;
 import io.vertx.core.json.JsonObject;
 
 public abstract class McpServerTest {
@@ -59,10 +61,28 @@ public abstract class McpServerTest {
     }
 
     public void send(JsonObject data) {
+        sendAndValidate(data).statusCode(200);
+    }
+
+    public ValidatableResponse sendAndValidate(JsonObject data) {
+        if (messageEndpoint == null || client == null) {
+            throw new IllegalStateException("SSE client not initialized");
+        }
+        return RestAssured.given()
+                .when()
+                .body(data.encode())
+                .post(messageEndpoint)
+                .then();
+    }
+
+    public void sendSecured(JsonObject data, String username, String password) {
         if (messageEndpoint == null || client == null) {
             throw new IllegalStateException("SSE client not initialized");
         }
         RestAssured.given()
+                .auth()
+                .preemptive()
+                .basic(username, password)
                 .when()
                 .body(data.encode())
                 .post(messageEndpoint)
@@ -70,14 +90,26 @@ public abstract class McpServerTest {
                 .statusCode(200);
     }
 
-    protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
+    protected McpSseClient newClient() {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
         String sseRootPath = sseRootPath();
-        client = new McpSseClient(
+        return new McpSseClient(
                 URI.create(testUriStr + (sseRootPath.endsWith("/") ? sseRootPath + "sse" : sseRootPath + "/sse")));
+    }
+
+    protected Entry<String, String> initBaseAuth() {
+        return null;
+    }
+
+    protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
+        String testUriStr = testUri.toString();
+        if (testUriStr.endsWith("/")) {
+            testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
+        }
+        client = newClient();
         client.connect();
         var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
@@ -94,7 +126,12 @@ public abstract class McpServerTest {
                                         .put("version", "1.0"))
                                 .put("protocolVersion", "2024-11-05"));
 
-        send(initMessage);
+        Entry<String, String> baseAuth = initBaseAuth();
+        if (baseAuth != null) {
+            sendSecured(initMessage, baseAuth.getKey(), baseAuth.getValue());
+        } else {
+            send(initMessage);
+        }
 
         JsonObject initResponse = waitForLastResponse();
 
@@ -107,10 +144,14 @@ public abstract class McpServerTest {
         }
 
         // Send "notifications/initialized"
-        send(new JsonObject()
+        JsonObject nofitication = new JsonObject()
                 .put("jsonrpc", "2.0")
-                .put("method", "notifications/initialized"));
-
+                .put("method", "notifications/initialized");
+        if (baseAuth != null) {
+            sendSecured(nofitication, baseAuth.getKey(), baseAuth.getValue());
+        } else {
+            send(nofitication);
+        }
         return endpoint;
     }
 

@@ -51,23 +51,24 @@ public class McpMessageHandler {
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
 
-    public void handle(JsonObject message, McpConnection connection, Responder responder) {
+    public void handle(JsonObject message, McpConnection connection, Responder responder, SecuritySupport securitySupport) {
         if (Messages.isResponse(message)) {
             // Response from a client
             // Currently we discard all responses, including pong responses
             LOG.debugf("Discard client response: %s", message);
         } else {
             switch (connection.status()) {
-                case NEW -> initializeNew(message, responder, connection);
+                case NEW -> initializeNew(message, responder, connection, securitySupport);
                 case INITIALIZING -> initializing(message, responder, connection);
-                case IN_OPERATION -> operation(message, responder, connection);
+                case IN_OPERATION -> operation(message, responder, connection, securitySupport);
                 case SHUTDOWN -> responder.send(
                         Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
             }
         }
     }
 
-    private void initializeNew(JsonObject message, Responder responder, McpConnection connection) {
+    private void initializeNew(JsonObject message, Responder responder, McpConnection connection,
+            SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         // The first message must be "initialize"
         String method = message.getString("method");
@@ -79,7 +80,7 @@ public class McpMessageHandler {
                         List.of());
                 if (connection.initialize(dummy) && connection.setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", connection.id());
-                    operation(message, responder, connection);
+                    operation(message, responder, connection, securitySupport);
                     return;
                 }
             }
@@ -134,20 +135,20 @@ public class McpMessageHandler {
     // non-standard messages
     static final String Q_CLOSE = "q/close";
 
-    private void operation(JsonObject message, Responder responder, McpConnection connection) {
+    private void operation(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
         String method = message.getString("method");
         switch (method) {
             case PROMPTS_LIST -> promptHandler.promptsList(message, responder);
-            case PROMPTS_GET -> promptHandler.promptsGet(message, responder, connection);
+            case PROMPTS_GET -> promptHandler.promptsGet(message, responder, connection, securitySupport);
             case TOOLS_LIST -> toolHandler.toolsList(message, responder);
-            case TOOLS_CALL -> toolHandler.toolsCall(message, responder, connection);
+            case TOOLS_CALL -> toolHandler.toolsCall(message, responder, connection, securitySupport);
             case PING -> ping(message, responder);
             case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
-            case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection);
+            case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection, securitySupport);
             case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, responder, connection);
             case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, responder, connection);
             case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, responder);
-            case COMPLETION_COMPLETE -> complete(message, responder, connection);
+            case COMPLETION_COMPLETE -> complete(message, responder, connection, securitySupport);
             case LOGGING_SET_LEVEL -> setLogLevel(message, responder, connection);
             case Q_CLOSE -> close(message, responder, connection);
             default -> responder.send(
@@ -178,7 +179,7 @@ public class McpMessageHandler {
 
     }
 
-    private void complete(JsonObject message, Responder responder, McpConnection connection) {
+    private void complete(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         JsonObject ref = params.getJsonObject("ref");
@@ -194,9 +195,9 @@ public class McpMessageHandler {
                     responder.sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
                 } else {
                     if ("ref/prompt".equals(referenceType)) {
-                        promptCompleteHandler.complete(id, ref, argument, responder, connection);
+                        promptCompleteHandler.complete(id, ref, argument, responder, connection, securitySupport);
                     } else if ("ref/resource".equals(referenceType)) {
-                        resourceTemplateCompleteHandler.complete(id, ref, argument, responder, connection);
+                        resourceTemplateCompleteHandler.complete(id, ref, argument, responder, connection, securitySupport);
                     } else {
                         responder.sendError(id, JsonRPC.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));

@@ -89,7 +89,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
                                 trafficLogger.messageReceived(message, connection);
                             }
                             if (JsonRPC.validate(message, connection)) {
-                                handle(message, connection, connection);
+                                handle(message, connection, connection, null);
                             }
                         } catch (DecodeException e) {
                             String msg = "Unable to parse the JSON message";
