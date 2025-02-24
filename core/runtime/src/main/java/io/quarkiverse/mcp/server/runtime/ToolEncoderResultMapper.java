@@ -32,7 +32,7 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
     @Override
     public Uni<ToolResponse> apply(Object obj) {
         Uni<ToolResponse> ret = null;
-        ToolResponse toolResponse = convertToolResponse(obj);
+        ToolResponse toolResponse = convertContainer(obj);
         if (toolResponse != null) {
             ret = Uni.createFrom().item(toolResponse);
         } else {
@@ -51,7 +51,8 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
         return ToolResponse.success(content);
     }
 
-    private ToolResponse convertToolResponse(Object obj) {
+    @Override
+    protected ToolResponse convertContainer(Object obj) {
         Class<?> type = obj.getClass();
         for (ToolResponseEncoder<?> encoder : toolResponseEncoders) {
             if (encoder.supports(type)) {
@@ -67,4 +68,5 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
         }
         return null;
     }
+
 }
