@@ -44,8 +44,8 @@ public class McpSseClient extends SseClient {
         if (lastId == 0) {
             return null;
         }
-        Awaitility.await().until(() -> responses.size() >= lastId);
-        return responses.get(lastId - 1);
+        Awaitility.await().until(() -> responses.stream().anyMatch(r -> r.getInteger("id") == lastId));
+        return responses.stream().filter(r -> r.getInteger("id") == lastId).findFirst().orElseThrow();
     }
 
     public List<JsonObject> waitForNotifications(int count) {

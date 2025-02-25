@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.ResourceTemplateMetadata;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
 
 @Singleton
@@ -15,8 +17,9 @@ public class ResourceTemplateCompleteManagerImpl extends CompletionManagerBase i
     private final ResourceTemplateManagerImpl resourceTemplateManager;
 
     ResourceTemplateCompleteManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ConnectionManager connectionManager, ResourceTemplateManagerImpl resourceTemplateManager) {
-        super(vertx, mapper, connectionManager);
+            ConnectionManager connectionManager, ResourceTemplateManagerImpl resourceTemplateManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation);
         for (FeatureMetadata<CompletionResponse> c : metadata.resourceTemplateCompletions()) {
             String key = c.info().name() + "_"
                     + c.info().arguments().stream().filter(FeatureArgument::isParam).findFirst().orElseThrow()

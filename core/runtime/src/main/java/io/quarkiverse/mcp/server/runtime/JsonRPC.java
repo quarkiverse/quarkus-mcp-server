@@ -16,6 +16,8 @@ public class JsonRPC {
     public static final int INVALID_REQUEST = -32600;
     public static final int PARSE_ERROR = -32700;
 
+    public static final int SECURITY_ERROR = -32001;
+
     public static boolean validate(JsonObject message, Responder responder) {
         Object id = message.getValue("id");
         String jsonrpc = message.getString("jsonrpc");

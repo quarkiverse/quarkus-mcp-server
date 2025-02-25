@@ -5,9 +5,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
 import org.jboss.logging.Logger;
@@ -24,31 +27,33 @@ public abstract class SseClient {
 
     protected abstract void process(SseEvent event);
 
-    public void connect() {
+    public CompletableFuture<HttpResponse<Void>> connect() {
+        return connect(Map.of());
+    }
+
+    public CompletableFuture<HttpResponse<Void>> connect(Map<String, String> headers) {
         HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(testUri)
                 .version(Version.HTTP_1_1)
                 .header("Accept", "text/event-stream")
-                .GET()
-                .build();
+                .GET();
+        headers.forEach(builder::header);
+        HttpRequest request = builder.build();
 
-        client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
-                .thenAccept(response -> {
-                    if (response.statusCode() == 200) {
-                        LOG.infof("Connected to SSE stream: %s", testUri);
+        return client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
+                .whenComplete((r, t) -> {
+                    if (t != null) {
+                        Throwable root = getRootCause(t);
+                        if (!(root instanceof EOFException)) {
+                            LOG.error(t);
+                        }
                     } else {
-                        LOG.errorf("Failed to connect %s: %s", response.statusCode(), testUri);
+                        if (r.statusCode() != 200) {
+                            LOG.errorf("Failed to connect %s: %s", r.statusCode(), testUri);
+                        }
                     }
-                })
-                .exceptionally(e -> {
-                    Throwable root = getRootCause(e);
-                    if (!(root instanceof EOFException)) {
-                        LOG.error(e);
-                    }
-                    return null;
                 });
-
     }
 
     class SseEventSubscriber implements Flow.Subscriber<String> {

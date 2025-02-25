@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
 
 @Singleton
@@ -15,8 +17,9 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
     private final PromptManagerImpl promptManager;
 
     protected PromptCompletionManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ConnectionManager connectionManager, PromptManagerImpl promptManager) {
-        super(vertx, mapper, connectionManager);
+            ConnectionManager connectionManager, PromptManagerImpl promptManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation);
         this.promptManager = promptManager;
         for (FeatureMetadata<CompletionResponse> c : metadata.promptCompletions()) {
             String key = c.info().name() + "_"

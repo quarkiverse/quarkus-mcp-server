@@ -14,8 +14,12 @@ import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
+import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -72,8 +76,23 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
         if (connection.trafficLogger() != null) {
             connection.trafficLogger().messageReceived(message, connection);
         }
+
+        QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();
+        SecuritySupport securitySupport = new SecuritySupport() {
+
+            @Override
+            public void setCurrentIdentity(CurrentIdentityAssociation currentIdentityAssociation) {
+                if (user != null) {
+                    SecurityIdentity identity = user.getSecurityIdentity();
+                    currentIdentityAssociation.setIdentity(identity);
+                } else {
+                    currentIdentityAssociation.setIdentity(QuarkusHttpUser.getSecurityIdentity(ctx, null));
+                }
+            }
+        };
+
         if (JsonRPC.validate(message, connection)) {
-            handle(message, connection, connection);
+            handle(message, connection, connection, securitySupport);
         }
         ctx.end();
     }
