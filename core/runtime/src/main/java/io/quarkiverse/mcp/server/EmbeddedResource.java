@@ -1,14 +1,19 @@
 package io.quarkiverse.mcp.server;
 
 /**
+ * A resource embedded into a prompt or tool call result.
  *
- * @param uri
- * @param mimeType
- * @param text
+ * @param resource
  * @see Prompt
  * @see Tool
  */
-public record ResourceContent(String uri, String mimeType, String text) implements Content {
+public record EmbeddedResource(ResourceContents resource) implements Content {
+
+    public EmbeddedResource {
+        if (resource == null) {
+            throw new IllegalArgumentException("resource must not be null");
+        }
+    }
 
     @Override
     public Type type() {
@@ -26,7 +31,7 @@ public record ResourceContent(String uri, String mimeType, String text) implemen
     }
 
     @Override
-    public ResourceContent asResource() {
+    public EmbeddedResource asResource() {
         return this;
     }
 }
