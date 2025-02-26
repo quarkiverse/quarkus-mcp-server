@@ -34,6 +34,15 @@
       "contributions": [
         "example"
       ]
+    },
+    {
+      "login": "rsvoboda",
+      "name": "Rostislav Svoboda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/925259?v=4",
+      "profile": "https://twitter.com/r_svoboda",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
