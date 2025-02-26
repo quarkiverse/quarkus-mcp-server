@@ -237,15 +237,15 @@ public class StdioSseProxy implements Runnable {
 
             @Override
             public void onNext(String line) {
+                LOG.debugf("Processing line:\n%s", line);
                 if (line.startsWith(":")) {
                     // Skip comments
                 } else if (line.isBlank()) {
                     // Flush
-                    process(new SseEvent(event, dataBuffer.toString()));
-                    event = "message";
+                    process(new SseEvent(event, dataBuffer.toString().strip()));
                     dataBuffer = new StringBuilder();
+                    event = "message";
                 } else if (line.contains(":")) {
-                    LOG.debugf("Received next line:\n%s", line);
                     int colon = line.indexOf(":");
                     String field = line.substring(0, colon).strip();
                     String value = line.substring(colon + 1).strip();
