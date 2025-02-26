@@ -1,7 +1,7 @@
 //usr/bin/env jbang "$0" "$@" ; exit $?
 //DEPS io.quarkus.platform:quarkus-bom:3.18.3@pom
 //DEPS io.quarkus:quarkus-picocli
-//FILES application.properties=../../../../../../resources/application.properties
+//Q:CONFIG quarkus.log.console.stderr=true
 package io.quarkiverse.mcp.server.proxy;
 
 import java.io.BufferedReader;

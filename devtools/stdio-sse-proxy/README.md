@@ -17,16 +17,15 @@ The application can be packaged using:
 This builds a Quarkus uber-jar that can be run directly:
 
 ```shell script
-java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar --help
+java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT.jar --help
 ```
 
 Shows the following help message:
 
 ```shell script
-Usage: stdio-sse-proxy [-hV] [--[no-]reconnect] -e=<sseEndpoint> [-s=<sleep>]
-                       [-t=<timeout>]
-  -e, --endpoint=<sseEndpoint>
-                            The URI of the target SSE endpoint
+  Usage: stdio-sse-proxy [-hV] [--[no-]reconnect] [-s=<sleep>] [-t=<timeout>]
+                       <sseEndpoint>
+      <sseEndpoint>         The URI of the target SSE endpoint
   -h, --help                Show this help message and exit.
       --[no-]reconnect      If set to true then the proxy attempts to reconnect
                               if a message endpoint returns http status 400
@@ -48,9 +47,6 @@ or if you need a custom endpoint:
 ```shell script
 java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar http://my.app/mcp
 ```
-
-> [!IMPORTANT]  
-> The target SSE endpoint is mandatory.
 
 ## JBang
 
