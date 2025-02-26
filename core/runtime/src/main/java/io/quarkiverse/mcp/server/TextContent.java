@@ -2,6 +2,12 @@ package io.quarkiverse.mcp.server;
 
 public record TextContent(String text) implements Content {
 
+    public TextContent {
+        if (text == null) {
+            throw new IllegalArgumentException("text must not be null");
+        }
+    }
+
     @Override
     public Type type() {
         return Type.TEXT;
@@ -18,7 +24,7 @@ public record TextContent(String text) implements Content {
     }
 
     @Override
-    public ResourceContent asResource() {
+    public EmbeddedResource asResource() {
         throw new IllegalArgumentException("Not a resource");
     }
 

@@ -22,22 +22,27 @@ public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoke
     }
 
     public JsonObject asJson() {
-        JsonObject json = new JsonObject().put("name", info.name())
+        JsonObject ret = new JsonObject()
+                .put("name", info.name())
                 .put("description", info.description());
         if (feature == Feature.PROMPT) {
             JsonArray arguments = new JsonArray();
             for (FeatureArgument arg : info.serializedArguments()) {
                 arguments.add(arg.asJson());
             }
-            json.put("arguments", arguments);
+            ret.put("arguments", arguments);
         } else if (feature == Feature.RESOURCE) {
-            json.put("uri", info.uri())
-                    .put("mimeType", info.mimeType());
+            ret.put("uri", info.uri());
+            if (info.mimeType() != null) {
+                ret.put("mimeType", info.mimeType());
+            }
         } else if (feature == Feature.RESOURCE_TEMPLATE) {
-            json.put("uriTemplate", info.uri())
-                    .put("mimeType", info.mimeType());
+            ret.put("uriTemplate", info.uri());
+            if (info.mimeType() != null) {
+                ret.put("mimeType", info.mimeType());
+            }
         }
-        return json;
+        return ret;
     }
 
 }

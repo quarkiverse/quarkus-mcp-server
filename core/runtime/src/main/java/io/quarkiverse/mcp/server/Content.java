@@ -2,7 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public sealed interface Content permits TextContent, ImageContent, ResourceContent {
+public sealed interface Content permits TextContent, ImageContent, EmbeddedResource {
 
     @JsonProperty("type")
     default String getType() {
@@ -15,7 +15,7 @@ public sealed interface Content permits TextContent, ImageContent, ResourceConte
 
     ImageContent asImage();
 
-    ResourceContent asResource();
+    EmbeddedResource asResource();
 
     enum Type {
         TEXT,

@@ -230,10 +230,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
         @Override
         public JsonObject asJson() {
-            return new JsonObject().put("name", name())
+            JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
-                    .put("uri", uri())
-                    .put("mimeType", mimeType());
+                    .put("uri", uri);
+            if (mimeType != null) {
+                ret.put("mimeType", mimeType);
+            }
+            return ret;
         }
 
         @Override

@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.resources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URISyntaxException;
@@ -55,6 +56,8 @@ public class ResourcesTest extends McpServerTest {
         assertEquals(uri, resource.getString("uri"));
         if (mimeType != null) {
             assertEquals(description, resource.getString("mimeType"));
+        } else {
+            assertFalse(resource.containsKey("mimeType"));
         }
     }
 

@@ -36,10 +36,10 @@ import org.jboss.jandex.Type.Kind;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
-import io.quarkiverse.mcp.server.ResourceContent;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
@@ -441,7 +441,7 @@ class McpServerProcessor {
             }
         }
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
-                ResourceContent.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
+                EmbeddedResource.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
                 FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
                 BlobResourceContents.class).methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
@@ -524,7 +524,7 @@ class McpServerProcessor {
 
     private static final Set<org.jboss.jandex.Type> TOOL_TYPES = Set.of(ClassType.create(DotNames.TOOL_RESPONSE),
             ClassType.create(DotNames.CONTENT), ClassType.create(DotNames.TEXT_CONTENT),
-            ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.RESOURCE_CONTENT),
+            ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.EMBEDDED_RESOURCE),
             ClassType.create(DotNames.STRING));
 
     private void validateToolMethod(MethodInfo method) {
@@ -772,7 +772,7 @@ class McpServerProcessor {
 
     private boolean isContent(DotName typeName) {
         return DotNames.CONTENT.equals(typeName) || DotNames.TEXT_CONTENT.equals(typeName)
-                || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.RESOURCE_CONTENT.equals(typeName);
+                || DotNames.IMAGE_CONTENT.equals(typeName) || DotNames.EMBEDDED_RESOURCE.equals(typeName);
     }
 
     private ResultHandle readResultMapper(BytecodeCreator bytecode, String mapperClassSimpleName) {

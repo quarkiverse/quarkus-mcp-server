@@ -7,7 +7,7 @@ package io.quarkiverse.mcp.server;
  *
  * @see TextContent
  * @see ImageContent
- * @see ResourceContent
+ * @see EmbeddedResource
  */
 public record PromptMessage(String role, Content content) {
 
