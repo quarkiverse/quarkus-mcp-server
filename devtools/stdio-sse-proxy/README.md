@@ -17,16 +17,15 @@ The application can be packaged using:
 This builds a Quarkus uber-jar that can be run directly:
 
 ```shell script
-java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar --help
+java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT.jar --help
 ```
 
 Shows the following help message:
 
 ```shell script
-Usage: stdio-sse-proxy [-hV] [--[no-]reconnect] -e=<sseEndpoint> [-s=<sleep>]
-                       [-t=<timeout>]
-  -e, --endpoint=<sseEndpoint>
-                            The URI of the target SSE endpoint
+  Usage: stdio-sse-proxy [-hV] [--[no-]reconnect] [-s=<sleep>] [-t=<timeout>]
+                       <sseEndpoint>
+      <sseEndpoint>         The URI of the target SSE endpoint
   -h, --help                Show this help message and exit.
       --[no-]reconnect      If set to true then the proxy attempts to reconnect
                               if a message endpoint returns http status 400
@@ -49,13 +48,17 @@ or if you need a custom endpoint:
 java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar http://my.app/mcp
 ```
 
-> [!IMPORTANT]  
-> The target SSE endpoint is mandatory.
-
 ## JBang
 
 You can also run the proxy as a JBang script:
 
 ```shell script
-jbang --quiet src/main/java/io/quarkiverse/mcp/server/proxy/StdioSseProxy.java -h
+jbang src/main/java/io/quarkiverse/mcp/server/proxy/StdioSseProxy.java -h
 ```
+
+or when released to maven use:
+
+```shell script
+jbang io.quarkiverse.mcp:quarkus-mcp-stdio-sse-proxy:RELEASE -h
+```
+
