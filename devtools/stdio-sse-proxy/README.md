@@ -40,7 +40,13 @@ Usage: stdio-sse-proxy [-hV] [--[no-]reconnect] -e=<sseEndpoint> [-s=<sleep>]
 In order to run a proxy server for a `quarkus-mcp-server` application running in the dev mode:
 
 ```shell script
-java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar -e http://localhost:8080/mcp/sse
+java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar
+```
+
+or if you need a custom endpoint:
+
+```shell script
+java -jar target/quarkus-mcp-stdio-sse-proxy-1.0.0-SNAPSHOT-runner.jar http://my.app/mcp
 ```
 
 > [!IMPORTANT]  

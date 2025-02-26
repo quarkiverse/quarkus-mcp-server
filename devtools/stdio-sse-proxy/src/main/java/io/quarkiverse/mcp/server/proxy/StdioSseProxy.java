@@ -39,6 +39,7 @@ import org.jboss.logging.Logger;
 import io.quarkus.runtime.Quarkus;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * Starts a proxy server between an MCP client using the {@code stdio} transport and an MCP server using the {@code HTTP/SSE}
@@ -49,7 +50,7 @@ public class StdioSseProxy implements Runnable {
 
     private static final Logger LOG = Logger.getLogger(StdioSseProxy.class);
 
-    @Option(names = { "-e", "--endpoint" }, required = true, description = "The URI of the target SSE endpoint")
+    @Parameters(description = "The URI of the target SSE endpoint", defaultValue = "http://localhost:8080/mcp/sse")
     URI sseEndpoint;
 
     @Option(names = { "-t",
