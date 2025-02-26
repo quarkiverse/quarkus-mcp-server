@@ -11,17 +11,22 @@ This extension provides declarative and programmatic APIs that enable developers
 
 ## Get Started
 
-Step #1 - add the following dependency to your POM file:
+### Step #1 
+
+Add the following dependency to your POM file:
 
 ```xml
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <artifactId>quarkus-mcp-server-sse</artifactId> <!-- use 'quarkus-mcp-server-stdio' if you want to use the STDIO transport instead of the SSE transport -->
+    <!-- use 'quarkus-mcp-server-stdio' if you want to use the STDIO transport instead of the HTTP/SSE transport -->
+    <artifactId>quarkus-mcp-server-sse</artifactId>
     <version>${project-version}</version>
 </dependency>
 ```
 
-Step #2 - add server features (prompts, resources and tools) represented by an _annotated business method_ of a CDI bean.
+### Step #2 
+
+Add server features (prompts, resources and tools) represented by _annotated business methods_ of CDI beans.
 
 ```java
 import jakarta.inject.Inject;
@@ -63,7 +68,9 @@ public class ServerFeatures {
 }
 ```
 
-Step #3 - run your Quarkus app and have fun!
+### Step #3
+
+Run your Quarkus app and have fun!
 
 ## Documentation
 
