@@ -622,6 +622,8 @@ class McpServerProcessor {
                     if (requiredValue != null) {
                         required = requiredValue.asBoolean();
                     }
+                } else if (DotNames.OPTIONAL.equals(pi.type().name())) {
+                    required = false;
                 }
             }
             ResultHandle type = Types.getTypeHandle(metaMethod, pi.type());

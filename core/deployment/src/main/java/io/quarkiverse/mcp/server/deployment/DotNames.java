@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.deployment;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.jboss.jandex.DotName;
 
@@ -83,5 +84,7 @@ class DotNames {
 
     static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
     static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");
+
+    static final DotName OPTIONAL = DotName.createSimple(Optional.class);
 
 }
