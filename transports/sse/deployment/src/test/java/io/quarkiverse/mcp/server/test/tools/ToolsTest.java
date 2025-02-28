@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.test.tools;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URISyntaxException;
 import java.time.DayOfWeek;
@@ -47,6 +48,7 @@ public class ToolsTest extends McpServerTest {
             assertNotNull(priceProperty);
             assertEquals("integer", priceProperty.getString("type"));
             assertEquals("Define the price...", priceProperty.getString("description"));
+            assertTrue(schema.getJsonArray("required").isEmpty());
         });
         assertTool(tools, "uni_alpha", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");
@@ -54,6 +56,8 @@ public class ToolsTest extends McpServerTest {
             JsonObject priceProperty = properties.getJsonObject("uni_price");
             assertNotNull(priceProperty);
             assertEquals("number", priceProperty.getString("type"));
+            assertEquals(1, schema.getJsonArray("required").size());
+            assertEquals("uni_price", schema.getJsonArray("required").getString(0));
         });
         assertTool(tools, "charlie", null, schema -> {
             JsonObject properties = schema.getJsonObject("properties");

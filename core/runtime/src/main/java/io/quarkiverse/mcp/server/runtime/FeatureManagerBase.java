@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -135,7 +136,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 if (val == null && arg.required()) {
                     throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
                 }
-                if (val instanceof Map map) {
+                if (Types.isOptional(arg.type())) {
+                    ret[idx] = Optional.ofNullable(val);
+                } else if (val instanceof Map map) {
                     // json object
                     JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
                     try {

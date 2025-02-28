@@ -109,6 +109,15 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (description != null && !description.isBlank()) {
                 objectNode.put("description", description);
             }
+            if (Types.isOptional(type)) {
+                ObjectNode valueType = objectNode.withObjectProperty("properties").withObjectProperty("value");
+                objectNode.set("type", valueType.get("type"));
+                if (valueType.has("properties")) {
+                    objectNode.set("properties", valueType.get("properties"));
+                } else {
+                    objectNode.remove("properties");
+                }
+            }
         }
         return jsonNode;
     }

@@ -601,6 +601,7 @@ class McpServerProcessor {
         for (MethodParameterInfo pi : featureMethod.getMethod().parameters()) {
             String name = pi.name();
             String description = "";
+            // Argument is required by default
             boolean required = true;
             if (argAnnotationName != null) {
                 AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
@@ -620,8 +621,15 @@ class McpServerProcessor {
                     }
                     AnnotationValue requiredValue = argAnnotation.value("required");
                     if (requiredValue != null) {
+                        // Annotation value always takes precedence
                         required = requiredValue.asBoolean();
+                    } else if (DotNames.OPTIONAL.equals(pi.type().name())) {
+                        // No annotation value is defined and Optional type is used
+                        required = false;
                     }
+                } else if (DotNames.OPTIONAL.equals(pi.type().name())) {
+                    // No annotation is defined and Optional type is used
+                    required = false;
                 }
             }
             ResultHandle type = Types.getTypeHandle(metaMethod, pi.type());

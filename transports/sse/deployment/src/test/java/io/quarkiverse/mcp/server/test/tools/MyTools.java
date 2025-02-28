@@ -6,6 +6,7 @@ import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
 import java.time.DayOfWeek;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.inject.Inject;
 
@@ -27,12 +28,12 @@ public class MyTools {
     FooService fooService;
 
     @Tool
-    ToolResponse alpha(@ToolArg(description = "Define the price...") int price) {
+    ToolResponse alpha(@ToolArg(description = "Define the price...") Optional<Integer> price) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
         return ToolResponse.success(
-                new TextContent(fooService.ping(price + "", 1, new Options(true))));
+                new TextContent(fooService.ping(price.get() + "", 1, new Options(true))));
     }
 
     @Tool
