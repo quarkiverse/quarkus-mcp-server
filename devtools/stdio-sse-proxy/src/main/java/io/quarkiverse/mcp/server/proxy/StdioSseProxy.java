@@ -1,17 +1,17 @@
 //usr/bin/env jbang "$0" "$@" ; exit $?
 //DEPS io.quarkus.platform:quarkus-bom:3.18.3@pom
 //DEPS io.quarkus:quarkus-picocli
+//DEPS io.quarkus:quarkus-vertx
+//DEPS io.quarkiverse.mcp:quarkus-mcp-server-sse-client:RELEASE
 //Q:CONFIG quarkus.log.console.stderr=true
 package io.quarkiverse.mcp.server.proxy;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
@@ -20,14 +20,11 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Flow;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -36,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.quarkus.runtime.Quarkus;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -95,7 +93,7 @@ public class StdioSseProxy implements Runnable {
                 }
             }
         };
-        sseClient.connect(client);
+        sseClient.connect(client, Map.of());
 
         executor.submit(new Runnable() {
             @Override
@@ -167,7 +165,7 @@ public class StdioSseProxy implements Runnable {
             // Let's reconnect the SSE client
             LOG.infof("Message endpoint %s not found - reconnecting SSE client..", messageEndpoint.get());
             endpointReceived.reset();
-            sseClient.connect(httpClient);
+            sseClient.connect(httpClient, Map.of());
             try {
                 endpointReceived.await(timeout, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
@@ -177,118 +175,6 @@ public class StdioSseProxy implements Runnable {
             sendData(sseClient, endpointReceived, httpClient, messageEndpoint, data, true);
         } else if (response.statusCode() != 200) {
             LOG.errorf("Received erroneous status code: %s", response.statusCode());
-        }
-    }
-
-    public abstract class SseClient {
-
-        private static final Logger LOG = Logger.getLogger(SseClient.class);
-
-        private final URI sseUri;
-
-        public SseClient(URI uri) {
-            this.sseUri = uri;
-        }
-
-        protected abstract void process(SseEvent event);
-
-        public void connect(HttpClient client) {
-            if (client == null) {
-                client = HttpClient.newHttpClient();
-            }
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(sseUri)
-                    .version(Version.HTTP_1_1)
-                    .header("Accept", "text/event-stream")
-                    .GET()
-                    .build();
-
-            client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
-                    .exceptionally(e -> {
-                        if (e instanceof CompletionException) {
-                            e = e.getCause();
-                        }
-                        if (e instanceof ConnectException ce) {
-                            LOG.errorf(ce.getCause(), "Connection failed: %s", sseEndpoint);
-                            Quarkus.asyncExit(0);
-                        } else {
-                            Throwable root = getRootCause(e);
-                            if (!(root instanceof EOFException)) {
-                                LOG.error(e);
-                            }
-                        }
-                        return null;
-                    });
-        }
-
-        class SseEventSubscriber implements Flow.Subscriber<String> {
-
-            private Flow.Subscription subscription;
-
-            private String event = "message";
-            private StringBuilder dataBuffer = new StringBuilder();
-
-            @Override
-            public void onSubscribe(Flow.Subscription subscription) {
-                this.subscription = subscription;
-                subscription.request(1);
-                LOG.infof("Connected to SSE stream: %s", sseUri);
-            }
-
-            @Override
-            public void onNext(String line) {
-                LOG.debugf("Processing line:\n%s", line);
-                if (line.startsWith(":")) {
-                    // Skip comments
-                } else if (line.isBlank()) {
-                    // Flush
-                    process(new SseEvent(event, dataBuffer.toString().strip()));
-                    dataBuffer = new StringBuilder();
-                    event = "message";
-                } else if (line.contains(":")) {
-                    int colon = line.indexOf(":");
-                    String field = line.substring(0, colon).strip();
-                    String value = line.substring(colon + 1).strip();
-                    handleField(field, value);
-                } else {
-                    // The whole line is the field name
-                    handleField(line, "");
-                }
-                subscription.request(1);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                Throwable root = getRootCause(t);
-                if (!(root instanceof EOFException)) {
-                    LOG.errorf(t, "Error in SSE stream");
-                }
-            }
-
-            @Override
-            public void onComplete() {
-                LOG.info("SSE connection closed");
-            }
-
-            private void handleField(String field, String value) {
-                switch (field) {
-                    case "event" -> event = value;
-                    case "data" -> dataBuffer.append(value).append("\n");
-                }
-            }
-        }
-
-        public record SseEvent(String name, String data) {
-        }
-
-        private static Throwable getRootCause(Throwable exception) {
-            final List<Throwable> chain = new ArrayList<>();
-            Throwable curr = exception;
-            while (curr != null && !chain.contains(curr)) {
-                chain.add(curr);
-                curr = curr.getCause();
-            }
-            return chain.isEmpty() ? null : chain.get(chain.size() - 1);
         }
     }
 

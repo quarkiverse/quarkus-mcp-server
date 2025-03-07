@@ -1,4 +1,5 @@
 name: MCP Server - HTTP/SSE Transport
+description: This extension enables developers to implement the MCP server features easily.
 metadata:
   keywords:
     - mcp-server

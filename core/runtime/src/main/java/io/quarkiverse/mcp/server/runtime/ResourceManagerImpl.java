@@ -60,7 +60,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     public ResourceInfo getResource(String uri) {
-        return resources.get(uri);
+        return resources.get(Objects.requireNonNull(uri));
     }
 
     void subscribe(String uri, String connectionId) {

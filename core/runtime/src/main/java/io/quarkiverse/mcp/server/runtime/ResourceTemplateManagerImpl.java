@@ -58,7 +58,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @Override
     public ResourceTemplateInfo getResourceTemplate(String name) {
-        ResourceTemplateMetadata metadata = templates.get(name);
+        ResourceTemplateMetadata metadata = templates.get(Objects.requireNonNull(name));
         return metadata != null ? metadata.info() : null;
     }
 

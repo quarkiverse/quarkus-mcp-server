@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -49,7 +50,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @Override
     public PromptInfo getPrompt(String name) {
-        return prompts.get(name);
+        return prompts.get(Objects.requireNonNull(name));
     }
 
     @Override
