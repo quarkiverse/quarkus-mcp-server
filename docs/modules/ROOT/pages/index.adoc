@@ -295,6 +295,7 @@ You can also use https://spec.modelcontextprotocol.io/specification/2024-11-05/s
 
 [source,java]
 ----
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.TextResourceContents;
 
@@ -307,8 +308,8 @@ public class MyResourceTemplates {
     ProjectService projectService;
 
     @ResourceTemplate(uriTemplate = "file:///project/{name}") <3> <4>
-    TextResourceContents project(String name, String uri) { <5>
-        return TextResourceContents.create(uri, projectService.readProject(name)));
+    TextResourceContents project(String name, RequestUri uri) { <5>
+        return TextResourceContents.create(uri.value(), projectService.readProject(name)));
     }
 
 }
