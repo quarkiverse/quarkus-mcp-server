@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -61,7 +62,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @Override
     public ToolInfo getTool(String name) {
-        return tools.get(name);
+        return tools.get(Objects.requireNonNull(name));
     }
 
     @Override

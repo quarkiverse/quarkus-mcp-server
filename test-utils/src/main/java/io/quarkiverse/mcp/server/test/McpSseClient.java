@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.awaitility.Awaitility;
 
+import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.vertx.core.json.JsonObject;
 
 public class McpSseClient extends SseClient {

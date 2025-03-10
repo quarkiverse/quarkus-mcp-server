@@ -1,6 +1,7 @@
-package io.quarkiverse.mcp.server.test;
+package io.quarkiverse.mcp.server.sse.client;
 
 import java.io.EOFException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow;
 
 import org.jboss.logging.Logger;
@@ -19,22 +21,32 @@ public abstract class SseClient {
 
     private static final Logger LOG = Logger.getLogger(SseClient.class);
 
-    private final URI testUri;
+    protected final URI connectUri;
 
     public SseClient(URI uri) {
-        this.testUri = uri;
+        this.connectUri = uri;
     }
 
     protected abstract void process(SseEvent event);
 
+    protected void connectionFailed() {
+        // No-op
+    }
+
     public CompletableFuture<HttpResponse<Void>> connect() {
-        return connect(Map.of());
+        return connect(null, Map.of());
     }
 
     public CompletableFuture<HttpResponse<Void>> connect(Map<String, String> headers) {
-        HttpClient client = HttpClient.newHttpClient();
+        return connect(null, headers);
+    }
+
+    public CompletableFuture<HttpResponse<Void>> connect(HttpClient client, Map<String, String> headers) {
+        if (client == null) {
+            client = HttpClient.newHttpClient();
+        }
         HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(testUri)
+                .uri(connectUri)
                 .version(Version.HTTP_1_1)
                 .header("Accept", "text/event-stream")
                 .GET();
@@ -42,17 +54,20 @@ public abstract class SseClient {
         HttpRequest request = builder.build();
 
         return client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
-                .whenComplete((r, t) -> {
-                    if (t != null) {
-                        Throwable root = getRootCause(t);
-                        if (!(root instanceof EOFException)) {
-                            LOG.error(t);
-                        }
+                .exceptionally(e -> {
+                    if (e instanceof CompletionException) {
+                        e = e.getCause();
+                    }
+                    if (e instanceof ConnectException ce) {
+                        LOG.errorf(ce.getCause(), "Connection failed: %s", connectUri);
+                        connectionFailed();
                     } else {
-                        if (r.statusCode() != 200) {
-                            LOG.errorf("Failed to connect %s: %s", r.statusCode(), testUri);
+                        Throwable root = getRootCause(e);
+                        if (!(root instanceof EOFException)) {
+                            LOG.error(e);
                         }
                     }
+                    return null;
                 });
     }
 

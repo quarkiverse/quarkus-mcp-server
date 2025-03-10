@@ -8,19 +8,18 @@
         <version>999-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>quarkus-mcp-server-test-utils</artifactId>
-    <name>Quarkus MCP Server Test Utils</name>
+    <artifactId>quarkus-mcp-server-sse-client</artifactId>
+    <name>Quarkus MCP Server SSE Client</name>
 
     <dependencies>
         <dependency>
-            <groupId>io.quarkiverse.mcp</groupId>
-            <artifactId>quarkus-mcp-server-sse-client</artifactId>
-            <version>${project.version}</version>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>smallrye-mutiny-vertx-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-        </dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            </dependency>
     </dependencies>
 
 </project>
