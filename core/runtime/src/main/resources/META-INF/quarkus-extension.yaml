@@ -1,4 +1,4 @@
-name: MCP Server
+name: MCP Server - Core
 description: This extension enables developers to implement the MCP server features easily.
 metadata:
   keywords:
@@ -7,3 +7,4 @@ metadata:
   categories:
     - "miscellaneous"
   status: "preview"
+  unlisted: true
