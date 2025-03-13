@@ -25,6 +25,9 @@ export class QwcMcpResources extends LitElement {
           padding-bottom: 10px;
           height: 100%;
         }
+        .resource-read {
+          padding-left: 0.5em;
+        }
         code {
           font-size: 85%;
         }
@@ -59,6 +62,7 @@ export class QwcMcpResources extends LitElement {
 
     _renderResourceRead() {
         return html`
+        <div class="resource-read">
         <vaadin-split-layout>
             <master-content style="width: 50%;">
                 <p>Read resource <strong>${this._selectedResource.name}</strong> with URI <code>${this._selectedResource.uri}</code></p>
@@ -76,6 +80,7 @@ export class QwcMcpResources extends LitElement {
         <vaadin-button @click="${this._showResources}">
            Back to resources
         </vaadin-button>
+        </div>
         </div>
                `;
     }

@@ -25,6 +25,9 @@ export class QwcMcpResourceTemplates extends LitElement {
           padding-bottom: 10px;
           height: 100%;
         }
+        .resource-read {
+          padding-left: 0.5em;
+        }
         code {
           font-size: 85%;
         }
@@ -59,6 +62,7 @@ export class QwcMcpResourceTemplates extends LitElement {
 
     _renderResourceTemplateRead() {
         return html`
+        <div class="resource-read">
         <vaadin-split-layout>
             <master-content style="width: 50%;">
                 <p>Read resource template <strong>${this._selectedResourceTemplate.name}</strong> with URI:</p>
@@ -78,6 +82,7 @@ export class QwcMcpResourceTemplates extends LitElement {
         <vaadin-button @click="${this._showResourceTemplates}">
            Back to resource templates
         </vaadin-button>
+        </div>
         </div>
                `;
     }
