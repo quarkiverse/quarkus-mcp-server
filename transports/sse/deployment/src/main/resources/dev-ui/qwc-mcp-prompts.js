@@ -25,6 +25,9 @@ export class QwcMcpPrompts extends LitElement {
           padding-bottom: 10px;
           height: 100%;
         }
+        .prompt-get {
+          padding-left: 0.5em;
+        }
         code {
           font-size: 85%;
         }
@@ -59,6 +62,7 @@ export class QwcMcpPrompts extends LitElement {
 
     _renderPromptGet() {
         return html`
+        <div class="prompt-get">
         <vaadin-split-layout>
             <master-content style="width: 50%;">
                 <p>Get prompt <strong>${this._selectedPrompt.name}</strong> with arguments:</p>
@@ -81,6 +85,7 @@ export class QwcMcpPrompts extends LitElement {
         <vaadin-button @click="${this._showPrompts}">
            Back to prompts
         </vaadin-button>
+        </div>
         </div>
                `;
     }

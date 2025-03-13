@@ -25,6 +25,9 @@ export class QwcMcpTools extends LitElement {
           padding-bottom: 10px;
           height: 100%;
         }
+        .tool-call {
+          padding-left: 0.5em;
+        }
         code {
           font-size: 85%;
         }
@@ -59,6 +62,7 @@ export class QwcMcpTools extends LitElement {
 
     _renderToolCall() {
         return html`
+        <div class="tool-call">
         <vaadin-split-layout>
             <master-content style="width: 50%;">
                 <p>Calling tool <strong>${this._selectedTool.name}</strong> with arguments:</p>
@@ -81,6 +85,7 @@ export class QwcMcpTools extends LitElement {
         <vaadin-button @click="${this._showTools}">
            Back to tools
         </vaadin-button>
+        </div>
         </div>
                `;
     }

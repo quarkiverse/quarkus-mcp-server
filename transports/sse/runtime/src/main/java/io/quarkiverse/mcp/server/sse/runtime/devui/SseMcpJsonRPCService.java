@@ -324,6 +324,9 @@ public class SseMcpJsonRPCService {
 
     class DevUISseClient extends SseClient {
 
+        private static final int AWAIT_ATTEMPTS = 50;
+        private static final int AWAIT_SLEEP = 100; // ms
+
         private final CountDownLatch endpointLatch = new CountDownLatch(1);
 
         private final ConcurrentMap<Integer, JsonObject> responses;
@@ -342,9 +345,9 @@ public class SseMcpJsonRPCService {
         JsonObject awaitResponse(Integer id) throws InterruptedException {
             JsonObject response = responses.get(id);
             int attempts = 0;
-            while (response == null && attempts++ < 50) {
-                TimeUnit.MILLISECONDS.sleep(100);
-                response = responses.get(id);
+            while (response == null && attempts++ < AWAIT_ATTEMPTS) {
+                TimeUnit.MILLISECONDS.sleep(AWAIT_SLEEP);
+                response = responses.remove(id);
             }
             return response;
         }
