@@ -6,6 +6,8 @@ _"https://modelcontextprotocol.io/[Model Context Protocol]  (MCP) is an open pro
 
 This extension provides declarative and programmatic APIs that enable developers to implement the MCP server features easily.
 
+NOTE: The https://github.com/langchain4j/langchain4j[LangChain4j] project provides the MCP client functionality, either as a low-level programmatic API or as a full-fledged integration into AI-infused applications.
+
 == Supported transports
 
 MCP currently defines two standard transports for client-server communication.
