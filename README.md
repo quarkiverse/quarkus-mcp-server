@@ -2,12 +2,14 @@
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
-
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
 _"[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open protocol that enables seamless integration between LLM applications and external data sources and tools."_
 
 This extension provides declarative and programmatic APIs that enable developers to implement the MCP server features easily.
+
+> [!NOTE]  
+> The [LangChain4j](https://github.com/langchain4j/langchain4j) project provides the MCP client functionality, either as a low-level programmatic API or as a full-fledged integration into AI-infused applications.
 
 ## Get Started
 
