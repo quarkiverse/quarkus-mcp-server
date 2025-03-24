@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.inject.Singleton;
 
@@ -42,6 +43,8 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
 
     private final Vertx vertx;
 
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
+
     protected StdioMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
@@ -57,50 +60,52 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
         this.vertx = vertx;
     }
 
-    void initialize(PrintStream stdout, McpRuntimeConfig config) {
-        String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-        StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel(),
-                trafficLogger, config.autoPingInterval(), stdout, vertx);
-        InputStream in = System.in;
-        executor.submit(new Runnable() {
+    public void initialize(PrintStream stdout, McpRuntimeConfig config) {
+        if (initialized.compareAndSet(false, true)) {
+            String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
+            StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel(),
+                    trafficLogger, config.autoPingInterval(), stdout, vertx);
+            InputStream in = System.in;
+            executor.submit(new Runnable() {
 
-            @Override
-            public void run() {
+                @Override
+                public void run() {
 
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
-                    while (true) {
-                        String line = reader.readLine();
-                        if (line == null) {
-                            LOG.debug("EOF received, exiting");
-                            Quarkus.asyncExit(0);
-                            return;
-                        }
-                        try {
-                            JsonObject message;
-                            try {
-                                message = new JsonObject(line);
-                            } catch (Exception e) {
-                                String msg = "Unable to parse the JSON message";
-                                LOG.errorf(e, msg);
-                                connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+                        while (true) {
+                            String line = reader.readLine();
+                            if (line == null) {
+                                LOG.debug("EOF received, exiting");
+                                Quarkus.asyncExit(0);
                                 return;
                             }
-                            if (trafficLogger != null) {
-                                trafficLogger.messageReceived(message, connection);
+                            try {
+                                JsonObject message;
+                                try {
+                                    message = new JsonObject(line);
+                                } catch (Exception e) {
+                                    String msg = "Unable to parse the JSON message";
+                                    LOG.errorf(e, msg);
+                                    connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
+                                    return;
+                                }
+                                if (trafficLogger != null) {
+                                    trafficLogger.messageReceived(message, connection);
+                                }
+                                if (JsonRPC.validate(message, connection)) {
+                                    handle(message, connection, connection, null);
+                                }
+                            } catch (DecodeException e) {
+                                String msg = "Unable to parse the JSON message";
+                                LOG.errorf(e, msg);
                             }
-                            if (JsonRPC.validate(message, connection)) {
-                                handle(message, connection, connection, null);
-                            }
-                        } catch (DecodeException e) {
-                            String msg = "Unable to parse the JSON message";
-                            LOG.errorf(e, msg);
                         }
+                    } catch (IOException e) {
+                        LOG.errorf(e, "Error reading stdio");
                     }
-                } catch (IOException e) {
-                    LOG.errorf(e, "Error reading stdio");
                 }
-            }
-        });
+            });
+        }
     }
 
 }

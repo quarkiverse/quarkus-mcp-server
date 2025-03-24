@@ -27,8 +27,10 @@ public class StdioMcpServerProcessor {
     @Record(RUNTIME_INIT)
     @Consume(SyntheticBeansRuntimeInitBuildItem.class)
     @BuildStep
-    void initialize(StdioMcpServerRecorder recorder) {
-        recorder.initialize();
+    void initialize(StdioMcpServerRecorder recorder, McpStdioBuildTimeConfig config) {
+        if (config.initializationEnabled()) {
+            recorder.initialize();
+        }
     }
 
 }
