@@ -1,1 +1,4 @@
 * xref:index.adoc[Getting started]
+
+* Additional Tools
+** xref:cli-adapter.adoc[CLI Adapter]
