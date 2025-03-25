@@ -38,7 +38,7 @@ public class SseMcpDevUIProcessor {
         cardPages.produce(pageBuildItem);
     }
 
-    @BuildStep(onlyIf = IsDevelopment.class)
+    @BuildStep
     JsonRPCProvidersBuildItem rpcProvider() {
         return new JsonRPCProvidersBuildItem(SseMcpJsonRPCService.class);
     }
