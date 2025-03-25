@@ -20,6 +20,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.invoke.Invoker;
@@ -79,6 +80,7 @@ import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
+import io.quarkus.arc.processor.Annotations;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.InjectionPointInfo;
@@ -92,6 +94,7 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
+import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
@@ -137,6 +140,18 @@ class McpServerProcessor {
                 .containsAnnotations(ANNOTATION_TO_FEATURE.keySet().toArray(DotName[]::new))
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
+    }
+
+    @BuildStep
+    ExecutionModelAnnotationsAllowedBuildItem executionModelAnnotations(
+            TransformedAnnotationsBuildItem transformedAnnotations) {
+        Set<DotName> featureAnnotations = ANNOTATION_TO_FEATURE.keySet();
+        return new ExecutionModelAnnotationsAllowedBuildItem(new Predicate<MethodInfo>() {
+            @Override
+            public boolean test(MethodInfo method) {
+                return Annotations.containsAny(transformedAnnotations.getAnnotations(method), featureAnnotations);
+            }
+        });
     }
 
     @BuildStep
