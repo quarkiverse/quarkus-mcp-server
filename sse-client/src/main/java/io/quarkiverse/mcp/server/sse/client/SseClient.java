@@ -91,7 +91,7 @@ public abstract class SseClient {
                 // Skip comments
             } else if (line.isBlank()) {
                 // Flush
-                process(new SseEvent(event, dataBuffer.toString()));
+                process(new SseEvent(event, dataBuffer.toString().strip()));
                 event = "message";
                 dataBuffer = new StringBuilder();
             } else if (line.contains(":")) {
