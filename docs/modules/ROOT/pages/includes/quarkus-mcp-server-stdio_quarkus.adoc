@@ -7,6 +7,27 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-initialization-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-initialization-enabled[`quarkus.initialization-enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.initialization-enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Flag to specify whether the MCP server should be automatically initialized. This can be useful in case where the MCP server should be conditionally started. For example: from a CLI that provides multiple commands including one for starting the MCP server.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_INITIALIZATION_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_INITIALIZATION_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
+
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-enabled[`quarkus.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.enabled+++[]
