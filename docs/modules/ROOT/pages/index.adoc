@@ -71,7 +71,7 @@ The execution model is determined by the method signature and additional annotat
 * Methods annotated with `@RunOnVirtualThread` or declared in class annotated with `@RunOnVirtualThread` must execute on
  a virtual thread, each invocation spawns a new virtual thread.
 
-=== Prompts
+== Prompts
 
 MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/prompts/[standardized way] for servers to expose prompt templates to clients.
 
@@ -108,7 +108,7 @@ However, the annotated method can also return other types that are converted acc
 * If it returns any other type `X` then `X` is encoded using the `PromptResponseEncoder` API.
 * It may also return a `Uni` that wraps any of the type mentioned above.
 
-==== Method parameters
+=== Method parameters
 
 A `@Prompt` method must only accept `String` parameters that represent Prompt arguments.
 However, it may also accept the following parameters:
@@ -117,7 +117,7 @@ However, it may also accept the following parameters:
 * `McpLog`
 * `RequestId`
 
-==== Prompt complete
+=== Prompt complete
 
 Arguments of a `@Prompt` method may be auto-completed through the completion API.
 
@@ -163,7 +163,7 @@ However, it may also accept the following parameters:
 * `McpLog`
 * `RequestId`
 
-==== Programmatic API
+=== Programmatic API
 
 It's also possible to register a prompt programmatically with the `PromptManager` API.
 
@@ -195,7 +195,7 @@ public class MyPrompts {
 <2> The `PromptManager#newPrompt(String)` method returns `PromptDefinition` - a builder-like API. 
 <3> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
 
-=== Resources
+== Resources
 
 MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/[standardized way] for servers to expose resources to clients.
 
@@ -232,7 +232,7 @@ However, the annotated method can also return other types that are converted acc
 
 TIP: There is a default resource contents encoder registered; it encodes the returned value as JSON.
 
-==== Method parameters
+=== Method parameters
 
 A `@Resource` method may accept the following parameters:
 
@@ -241,7 +241,7 @@ A `@Resource` method may accept the following parameters:
 * `RequestId`
 * `RequestUri`
 
-==== Programmatic API
+=== Programmatic API
 
 It's also possible to register a resource programmatically with the `ResourceManager` API.
 
@@ -269,7 +269,7 @@ public class MyResources {
 <2> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API. 
 <3> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
 
-==== Subscriptions
+=== Subscriptions
 
 MCP clients can subscribe to a specific resource and receive update notifications.
 
@@ -291,7 +291,7 @@ public class MyResources {
 <1> The injected manager can be used to obtain resource info for a specific URI.
 <2> Sends update notifications to all subscribers.
 
-==== Resource templates
+== Resource templates
 
 You can also use https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/#resource-templates[resource templates]  to expose parameterized resources.
 
@@ -338,7 +338,7 @@ However, it may also accept the following parameters:
 * `RequestId`
 * `RequestUri`
 
-===== Complete API
+=== Complete API
 
 Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.
 
@@ -384,7 +384,7 @@ However, it may also accept the following parameters:
 * `RequestId`
 * `RequestUri`
 
-===== Programmatic API
+=== Programmatic API
 
 It's also possible to register a resource template programmatically with the `ResourceTemplateManager` API.
 
@@ -416,7 +416,7 @@ public class MyResourceTemplates {
 <2> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API. 
 <3> Registers the resource template definition.
 
-=== Tools
+== Tools
 
 MCP provides a https://spec.modelcontextprotocol.io/specification/2024-11-05/server/tools/[standardized way] for servers to expose tools that can be invoked by clients.
 
@@ -463,7 +463,7 @@ However, the annotated method can also return other types that are converted acc
 
 TIP: There is a default content encoder registered; it encodes the returned value as JSON.
 
-==== Method parameters
+=== Method parameters
 
 A `@Tool` method may accept parameters that represent Tool arguments.
 However, it may also accept the following parameters:
@@ -472,7 +472,7 @@ However, it may also accept the following parameters:
 * `McpLog`
 * `RequestId`
 
-==== Programmatic API
+=== Programmatic API
 
 It's also possible to register a tool programmatically with the `ToolManager` API.
 
@@ -500,13 +500,13 @@ public class MyTools {
 <2> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API. 
 <3> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
 
-==== Support `@Tool`/`@P` annotations from LangChain4j
+=== Support `@Tool`/`@P` annotations from LangChain4j
 
 The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
 For example, `void` methods are not supported. 
 
-=== Pagination
+== Pagination
 
 Pagination is automatically enabled if the number of results exceeds the configured page size.
 See the <<extension-configuration-reference>> for relevant config properties.
@@ -616,6 +616,12 @@ quarkus.mcp.server.traffic-logging.text-limit=500 <2>
 <1> Enables traffic logging.
 <2> Set the number of characters of a JSON message which will be logged.
 
+== Dev UI
+
+The `quarkus-mcp-server-sse` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
+You can inspect and test the server features easily without third-party tools like <<mcp_inspector,MCP Inspector>>
+
+[[mcp_inspector]]
 == MCP Inspector
 
 The https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] is a developer tool for testing and debugging MCP servers.
