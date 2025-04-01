@@ -3,20 +3,28 @@ package io.quarkiverse.mcp.server;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 
 /**
- * Connection from an MCP client.
+ * The connection from an MCP client.
  */
 public interface McpConnection {
 
+    /**
+     * @return the identifier (not {@code null})}
+     */
     String id();
 
+    /**
+     * @return the current status (not {@code null})}
+     */
     Status status();
 
-    boolean initialize(InitializeRequest request);
+    /**
+     * @return the initial request (not {@code null})}
+     */
+    InitialRequest initialRequest();
 
-    boolean setInitialized();
-
-    InitializeRequest initializeRequest();
-
+    /**
+     * @return the current log level
+     */
     LogLevel logLevel();
 
     /**

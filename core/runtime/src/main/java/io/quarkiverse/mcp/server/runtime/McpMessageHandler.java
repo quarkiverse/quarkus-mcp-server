@@ -10,7 +10,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
-import io.quarkiverse.mcp.server.InitializeRequest;
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
@@ -51,7 +51,7 @@ public class McpMessageHandler {
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
 
-    public void handle(JsonObject message, McpConnection connection, Responder responder, SecuritySupport securitySupport) {
+    public void handle(JsonObject message, McpConnectionBase connection, Responder responder, SecuritySupport securitySupport) {
         if (Messages.isResponse(message)) {
             // Response from a client
             // Currently we discard all responses, including pong responses
@@ -67,7 +67,7 @@ public class McpMessageHandler {
         }
     }
 
-    private void initializeNew(JsonObject message, Responder responder, McpConnection connection,
+    private void initializeNew(JsonObject message, Responder responder, McpConnectionBase connection,
             SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         // The first message must be "initialize"
@@ -76,7 +76,7 @@ public class McpMessageHandler {
             // In the dev mode, if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
             // we could perform a "dummy" initialization
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT && config.devMode().dummyInit()) {
-                InitializeRequest dummy = new InitializeRequest(new Implementation("dummy", "1"), DEFAULT_PROTOCOL_VERSION,
+                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), DEFAULT_PROTOCOL_VERSION,
                         List.of());
                 if (connection.initialize(dummy) && connection.setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", connection.id());
@@ -103,7 +103,7 @@ public class McpMessageHandler {
         }
     }
 
-    private void initializing(JsonObject message, Responder responder, McpConnection connection) {
+    private void initializing(JsonObject message, Responder responder, McpConnectionBase connection) {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
@@ -223,7 +223,7 @@ public class McpMessageHandler {
         }
     }
 
-    private InitializeRequest decodeInitializeRequest(JsonObject params) {
+    private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
         Implementation implementation = new Implementation(clientInfo.getString("name"), clientInfo.getString("version"));
         String protocolVersion = params.getString("protocolVersion");
@@ -235,7 +235,7 @@ public class McpMessageHandler {
                 clientCapabilities.add(new ClientCapability(name, Map.of()));
             }
         }
-        return new InitializeRequest(implementation, protocolVersion, clientCapabilities);
+        return new InitialRequest(implementation, protocolVersion, clientCapabilities);
     }
 
     private static final String DEFAULT_PROTOCOL_VERSION = "2024-11-05";

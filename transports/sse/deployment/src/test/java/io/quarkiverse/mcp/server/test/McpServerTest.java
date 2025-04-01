@@ -118,13 +118,17 @@ public abstract class McpServerTest {
 
         LOG.infof("Client received endpoint: %s", endpoint);
 
-        JsonObject initMessage = newMessage("initialize")
-                .put("params",
-                        new JsonObject()
-                                .put("clientInfo", new JsonObject()
-                                        .put("name", "test-client")
-                                        .put("version", "1.0"))
-                                .put("protocolVersion", "2024-11-05"));
+        JsonObject initMessage = newMessage("initialize");
+        JsonObject params = new JsonObject()
+                .put("clientInfo", new JsonObject()
+                        .put("name", "test-client")
+                        .put("version", "1.0"))
+                .put("protocolVersion", "2024-11-05");
+        JsonObject clientCapabilities = getClientCapabilities();
+        if (clientCapabilities != null) {
+            params.put("capabilities", clientCapabilities);
+        }
+        initMessage.put("params", params);
 
         Entry<String, String> baseAuth = initBaseAuth();
         if (baseAuth != null) {
@@ -169,6 +173,10 @@ public abstract class McpServerTest {
                 .put("jsonrpc", "2.0")
                 .put("method", method)
                 .put("id", client.nextRequestId());
+    }
+
+    protected JsonObject getClientCapabilities() {
+        return null;
     }
 
 }
