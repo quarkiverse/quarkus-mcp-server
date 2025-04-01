@@ -3,13 +3,12 @@ package io.quarkiverse.mcp.server;
 import org.jboss.logging.Logger;
 
 /**
- * Sends log message notifications to a connected MCP client.
+ * Send log message notifications to a connected MCP client.
  * <p>
  * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/server/utilities/logging">Logging</a>.
  * <p>
  * The MCP logger name is derived from the method. For example, if there is a method {@code myTool()} annotated with
- * {@code @Tool}
- * then the logger name will be {@code tool:myTool}.
+ * {@code @Tool} then the logger name will be {@code tool:myTool}.
  */
 public interface McpLog {
 
