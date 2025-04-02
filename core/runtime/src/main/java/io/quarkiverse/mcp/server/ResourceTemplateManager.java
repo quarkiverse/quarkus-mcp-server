@@ -5,7 +5,7 @@ import java.util.Map;
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
 
 /**
- * Manager can be used to obtain metadata and register a new resource template programmatically.
+ * This manager can be used to obtain metadata and register a new resource template programmatically.
  */
 public interface ResourceTemplateManager extends FeatureManager<ResourceTemplateInfo> {
 

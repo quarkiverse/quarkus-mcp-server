@@ -3,7 +3,7 @@ package io.quarkiverse.mcp.server;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 
 /**
- * Manager can be used to obtain metadata and register a new resource programmatically.
+ * This manager can be used to obtain metadata and register a new resource programmatically.
  */
 public interface ResourceManager extends FeatureManager<ResourceInfo> {
 

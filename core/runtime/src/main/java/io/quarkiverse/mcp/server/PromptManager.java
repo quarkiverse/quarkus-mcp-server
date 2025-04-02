@@ -6,7 +6,7 @@ import java.util.Map;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 
 /**
- * Manager can be used to obtain metadata and register a new prompt programmatically.
+ * This manager can be used to obtain metadata and register a new prompt programmatically.
  */
 public interface PromptManager extends FeatureManager<PromptInfo> {
 

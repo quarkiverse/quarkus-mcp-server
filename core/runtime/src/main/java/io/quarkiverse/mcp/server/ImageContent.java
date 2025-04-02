@@ -1,9 +1,10 @@
 package io.quarkiverse.mcp.server;
 
 /**
+ * An image content provided to or from an LLM.
  *
- * @param data A base64-encoded string representing the image data
- * @param mimeType
+ * @param data a base64-encoded string representing the image data (must not be {@code null})
+ * @param mimeType the mime type of the image (must not be {@code null})
  */
 public record ImageContent(String data, String mimeType) implements Content {
 

@@ -1,7 +1,6 @@
 package io.quarkiverse.mcp.server;
 
 /**
- *
  * @param <TYPE> The type to be encoded
  * @param <ENCODED> The resulting type of encoding
  */

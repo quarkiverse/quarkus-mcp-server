@@ -235,7 +235,7 @@ public class McpMessageHandler {
                 clientCapabilities.add(new ClientCapability(name, Map.of()));
             }
         }
-        return new InitialRequest(implementation, protocolVersion, clientCapabilities);
+        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities));
     }
 
     private static final String DEFAULT_PROTOCOL_VERSION = "2024-11-05";

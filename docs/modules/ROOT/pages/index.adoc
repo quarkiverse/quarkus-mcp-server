@@ -117,7 +117,7 @@ However, it may also accept the following parameters:
 * `McpLog`
 * `RequestId`
 
-=== Prompt complete
+=== Completion API
 
 Arguments of a `@Prompt` method may be auto-completed through the completion API.
 
@@ -338,7 +338,7 @@ However, it may also accept the following parameters:
 * `RequestId`
 * `RequestUri`
 
-=== Complete API
+=== Completion API
 
 Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.
 

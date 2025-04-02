@@ -29,6 +29,8 @@ import io.smallrye.mutiny.Uni;
  * <li>{@code Uni<List<String>>}</li>
  * </ul>
  *
+ * A resource template completion method must consume exactly one {@link String} argument.
+ *
  * @see ResourceTemplate#name()
  */
 @Retention(RUNTIME)
