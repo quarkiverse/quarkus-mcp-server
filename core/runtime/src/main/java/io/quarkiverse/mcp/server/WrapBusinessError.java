@@ -11,9 +11,8 @@ import jakarta.enterprise.util.Nonbinding;
 import jakarta.interceptor.InterceptorBinding;
 
 /**
- * Wraps an exception thrown from a "feature" method with an exception that represents a business logic error and is
- * automatically
- * converted to a failed response.
+ * Wraps a matching exception thrown from a "feature" method with an exception that represents a business logic error and is
+ * automatically converted to a failed response.
  * <p>
  * For example, if a {@link Tool} method throws an exception it's wrapped with a {@link ToolCallException} which is
  * automatically converted to a failed {@link ToolResponse}.

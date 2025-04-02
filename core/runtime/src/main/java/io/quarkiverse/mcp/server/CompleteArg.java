@@ -7,7 +7,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Annotates a parameter of a "complete" method, such as {@link CompletePrompt}.
+ * This annotation can be used to customize the name of a completed argument, i.e. the name of a parameter of a completion
+ * method.
+ * <p>
+ * A completion method must consume exactly one {@link String} argument.
+ *
+ * @see CompletePrompt
+ * @see CompleteResourceTemplate
  */
 @Retention(RUNTIME)
 @Target(ElementType.PARAMETER)
@@ -18,6 +24,9 @@ public @interface CompleteArg {
      */
     String ELEMENT_NAME = "<<element name>>";
 
+    /**
+     * @return the name of the completed argument
+     */
     String name() default ELEMENT_NAME;
 
 }

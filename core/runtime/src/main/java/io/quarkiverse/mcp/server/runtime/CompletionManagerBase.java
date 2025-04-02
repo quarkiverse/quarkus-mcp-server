@@ -19,7 +19,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
+public abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
         implements CompletionManager {
 
     // key = prompt name + "_" + argument name

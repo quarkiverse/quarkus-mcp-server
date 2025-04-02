@@ -10,7 +10,7 @@ import java.util.List;
 import io.smallrye.mutiny.Uni;
 
 /**
- * Annotates a business method of a CDI bean used to complete a prompt argument
+ * Annotates a business method of a CDI bean used to complete a prompt argument.
  * <p>
  * The result of a "complete" operation is always represented as a {@link CompletionResponse}. However, the annotated method can
  * also return other types that are converted according to the following rules.
@@ -28,6 +28,8 @@ import io.smallrye.mutiny.Uni;
  * <li>{@code Uni<String>}</li>
  * <li>{@code Uni<List<String>>}</li>
  * </ul>
+ *
+ * A prompt completion method must consume exactly one {@link String} argument.
  *
  * @see Prompt#name()
  */

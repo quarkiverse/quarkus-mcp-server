@@ -6,7 +6,7 @@ import java.util.Map;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 
 /**
- * Manager can be used to obtain metadata and register a new tool programmatically.
+ * This manager can be used to obtain metadata and register a new tool programmatically.
  */
 public interface ToolManager extends FeatureManager<ToolInfo> {
 

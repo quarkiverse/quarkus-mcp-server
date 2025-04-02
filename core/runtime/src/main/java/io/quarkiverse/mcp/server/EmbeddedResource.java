@@ -3,7 +3,7 @@ package io.quarkiverse.mcp.server;
 /**
  * A resource embedded into a prompt or tool call result.
  *
- * @param resource
+ * @param resource (must not be {@code null})
  * @see Prompt
  * @see Tool
  */

@@ -5,7 +5,7 @@ import java.util.function.Predicate;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 
 /**
- * Manager can be used to obtain metadata and register a new completion programmatically.
+ * This manager can be used to obtain metadata and register a new completion programmatically.
  */
 public interface CompletionManager extends FeatureManager<CompletionInfo> {
 

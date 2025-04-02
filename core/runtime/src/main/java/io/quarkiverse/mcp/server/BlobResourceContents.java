@@ -6,18 +6,31 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
+ * Binary data of a resource.
  *
- * @param uri
- * @param blob A base64-encoded string representing the binary data of the item
- * @param mimeType
+ * @param uri (must not be {@code null})
+ * @param blob a base64-encoded string representing the binary data of the item (must not be {@code null})
+ * @param mimeType the mime type of this resource
  */
 @JsonInclude(Include.NON_NULL)
 public record BlobResourceContents(String uri, String blob, String mimeType) implements ResourceContents {
 
+    /**
+     *
+     * @param uri
+     * @param blob
+     * @return a new binary resource contents
+     */
     public static BlobResourceContents create(String uri, String blob) {
         return new BlobResourceContents(uri, blob, null);
     }
 
+    /**
+     *
+     * @param uri
+     * @param blob
+     * @return a new binary resource contents
+     */
     public static BlobResourceContents create(String uri, byte[] blob) {
         return new BlobResourceContents(uri, Base64.getMimeEncoder().encodeToString(blob), null);
     }
