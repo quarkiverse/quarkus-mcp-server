@@ -149,7 +149,7 @@ public class ServerFeaturesIT {
             assertEquals("string", valueProperty.getString("type"));
         });
 
-        assertToolCall(
+        assertToolCallAndNotification(
                 "loop", "toLowerCase", new JsonObject()
                         .put("value", "LooP"));
     }
@@ -226,12 +226,16 @@ public class ServerFeaturesIT {
         }
     }
 
-    private void assertToolCall(String expectedText, String name, JsonObject arguments) {
+    private void assertToolCallAndNotification(String expectedText, String name, JsonObject arguments) {
         JsonObject toolGetMessage = newMessage("tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", arguments));
         sendMessage(toolGetMessage);
+
+        // Since we're using stdio we need to await the notification first
+        JsonObject notification = awaitResponse();
+        assertEquals("notifications/tools/list_changed", notification.getString("method"));
 
         JsonObject toolGetResponse = awaitResponse();
 

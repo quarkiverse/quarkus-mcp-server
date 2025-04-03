@@ -65,6 +65,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
             String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
             StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel(),
                     trafficLogger, config.autoPingInterval(), stdout, vertx);
+            connectionManager.add(connection);
             InputStream in = System.in;
             executor.submit(new Runnable() {
 

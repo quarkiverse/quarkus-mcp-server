@@ -10,6 +10,8 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkus.logging.Log;
 
 public class ServerFeatures {
@@ -17,8 +19,17 @@ public class ServerFeatures {
     @Inject
     CodeService codeService;
 
+    @Inject
+    ToolManager toolManager;
+
     @Tool
     TextContent toLowerCase(String value) {
+        // Just register another tool
+        toolManager.newTool("testTool")
+                .setDescription("This tool does nothing.")
+                .setHandler(
+                        ta -> ToolResponse.success("OK"))
+                .register();
         return new TextContent(value.toLowerCase());
     }
 
