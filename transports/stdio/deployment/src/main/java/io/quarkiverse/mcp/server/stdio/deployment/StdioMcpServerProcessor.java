@@ -2,6 +2,8 @@ package io.quarkiverse.mcp.server.stdio.deployment;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
+import java.util.List;
+
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpServerRecorder;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -27,8 +29,9 @@ public class StdioMcpServerProcessor {
     @Record(RUNTIME_INIT)
     @Consume(SyntheticBeansRuntimeInitBuildItem.class)
     @BuildStep
-    void initialize(StdioMcpServerRecorder recorder, McpStdioBuildTimeConfig config) {
-        if (config.initializationEnabled()) {
+    void initialize(StdioMcpServerRecorder recorder, McpStdioBuildTimeConfig config,
+            List<McpStdioExplicitInitializationBuildItem> initialization) {
+        if (config.initializationEnabled() && initialization.isEmpty()) {
             recorder.initialize();
         }
     }
