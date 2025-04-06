@@ -9,7 +9,7 @@ be used to start the MCP server.
 
 ```xml
 <dependency>
-    <groupId>io.quarkiverse.mc</groupId>
+    <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-cli-adapter</artifactId>
     <version>${quarkus-mcp.version}</version>
 </dependency>
