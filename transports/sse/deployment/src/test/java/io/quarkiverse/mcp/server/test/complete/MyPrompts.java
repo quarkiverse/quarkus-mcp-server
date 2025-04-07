@@ -16,7 +16,7 @@ public class MyPrompts {
 
     @Prompt(description = "Not much we can say here.")
     PromptMessage foo(@PromptArg(description = "The name") String name, String suffix) {
-        return new PromptMessage("user", new TextContent(name.toLowerCase() + suffix));
+        return PromptMessage.withUserRole(new TextContent(name.toLowerCase() + suffix));
     }
 
     @CompletePrompt("foo")

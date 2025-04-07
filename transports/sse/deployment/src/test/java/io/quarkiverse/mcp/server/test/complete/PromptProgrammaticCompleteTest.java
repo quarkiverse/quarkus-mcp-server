@@ -17,6 +17,7 @@ import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
@@ -100,7 +101,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
 
         @Prompt(description = "Not much we can say here.")
         PromptMessage foo(@PromptArg(description = "The name") String name, String suffix) {
-            return new PromptMessage("user", new TextContent(name.toLowerCase() + suffix));
+            return new PromptMessage(Role.USER, new TextContent(name.toLowerCase() + suffix));
         }
 
     }

@@ -31,7 +31,7 @@ public class MyPrompts {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
-        return new PromptMessage("user", new TextContent(fooService.ping(name, Integer.parseInt(repeat), new Options(true))));
+        return PromptMessage.withUserRole(fooService.ping(name, Integer.parseInt(repeat), new Options(true)));
     }
 
     @Prompt(name = "BAR")
