@@ -43,6 +43,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -458,7 +459,7 @@ class McpServerProcessor {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
                 EmbeddedResource.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
                 FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
-                BlobResourceContents.class).methods().build());
+                BlobResourceContents.class, Role.class).methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
     }

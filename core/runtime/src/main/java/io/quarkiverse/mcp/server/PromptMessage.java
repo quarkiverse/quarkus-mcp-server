@@ -10,24 +10,42 @@ package io.quarkiverse.mcp.server;
  * @see ImageContent
  * @see EmbeddedResource
  */
-public record PromptMessage(String role, Content content) {
+public record PromptMessage(Role role, Content content) {
 
     /**
      *
-     * @param content
+     * @param textContent the text content (must not be {@code null})
      * @return a new message with the {@code user} role
      */
-    public static PromptMessage withUserRole(Content content) {
-        return new PromptMessage("user", content);
+    public static PromptMessage withUserRole(String textContent) {
+        return withUserRole(new TextContent(textContent));
     }
 
     /**
      *
-     * @param content
+     * @param content (must not be {@code null})
+     * @return a new message with the {@code user} role
+     */
+    public static PromptMessage withUserRole(Content content) {
+        return new PromptMessage(Role.USER, content);
+    }
+
+    /**
+     *
+     * @param textContent the text content (must not be {@code null})
+     * @return a new message with the {@code assistant} role
+     */
+    public static PromptMessage withAssistantRole(String textContent) {
+        return withAssistantRole(new TextContent(textContent));
+    }
+
+    /**
+     *
+     * @param content (must not be {@code null})
      * @return a new message with the {@code assistant} role
      */
     public static PromptMessage withAssistantRole(Content content) {
-        return new PromptMessage("assistant", content);
+        return new PromptMessage(Role.ASSISTANT, content);
     }
 
     public PromptMessage {
