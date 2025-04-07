@@ -28,12 +28,16 @@ public abstract class McpServerTest {
     private volatile URI messageEndpoint;
 
     public static QuarkusUnitTest defaultConfig() {
+        return defaultConfig(500);
+    }
+
+    public static QuarkusUnitTest defaultConfig(int textLimit) {
         // TODO in theory, we should also add SseClient to all test archives
         // but the test CL can see the class and we don't need Quarkus to analyze this util class
         QuarkusUnitTest config = new QuarkusUnitTest();
         if (System.getProperty("logTraffic") != null) {
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
-            config.overrideConfigKey("quarkus.mcp.server.traffic-logging.text-limit", "500");
+            config.overrideConfigKey("quarkus.mcp.server.traffic-logging.text-limit", "" + textLimit);
         }
         return config;
     }
