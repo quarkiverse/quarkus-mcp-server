@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -33,7 +32,7 @@ public class ProgrammaticToolTest extends McpServerTest {
     MyTools myTools;
 
     @Test
-    public void testTools() throws URISyntaxException {
+    public void testTools() {
         initClient();
         assertTools(0);
         assertToolCallResponseError("alpha");

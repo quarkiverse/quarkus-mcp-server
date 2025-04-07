@@ -3,8 +3,6 @@ package io.quarkiverse.mcp.server.test.resources.templates;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -22,7 +20,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                     root -> root.addClasses(MyTemplates.class, Checks.class));
 
     @Test
-    public void testResourceTemplates() throws URISyntaxException {
+    public void testResourceTemplates() {
         initClient();
 
         JsonObject resourceTemplatesListMessage = newMessage("resources/templates/list");

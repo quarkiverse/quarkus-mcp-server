@@ -11,8 +11,14 @@ NOTE: The https://github.com/langchain4j/langchain4j[LangChain4j] project provid
 == Supported transports
 
 MCP currently defines two standard transports for client-server communication.
-This extension supports both transports and defines a unified API to define server features.
-In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients.
+The `stdio` transport starts an MCP server as a subprocess and communicates over standard `in` and `out`.
+The `HTTP` transports connects to a running HTTP server.
+The `HTTP` transport is defined in two variants: the "Streamable HTTP" variant (introduced in the protocol version 2025-03-26) replaces the "HTTP/SSE" transport (introduced in protocol version 2024-11-05).
+The "HTTP/SSE" transport is considered deprecated but it's still supported by most clients and servers.
+
+This extension supports the `stdio` transport and both variants of the `HTTP` transport.
+Moreover, it defines a unified API to declare server features (tools, prompts and resources).
+In other words, the server features are declared using the same API but the selected transport determines the way the MCP server communicates with clients.
 
 If you want to use the `stdio` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
@@ -28,7 +34,7 @@ For instance, with Maven, add the following dependency to your POM file:
 
 IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default.
 
-If you want to use the `HTTP/SSE` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
+If you want to use the `HTTP` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
@@ -40,9 +46,12 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
+This artifact contains both versions of the `HTTP` transport.
 // We need to escape the {rootPath}
 // https://github.com/quarkiverse/quarkus-mcp-server/issues/105
-TIP: The SSE endpoint is exposed at `\{rootPath}/sse`. The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+The MCP endpoint (as defined in `2025-03-26`) is exposed at `\{rootPath}`, i.e. `/mcp` by default.
+The SSE endpoint (as defined in `2024-11-05`) is exposed at `\{rootPath}/sse`, i.e. `/mcp/sse` by default.
+The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
 == Supported server features
 

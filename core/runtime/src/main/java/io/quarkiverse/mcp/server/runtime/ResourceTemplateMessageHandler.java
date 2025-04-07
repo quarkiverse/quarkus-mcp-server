@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -19,9 +20,12 @@ class ResourceTemplateMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void resourceTemplatesList(JsonObject message, Sender sender) {
+    Future<Void> resourceTemplatesList(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, sender);
+        Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
+        if (cursor == null) {
+            return Future.succeededFuture();
+        }
 
         LOG.debugf("List resource templates [id: %s, cursor: %s]", id, cursor);
 
@@ -35,7 +39,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
             ResourceTemplateManager.ResourceTemplateInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        sender.sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result);
     }
 
 }

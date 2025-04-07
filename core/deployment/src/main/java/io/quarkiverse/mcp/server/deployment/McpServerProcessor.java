@@ -460,14 +460,16 @@ class McpServerProcessor {
         }
         resourceTemplateCompletionsMethod.returnValue(retResourceTemplateCompletions);
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.inits()
-        MethodCreator initsMethod = metadataCreator.getMethodCreator("inits", List.class);
-        ResultHandle retInits = Gizmo.newArrayList(initsMethod);
-        for (FeatureMethodBuildItem init : featureMethods.stream().filter(FeatureMethodBuildItem::isInit).toList()) {
-            processFeatureMethod(counter, metadataCreator, initsMethod, init, retInits, transformedAnnotations,
+        // io.quarkiverse.mcp.server.runtime.McpMetadata.notifications()
+        MethodCreator notificationsMethod = metadataCreator.getMethodCreator("notifications", List.class);
+        ResultHandle retNotifications = Gizmo.newArrayList(notificationsMethod);
+        for (FeatureMethodBuildItem notification : featureMethods.stream().filter(FeatureMethodBuildItem::isNotification)
+                .toList()) {
+            processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
+                    transformedAnnotations,
                     DotNames.NOTIFICATION);
         }
-        initsMethod.returnValue(retInits);
+        notificationsMethod.returnValue(retNotifications);
 
         //  io.quarkiverse.mcp.server.runtime.McpMetadata.defaultValueConverters()
         MethodCreator convertersMethod = metadataCreator.getMethodCreator("defaultValueConverters", Map.class);

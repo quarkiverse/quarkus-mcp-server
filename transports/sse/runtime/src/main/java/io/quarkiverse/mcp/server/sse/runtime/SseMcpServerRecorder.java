@@ -2,8 +2,6 @@ package io.quarkiverse.mcp.server.sse.runtime;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.util.Base64;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
@@ -17,6 +15,7 @@ import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.impl.ConnectionBase;
@@ -34,6 +33,28 @@ public class SseMcpServerRecorder {
         this.config = config;
     }
 
+    public Handler<RoutingContext> createMcpEndpointHandler() {
+        StreamableHttpMcpMessageHandler handler = Arc.container().instance(StreamableHttpMcpMessageHandler.class).get();
+        return new Handler<RoutingContext>() {
+
+            @Override
+            public void handle(RoutingContext ctx) {
+                HttpMethod method = ctx.request().method();
+                if (HttpMethod.GET.equals(method)) {
+                    openSseStream(ctx);
+                } else if (HttpMethod.POST.equals(method)) {
+                    handler.handle(ctx);
+                } else {
+                    throw new IllegalArgumentException("Unexpected HTTP method: " + method);
+                }
+            }
+        };
+    }
+
+    private void openSseStream(RoutingContext ctx) {
+        ctx.response().setStatusCode(405).end();
+    }
+
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath) {
 
         ArcContainer container = Arc.container();
@@ -49,9 +70,8 @@ public class SseMcpServerRecorder {
                 response.setChunked(true);
                 response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
 
-                String id = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-
-                LOG.debugf("Connection initialized [%s]", id);
+                String id = ConnectionManager.connectionId();
+                LOG.debugf("SSE connection initialized [%s]", id);
 
                 SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), trafficLogger,
                         config.autoPingInterval(), response);

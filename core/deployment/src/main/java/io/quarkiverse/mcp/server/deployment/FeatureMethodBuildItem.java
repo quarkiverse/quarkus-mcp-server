@@ -96,7 +96,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
     }
 
-    boolean isInit() {
+    boolean isNotification() {
         return feature == Feature.NOTIFICATION;
     }
 

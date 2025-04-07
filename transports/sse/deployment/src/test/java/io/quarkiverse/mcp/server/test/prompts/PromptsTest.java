@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.prompts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ public class PromptsTest extends McpServerTest {
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyPrompts.class));
 
     @Test
-    public void testPrompts() throws URISyntaxException {
+    public void testPrompts() {
         initClient();
         JsonObject promptListMessage = newMessage("prompts/list");
         send(promptListMessage);

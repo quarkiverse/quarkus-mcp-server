@@ -4,9 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import jakarta.inject.Singleton;
 
@@ -30,36 +31,48 @@ public class SamplingTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
-    public void testSampling() throws URISyntaxException, InterruptedException {
-        initClient();
+    public void testSampling() throws InterruptedException {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            initClient();
+            JsonObject toolCallMessage = newMessage("tools/call")
+                    .put("params", new JsonObject()
+                            .put("name", "samplingFoo"));
 
-        JsonObject toolCallMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "samplingFoo"));
-        send(toolCallMessage);
+            // We need to send the request on a separate thread
+            // because the response is not completed until the sampling response is sent
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    send(toolCallMessage);
+                }
+            });
 
-        // The server should send a sampling request
-        List<JsonObject> requests = client().waitForRequests(1);
-        assertEquals("sampling/createMessage", requests.get(0).getString("method"));
-        Long id = requests.get(0).getLong("id");
-        JsonObject message = newResult(id, new JsonObject()
-                .put("role", "assistant")
-                .put("model", "claude-3-sonnet-20240307")
-                .put("content", new JsonObject()
-                        .put("type", "text")
-                        .put("text", "It's ok buddy.")));
-        // Send the response back to the server
-        send(message);
+            // The server should send a sampling request
+            List<JsonObject> requests = client().waitForRequests(1);
+            assertEquals("sampling/createMessage", requests.get(0).getString("method"));
+            Long id = requests.get(0).getLong("id");
+            JsonObject message = newResult(id, new JsonObject()
+                    .put("role", "assistant")
+                    .put("model", "claude-3-sonnet-20240307")
+                    .put("content", new JsonObject()
+                            .put("type", "text")
+                            .put("text", "It's ok buddy.")));
+            // Send the response back to the server
+            send(message);
 
-        JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals("It's ok buddy.", textContent.getString("text"));
+            JsonObject toolCallResponse = waitForLastResponse();
+            JsonObject toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
+            assertNotNull(toolCallResult);
+            assertFalse(toolCallResult.getBoolean("isError"));
+            JsonArray content = toolCallResult.getJsonArray("content");
+            assertEquals(1, content.size());
+            JsonObject textContent = content.getJsonObject(0);
+            assertEquals("text", textContent.getString("type"));
+            assertEquals("It's ok buddy.", textContent.getString("text"));
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Singleton

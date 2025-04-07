@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ public class InitialRequestTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
-    public void testInitRequest() throws URISyntaxException {
+    public void testInitRequest() {
         initClient();
 
         JsonObject toolCallMessage = newMessage("tools/call")

@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
-
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,7 +19,7 @@ public class DefaultServerInfoTest extends McpServerTest {
             .withEmptyApplication();
 
     @Test
-    public void testServerInfo() throws URISyntaxException {
+    public void testServerInfo() {
         initClient(result -> {
             JsonObject serverInfo = result.getJsonObject("serverInfo");
             assertNotNull(serverInfo);

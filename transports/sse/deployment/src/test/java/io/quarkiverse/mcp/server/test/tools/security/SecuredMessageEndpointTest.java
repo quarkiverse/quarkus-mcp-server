@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.tools.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
@@ -39,11 +38,11 @@ public class SecuredMessageEndpointTest extends McpServerTest {
     }
 
     @Test
-    public void testSseEndpoint() throws URISyntaxException, InterruptedException, ExecutionException, TimeoutException {
+    public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
         initClient();
 
         JsonObject toolListMessage = newMessage("tools/list");
-        sendAndValidate(toolListMessage).statusCode(401);
+        sendAndValidate(toolListMessage, Map.of()).statusCode(401);
 
         toolListMessage = newMessage("tools/list");
         sendSecured(toolListMessage, "bob", "bob");

@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Base64;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -58,6 +60,10 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
     }
 
     record ConnectionTimerId(McpConnectionBase connection, Long timerId) {
+    }
+
+    public static String connectionId() {
+        return Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
     }
 
 }

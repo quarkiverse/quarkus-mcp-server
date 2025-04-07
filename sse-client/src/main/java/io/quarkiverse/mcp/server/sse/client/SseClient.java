@@ -42,17 +42,21 @@ public abstract class SseClient {
         return connect(null, headers);
     }
 
-    public CompletableFuture<HttpResponse<Void>> connect(HttpClient client, Map<String, String> headers) {
-        if (client == null) {
-            client = HttpClient.newHttpClient();
-        }
+    protected HttpRequest buildConnectRequest(Map<String, String> headers) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(connectUri)
                 .version(Version.HTTP_1_1)
                 .header("Accept", "text/event-stream")
                 .GET();
         headers.forEach(builder::header);
-        HttpRequest request = builder.build();
+        return builder.build();
+    }
+
+    public CompletableFuture<HttpResponse<Void>> connect(HttpClient client, Map<String, String> headers) {
+        if (client == null) {
+            client = HttpClient.newHttpClient();
+        }
+        HttpRequest request = buildConnectRequest(headers);
 
         return client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
                 .exceptionally(e -> {

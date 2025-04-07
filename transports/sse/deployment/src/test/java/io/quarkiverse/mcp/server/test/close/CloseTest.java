@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.close;
 import static io.restassured.RestAssured.given;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -20,7 +19,7 @@ public class CloseTest extends McpServerTest {
             .withEmptyApplication();
 
     @Test
-    public void testCloseMessage() throws URISyntaxException {
+    public void testCloseMessage() {
         URI endpoint = initClient();
 
         JsonObject closeMessage = newMessage("q/close");

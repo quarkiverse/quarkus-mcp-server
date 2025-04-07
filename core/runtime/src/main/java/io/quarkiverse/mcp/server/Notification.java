@@ -17,6 +17,8 @@ import java.lang.annotation.Target;
  * <li>{@link McpConnection}</li>
  * <li>{@link McpLog}</li>
  * <li>{@link Roots}</li>
+ * <li>{@link Sampling}</li>
+ * <li>{@link Progress}</li>
  * </ul>
  *
  * @see McpConnection#initialRequest()
@@ -38,6 +40,15 @@ public @interface Notification {
         /**
          * {@code notifications/roots/list_changed}
          */
-        ROOTS_LIST_CHANGED
+        ROOTS_LIST_CHANGED;
+
+        public static Type from(String method) {
+            if ("notifications/initialized".equals(method)) {
+                return INITIALIZED;
+            } else if ("notifications/roots/list_changed".equals(method)) {
+                return ROOTS_LIST_CHANGED;
+            }
+            throw new IllegalArgumentException("Invalid method: " + method);
+        }
     }
 }
