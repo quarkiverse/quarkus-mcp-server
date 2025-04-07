@@ -12,7 +12,7 @@ NOTE: The https://github.com/langchain4j/langchain4j[LangChain4j] project provid
 
 MCP currently defines two standard transports for client-server communication.
 This extension supports both transports and defines a unified API to define server features.
-In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients. 
+In other words, the server features are defined with the same API but the selected transport determines the way the MCP server communicates with clients.
 
 If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#stdio[stdio] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
@@ -26,7 +26,7 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default. 
+IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default.
 
 If you want to use the https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse[HTTP/SSE] transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
@@ -49,7 +49,7 @@ TIP: The SSE endpoint is exposed at `\{rootPath}/sse`. The `\{rootPath}` is set 
 An https://spec.modelcontextprotocol.io/specification/2024-11-05/server/[MCP server] provides some building blocks to enrich the context of language models in AI apps.
 In this extension, a _server feature_ (prompt, resource, tool, etc.) is either represented as a _business method_ of a CDI bean or registered programmatically.
 The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
-For example, when a server feature is executed the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
+For example, when a server feature is executed, the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
 
 === Execution model
 
@@ -97,7 +97,7 @@ public class MyPrompts {
 ----
 <1> The `@Singleton` scope is added automatically, if needed.
 <2> `MyPrompts` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
-<3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name. 
+<3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name.
 <4> The `@PromptArg` can be used to customize the description of an argument.
 
 The result of a "prompt get" operation is always represented as a `PromptResponse`.
@@ -137,17 +137,17 @@ public class MyPrompts {
     PromptMessage foo(@PromptArg(description = "The name") String name) {
         return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
     }
-    
+
     @CompletePrompt("foo") <1>
     List<String> completeName(@CompleteArg(name = "name") String val) { <2> <3>
         return fooService.getNames().stream().filter(n -> n.startsWith(val)).toList();
     }
-    
+
 }
 ----
-<1> `"foo"` is the name reference to a prompt. If not such prompt exists then the build fails.
+<1> `"foo"` is the name reference to a prompt. If no such prompt exists then the build fails.
 <2> The method returns a list of matching values.
-<3> The `@CompleteArg` can be used to customize the name of an argument.
+<3> The `@CompleteArg` annotation can be used to customize the name of an argument.
 
 The result of a "prompt complete" operation is always represented as a `CompleteResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
@@ -176,10 +176,10 @@ public class MyPrompts {
 
     @Inject
     PromptManager promptManager; <1>
-    
+
     @Inject
     CodeService codeService;
-        
+
     void addPrompt() {
        promptManager.newPrompt("code_assist") <2>
           .setDescription("Prompt for code assist")
@@ -192,7 +192,7 @@ public class MyPrompts {
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new prompt programmatically.
-<2> The `PromptManager#newPrompt(String)` method returns `PromptDefinition` - a builder-like API. 
+<2> The `PromptManager#newPrompt(String)` method returns `PromptDefinition` - a builder-like API.
 <3> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
 
 == Resources
@@ -254,7 +254,7 @@ public class MyResources {
 
     @Inject
     ResourceManager resourceManager; <1>
-    
+
     void addResource() {
        resourceManager.newResource("file:///project/alpha") <2>
           .setDescription("Alpha resource file")
@@ -266,7 +266,7 @@ public class MyResources {
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new resource programmatically.
-<2> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API. 
+<2> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API.
 <3> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
 
 === Subscriptions
@@ -282,7 +282,7 @@ public class MyResources {
 
     @Inject
     ResourceManager resourceManager; <1>
-    
+
     void alphaUpdated() {
        resourceManager.getResource("file:///alpha.txt").sendUpdate(); <2>
     }
@@ -320,7 +320,7 @@ public class MyResourceTemplates {
 <2> `MyResourceTemplates` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
 <3> `@ResourceTemplate` annotates a business method of a CDI bean that should be exposed as a resource template. By default, the name of the resource template is derived from the method name.
 <4> `ResourceTemplate#uriTemplate()` contains a  Level 1 URI template (https://datatracker.ietf.org/doc/html/rfc6570#section-1.2[RFC 6570]) that can be used to construct resource URIs.
-<5> The `name` parameter refers to the expression from the URI template. The `uri` parameter refers to the actual resource URI. 
+<5> The `name` parameter refers to the expression from the URI template. The `uri` parameter refers to the actual resource URI.
 
 The result of a "resource read" operation is always represented as a `ResourceResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
@@ -353,20 +353,20 @@ public class MyTemplates {
 
     @Inject
     ProjectService projectService;
-    
+
     @ResourceTemplate(uriTemplate = "file:///project/{name}")
     TextResourceContents project(String name) {
         return TextResourceContents.create(uri, projectService.readProject(name)));
     }
-    
+
     @CompleteResourceTemplate("project") <1>
     List<String> completeName(String name) { <2>
         return projectService.getNames().stream().filter(n -> n.startsWith(name)).toList();
     }
-    
+
 }
 ----
-<1> `"project"` is the name reference to a resource template. If not such resource template exists then the build fails.
+<1> `"project"` is the name reference to a resource template. If no such resource template exists then the build fails.
 <2> The method returns a list of matching values.
 
 The result of a "prompt complete" operation is always represented as a `CompleteResponse`.
@@ -397,10 +397,10 @@ public class MyResourceTemplates {
 
     @Inject
     ResourceTemplateManager resourceTemplateManager; <1>
-    
+
     @Inject
     FileService fileService;
-    
+
     void addResourceTemplate() {
        resourceTemplateManager.newResourceTemplate("alpha") <2>
           .setUriTemplate("file:///alpha/{foo}")
@@ -413,7 +413,7 @@ public class MyResourceTemplates {
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new resource template programmatically.
-<2> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API. 
+<2> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API.
 <3> Registers the resource template definition.
 
 == Tools
@@ -485,7 +485,7 @@ public class MyTools {
 
     @Inject
     ToolManager toolManager; <1>
-    
+
     void addTool() {
        toolManager.newTool("toLowerCase") <2>
           .setDescription("Converts input string to lower case.")
@@ -497,20 +497,20 @@ public class MyTools {
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new tool programmatically.
-<2> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API. 
+<2> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API.
 <3> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
 
 === Support `@Tool`/`@P` annotations from LangChain4j
 
 The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
-For example, `void` methods are not supported. 
+For example, `void` methods are not supported.
 
 == Pagination
 
 Pagination is automatically enabled if the number of results exceeds the configured page size.
 See the <<extension-configuration-reference>> for relevant config properties.
-The following MCP operations support pagination: `resources/list`, `resources/templates/list`, `prompts/list` and `tools/list`. 
+The following MCP operations support pagination: `resources/list`, `resources/templates/list`, `prompts/list` and `tools/list`.
 
 == Client logging
 
@@ -534,7 +534,7 @@ public class MyTools {
         log.info("UP name accepted %s", name); <1>
         return name.toUpperCase();
     }
-    
+
     @Tool
     String down(String name, McpLog log) {
         log.send(LogLevel.INFO, "DOWN name accepted %s", name); <2>
@@ -565,9 +565,9 @@ quarkus.http.auth.permission.mcp-endpoints.policy=authenticated <2>
 Alternatively, you can also secure the annotated server feature methods with security annotations such as `io.quarkus.security.Authenticated`,
 `jakarta.annotation.security.RolesAllowed` and other annotations listed in the xref:security-authorize-web-endpoints-reference.adoc#standard-security-annotations[Supported security annotations] documentation.
 However, in this case an MCP client will not receive an appropriate HTTP status code if authentication fails.
-Instead, an MCP error message with code `-32001` is sent back to the client. 
+Instead, an MCP error message with code `-32001` is sent back to the client.
 
-.Annotation-based Security Example 
+.Annotation-based Security Example
 [source,java]
 ----
 package org.acme;
@@ -588,7 +588,7 @@ public class MyTools {
         log.info("UP name accepted %s", name); <1>
         return name.toUpperCase();
     }
-    
+
     @Tool
     @RolesAllowed("admin") <2>
     String down(String name, McpLog log) {
@@ -631,10 +631,10 @@ It's a Node.js app that can be run locally:
 ----
 $ npx @modelcontextprotocol/inspector
 ----
- 
+
 The UI is then available at `locahost:5173` by default.
 
-If you don't have the `npm` installed locally you can also use the official Node.js Docker image.
+If you don't have the `npx` command installed locally you can also use the official Node.js Docker image.
 Linux developers will need to add the `--network=host` option because the inspector app needs to access your MCP server running on the localhost:
 
 [source,console]
