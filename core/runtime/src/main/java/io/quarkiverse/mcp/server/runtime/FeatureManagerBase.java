@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
@@ -136,35 +137,55 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 if (val == null && arg.required()) {
                     throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
                 }
-                if (Types.isOptional(arg.type())) {
-                    ret[idx] = Optional.ofNullable(val);
-                } else if (val instanceof Map map) {
+                boolean isOptional = Types.isOptional(arg.type());
+                Type argType = isOptional ? Types.getFirstActualTypeArgument(arg.type()) : arg.type();
+                if (val instanceof Map map) {
                     // json object
-                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    JavaType javaType = mapper.getTypeFactory().constructType(argType);
                     try {
-                        ret[idx] = mapper.readValue(new JsonObject(map).encode(), javaType);
+                        val = mapper.readValue(new JsonObject(map).encode(), javaType);
                     } catch (JsonProcessingException e) {
                         throw new IllegalStateException(e);
                     }
                 } else if (val instanceof List list) {
                     // json array
-                    JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                    JavaType javaType = mapper.getTypeFactory().constructType(argType);
                     try {
-                        ret[idx] = mapper.readValue(new JsonArray(list).encode(), javaType);
+                        val = mapper.readValue(new JsonArray(list).encode(), javaType);
                     } catch (JsonProcessingException e) {
                         throw new IllegalStateException(e);
                     }
-                } else {
-                    if (arg.type() instanceof Class clazz && clazz.isEnum()) {
-                        ret[idx] = Enum.valueOf(clazz, val.toString());
-                    } else {
-                        ret[idx] = val;
-                    }
+                } else if (argType instanceof Class clazz && clazz.isEnum()) {
+                    val = Enum.valueOf(clazz, val.toString());
+                } else if (val instanceof Number num) {
+                    val = coerceNumber(num, argType);
                 }
+
+                if (isOptional) {
+                    val = Optional.ofNullable(val);
+                }
+                ret[idx] = val;
             }
             idx++;
         }
         return ret;
+    }
+
+    private Object coerceNumber(Number num, Type argType) {
+        if (Integer.class.equals(argType) || int.class.equals(argType)) {
+            return num instanceof Integer ? num : num.intValue();
+        } else if (Long.class.equals(argType) || long.class.equals(argType)) {
+            return num instanceof Long ? num : num.longValue();
+        } else if (Short.class.equals(argType) || short.class.equals(argType)) {
+            return num instanceof Short ? num : num.shortValue();
+        } else if (Byte.class.equals(argType) || byte.class.equals(argType)) {
+            return num instanceof Byte ? num : num.byteValue();
+        } else if (Float.class.equals(argType) || float.class.equals(argType)) {
+            return num instanceof Float ? num : num.floatValue();
+        } else if (Double.class.equals(argType) || double.class.equals(argType)) {
+            return num instanceof Double ? num : num.doubleValue();
+        }
+        return num;
     }
 
     protected abstract FeatureInvoker<RESULT> getInvoker(String id);
