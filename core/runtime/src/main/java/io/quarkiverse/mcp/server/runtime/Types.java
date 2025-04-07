@@ -15,4 +15,11 @@ public final class Types {
         }
         return false;
     }
+
+    public static Type getFirstActualTypeArgument(Type type) {
+        if (type instanceof ParameterizedType pt) {
+            return pt.getActualTypeArguments()[0];
+        }
+        throw new IllegalArgumentException("Not a parameterized type: " + type);
+    }
 }
