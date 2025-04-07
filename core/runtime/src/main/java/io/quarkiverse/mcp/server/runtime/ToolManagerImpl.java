@@ -107,18 +107,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         JsonNode jsonNode = schemaGenerator.generateSchema(type);
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
+            if (Types.isOptional(type)) {
+                // The generated schema for Optional<List<String>> looks like:
+                // {"type":"object","properties":{"value":{"type":"array","items":{"type":"string"}}}}
+                // We need to extract the value property and replace the original object node
+                ObjectNode valueProp = objectNode.withObjectProperty("properties").withObjectProperty("value");
+                if (valueProp != null) {
+                    objectNode = valueProp;
+                }
+            }
             if (description != null && !description.isBlank()) {
                 objectNode.put("description", description);
             }
-            if (Types.isOptional(type)) {
-                ObjectNode valueType = objectNode.withObjectProperty("properties").withObjectProperty("value");
-                objectNode.set("type", valueType.get("type"));
-                if (valueType.has("properties")) {
-                    objectNode.set("properties", valueType.get("properties"));
-                } else {
-                    objectNode.remove("properties");
-                }
-            }
+            return objectNode;
         }
         return jsonNode;
     }
