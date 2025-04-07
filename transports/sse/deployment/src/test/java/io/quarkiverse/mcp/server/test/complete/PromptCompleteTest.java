@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URISyntaxException;
-
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
@@ -28,7 +26,7 @@ public class PromptCompleteTest extends McpServerTest {
     PromptCompletionManager manager;
 
     @Test
-    public void testCompletion() throws URISyntaxException {
+    public void testCompletion() {
         initClient();
         JsonObject completeMessage = newMessage("completion/complete")
                 .put("params", new JsonObject()

@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.logging;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.time.DayOfWeek;
 import java.util.List;
 
@@ -23,7 +22,7 @@ public class LoggingSetLevelTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
-    public void testLog() throws URISyntaxException {
+    public void testLog() {
         initClient();
 
         assertToolCall("monday:INFO", "charlie", DayOfWeek.MONDAY);

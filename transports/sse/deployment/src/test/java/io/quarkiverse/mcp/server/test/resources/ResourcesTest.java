@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -23,7 +21,7 @@ public class ResourcesTest extends McpServerTest {
                     root -> root.addClasses(MyResources.class, Checks.class));
 
     @Test
-    public void testResources() throws URISyntaxException {
+    public void testResources() {
         initClient();
 
         JsonObject resourcesListMessage = newMessage("resources/list");

@@ -9,6 +9,7 @@ import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -26,11 +27,11 @@ import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
 
 @Singleton
-public class SseMcpMessageHandler extends McpMessageHandler implements Handler<RoutingContext> {
+public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> implements Handler<RoutingContext> {
 
     private static final Logger LOG = Logger.getLogger(SseMcpMessageHandler.class);
 
@@ -66,18 +67,16 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
             ctx.fail(400);
             return;
         }
-        JsonObject message;
+
+        Object json;
         try {
-            message = ctx.body().asJsonObject();
+            json = Json.decodeValue(ctx.body().buffer());
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
             LOG.errorf(e, msg);
             connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
             ctx.end();
             return;
-        }
-        if (connection.trafficLogger() != null) {
-            connection.trafficLogger().messageReceived(message, connection);
         }
 
         QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();
@@ -94,10 +93,15 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
             }
         };
 
-        if (JsonRPC.validate(message, connection)) {
-            handle(message, connection, connection, securitySupport);
-        }
-        ctx.end();
+        McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, securitySupport);
+        handle(mcpRequest).onComplete(ar -> {
+            if (ar.succeeded()) {
+                ctx.end();
+            } else {
+                ctx.response().setStatusCode(500).end();
+            }
+        });
+
     }
 
 }

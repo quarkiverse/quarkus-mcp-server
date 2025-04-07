@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,7 @@ public class NumberArgumentTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         JsonObject message = newMessage("tools/call")
                 .put("params", new JsonObject()

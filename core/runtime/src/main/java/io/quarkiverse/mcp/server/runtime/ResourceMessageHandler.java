@@ -5,13 +5,10 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -28,33 +25,36 @@ class ResourceMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void resourcesSubscribe(JsonObject message, Sender sender, McpConnection connection) {
+    Future<Void> resourcesSubscribe(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
-            return;
+            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
-        manager.subscribe(resourceUri, connection.id());
+        manager.subscribe(resourceUri, mcpRequest.connection().id());
+        return Future.succeededFuture();
     }
 
-    void resourcesUnsubscribe(JsonObject message, Sender sender, McpConnection connection) {
+    Future<Void> resourcesUnsubscribe(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
-            return;
+            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Unsubscribe to resource %s [id: %s]", resourceUri, id);
-        manager.unsubscribe(resourceUri, connection.id());
+        manager.unsubscribe(resourceUri, mcpRequest.connection().id());
+        return Future.succeededFuture();
     }
 
-    void resourcesList(JsonObject message, Sender sender) {
+    Future<Void> resourcesList(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, sender);
+        Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
+        if (cursor == null) {
+            return Future.succeededFuture();
+        }
 
         LOG.debugf("List resources [id: %s, cursor: %s]", id, cursor);
 
@@ -68,37 +68,29 @@ class ResourceMessageHandler extends MessageHandler {
             ResourceInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        sender.sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result);
     }
 
-    void resourcesRead(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
+    Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
-            return;
+            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, id, resourceUri, sender,
+        ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), id, resourceUri,
+                mcpRequest.sender(),
                 Messages.getProgressToken(message), manager.responseHandlers);
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
-                    new FeatureExecutionContext(argProviders, securitySupport));
-            fu.onComplete(new Handler<AsyncResult<ResourceResponse>>() {
-                @Override
-                public void handle(AsyncResult<ResourceResponse> ar) {
-                    if (ar.succeeded()) {
-                        ResourceResponse resourceResponse = ar.result();
-                        sender.sendResult(id, resourceResponse);
-                    } else {
-                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to read resource %s", resourceUri);
-                    }
-                }
-            });
+                    new FeatureExecutionContext(argProviders, mcpRequest.securitySupport()));
+            return fu.compose(resourceResponse -> mcpRequest.sender().sendResult(id, resourceResponse),
+                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+                            "Unable to read resource %s", resourceUri));
         } catch (McpException e) {
-            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcError(), e.getMessage());
         }
     }
 

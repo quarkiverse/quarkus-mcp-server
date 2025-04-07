@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.tools;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,7 +23,7 @@ public class OptionalListStringInputSchemaTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class));
 
     @Test
-    public void testInputSchema() throws URISyntaxException {
+    public void testInputSchema() {
         initClient();
         JsonObject toolListMessage = newMessage("tools/list");
         send(toolListMessage);

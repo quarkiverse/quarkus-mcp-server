@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
 import java.time.DayOfWeek;
 import java.util.function.Consumer;
 
@@ -28,7 +27,7 @@ public class ToolsTest extends McpServerTest {
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyTools.class));
 
     @Test
-    public void testTools() throws URISyntaxException {
+    public void testTools() {
         initClient();
         JsonObject toolListMessage = newMessage("tools/list");
         send(toolListMessage);

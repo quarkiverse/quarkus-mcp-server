@@ -59,6 +59,11 @@ public class McpSseClient extends SseClient {
         return requests;
     }
 
+    public List<JsonObject> waitForResponses(int count) {
+        Awaitility.await().until(() -> responses.size() >= count);
+        return responses;
+    }
+
     public void clearRequests() {
         requests.clear();
     }

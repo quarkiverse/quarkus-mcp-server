@@ -63,6 +63,14 @@ public class Messages {
         return message.containsKey("result") || message.containsKey("error");
     }
 
+    public static boolean isRequest(JsonObject message) {
+        return !isResponse(message) && message.getValue("id") != null;
+    }
+
+    public static boolean isNotification(JsonObject message) {
+        return !isResponse(message) && message.getValue("id") == null;
+    }
+
     static Cursor getCursor(JsonObject message, Sender sender) {
         JsonObject params = message.getJsonObject("params");
         if (params != null) {

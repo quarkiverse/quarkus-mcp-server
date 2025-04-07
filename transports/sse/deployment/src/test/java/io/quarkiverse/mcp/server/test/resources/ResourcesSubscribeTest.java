@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.resources;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -30,7 +29,7 @@ public class ResourcesSubscribeTest extends McpServerTest {
     ResourceManager manager;
 
     @Test
-    public void testResources() throws URISyntaxException {
+    public void testResources() {
         String uri1 = "file:///file1.txt";
         String uri2 = "file:///file2.txt";
 

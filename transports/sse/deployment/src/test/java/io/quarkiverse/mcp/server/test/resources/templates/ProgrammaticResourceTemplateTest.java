@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -33,7 +32,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
     MyTemplates myTemplates;
 
     @Test
-    public void testResources() throws URISyntaxException {
+    public void testResources() {
         initClient();
         assertResources(0);
         assertResourceReadResponseError("file:///alpha/nok");

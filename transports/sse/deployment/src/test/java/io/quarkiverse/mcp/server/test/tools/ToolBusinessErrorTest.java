@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -27,7 +25,7 @@ public class ToolBusinessErrorTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         assertBusinessError("bravo", new JsonObject().put("price", 10), "Business error");
         assertBusinessError("charlie", new JsonObject(), "java.lang.IllegalArgumentException: I am not ready!");

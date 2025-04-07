@@ -5,13 +5,10 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -28,9 +25,12 @@ class PromptMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void promptsList(JsonObject message, Sender sender) {
+    Future<Void> promptsList(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, sender);
+        Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
+        if (cursor == null) {
+            return Future.succeededFuture();
+        }
 
         LOG.debugf("List prompts [id: %s, cursor: %s]", id, cursor);
 
@@ -44,39 +44,33 @@ class PromptMessageHandler extends MessageHandler {
             PromptManager.PromptInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        sender.sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result);
     }
 
-    void promptsGet(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
+    Future<Void> promptsGet(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
-        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, sender,
+        ArgumentProviders argProviders = new ArgumentProviders(args, mcpRequest.connection(), id, null, mcpRequest.sender(),
                 Messages.getProgressToken(message), manager.responseHandlers);
 
         try {
-            Future<PromptResponse> fu = manager.execute(promptName, new FeatureExecutionContext(argProviders, securitySupport));
-            fu.onComplete(new Handler<AsyncResult<PromptResponse>>() {
-                @Override
-                public void handle(AsyncResult<PromptResponse> ar) {
-                    if (ar.succeeded()) {
-                        PromptResponse promptResponse = ar.result();
-                        JsonObject result = new JsonObject();
-                        if (promptResponse.description() != null) {
-                            result.put("description", promptResponse.description());
-                        }
-                        result.put("messages", promptResponse.messages());
-                        sender.sendResult(id, result);
-                    } else {
-                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to obtain prompt %s", promptName);
-                    }
+            Future<PromptResponse> fu = manager.execute(promptName,
+                    new FeatureExecutionContext(argProviders, mcpRequest.securitySupport()));
+            return fu.compose(promptResponse -> {
+                JsonObject result = new JsonObject();
+                if (promptResponse.description() != null) {
+                    result.put("description", promptResponse.description());
                 }
-            });
+                result.put("messages", promptResponse.messages());
+                return mcpRequest.sender().sendResult(id, result);
+            }, cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+                    "Unable to obtain prompt %s", promptName));
         } catch (McpException e) {
-            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcError(), e.getMessage());
         }
 
     }

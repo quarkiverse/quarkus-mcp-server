@@ -19,6 +19,7 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -32,10 +33,10 @@ import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.Json;
 
 @Singleton
-public class StdioMcpMessageHandler extends McpMessageHandler {
+public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
 
     private static final Logger LOG = Logger.getLogger(StdioMcpMessageHandler.class);
 
@@ -84,21 +85,17 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
                                 return;
                             }
                             try {
-                                JsonObject message;
+                                Object json;
                                 try {
-                                    message = new JsonObject(line);
+                                    json = Json.decodeValue(line);
                                 } catch (Exception e) {
                                     String msg = "Unable to parse the JSON message";
                                     LOG.errorf(e, msg);
                                     connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
                                     return;
                                 }
-                                if (trafficLogger != null) {
-                                    trafficLogger.messageReceived(message, connection);
-                                }
-                                if (JsonRPC.validate(message, connection)) {
-                                    handle(message, connection, connection, null);
-                                }
+                                McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null);
+                                handle(mcpRequest);
                             } catch (DecodeException e) {
                                 String msg = "Unable to parse the JSON message";
                                 LOG.errorf(e, msg);

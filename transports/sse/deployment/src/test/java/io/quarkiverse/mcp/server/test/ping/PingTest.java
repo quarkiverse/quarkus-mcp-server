@@ -3,8 +3,6 @@ package io.quarkiverse.mcp.server.test.ping;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -19,7 +17,7 @@ public class PingTest extends McpServerTest {
             .withEmptyApplication();
 
     @Test
-    public void testPing() throws URISyntaxException {
+    public void testPing() {
         initClient();
         JsonObject pingMessage = newMessage("ping");
         send(pingMessage);
