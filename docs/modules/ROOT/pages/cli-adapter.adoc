@@ -4,7 +4,7 @@ include::./includes/attributes.adoc[]
 
 The extension provides an adapter for Quarkus CLI applications that enables them to expose MCP capabilities.
 
-By adding the dependency below to the CLI project, the CLI `TopCommand` will be added a new option `--mcp` that can 
+By adding the dependency below to the CLI project, the CLI `TopCommand` will be added a new option `--mcp` that can
 be used to start the MCP server.
 
 ```xml
@@ -15,4 +15,4 @@ be used to start the MCP server.
 </dependency>
 ```
 
-The MCP sever will automatically adapt all subcommands reachable from the `TopCommand` and expose them as MCP commands.
+The MCP server will automatically adapt all subcommands reachable from the `TopCommand` and expose them as MCP commands.
