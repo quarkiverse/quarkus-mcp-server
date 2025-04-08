@@ -1,5 +1,5 @@
 name: quarkus-mcp-server
-title: Mcp Server
+title: MCP Server
 version: dev
 nav:
   - modules/ROOT/nav.adoc
