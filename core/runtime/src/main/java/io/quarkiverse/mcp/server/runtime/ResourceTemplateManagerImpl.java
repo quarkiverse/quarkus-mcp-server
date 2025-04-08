@@ -118,7 +118,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString()));
         argProviders = new ArgumentProviders(
                 matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
-                argProviders.responder());
+                argProviders.sender(), argProviders.progressToken());
         return super.prepareArguments(metadata, argProviders);
     }
 

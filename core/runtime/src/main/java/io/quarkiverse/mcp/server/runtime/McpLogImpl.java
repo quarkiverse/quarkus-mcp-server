@@ -18,19 +18,19 @@ class McpLogImpl implements McpLog {
 
     private final Logger log;
 
-    private final Responder responder;
+    private final Sender sender;
 
-    McpLogImpl(Supplier<LogLevel> level, String loggerName, String mcpLoggerName, Responder responder) {
+    McpLogImpl(Supplier<LogLevel> level, String loggerName, String mcpLoggerName, Sender sender) {
         this.mcpLoggerName = mcpLoggerName;
         this.level = level;
         this.log = Logger.getLogger(loggerName);
-        this.responder = responder;
+        this.sender = sender;
     }
 
     @Override
     public void send(LogLevel level, Object data) {
         if (isEnabled(Objects.requireNonNull(level))) {
-            responder.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+            sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
                     newLog(level, mcpLoggerName, encode(data))));
         }
     }
@@ -38,7 +38,7 @@ class McpLogImpl implements McpLog {
     @Override
     public void send(LogLevel level, String format, Object... params) {
         if (isEnabled(Objects.requireNonNull(level))) {
-            responder.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+            sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
                     newLog(level, mcpLoggerName, format.formatted(params))));
         }
     }

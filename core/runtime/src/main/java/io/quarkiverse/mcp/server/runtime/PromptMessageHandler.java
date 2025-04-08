@@ -28,9 +28,9 @@ class PromptMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void promptsList(JsonObject message, Responder responder) {
+    void promptsList(JsonObject message, Sender sender) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, responder);
+        Cursor cursor = Messages.getCursor(message, sender);
 
         LOG.debugf("List prompts [id: %s, cursor: %s]", id, cursor);
 
@@ -44,17 +44,18 @@ class PromptMessageHandler extends MessageHandler {
             PromptManager.PromptInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        responder.sendResult(id, result);
+        sender.sendResult(id, result);
     }
 
-    void promptsGet(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
+    void promptsGet(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
-        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, responder);
+        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, sender,
+                Messages.getProgressToken(message));
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName, new FeatureExecutionContext(argProviders, securitySupport));
@@ -68,14 +69,14 @@ class PromptMessageHandler extends MessageHandler {
                             result.put("description", promptResponse.description());
                         }
                         result.put("messages", promptResponse.messages());
-                        responder.sendResult(id, result);
+                        sender.sendResult(id, result);
                     } else {
-                        handleFailure(id, responder, connection, ar.cause(), LOG, "Unable to obtain prompt %s", promptName);
+                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to obtain prompt %s", promptName);
                     }
                 }
             });
         } catch (McpException e) {
-            responder.sendError(id, e.getJsonRpcError(), e.getMessage());
+            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }
 
     }

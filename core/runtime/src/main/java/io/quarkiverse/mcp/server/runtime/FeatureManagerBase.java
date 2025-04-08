@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.ProgressToken;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -132,6 +133,12 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = new RequestUri(argProviders.uri());
             } else if (arg.provider() == Provider.MCP_LOG) {
                 ret[idx] = log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
+            } else if (arg.provider() == Provider.PROGRESS) {
+                ProgressToken token = null;
+                if (argProviders.progressToken() != null) {
+                    token = new ProgressToken(argProviders.progressToken());
+                }
+                ret[idx] = new ProgressImpl(token, argProviders.sender());
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {
@@ -248,7 +255,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected McpLog log(String key, String loggerName, ArgumentProviders argProviders) {
         return logs.computeIfAbsent(key, k -> new McpLogImpl(argProviders.connection()::logLevel, loggerName, key,
-                argProviders.responder()));
+                argProviders.sender()));
     }
 
     private String logKey(FeatureMetadata<?> metadata) {

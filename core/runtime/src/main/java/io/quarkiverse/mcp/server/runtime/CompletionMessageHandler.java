@@ -18,7 +18,8 @@ public abstract class CompletionMessageHandler extends MessageHandler {
     protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
             SecuritySupport securitySupport) throws McpException;
 
-    void complete(Object id, JsonObject ref, JsonObject argument, Responder responder, McpConnection connection,
+    void complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
+            McpConnection connection,
             SecuritySupport securitySupport) {
         String referenceName = ref.getString("name");
         String argumentName = argument.getString("name");
@@ -28,7 +29,8 @@ public abstract class CompletionMessageHandler extends MessageHandler {
         String key = referenceName + "_" + argumentName;
 
         ArgumentProviders argProviders = new ArgumentProviders(
-                Map.of(argumentName, argument.getString("value")), connection, id, null, responder);
+                Map.of(argumentName, argument.getString("value")), connection, id, null, sender,
+                Messages.getProgressToken(message));
 
         try {
             Future<CompletionResponse> fu = execute(key, argProviders, securitySupport);
@@ -47,14 +49,14 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                             completion.put("hasMore", completionResponse.hasMore());
                         }
                         result.put("completion", completion);
-                        responder.sendResult(id, result);
+                        sender.sendResult(id, result);
                     } else {
-                        handleFailure(id, responder, connection, ar.cause(), LOG, "Unable to complete %s", referenceName);
+                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to complete %s", referenceName);
                     }
                 }
             });
         } catch (McpException e) {
-            responder.sendError(id, e.getJsonRpcError(), e.getMessage());
+            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }
     }
 

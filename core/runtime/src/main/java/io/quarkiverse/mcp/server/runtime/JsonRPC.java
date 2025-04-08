@@ -18,16 +18,16 @@ public class JsonRPC {
 
     public static final int SECURITY_ERROR = -32001;
 
-    public static boolean validate(JsonObject message, Responder responder) {
+    public static boolean validate(JsonObject message, Sender sender) {
         Object id = message.getValue("id");
         String jsonrpc = message.getString("jsonrpc");
         if (!VERSION.equals(jsonrpc)) {
-            responder.sendError(id, INVALID_REQUEST, "Invalid jsonrpc version: " + jsonrpc);
+            sender.sendError(id, INVALID_REQUEST, "Invalid jsonrpc version: " + jsonrpc);
             return false;
         }
         if (!isResponse(message)) {
             if (message.getString("method") == null) {
-                responder.sendError(id, METHOD_NOT_FOUND, "Method not set");
+                sender.sendError(id, METHOD_NOT_FOUND, "Method not set");
                 return false;
             }
         }

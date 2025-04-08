@@ -113,9 +113,10 @@ However, the annotated method can also return other types that are converted acc
 A `@Prompt` method must only accept `String` parameters that represent Prompt arguments.
 However, it may also accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
 
 === Completion API
 
@@ -159,9 +160,10 @@ However, the annotated method can also return other types that are converted acc
 A `@CompletePrompt` method must only accept a single `String` parameter that represents a completed Prompt argument.
 However, it may also accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
 
 === Programmatic API
 
@@ -236,10 +238,11 @@ TIP: There is a default resource contents encoder registered; it encodes the ret
 
 A `@Resource` method may accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
-* `RequestUri`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.RequestUri`
 
 === Programmatic API
 
@@ -333,10 +336,11 @@ However, the annotated method can also return other types that are converted acc
 A `@ResourceTemplate` method must only accept `String` parameters that represent template variables.
 However, it may also accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
-* `RequestUri`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.RequestUri`
 
 === Completion API
 
@@ -379,10 +383,11 @@ However, the annotated method can also return other types that are converted acc
 A `@CompleteResourceTemplate` method must only accept a single `String` parameter that represents a completed Resource template variable.
 However, it may also accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
-* `RequestUri`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.RequestUri`
 
 === Programmatic API
 
@@ -468,9 +473,10 @@ TIP: There is a default content encoder registered; it encodes the returned valu
 A `@Tool` method may accept parameters that represent Tool arguments.
 However, it may also accept the following parameters:
 
-* `McpConnection`
-* `McpLog`
-* `RequestId`
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
 
 === Programmatic API
 
@@ -548,6 +554,137 @@ public class MyTools {
 
 
 TIP: The default log level can be set with the `quarkus.mcp.server.client-logging.default-level` configuration property.
+
+== Progress API
+
+Server features which have the nature of long running operations can send progress notifications to the clients.
+A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter.
+This API makes it possible to check the progress token from a client request.
+Furthermore, you can either send the notifications directly using the `Progress#notificationBuilder()` method, or build a stateful thread-safe `ProgressTracker` object that can be be used to update the progress status and send notification messages in one step.
+
+.`ProgressTracker` Example
+[source,java]
+----
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import jakarta.annotation.PreDestroy;
+import io.smallrye.mutiny.Uni;
+
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressTracker;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    private final ExecutorService executor;
+
+    MyTools() {
+       this.executor = Executors.newFixedThreadPool(1);
+    }
+
+    @PreDestroy
+    void destroy() {
+       executor.shutdownNow();
+    }
+    
+    @Tool
+    Uni<String> longRunning(Progress progress) { <1> <2>
+       if (progress.token().isEmpty()) { <3>
+          return Uni.createFrom().item("nok");
+       }
+       ProgressTracker tracker = progress.trackerBuilder() <4>
+          .setDefaultStep(1)
+          .setTotal(10.2)
+          .setMessageBuilder(i -> "Long running progress: " + i)
+          .build();
+
+       CompletableFuture<String> ret = new CompletableFuture<String>();
+       executor.execute(() -> {
+          for (int i = 0; i < 10; i++) {
+             try {
+                // Do something that takes time...
+                TimeUnit.MILLISECONDS.sleep(500);
+             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+             }
+             tracker.advance(); <5>
+          }
+          ret.complete("ok");
+        });
+        return Uni.createFrom().completionStage(ret);
+    }
+
+}
+----
+<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter. 
+<2> Long running operations must return `Uni` so that the server can process them asynchronously.
+<3> The server should only send notifications if the client request contains the progress token.
+<4> `ProgressTracker` is a stateful thread-safe object can be be used to update the progress status and send notification messages to the client.
+<5> Advance the progress and send a `notifications/progress` message to the client without waiting for the result.
+
+.`ProgressNotification` Example
+[source,java]
+----
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import jakarta.annotation.PreDestroy;
+import io.smallrye.mutiny.Uni;
+
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressNotification;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    private final ExecutorService executor;
+
+    MyTools() {
+       this.executor = Executors.newFixedThreadPool(1);
+    }
+
+    @PreDestroy
+    void destroy() {
+       executor.shutdownNow();
+    }
+    
+    @Tool
+    Uni<String> longRunning(Progress progress) { <1> <2>
+       if (progress.token().isEmpty()) { <3>
+          return Uni.createFrom().item("nok");
+       }
+
+       CompletableFuture<String> ret = new CompletableFuture<String>();
+       executor.execute(() -> {
+          for (int i = 0; i < 10; i++) {
+             try {
+                // Do something that takes time...
+                TimeUnit.MILLISECONDS.sleep(500);
+             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+             }
+             progress.notificationBuilder()
+                            .setProgress(i)
+                            .setTotal(10.2)
+                            .setMessage("Long running progress: " + i)
+                            .build()
+                            .sendAndForget(); <4>
+          }
+          ret.complete("ok");
+        });
+        return Uni.createFrom().completionStage(ret);
+    }
+
+}
+----
+<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter. 
+<2> Long running operations must return `Uni` so that the server can process them asynchronously.
+<3> The server should only send notifications if the client request contains the progress token.
+<4> Send the message to the client without waiting for the result.
+
 
 == Security
 

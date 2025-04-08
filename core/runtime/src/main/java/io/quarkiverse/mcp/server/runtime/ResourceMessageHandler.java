@@ -28,33 +28,33 @@ class ResourceMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void resourcesSubscribe(JsonObject message, Responder responder, McpConnection connection) {
+    void resourcesSubscribe(JsonObject message, Sender sender, McpConnection connection) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
+            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
             return;
         }
         LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
         manager.subscribe(resourceUri, connection.id());
     }
 
-    void resourcesUnsubscribe(JsonObject message, Responder responder, McpConnection connection) {
+    void resourcesUnsubscribe(JsonObject message, Sender sender, McpConnection connection) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
+            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
             return;
         }
         LOG.debugf("Unsubscribe to resource %s [id: %s]", resourceUri, id);
         manager.unsubscribe(resourceUri, connection.id());
     }
 
-    void resourcesList(JsonObject message, Responder responder) {
+    void resourcesList(JsonObject message, Sender sender) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, responder);
+        Cursor cursor = Messages.getCursor(message, sender);
 
         LOG.debugf("List resources [id: %s, cursor: %s]", id, cursor);
 
@@ -68,21 +68,21 @@ class ResourceMessageHandler extends MessageHandler {
             ResourceInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        responder.sendResult(id, result);
+        sender.sendResult(id, result);
     }
 
-    void resourcesRead(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
+    void resourcesRead(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
-            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
+            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
             return;
         }
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
-        ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, id, resourceUri, responder);
-
+        ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, id, resourceUri, sender,
+                Messages.getProgressToken(message));
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
                     new FeatureExecutionContext(argProviders, securitySupport));
@@ -91,14 +91,14 @@ class ResourceMessageHandler extends MessageHandler {
                 public void handle(AsyncResult<ResourceResponse> ar) {
                     if (ar.succeeded()) {
                         ResourceResponse resourceResponse = ar.result();
-                        responder.sendResult(id, resourceResponse);
+                        sender.sendResult(id, resourceResponse);
                     } else {
-                        handleFailure(id, responder, connection, ar.cause(), LOG, "Unable to read resource %s", resourceUri);
+                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to read resource %s", resourceUri);
                     }
                 }
             });
         } catch (McpException e) {
-            responder.sendError(id, e.getJsonRpcError(), e.getMessage());
+            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }
     }
 
