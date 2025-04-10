@@ -2,6 +2,8 @@ package io.quarkiverse.mcp.server.cli.adapter.deployment;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Set;
+
 import jakarta.inject.Inject;
 
 import org.jboss.jandex.ClassInfo;
@@ -56,6 +58,19 @@ public class CommandUtilTest {
         Index index = Index.of(Simple.class, SimpleBeanWithFieldInjection.class);
         ClassInfo classInfo = index.getClassByName(DotName.createSimple(SimpleBeanWithFieldInjection.class.getName()));
         assertFalse(CommandUtil.canBeInstantiated(classInfo, index));
+    }
+
+    @Test
+    public void shouldFindMaxCommonPrefix() {
+        assertEquals("io.quarkiverse.mcp.server.cli.adapter.deployment.",
+                CommandUtil.findCommonPrefix(Set.of(
+                        "io.quarkiverse.mcp.server.cli.adapter.deployment.CommandUtilTest",
+                        "io.quarkiverse.mcp.server.cli.adapter.deployment.MyCommand")));
+
+        assertEquals("", CommandUtil.findCommonPrefix(Set.of(
+                "io.quarkiverse.mcp.server.cli.adapter.deployment.CommandUtilTest",
+                "io.quarkiverse.mcp.server.cli.adapter.deployment.CommandUtil",
+                "org.acme.MyCommand")));
     }
 
 }

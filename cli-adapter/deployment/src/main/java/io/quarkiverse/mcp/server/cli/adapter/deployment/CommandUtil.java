@@ -5,18 +5,37 @@ import static io.quarkus.arc.processor.DotNames.INJECT;
 import static io.quarkus.arc.processor.DotNames.OBJECT;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 
+import io.quarkus.picocli.runtime.annotations.TopCommand;
+
 class CommandUtil {
+
+    /**
+     * Look for a {@link TopCommand) annotation in the index.
+     *
+     * @param indexView the index view
+     * @return an {@link Optional} containing the name of the class annotated with {@link TopCommand} if found, empty otherwise
+     */
+    public static Optional<DotName> findTopCommand(IndexView indexView) {
+        return indexView.getAnnotations(DotNames.TOP_COMAMND)
+                .stream()
+                .filter(ann -> ann.target().kind() == AnnotationTarget.Kind.CLASS)
+                .map(ann -> ann.target().asClass().name())
+                .findFirst();
+    }
 
     /**
      * Check if the given class should be instantiated.
@@ -109,6 +128,23 @@ class CommandUtil {
      */
     public static boolean isQualifier(ClassInfo clazz) {
         return clazz != null && clazz.annotations().stream().anyMatch(a -> QUALIFIER.equals(a.name()));
+    }
+
+    protected static String findCommonPrefix(Collection<String> names) {
+        if (names.isEmpty() || names.size() == 1) {
+            return "";
+        }
+        return names.stream()
+                .reduce((prefix, name) -> {
+                    while (!name.startsWith(prefix)) {
+                        prefix = prefix.substring(0, prefix.length() - 1);
+                        if (prefix.isEmpty()) {
+                            return "";
+                        }
+                    }
+                    return prefix;
+                })
+                .orElse("");
     }
 
     private static boolean hasNoArgConstructor(ClassInfo clazz) {
