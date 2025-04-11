@@ -51,7 +51,7 @@ public class Messages {
         return message.containsKey("result") && message.containsKey("error");
     }
 
-    static Cursor getCursor(JsonObject message, Responder responder) {
+    static Cursor getCursor(JsonObject message, Sender sender) {
         JsonObject params = message.getJsonObject("params");
         if (params != null) {
             String cursorVal = params.getString("cursor");
@@ -61,13 +61,24 @@ public class Messages {
                 } catch (Exception e) {
                     // Invalid cursors should result in an error with code -32602 (Invalid params).
                     LOG.warnf("Invalid cursor detected %s: %s", cursorVal, e.toString());
-                    responder.sendError(message.getValue("id"), JsonRPC.INVALID_PARAMS,
+                    sender.sendError(message.getValue("id"), JsonRPC.INVALID_PARAMS,
                             "Invalid cursor detected: " + cursorVal);
                     return null;
                 }
             }
         }
         return Cursor.FIRST_PAGE;
+    }
+
+    static Object getProgressToken(JsonObject message) {
+        JsonObject params = message.getJsonObject("params");
+        if (params != null) {
+            JsonObject meta = params.getJsonObject("_meta");
+            if (meta != null) {
+                return meta.getValue("progressToken");
+            }
+        }
+        return null;
     }
 
 }

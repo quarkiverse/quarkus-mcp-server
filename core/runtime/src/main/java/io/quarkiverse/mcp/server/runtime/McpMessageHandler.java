@@ -51,23 +51,23 @@ public class McpMessageHandler {
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
 
-    public void handle(JsonObject message, McpConnectionBase connection, Responder responder, SecuritySupport securitySupport) {
+    public void handle(JsonObject message, McpConnectionBase connection, Sender sender, SecuritySupport securitySupport) {
         if (Messages.isResponse(message)) {
             // Response from a client
             // Currently we discard all responses, including pong responses
             LOG.debugf("Discard client response: %s", message);
         } else {
             switch (connection.status()) {
-                case NEW -> initializeNew(message, responder, connection, securitySupport);
-                case INITIALIZING -> initializing(message, responder, connection);
-                case IN_OPERATION -> operation(message, responder, connection, securitySupport);
-                case SHUTDOWN -> responder.send(
+                case NEW -> initializeNew(message, sender, connection, securitySupport);
+                case INITIALIZING -> initializing(message, sender, connection);
+                case IN_OPERATION -> operation(message, sender, connection, securitySupport);
+                case SHUTDOWN -> sender.send(
                         Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
             }
         }
     }
 
-    private void initializeNew(JsonObject message, Responder responder, McpConnectionBase connection,
+    private void initializeNew(JsonObject message, Sender sender, McpConnectionBase connection,
             SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         // The first message must be "initialize"
@@ -80,39 +80,39 @@ public class McpMessageHandler {
                         List.of());
                 if (connection.initialize(dummy) && connection.setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", connection.id());
-                    operation(message, responder, connection, securitySupport);
+                    operation(message, sender, connection, securitySupport);
                     return;
                 }
             }
-            responder.sendError(id, JsonRPC.METHOD_NOT_FOUND,
+            sender.sendError(id, JsonRPC.METHOD_NOT_FOUND,
                     "The first message from the client must be \"initialize\": " + method);
             return;
         }
         JsonObject params = message.getJsonObject("params");
         if (params == null) {
-            responder.sendError(id, JsonRPC.INVALID_PARAMS, "Initialization params not found");
+            sender.sendError(id, JsonRPC.INVALID_PARAMS, "Initialization params not found");
             return;
         }
         // TODO schema validation?
         if (connection.initialize(decodeInitializeRequest(params))) {
             // The server MUST respond with its own capabilities and information
-            responder.sendResult(id, serverInfo);
+            sender.sendResult(id, serverInfo);
         } else {
-            responder.sendError(id, JsonRPC.INTERNAL_ERROR,
+            sender.sendError(id, JsonRPC.INTERNAL_ERROR,
                     "Unable to initialize connection [connectionId: " + connection.id() + "]");
         }
     }
 
-    private void initializing(JsonObject message, Responder responder, McpConnectionBase connection) {
+    private void initializing(JsonObject message, Sender sender, McpConnectionBase connection) {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", connection.id());
             }
         } else if (PING.equals(method)) {
-            ping(message, responder);
+            ping(message, sender);
         } else {
-            responder.send(Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
+            sender.send(Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Client not initialized yet [" + connection.id() + "]"));
         }
     }
@@ -120,6 +120,7 @@ public class McpMessageHandler {
     static final String INITIALIZE = "initialize";
     static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     static final String NOTIFICATIONS_MESSAGE = "notifications/message";
+    static final String NOTIFICATIONS_PROGRESS = "notifications/progress";
     static final String PROMPTS_LIST = "prompts/list";
     static final String PROMPTS_GET = "prompts/get";
     static final String TOOLS_LIST = "tools/list";
@@ -135,42 +136,42 @@ public class McpMessageHandler {
     // non-standard messages
     static final String Q_CLOSE = "q/close";
 
-    private void operation(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
+    private void operation(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
         String method = message.getString("method");
         switch (method) {
-            case PROMPTS_LIST -> promptHandler.promptsList(message, responder);
-            case PROMPTS_GET -> promptHandler.promptsGet(message, responder, connection, securitySupport);
-            case TOOLS_LIST -> toolHandler.toolsList(message, responder);
-            case TOOLS_CALL -> toolHandler.toolsCall(message, responder, connection, securitySupport);
-            case PING -> ping(message, responder);
-            case RESOURCES_LIST -> resourceHandler.resourcesList(message, responder);
-            case RESOURCES_READ -> resourceHandler.resourcesRead(message, responder, connection, securitySupport);
-            case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, responder, connection);
-            case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, responder, connection);
-            case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, responder);
-            case COMPLETION_COMPLETE -> complete(message, responder, connection, securitySupport);
-            case LOGGING_SET_LEVEL -> setLogLevel(message, responder, connection);
-            case Q_CLOSE -> close(message, responder, connection);
-            default -> responder.send(
+            case PROMPTS_LIST -> promptHandler.promptsList(message, sender);
+            case PROMPTS_GET -> promptHandler.promptsGet(message, sender, connection, securitySupport);
+            case TOOLS_LIST -> toolHandler.toolsList(message, sender);
+            case TOOLS_CALL -> toolHandler.toolsCall(message, sender, connection, securitySupport);
+            case PING -> ping(message, sender);
+            case RESOURCES_LIST -> resourceHandler.resourcesList(message, sender);
+            case RESOURCES_READ -> resourceHandler.resourcesRead(message, sender, connection, securitySupport);
+            case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, sender, connection);
+            case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, sender, connection);
+            case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, sender);
+            case COMPLETION_COMPLETE -> complete(message, sender, connection, securitySupport);
+            case LOGGING_SET_LEVEL -> setLogLevel(message, sender, connection);
+            case Q_CLOSE -> close(message, sender, connection);
+            default -> sender.send(
                     Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
         }
     }
 
-    private void setLogLevel(JsonObject message, Responder responder, McpConnection connection) {
+    private void setLogLevel(JsonObject message, Sender sender, McpConnection connection) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String level = params.getString("level");
         if (level == null) {
-            responder.sendError(id, JsonRPC.INVALID_REQUEST, "Log level not set");
+            sender.sendError(id, JsonRPC.INVALID_REQUEST, "Log level not set");
         } else {
             LogLevel logLevel = LogLevel.from(level);
             if (logLevel == null) {
-                responder.sendError(id, JsonRPC.INVALID_REQUEST, "Invalid log level set: " + level);
+                sender.sendError(id, JsonRPC.INVALID_REQUEST, "Invalid log level set: " + level);
             } else {
                 if (connection instanceof McpConnectionBase connectionBase) {
                     connectionBase.setLogLevel(logLevel);
                     // Send empty result
-                    responder.sendResult(id, new JsonObject());
+                    sender.sendResult(id, new JsonObject());
                 } else {
                     throw new IllegalStateException();
                 }
@@ -179,27 +180,28 @@ public class McpMessageHandler {
 
     }
 
-    private void complete(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
+    private void complete(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         JsonObject ref = params.getJsonObject("ref");
         if (ref == null) {
-            responder.sendError(id, JsonRPC.INVALID_REQUEST, "Reference not found");
+            sender.sendError(id, JsonRPC.INVALID_REQUEST, "Reference not found");
         } else {
             String referenceType = ref.getString("type");
             if (referenceType == null) {
-                responder.sendError(id, JsonRPC.INVALID_REQUEST, "Reference type not found");
+                sender.sendError(id, JsonRPC.INVALID_REQUEST, "Reference type not found");
             } else {
                 JsonObject argument = params.getJsonObject("argument");
                 if (argument == null) {
-                    responder.sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
+                    sender.sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
                 } else {
                     if ("ref/prompt".equals(referenceType)) {
-                        promptCompleteHandler.complete(id, ref, argument, responder, connection, securitySupport);
+                        promptCompleteHandler.complete(message, id, ref, argument, sender, connection, securitySupport);
                     } else if ("ref/resource".equals(referenceType)) {
-                        resourceTemplateCompleteHandler.complete(id, ref, argument, responder, connection, securitySupport);
+                        resourceTemplateCompleteHandler.complete(message, id, ref, argument, sender, connection,
+                                securitySupport);
                     } else {
-                        responder.sendError(id, JsonRPC.INVALID_REQUEST,
+                        sender.sendError(id, JsonRPC.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));
                     }
                 }
@@ -207,18 +209,18 @@ public class McpMessageHandler {
         }
     }
 
-    private void ping(JsonObject message, Responder responder) {
+    private void ping(JsonObject message, Sender sender) {
         // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.debugf("Ping [id: %s]", id);
-        responder.sendResult(id, new JsonObject());
+        sender.sendResult(id, new JsonObject());
     }
 
-    private void close(JsonObject message, Responder responder, McpConnection connection) {
+    private void close(JsonObject message, Sender sender, McpConnection connection) {
         if (connectionManager.remove(connection.id())) {
             LOG.debugf("Connection %s explicitly closed ", connection.id());
         } else {
-            responder.sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
+            sender.sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Unable to obtain the connection to be closed:" + connection.id());
         }
     }

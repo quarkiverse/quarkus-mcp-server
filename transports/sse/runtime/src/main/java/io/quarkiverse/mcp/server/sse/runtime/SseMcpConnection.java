@@ -6,6 +6,7 @@ import java.util.Optional;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 
@@ -19,20 +20,20 @@ public class SseMcpConnection extends McpConnectionBase {
         this.response = response;
     }
 
-    public void sendEvent(String name, String data) {
+    public Future<Void> sendEvent(String name, String data) {
         // "write" is async and synchronized over http connection, and should be thread-safe
-        response.write("event: " + name + "\ndata: " + data + "\n\n");
+        return response.write("event: " + name + "\ndata: " + data + "\n\n");
     }
 
     @Override
-    public void send(JsonObject message) {
+    public Future<Void> send(JsonObject message) {
         if (message == null) {
-            return;
+            return Future.succeededFuture();
         }
         if (trafficLogger != null) {
             trafficLogger.messageSent(message, this);
         }
-        sendEvent("message", message.encode());
+        return sendEvent("message", message.encode());
     }
 
 }

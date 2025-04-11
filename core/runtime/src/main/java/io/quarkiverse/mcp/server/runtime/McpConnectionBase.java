@@ -8,7 +8,7 @@ import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 
-public abstract class McpConnectionBase implements McpConnection, Responder {
+public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final String id;
 

@@ -450,7 +450,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.MCP_CONNECTION)
                         || paramType.name().equals(DotNames.MCP_LOG)
                         || paramType.name().equals(DotNames.REQUEST_ID)
-                        || paramType.name().equals(DotNames.REQUEST_URI)) {
+                        || paramType.name().equals(DotNames.REQUEST_URI)
+                        || paramType.name().equals(DotNames.PROGRESS)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -687,6 +688,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.MCP_LOG;
         } else if (type.name().equals(DotNames.REQUEST_URI)) {
             return FeatureArgument.Provider.REQUEST_URI;
+        } else if (type.name().equals(DotNames.PROGRESS)) {
+            return FeatureArgument.Provider.PROGRESS;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

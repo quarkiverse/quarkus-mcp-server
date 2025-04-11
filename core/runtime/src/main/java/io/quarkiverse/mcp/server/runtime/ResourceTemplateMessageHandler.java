@@ -19,9 +19,9 @@ class ResourceTemplateMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void resourceTemplatesList(JsonObject message, Responder responder) {
+    void resourceTemplatesList(JsonObject message, Sender sender) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, responder);
+        Cursor cursor = Messages.getCursor(message, sender);
 
         LOG.debugf("List resource templates [id: %s, cursor: %s]", id, cursor);
 
@@ -35,7 +35,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
             ResourceTemplateManager.ResourceTemplateInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        responder.sendResult(id, result);
+        sender.sendResult(id, result);
     }
 
 }

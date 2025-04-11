@@ -29,9 +29,9 @@ class ToolMessageHandler extends MessageHandler {
         this.pageSize = pageSize;
     }
 
-    void toolsList(JsonObject message, Responder responder) {
+    void toolsList(JsonObject message, Sender sender) {
         Object id = message.getValue("id");
-        Cursor cursor = Messages.getCursor(message, responder);
+        Cursor cursor = Messages.getCursor(message, sender);
 
         LOG.debugf("List tools [id: %s, cursor: %s]", id, cursor);
 
@@ -45,17 +45,18 @@ class ToolMessageHandler extends MessageHandler {
             ToolManager.ToolInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
         }
-        responder.sendResult(id, result);
+        sender.sendResult(id, result);
     }
 
-    void toolsCall(JsonObject message, Responder responder, McpConnection connection, SecuritySupport securitySupport) {
+    void toolsCall(JsonObject message, Sender sender, McpConnection connection, SecuritySupport securitySupport) {
         Object id = message.getValue("id");
         JsonObject params = message.getJsonObject("params");
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
-        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, responder);
+        ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, sender,
+                Messages.getProgressToken(message));
 
         try {
             Future<ToolResponse> fu = manager.execute(toolName, new FeatureExecutionContext(argProviders, securitySupport));
@@ -64,20 +65,20 @@ class ToolMessageHandler extends MessageHandler {
                 public void handle(AsyncResult<ToolResponse> ar) {
                     if (ar.succeeded()) {
                         ToolResponse toolResponse = ar.result();
-                        responder.sendResult(id, toolResponse);
+                        sender.sendResult(id, toolResponse);
                     } else {
                         Throwable cause = ar.cause();
                         if (cause instanceof ToolCallException tce) {
                             // Business logic error should result in ToolResponse with isError:true
-                            responder.sendResult(id, ToolResponse.error(tce.getMessage()));
+                            sender.sendResult(id, ToolResponse.error(tce.getMessage()));
                         } else {
-                            handleFailure(id, responder, connection, cause, LOG, "Unable to call tool %s", toolName);
+                            handleFailure(id, sender, connection, cause, LOG, "Unable to call tool %s", toolName);
                         }
                     }
                 }
             });
         } catch (McpException e) {
-            responder.sendError(id, e.getJsonRpcError(), e.getMessage());
+            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }
     }
 
