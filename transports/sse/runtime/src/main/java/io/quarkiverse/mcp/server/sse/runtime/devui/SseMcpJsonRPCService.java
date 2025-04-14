@@ -24,8 +24,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkiverse.mcp.server.CompletionManager;
+import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
@@ -41,8 +44,10 @@ public class SseMcpJsonRPCService {
 
     private final ToolManager toolManager;
     private final PromptManager promptManager;
+    private final PromptCompletionManager promptCompletionManager;
     private final ResourceManager resourceManager;
     private final ResourceTemplateManager resourceTemplateManager;
+    private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
 
     private final DevUISseClient sseClient;
     private final AtomicReference<URI> messageEndpoint;
@@ -51,13 +56,15 @@ public class SseMcpJsonRPCService {
     private final AtomicInteger idGenerator;
 
     public SseMcpJsonRPCService(ToolManager toolManager, PromptManager promptManager, ResourceManager resourceManager,
-            ResourceTemplateManager resourceTemplateManager, VertxHttpConfig httpConfig,
-            VertxHttpBuildTimeConfig httpBuildConfig,
-            McpSseBuildTimeConfig mcpSseBuildConfig) {
+            ResourceTemplateManager resourceTemplateManager, PromptCompletionManager promptCompletionManager,
+            ResourceTemplateCompletionManager resourceTemplateCompletionManager, VertxHttpConfig httpConfig,
+            VertxHttpBuildTimeConfig httpBuildConfig, McpSseBuildTimeConfig mcpSseBuildConfig) {
         this.toolManager = toolManager;
         this.promptManager = promptManager;
+        this.promptCompletionManager = promptCompletionManager;
         this.resourceManager = resourceManager;
         this.resourceTemplateManager = resourceTemplateManager;
+        this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
         this.sseClient = new DevUISseClient(URI.create(new StringBuilder("http://")
                 .append(httpConfig.host())
                 .append(":")
@@ -111,6 +118,17 @@ public class SseMcpJsonRPCService {
         return ret;
     }
 
+    public JsonArray getPromptCompletionsData() {
+        JsonArray ret = new JsonArray();
+        for (CompletionManager.CompletionInfo completion : promptCompletionManager) {
+            JsonObject completionJson = new JsonObject();
+            completionJson.put("name", completion.name());
+            completionJson.put("argumentName", completion.argumentName());
+            ret.add(completionJson);
+        }
+        return ret;
+    }
+
     public JsonArray getResourcesData() {
         JsonArray ret = new JsonArray();
         for (ResourceManager.ResourceInfo resource : resourceManager) {
@@ -123,6 +141,17 @@ public class SseMcpJsonRPCService {
         JsonArray ret = new JsonArray();
         for (ResourceTemplateManager.ResourceTemplateInfo resourceTemplate : resourceTemplateManager) {
             ret.add(resourceTemplate.asJson());
+        }
+        return ret;
+    }
+
+    public JsonArray getResourceTemplateCompletionsData() {
+        JsonArray ret = new JsonArray();
+        for (CompletionManager.CompletionInfo completion : resourceTemplateCompletionManager) {
+            JsonObject completionJson = new JsonObject();
+            completionJson.put("name", completion.name());
+            completionJson.put("argumentName", completion.argumentName());
+            ret.add(completionJson);
         }
         return ret;
     }
@@ -232,6 +261,41 @@ public class SseMcpJsonRPCService {
         return new JsonObject().put("response", sseClient.awaitResponse(requestId));
     }
 
+    public JsonObject completePrompt(String name, String argumentName, String argumentValue)
+            throws IOException, InterruptedException {
+        if (promptCompletionManager.getCompletion(name, argumentName) == null) {
+            return new JsonObject().put("error", "Prompt completion not found: " + name);
+        }
+        JsonObject initRet = ensureInitialized();
+        if (initRet != null) {
+            return initRet;
+        }
+        Integer requestId = idGenerator.incrementAndGet();
+        JsonObject message = new JsonObject()
+                .put("jsonrpc", JsonRPC.VERSION)
+                .put("id", requestId)
+                .put("method", "completion/complete")
+                .put("params", new JsonObject()
+                        .put("ref", new JsonObject()
+                                .put("type", "ref/prompt")
+                                .put("name", name))
+                        .put("argument", new JsonObject()
+                                .put("name", argumentName)
+                                .put("value", argumentValue)));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(messageEndpoint.get())
+                .version(Version.HTTP_1_1)
+                .POST(BodyPublishers.ofString(message.encode()))
+                .build();
+        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
+        if (response.statusCode() != 200) {
+            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
+        }
+        // Wait for the response
+        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+    }
+
     public JsonObject readResource(String uri) throws IOException, InterruptedException {
         if (uri == null || uri.isBlank()) {
             return new JsonObject().put("error", "Resource uri must be set");
@@ -247,6 +311,41 @@ public class SseMcpJsonRPCService {
                 .put("method", "resources/read")
                 .put("params", new JsonObject()
                         .put("uri", uri));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(messageEndpoint.get())
+                .version(Version.HTTP_1_1)
+                .POST(BodyPublishers.ofString(message.encode()))
+                .build();
+        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
+        if (response.statusCode() != 200) {
+            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
+        }
+        // Wait for the response
+        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+    }
+
+    public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue)
+            throws IOException, InterruptedException {
+        if (resourceTemplateCompletionManager.getCompletion(name, argumentName) == null) {
+            return new JsonObject().put("error", "Resource template completion not found: " + name);
+        }
+        JsonObject initRet = ensureInitialized();
+        if (initRet != null) {
+            return initRet;
+        }
+        Integer requestId = idGenerator.incrementAndGet();
+        JsonObject message = new JsonObject()
+                .put("jsonrpc", JsonRPC.VERSION)
+                .put("id", requestId)
+                .put("method", "completion/complete")
+                .put("params", new JsonObject()
+                        .put("ref", new JsonObject()
+                                .put("type", "ref/resource")
+                                .put("name", name))
+                        .put("argument", new JsonObject()
+                                .put("name", argumentName)
+                                .put("value", argumentValue)));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(messageEndpoint.get())
