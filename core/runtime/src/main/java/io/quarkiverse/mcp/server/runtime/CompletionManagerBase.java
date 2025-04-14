@@ -22,13 +22,18 @@ import io.vertx.core.json.JsonObject;
 public abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
         implements CompletionManager {
 
-    // key = prompt name + "_" + argument name
+    // key = reference name + "_" + argument name
     protected final ConcurrentMap<String, CompletionInfo> completions;
 
     protected CompletionManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation);
         this.completions = new ConcurrentHashMap<>();
+    }
+
+    @Override
+    public CompletionInfo getCompletion(String name, String argumentName) {
+        return completions.get(name + "_" + argumentName);
     }
 
     @Override

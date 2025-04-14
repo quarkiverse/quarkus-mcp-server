@@ -10,6 +10,14 @@ import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 public interface CompletionManager extends FeatureManager<CompletionInfo> {
 
     /**
+     *
+     * @param name
+     * @param argumentName
+     * @return the completion for the given name reference and argument name
+     */
+    CompletionInfo getCompletion(String name, String argumentName);
+
+    /**
      * The combination of the name reference and argument name must be unique.
      *
      * @param nameReference

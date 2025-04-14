@@ -26,6 +26,11 @@ public class SseMcpDevUIProcessor {
                 .title("Prompts"));
 
         pageBuildItem.addPage(Page.webComponentPageBuilder()
+                .icon("font-awesome-solid:terminal")
+                .componentLink("qwc-mcp-prompt-completions.js")
+                .title("P completions"));
+
+        pageBuildItem.addPage(Page.webComponentPageBuilder()
                 .icon("font-awesome-solid:file")
                 .componentLink("qwc-mcp-resources.js")
                 .title("Resources"));
@@ -34,6 +39,11 @@ public class SseMcpDevUIProcessor {
                 .icon("font-awesome-solid:file-code")
                 .componentLink("qwc-mcp-resource-templates.js")
                 .title("Resource templates"));
+
+        pageBuildItem.addPage(Page.webComponentPageBuilder()
+                .icon("font-awesome-solid:file-code")
+                .componentLink("qwc-mcp-resource-template-completions.js")
+                .title("RT completions"));
 
         cardPages.produce(pageBuildItem);
     }
