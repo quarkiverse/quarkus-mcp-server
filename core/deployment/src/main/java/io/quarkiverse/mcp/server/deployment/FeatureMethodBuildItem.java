@@ -97,7 +97,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     }
 
     boolean isInit() {
-        return feature == Feature.INIT;
+        return feature == Feature.NOTIFICATION;
     }
 
     @Override

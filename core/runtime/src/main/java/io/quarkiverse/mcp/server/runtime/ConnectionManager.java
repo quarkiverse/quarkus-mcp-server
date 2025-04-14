@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -17,10 +16,10 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
     @Inject
     Vertx vertx;
 
-    private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
+    @Inject
+    ResponseHandlers responseHandlers;
 
-    // TODO we might need to extract this in a global component in the future
-    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
 
     @Override
     public Iterator<McpConnectionBase> iterator() {
@@ -38,7 +37,7 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
             timerId = vertx.setPeriodic(connection.autoPingInterval().get().toMillis(), new Handler<Long>() {
                 @Override
                 public void handle(Long timerId) {
-                    connection.send(Messages.newPing(idGenerator.incrementAndGet()));
+                    connection.send(Messages.newPing(responseHandlers.nextId()));
                 }
             });
         }

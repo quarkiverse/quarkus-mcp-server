@@ -39,8 +39,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     final ConcurrentMap<String, ToolInfo> tools;
 
     ToolManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             this.tools.put(f.info().name(), new ToolMethod(f));
@@ -197,7 +197,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (existing != null) {
                 throw toolAlreadyExists(name);
             } else {
-                notifyConnections("notifications/tools/list_changed");
+                notifyConnections(McpMessageHandler.NOTIFICATIONS_TOOLS_LIST_CHANGED);
             }
             return ret;
         }
@@ -244,7 +244,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             return new ToolArguments(argumentProviders.args(),
                     argumentProviders.connection(),
                     log(Feature.TOOL.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()));
+                    new RequestId(argumentProviders.requestId()),
+                    ProgressImpl.from(argumentProviders),
+                    RootsImpl.from(argumentProviders));
         }
 
     }

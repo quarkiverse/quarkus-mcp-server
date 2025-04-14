@@ -1,6 +1,6 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.runtime.Feature.INIT;
+import static io.quarkiverse.mcp.server.runtime.Feature.NOTIFICATION;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
 import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE;
@@ -56,11 +56,11 @@ import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
-import io.quarkiverse.mcp.server.runtime.InitManagerImpl;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
 import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
+import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -69,6 +69,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
+import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
@@ -118,16 +119,17 @@ class McpServerProcessor {
             DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
             DotNames.TOOL, TOOL,
             DotNames.LANGCHAIN4J_TOOL, TOOL,
-            DotNames.INIT, INIT);
+            DotNames.NOTIFICATION, NOTIFICATION);
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
+        unremovable.addBeanClass(ResponseHandlers.class);
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
-                ResourceTemplateCompleteManagerImpl.class, InitManagerImpl.class);
+                ResourceTemplateCompleteManagerImpl.class, NotificationManagerImpl.class);
         // Encoders
         unremovable.addBeanClasses(JsonTextContentEncoder.class, JsonTextResourceContentsEncoder.class);
         // Result mappers
@@ -171,7 +173,8 @@ class McpServerProcessor {
                     Feature feature = getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature, featureAnnotation);
                     String name;
-                    if (feature == PROMPT_COMPLETE || feature == RESOURCE_TEMPLATE_COMPLETE) {
+                    if (feature == PROMPT_COMPLETE
+                            || feature == RESOURCE_TEMPLATE_COMPLETE) {
                         name = featureAnnotation.value().asString();
                     } else {
                         AnnotationValue nameValue = featureAnnotation.value("name");
@@ -182,6 +185,9 @@ class McpServerProcessor {
                     if (feature == TOOL && method.hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)) {
                         AnnotationValue value = featureAnnotation.value();
                         description = value != null ? Arrays.stream(value.asStringArray()).collect(Collectors.joining()) : "";
+                    } else if (feature == NOTIFICATION) {
+                        // Description holds the notification type
+                        description = featureAnnotation.value().asEnum();
                     } else {
                         AnnotationValue descValue = featureAnnotation.value("description");
                         description = descValue != null ? descValue.asString() : "";
@@ -437,7 +443,7 @@ class McpServerProcessor {
         ResultHandle retInits = Gizmo.newArrayList(initsMethod);
         for (FeatureMethodBuildItem init : featureMethods.stream().filter(FeatureMethodBuildItem::isInit).toList()) {
             processFeatureMethod(counter, metadataCreator, initsMethod, init, retInits, transformedAnnotations,
-                    DotNames.INIT);
+                    DotNames.NOTIFICATION);
         }
         initsMethod.returnValue(retInits);
 
@@ -463,7 +469,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.MCP_LOG)
                         || paramType.name().equals(DotNames.REQUEST_ID)
                         || paramType.name().equals(DotNames.REQUEST_URI)
-                        || paramType.name().equals(DotNames.PROGRESS)) {
+                        || paramType.name().equals(DotNames.PROGRESS)
+                        || paramType.name().equals(DotNames.ROOTS)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -484,7 +491,7 @@ class McpServerProcessor {
         if (Modifier.isPrivate(method.flags())) {
             throw new IllegalStateException(feature + " method must not be private: " + method);
         }
-        if (method.returnType().kind() == Kind.VOID && feature != INIT) {
+        if (method.returnType().kind() == Kind.VOID && feature != NOTIFICATION) {
             throw new IllegalStateException(feature + " method may not return void: " + method);
         }
         switch (feature) {
@@ -494,7 +501,7 @@ class McpServerProcessor {
             case RESOURCE -> validateResourceMethod(method);
             case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation);
             case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
-            case INIT -> validateInitMethod(method);
+            case NOTIFICATION -> validateNotificationMethod(method);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
@@ -606,18 +613,21 @@ class McpServerProcessor {
         }
     }
 
-    private void validateInitMethod(MethodInfo method) {
+    private void validateNotificationMethod(MethodInfo method) {
         if (method.returnType().kind() != Kind.VOID
                 && (!method.returnType().name().equals(DotNames.UNI)
                         || !method.returnType().asParameterizedType().arguments().get(0).name()
                                 .equals(DotName.createSimple(Void.class)))) {
-            throw new IllegalStateException("Init method must return void or Uni<Void>");
+            throw new IllegalStateException("Notification method must return void or Uni<Void>");
         }
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = method.parameters();
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.MCP_CONNECTION)
-                    && !param.type().name().equals(DotNames.MCP_LOG)) {
-                throw new IllegalStateException("Init method must only consume McpConnection and McpLog parameters: " + method);
+                    && !param.type().name().equals(DotNames.MCP_LOG)
+                    && !param.type().name().equals(DotNames.ROOTS)) {
+                throw new IllegalStateException(
+                        "Notification methods must only consume built-in parameter types [McpConnection, McpLog, Roots]: "
+                                + method);
             }
         }
     }
@@ -719,6 +729,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.REQUEST_URI;
         } else if (type.name().equals(DotNames.PROGRESS)) {
             return FeatureArgument.Provider.PROGRESS;
+        } else if (type.name().equals(DotNames.ROOTS)) {
+            return FeatureArgument.Provider.ROOTS;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }
@@ -738,7 +750,7 @@ class McpServerProcessor {
             case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bytecode,
                     createMapperClassSimpleName(RESOURCE_TEMPLATE_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE,
                             c -> "String"));
-            case INIT -> readResultMapper(bytecode, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
+            case NOTIFICATION -> readResultMapper(bytecode, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         };
     }

@@ -60,7 +60,8 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
 
     }
 
-    record PromptArguments(Map<String, String> args, McpConnection connection, McpLog log, RequestId requestId) {
+    record PromptArguments(Map<String, String> args, McpConnection connection, McpLog log, RequestId requestId,
+            Progress progress, Roots roots) {
     }
 
     record PromptArgument(String name, String description, boolean required) {

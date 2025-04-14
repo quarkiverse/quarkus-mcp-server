@@ -59,6 +59,10 @@ public class McpSseClient extends SseClient {
         return requests;
     }
 
+    public void clearRequests() {
+        requests.clear();
+    }
+
     public SseEvent waitForFirstEvent() {
         Awaitility.await().until(() -> !allEvents.isEmpty());
         return allEvents.get(0);

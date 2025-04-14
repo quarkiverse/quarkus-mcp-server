@@ -60,7 +60,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
     }
 
-    record ToolArguments(Map<String, Object> args, McpConnection connection, McpLog log, RequestId requestId) {
+    record ToolArguments(Map<String, Object> args, McpConnection connection, McpLog log, RequestId requestId, Progress progress,
+            Roots roots) {
 
     }
 

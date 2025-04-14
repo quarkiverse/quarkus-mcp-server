@@ -14,7 +14,8 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.InitManager;
+import io.quarkiverse.mcp.server.Notification.Type;
+import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
@@ -43,17 +44,19 @@ public class InitProgrammaticTest extends McpServerTest {
         AtomicBoolean initCalled = new AtomicBoolean();
 
         @Inject
-        InitManager initManager;
+        NotificationManager notificationManager;
 
         @Startup
         void starup() {
-            initManager.newInit("foo").setHandler(args -> {
-                if (args.connection().initialRequest().supportsSampling()) {
-                    initCalled.set(true);
-                }
-                INIT_LATCH.countDown();
-                return null;
-            }).register();
+            notificationManager.newNotification("foo")
+                    .setType(Type.INITIALIZED)
+                    .setHandler(args -> {
+                        if (args.connection().initialRequest().supportsSampling()) {
+                            initCalled.set(true);
+                        }
+                        INIT_LATCH.countDown();
+                        return null;
+                    }).register();
         }
 
     }

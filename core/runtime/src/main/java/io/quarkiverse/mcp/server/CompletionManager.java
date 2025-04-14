@@ -68,7 +68,8 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
 
     }
 
-    record CompletionArguments(String argumentValue, McpConnection connection, McpLog log, RequestId requestId) {
+    record CompletionArguments(String argumentValue, McpConnection connection, McpLog log, RequestId requestId,
+            Progress progress, Roots roots) {
 
     }
 }

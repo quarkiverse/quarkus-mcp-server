@@ -5,8 +5,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.Init;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class InitInvalidReturnTypeTest {
@@ -25,7 +26,7 @@ public class InitInvalidReturnTypeTest {
 
     public static class InitInvalidReturnType {
 
-        @Init
+        @Notification(Type.INITIALIZED)
         String foo(McpConnection conn) {
             return null;
         }

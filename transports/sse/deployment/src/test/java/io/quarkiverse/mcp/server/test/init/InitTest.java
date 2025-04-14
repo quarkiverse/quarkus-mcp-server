@@ -14,8 +14,9 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.Init;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -42,7 +43,7 @@ public class InitTest extends McpServerTest {
         static final CountDownLatch INIT_LATCH = new CountDownLatch(1);
         AtomicBoolean initCalled = new AtomicBoolean();
 
-        @Init
+        @Notification(Type.INITIALIZED)
         void onInit(McpConnection connection) {
             if (connection.initialRequest().supportsSampling()) {
                 initCalled.set(true);

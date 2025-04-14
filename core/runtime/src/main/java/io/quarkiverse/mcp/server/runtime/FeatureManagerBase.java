@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpLog;
-import io.quarkiverse.mcp.server.ProgressToken;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -54,13 +53,16 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected final CurrentIdentityAssociation currentIdentityAssociation;
 
+    final ResponseHandlers responseHandlers;
+
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
         this.logs = new ConcurrentHashMap<>();
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
+        this.responseHandlers = responseHandlers;
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
@@ -134,11 +136,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             } else if (arg.provider() == Provider.MCP_LOG) {
                 ret[idx] = log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
             } else if (arg.provider() == Provider.PROGRESS) {
-                ProgressToken token = null;
-                if (argProviders.progressToken() != null) {
-                    token = new ProgressToken(argProviders.progressToken());
-                }
-                ret[idx] = new ProgressImpl(token, argProviders.sender());
+                ret[idx] = ProgressImpl.from(argProviders);
+            } else if (arg.provider() == Provider.ROOTS) {
+                ret[idx] = RootsImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {

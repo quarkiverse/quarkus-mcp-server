@@ -117,6 +117,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.McpLog`
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Completion API
 
@@ -164,6 +165,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.McpLog`
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Programmatic API
 
@@ -248,6 +250,7 @@ A `@Resource` method may accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Programmatic API
 
@@ -351,6 +354,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Completion API
 
@@ -398,6 +402,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Programmatic API
 
@@ -492,6 +497,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.McpLog`
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.Roots`
 
 === Programmatic API
 
@@ -531,6 +537,59 @@ public class MyTools {
 The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
 For example, `void` methods are not supported.
+
+== Notifications
+
+You can annotate a business method of a CDI bean with `@io.quarkiverse.mcp.server.Notification`.
+This method will be called when an MCP client sends a specific notification message, such as `notifications/initialized`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
+
+public class MyNotifications {
+
+    @Notification(Type.INITIALIZED) <1>
+    void init(McpConnection connection) { <2> <3>
+       Log.infof("New client connected: %s", connection.initialRequest().implementation().name());
+    }
+}
+----
+<1> Invoke the method when a client sends the `notifications/initialized` message.
+<2> The annotated method must either return `void` or `Uni<Void>`.
+<3> The method may accept the following parameters: `McpConnection`, `McpLog` and `Roots`.
+
+=== Programmatic API
+
+It's also possible to register a notification programmatically with the `NotificationManager` API.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.NotificationManager;
+import io.quarkiverse.mcp.server.Notification.Type;
+import jakarta.inject.Inject;
+import io.quarkus.runtime.Startup;
+
+public class MyNotifications {
+
+    @Inject
+    NotificationManager notificationManager; <1>
+
+    @Startup <2>
+    void addNotification() {
+       notificationManager.newNotification("foo")
+                    .setType(Type.INITIALIZED)
+                    .setHandler(args -> {
+                        Log.infof("New client connected: %s", args.connection().initialRequest().implementation().name());
+                        return null;
+                    }).register(); <3>
+    }
+}
+----
+<1> The injected manager can be used to register a new notification programmatically.
+<2> Instructs Quarkus to execute the `addNotification()` method when the application starts.
+<3> Registers the notification definition.
 
 == Pagination
 
@@ -705,6 +764,42 @@ public class MyTools {
 <3> The server should only send notifications if the client request contains the progress token.
 <4> Send the message to the client without waiting for the result.
 
+== Roots
+
+If an MCP client supports the `roots` capability the server can obtain the list of root objects.
+Any server feature method can accept the `io.quarkiverse.mcp.server.Roots` parameter.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
+
+public class MyRoots {
+
+   private final Map<String, List<Root>> rootsMap = new ConcurrentHashMap<>(); <1>
+
+   @Notification(Type.INITIALIZED)
+   void init(McpConnection connection, Roots roots) { <2>
+      if (connection.initialRequest().supportsRoots()) {
+         rootsMap.put(connection.id(), roots.listAndAwait());
+      }
+   }
+
+   @Notification(Type.ROOTS_LIST_CHANGED)
+   void change(McpConnection connection, Roots roots) { <3>
+      rootsMap.put(connection.id(), roots.listAndAwait());
+   }
+   
+   public List<Root> getRoots(String connectionId) {
+      return rootsMap.get(connectionId);
+   }
+
+}
+----
+<1> Maps connection ids (client sessions) to lists of roots.
+<2> Obtain the list of roots when an MCP client sends the `notifications/initialized` message.
+<3> Update the list of roots when an MCP client sends the `notifications/roots/list_changed` message.
 
 == Security
 

@@ -16,15 +16,16 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.InitManagerImpl;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
@@ -50,11 +51,12 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, InitManagerImpl initManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
+            ResponseHandlers serverRequests,
             McpMetadata metadata,
             Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata);
         this.executor = Executors.newSingleThreadExecutor();
         this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;

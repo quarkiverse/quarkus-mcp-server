@@ -82,7 +82,7 @@ class ResourceMessageHandler extends MessageHandler {
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, id, resourceUri, sender,
-                Messages.getProgressToken(message));
+                Messages.getProgressToken(message), manager.responseHandlers);
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
                     new FeatureExecutionContext(argProviders, securitySupport));

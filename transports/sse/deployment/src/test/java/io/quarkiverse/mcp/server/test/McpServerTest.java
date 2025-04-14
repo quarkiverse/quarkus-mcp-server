@@ -171,7 +171,7 @@ public abstract class McpServerTest {
 
     protected JsonObject newMessage(String method) {
         if (client == null) {
-            throw new IllegalStateException("SSE client not initialized");
+            throw clientNotInitialized();
         }
         return new JsonObject()
                 .put("jsonrpc", "2.0")
@@ -179,8 +179,30 @@ public abstract class McpServerTest {
                 .put("id", client.nextRequestId());
     }
 
+    protected JsonObject newNotification(String method) {
+        if (client == null) {
+            throw clientNotInitialized();
+        }
+        return new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("method", method);
+    }
+
+    protected JsonObject newResult(Object requestId, JsonObject result) {
+        if (client == null) {
+            throw clientNotInitialized();
+        }
+        return new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("result", result)
+                .put("id", requestId);
+    }
+
     protected JsonObject getClientCapabilities() {
         return null;
     }
 
+    private IllegalStateException clientNotInitialized() {
+        return new IllegalStateException("SSE client not initialized");
+    }
 }

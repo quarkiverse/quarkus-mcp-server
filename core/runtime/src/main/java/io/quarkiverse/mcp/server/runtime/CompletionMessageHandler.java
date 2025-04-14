@@ -15,6 +15,12 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
     private static final Logger LOG = Logger.getLogger(CompletionMessageHandler.class);
 
+    private final ResponseHandlers responseHandlers;
+
+    protected CompletionMessageHandler(ResponseHandlers responseHandlers) {
+        this.responseHandlers = responseHandlers;
+    }
+
     protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
             SecuritySupport securitySupport) throws McpException;
 
@@ -30,7 +36,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(
                 Map.of(argumentName, argument.getString("value")), connection, id, null, sender,
-                Messages.getProgressToken(message));
+                Messages.getProgressToken(message), responseHandlers);
 
         try {
             Future<CompletionResponse> fu = execute(key, argProviders, securitySupport);

@@ -55,7 +55,7 @@ class PromptMessageHandler extends MessageHandler {
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
         ArgumentProviders argProviders = new ArgumentProviders(args, connection, id, null, sender,
-                Messages.getProgressToken(message));
+                Messages.getProgressToken(message), manager.responseHandlers);
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName, new FeatureExecutionContext(argProviders, securitySupport));

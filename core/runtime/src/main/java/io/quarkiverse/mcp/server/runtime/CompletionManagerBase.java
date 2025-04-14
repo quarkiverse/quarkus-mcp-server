@@ -26,8 +26,8 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     protected final ConcurrentMap<String, CompletionInfo> completions;
 
     protected CompletionManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.completions = new ConcurrentHashMap<>();
     }
 
@@ -168,7 +168,9 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
             return new CompletionArguments(argumentProviders.args().get(argumentName).toString(),
                     argumentProviders.connection(),
                     log(feature().toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()));
+                    new RequestId(argumentProviders.requestId()),
+                    ProgressImpl.from(argumentProviders),
+                    RootsImpl.from(argumentProviders));
         }
 
     }

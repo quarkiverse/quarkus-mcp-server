@@ -18,8 +18,8 @@ public class ResourceTemplateCompleteManagerImpl extends CompletionManagerBase i
 
     ResourceTemplateCompleteManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
             ConnectionManager connectionManager, ResourceTemplateManagerImpl resourceTemplateManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         for (FeatureMetadata<CompletionResponse> c : metadata.resourceTemplateCompletions()) {
             String key = c.info().name() + "_"
                     + c.info().arguments().stream().filter(FeatureArgument::isParam).findFirst().orElseThrow()
