@@ -169,9 +169,12 @@ However, it may also accept the following parameters:
 
 It's also possible to register a prompt programmatically with the `PromptManager` API.
 
+For example, if some prompt is only known at application startup time, it can be added as follows:
+
 [source,java]
 ----
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 
 public class MyPrompts {
@@ -182,20 +185,22 @@ public class MyPrompts {
     @Inject
     CodeService codeService;
 
+    @Startup <2>
     void addPrompt() {
-       promptManager.newPrompt("code_assist") <2>
+       promptManager.newPrompt("code_assist") <3>
           .setDescription("Prompt for code assist")
           .addArgument("lang", "Language", true)
           .setHandler(
               a -> PromptResponse.withMessages(
                          List.of(PromptMessage.withUserRole(new TextContent(codeService.assist(a.args().get("lang")))))))
-          .register(); <3>
+          .register(); <4>
     }
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new prompt programmatically.
-<2> The `PromptManager#newPrompt(String)` method returns `PromptDefinition` - a builder-like API.
-<3> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
+<2> Ensure that `addPrompt` is executed when the application starts
+<3> The `PromptManager#newPrompt(String)` method returns `PromptDefinition` - a builder-like API.
+<4> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
 
 == Resources
 
@@ -248,9 +253,12 @@ A `@Resource` method may accept the following parameters:
 
 It's also possible to register a resource programmatically with the `ResourceManager` API.
 
+For example, if some resource is only known at application startup time, it can be added as follows:
+
 [source,java]
 ----
 import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 
 public class MyResources {
@@ -258,19 +266,21 @@ public class MyResources {
     @Inject
     ResourceManager resourceManager; <1>
 
+    @Startup <2>
     void addResource() {
-       resourceManager.newResource("file:///project/alpha") <2>
+       resourceManager.newResource("file:///project/alpha") <3>
           .setDescription("Alpha resource file")
           .setHandler(
               args -> new ResourceResponse(
                                     List.of(BlobResourceContents.create(args.requestUri().value(), Files.readAllBytes(Paths.ALPHA)))))
-          .register(); <3>
+          .register(); <4>
     }
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new resource programmatically.
-<2> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API.
-<3> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
+<2> Ensure that `addResource` is executed when the application starts
+<3> The `ResourceManager#newResource(String)` method returns `ResourceDefinition` - a builder-like API.
+<4> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
 
 === Subscriptions
 
@@ -393,9 +403,12 @@ However, it may also accept the following parameters:
 
 It's also possible to register a resource template programmatically with the `ResourceTemplateManager` API.
 
+For example, if some resource template is only known at application startup time, it can be added as follows:
+
 [source,java]
 ----
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 
 public class MyResourceTemplates {
@@ -406,20 +419,22 @@ public class MyResourceTemplates {
     @Inject
     FileService fileService;
 
+    @Startup <2>
     void addResourceTemplate() {
-       resourceTemplateManager.newResourceTemplate("alpha") <2>
+       resourceTemplateManager.newResourceTemplate("alpha") <3>
           .setUriTemplate("file:///alpha/{foo}")
           .setDescription("Alpha file template")
           .setHandler(
               rta -> new ResourceResponse(
                                     List.of(BlobResourceContents.create(args.requestUri().value(), fileService.load(rta.args().get("foo"))))))
-          .register(); <3>
+          .register(); <4>
     }
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new resource template programmatically.
-<2> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API.
-<3> Registers the resource template definition.
+<2> Ensure that `addResourceTemplate` is executed when the application starts
+<3> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API.
+<4> Registers the resource template definition.
 
 == Tools
 
@@ -482,9 +497,12 @@ However, it may also accept the following parameters:
 
 It's also possible to register a tool programmatically with the `ToolManager` API.
 
+For example, if some tool is only known at application startup time, it can be added as follows:
+
 [source,java]
 ----
 import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
 
 public class MyTools {
@@ -492,19 +510,21 @@ public class MyTools {
     @Inject
     ToolManager toolManager; <1>
 
+    @Startup <2>
     void addTool() {
-       toolManager.newTool("toLowerCase") <2>
+       toolManager.newTool("toLowerCase") <3>
           .setDescription("Converts input string to lower case.")
-          ..addArgument("value", "Value to convert", true, String.class)
+          .addArgument("value", "Value to convert", true, String.class)
           .setHandler(
               ta -> ToolResponse.success(ta.args().get("value").toString().toLowerCase()))
-          .register(); <3>
+          .register(); <4>
     }
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new tool programmatically.
-<2> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API.
-<3> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
+<2> Ensure that `addTool` is executed when the application starts
+<3> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API.
+<4> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
 
 === Support `@Tool`/`@P` annotations from LangChain4j
 
