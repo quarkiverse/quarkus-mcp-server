@@ -16,6 +16,7 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.InitManagerImpl;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -49,11 +50,11 @@ public class StdioMcpMessageHandler extends McpMessageHandler {
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, InitManagerImpl initManager,
             McpMetadata metadata,
             Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, metadata);
         this.executor = Executors.newSingleThreadExecutor();
         this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;

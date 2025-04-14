@@ -382,13 +382,17 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         protected void validate() {
+            validate(true);
+        }
+
+        protected void validate(boolean requireDescription) {
             if (fun == null && asyncFun == null) {
                 throw new IllegalStateException("Either sync or async logic must be set");
             }
             if (name == null) {
                 throw new IllegalStateException("Name must be set");
             }
-            if (description == null) {
+            if (requireDescription && description == null) {
                 throw new IllegalStateException("Description must be set");
             }
         }

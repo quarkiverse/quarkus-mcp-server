@@ -10,11 +10,16 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
+import io.quarkiverse.mcp.server.InitManager;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.runtime.LaunchMode;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 public class McpMessageHandler {
@@ -30,6 +35,8 @@ public class McpMessageHandler {
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
+    private final InitManagerImpl initManager;
+
     protected final McpRuntimeConfig config;
 
     private final Map<String, Object> serverInfo;
@@ -37,7 +44,7 @@ public class McpMessageHandler {
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, InitManagerImpl initManager,
             McpMetadata metadata) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager, config.tools().pageSize());
@@ -47,6 +54,7 @@ public class McpMessageHandler {
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager,
                 config.resourceTemplates().pageSize());
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
+        this.initManager = initManager;
         this.config = config;
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
@@ -59,7 +67,7 @@ public class McpMessageHandler {
         } else {
             switch (connection.status()) {
                 case NEW -> initializeNew(message, sender, connection, securitySupport);
-                case INITIALIZING -> initializing(message, sender, connection);
+                case INITIALIZING -> initializing(message, sender, connection, securitySupport);
                 case IN_OPERATION -> operation(message, sender, connection, securitySupport);
                 case SHUTDOWN -> sender.send(
                         Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
@@ -103,11 +111,33 @@ public class McpMessageHandler {
         }
     }
 
-    private void initializing(JsonObject message, Sender sender, McpConnectionBase connection) {
+    private void initializing(JsonObject message, Sender sender, McpConnectionBase connection,
+            SecuritySupport securitySupport) {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", connection.id());
+                // Call init methods
+                if (!initManager.isEmpty()) {
+                    ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, null, null, sender, null);
+                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders,
+                            securitySupport);
+                    for (InitManager.InitInfo init : initManager) {
+                        try {
+                            Future<Void> fu = initManager.execute(init.name(), featureExecutionContext);
+                            fu.onComplete(new Handler<AsyncResult<Void>>() {
+                                @Override
+                                public void handle(AsyncResult<Void> ar) {
+                                    if (ar.failed()) {
+                                        LOG.errorf(ar.cause(), "Unable to call init method: %s", init.name());
+                                    }
+                                }
+                            });
+                        } catch (McpException e) {
+                            LOG.errorf(e, "Unable to call init method: %s", init.name());
+                        }
+                    }
+                }
             }
         } else if (PING.equals(method)) {
             ping(message, sender);

@@ -5,6 +5,7 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.InitManagerImpl;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -36,10 +37,10 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, InitManagerImpl initManager,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, metadata);
     }
 
     @Override
