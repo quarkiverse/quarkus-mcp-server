@@ -73,8 +73,8 @@ public class McpMessageHandler {
                 case NEW -> initializeNew(message, sender, connection, securitySupport);
                 case INITIALIZING -> initializing(message, sender, connection, securitySupport);
                 case IN_OPERATION -> operation(message, sender, connection, securitySupport);
-                case SHUTDOWN -> sender.send(
-                        Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
+                case CLOSED -> sender.send(
+                        Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection is closed"));
             }
         }
     }
@@ -283,7 +283,6 @@ public class McpMessageHandler {
     }
 
     private void ping(JsonObject message, Sender sender) {
-        // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping/
         Object id = message.getValue("id");
         LOG.debugf("Ping [id: %s]", id);
         sender.sendResult(id, new JsonObject());

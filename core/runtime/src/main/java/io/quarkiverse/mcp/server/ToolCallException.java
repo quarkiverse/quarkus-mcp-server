@@ -6,8 +6,6 @@ package io.quarkiverse.mcp.server;
  * If a method annotated with {@link Tool} throws an exception that is an instance of {@link ToolCallException} then it is
  * automatically converted to a failed {@link ToolResponse}. The message of the exception is used as the text of the result
  * content.
- * <p>
- * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/server/tools/#error-handling">Error Handling</a>
  */
 public class ToolCallException extends RuntimeException {
 

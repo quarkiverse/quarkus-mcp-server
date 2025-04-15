@@ -64,7 +64,6 @@ public class SseMcpServerRecorder {
                 String endpointPath = mcpPath.endsWith("/") ? (mcpPath + "messages/" + id) : (mcpPath + "/messages/" + id);
                 LOG.debugf("POST endpoint path: %s", endpointPath);
 
-                // https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse
                 connection.sendEvent("endpoint", endpointPath);
             }
         };

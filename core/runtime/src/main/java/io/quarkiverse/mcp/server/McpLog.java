@@ -5,8 +5,6 @@ import org.jboss.logging.Logger;
 /**
  * Send log message notifications to a connected MCP client.
  * <p>
- * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/server/utilities/logging">Logging</a>.
- * <p>
  * The MCP logger name is derived from the method. For example, if there is a method {@code myTool()} annotated with
  * {@code @Tool} then the logger name will be {@code tool:myTool}.
  */
@@ -72,10 +70,6 @@ public interface McpLog {
      */
     void error(Throwable t, String format, Object... params);
 
-    /**
-     * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/server/utilities/logging/#log-levels">Log
-     * Levels</a>.
-     */
     public enum LogLevel {
         DEBUG,
         INFO,

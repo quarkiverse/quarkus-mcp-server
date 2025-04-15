@@ -48,6 +48,7 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
     public boolean remove(String id) {
         ConnectionTimerId connection = connections.remove(id);
         if (connection != null) {
+            connection.connection().close();
             if (connection.timerId() != null) {
                 vertx.cancelTimer(connection.timerId());
             }

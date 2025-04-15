@@ -198,7 +198,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
-        public void sendUpdate() {
+        public void sendUpdateAndForget() {
             ResourceManagerImpl.this.sendUpdateNotifications(uri());
         }
 
@@ -251,7 +251,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
-        public void sendUpdate() {
+        public void sendUpdateAndForget() {
             ResourceManagerImpl.this.sendUpdateNotifications(uri());
         }
     }
