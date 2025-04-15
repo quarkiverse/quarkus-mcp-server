@@ -27,14 +27,25 @@ public interface McpConnection {
      */
     LogLevel logLevel();
 
-    /**
-     * See <a href="https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/">Lifecycle</a>
-     */
     enum Status {
+
+        /**
+         * A new connnection, waiting for the {@code initialize} request from the client.
+         */
         NEW,
+        /**
+         * The server responded to the {@code initialize} request with its own capabilities and information. Now it's waigting
+         * for the {@code initialized} notification from the client.
+         */
         INITIALIZING,
+        /**
+         * The client sent the {@code initialized} notification.
+         */
         IN_OPERATION,
-        SHUTDOWN
+        /**
+         * Connection was closed.
+         */
+        CLOSED
     }
 
 }

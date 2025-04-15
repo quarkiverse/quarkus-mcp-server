@@ -39,12 +39,19 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         String mimeType();
 
         /**
-         * Sends update notifications to all subscribers.
+         * Sends update notifications to all subscribers without waiting for the result.
          * <p>
-         * See <a href=
-         * "https://spec.modelcontextprotocol.io/specification/2024-11-05/server/resources/#subscriptions">Subscriptions</a>.
+         * The message can be sent asynchronously, e.g. if this method is invoked on an event loop.
          */
-        void sendUpdate();
+        void sendUpdateAndForget();
+
+        /**
+         * @deprecated Use {@link #sendUpdateAndForget()} instead
+         */
+        @Deprecated(forRemoval = true, since = "1.1")
+        default void sendUpdate() {
+            sendUpdateAndForget();
+        }
 
     }
 

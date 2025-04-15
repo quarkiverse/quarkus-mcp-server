@@ -55,6 +55,10 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         return false;
     }
 
+    public boolean close() {
+        return status.compareAndSet(Status.IN_OPERATION, Status.CLOSED);
+    }
+
     @Override
     public LogLevel logLevel() {
         return logLevel.get();

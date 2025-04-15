@@ -49,8 +49,8 @@ public class ResourcesSubscribeTest extends McpServerTest {
         send(newMessage("resources/subscribe")
                 .put("params", new JsonObject().put("uri", uri2)));
 
-        manager.getResource(uri1).sendUpdate();
-        manager.getResource(uri2).sendUpdate();
+        manager.getResource(uri1).sendUpdateAndForget();
+        manager.getResource(uri2).sendUpdateAndForget();
 
         List<JsonObject> notifications = client().waitForNotifications(2);
         for (JsonObject n : notifications) {
@@ -61,8 +61,8 @@ public class ResourcesSubscribeTest extends McpServerTest {
         send(newMessage("resources/unsubscribe")
                 .put("params", new JsonObject().put("uri", uri1)));
 
-        manager.getResource(uri1).sendUpdate();
-        manager.getResource(uri2).sendUpdate();
+        manager.getResource(uri1).sendUpdateAndForget();
+        manager.getResource(uri2).sendUpdateAndForget();
 
         notifications = client().waitForNotifications(3);
         assertEquals("notifications/resources/updated", notifications.get(2).getString("method"));

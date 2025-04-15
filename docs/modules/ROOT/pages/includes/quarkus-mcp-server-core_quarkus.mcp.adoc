@@ -15,9 +15,8 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The name of the server is included in the response to an `initialize` request as defined by the
-https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/#initialization[spec].
-By default, the value of the `quarkus.application.name` config property is used.
+The name of the server is included in the response to an `initialize` request. By default, the value of the
+`quarkus.application.name` config property is used.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -38,9 +37,8 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The version of the server is included in the response to an `initialize` request as defined by the
-https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/lifecycle/#initialization[spec].
-By default, the value of the `quarkus.application.version` config property is used.
+The version of the server is included in the response to an `initialize` request. By default, the value of the
+`quarkus.application.version` config property is used.
 
 
 ifdef::add-copy-button-to-env-var[]
