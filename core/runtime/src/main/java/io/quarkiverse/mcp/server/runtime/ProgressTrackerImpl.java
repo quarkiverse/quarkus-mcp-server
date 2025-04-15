@@ -33,7 +33,7 @@ class ProgressTrackerImpl implements ProgressTracker {
     }
 
     @Override
-    public Uni<Void> advanceAsync(BigDecimal value) {
+    public Uni<Void> advance(BigDecimal value) {
         Objects.requireNonNull(value);
         return Uni.createFrom().deferred(() -> {
             BigDecimal progress = val.updateAndGet(p -> {
@@ -47,12 +47,12 @@ class ProgressTrackerImpl implements ProgressTracker {
             if (messageBuilder != null) {
                 message = messageBuilder.apply(progress);
             }
-            return new ProgressNotificationImpl(sender, token, total, progress, message).sendAsync();
+            return new ProgressNotificationImpl(sender, token, total, progress, message).send();
         });
     }
 
     @Override
-    public void advance(BigDecimal value) {
+    public void advanceAndForget(BigDecimal value) {
         Objects.requireNonNull(value);
         BigDecimal progress = val.updateAndGet(p -> {
             BigDecimal next = p.add(value);

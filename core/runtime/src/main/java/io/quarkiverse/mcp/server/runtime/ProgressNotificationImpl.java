@@ -48,15 +48,15 @@ class ProgressNotificationImpl implements ProgressNotification {
 
     @Override
     public void sendAndForget() {
-        send();
+        doSend();
     }
 
     @Override
-    public Uni<Void> sendAsync() {
-        return Uni.createFrom().completionStage(() -> send().toCompletionStage());
+    public Uni<Void> send() {
+        return Uni.createFrom().completionStage(() -> doSend().toCompletionStage());
     }
 
-    private Future<Void> send() {
+    private Future<Void> doSend() {
         JsonObject notification = new JsonObject()
                 .put("progressToken", token.value());
         putDecimal(notification, "progress", progress);

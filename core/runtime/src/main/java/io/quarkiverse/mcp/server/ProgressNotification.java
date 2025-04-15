@@ -43,7 +43,7 @@ public interface ProgressNotification {
      * @return a new {@link Uni} that completes with a {@code null} item
      */
     @CheckReturnValue
-    Uni<Void> sendAsync();
+    Uni<Void> send();
 
     /**
      * Convenient progress notification builder.

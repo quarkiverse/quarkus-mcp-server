@@ -63,7 +63,7 @@ public class UnboundProgressTrackerTest extends ProgressTest {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
-                    tracker.advance();
+                    tracker.advanceAndForget();
                 }
                 ret.complete("ok");
             });
