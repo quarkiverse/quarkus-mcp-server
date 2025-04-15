@@ -30,8 +30,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     final ConcurrentMap<String, PromptInfo> prompts;
 
     PromptManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
             this.prompts.put(f.info().name(), new PromptMethod(f));
@@ -156,7 +156,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             if (existing != null) {
                 throw promptWithNameAlreadyExists(name);
             } else {
-                notifyConnections("notifications/prompts/list_changed");
+                notifyConnections(McpMessageHandler.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
             }
             return ret;
         }
@@ -184,7 +184,9 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             return new PromptArguments(argumentProviders.args().entrySet().stream()
                     .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toString())), argumentProviders.connection(),
                     log(Feature.PROMPT.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()));
+                    new RequestId(argumentProviders.requestId()),
+                    ProgressImpl.from(argumentProviders),
+                    RootsImpl.from(argumentProviders));
         }
 
         @Override

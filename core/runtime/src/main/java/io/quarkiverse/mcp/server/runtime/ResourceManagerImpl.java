@@ -38,8 +38,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     ResourceManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
             ResourceTemplateManagerImpl resourceTemplateManager, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.resourceTemplateManager = resourceTemplateManager;
         this.resources = new ConcurrentHashMap<>();
         this.subscribers = new ConcurrentHashMap<>();
@@ -245,7 +245,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     argumentProviders.connection(),
                     log(Feature.RESOURCE.toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),
-                    new RequestUri(argumentProviders.uri()));
+                    new RequestUri(argumentProviders.uri()),
+                    ProgressImpl.from(argumentProviders),
+                    RootsImpl.from(argumentProviders));
         }
 
         @Override
@@ -289,7 +291,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             if (existing != null) {
                 throw resourceWithUriAlreadyExists(uri);
             } else {
-                notifyConnections("notifications/resources/list_changed");
+                notifyConnections(McpMessageHandler.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
             }
             return ret;
         }

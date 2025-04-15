@@ -18,8 +18,8 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
 
     protected PromptCompletionManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
             ConnectionManager connectionManager, PromptManagerImpl promptManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.promptManager = promptManager;
         for (FeatureMetadata<CompletionResponse> c : metadata.promptCompletions()) {
             String key = c.info().name() + "_"

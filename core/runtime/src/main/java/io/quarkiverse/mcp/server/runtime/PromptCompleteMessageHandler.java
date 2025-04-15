@@ -11,6 +11,7 @@ class PromptCompleteMessageHandler extends CompletionMessageHandler {
     private final PromptCompletionManagerImpl manager;
 
     PromptCompleteMessageHandler(PromptCompletionManagerImpl manager) {
+        super(manager.responseHandlers);
         this.manager = Objects.requireNonNull(manager);
     }
 

@@ -74,7 +74,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
     }
 
-    record ResourceArguments(McpConnection connection, McpLog log, RequestId requestId, RequestUri requestUri) {
+    record ResourceArguments(McpConnection connection, McpLog log, RequestId requestId, RequestUri requestUri,
+            Progress progress, Roots roots) {
 
     }
 

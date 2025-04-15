@@ -9,11 +9,13 @@ import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
@@ -36,10 +38,11 @@ public class SseMcpMessageHandler extends McpMessageHandler implements Handler<R
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
+            ResponseHandlers serverRequests,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata);
     }
 
     @Override

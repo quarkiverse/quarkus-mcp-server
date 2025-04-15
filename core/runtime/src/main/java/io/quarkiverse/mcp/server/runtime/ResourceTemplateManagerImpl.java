@@ -37,8 +37,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     final ConcurrentMap<String, ResourceTemplateMetadata> templates;
 
     ResourceTemplateManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation);
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
             this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
@@ -118,7 +118,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString()));
         argProviders = new ArgumentProviders(
                 matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
-                argProviders.sender(), argProviders.progressToken());
+                argProviders.sender(), argProviders.progressToken(), responseHandlers);
         return super.prepareArguments(metadata, argProviders);
     }
 
@@ -261,7 +261,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                     argumentProviders.connection(),
                     log(Feature.RESOURCE_TEMPLATE.toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),
-                    new RequestUri(argumentProviders.uri()));
+                    new RequestUri(argumentProviders.uri()),
+                    ProgressImpl.from(argumentProviders),
+                    RootsImpl.from(argumentProviders));
         }
 
     }

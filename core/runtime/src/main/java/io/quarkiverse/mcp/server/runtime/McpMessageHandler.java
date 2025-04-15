@@ -13,8 +13,14 @@ import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.Notification.Type;
+import io.quarkiverse.mcp.server.NotificationManager;
+import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.runtime.LaunchMode;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 public class McpMessageHandler {
@@ -30,6 +36,10 @@ public class McpMessageHandler {
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
+    private final NotificationManagerImpl notificationManager;
+
+    private final ResponseHandlers responseHandlers;
+
     protected final McpRuntimeConfig config;
 
     private final Map<String, Object> serverInfo;
@@ -37,7 +47,8 @@ public class McpMessageHandler {
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager,
+            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
+            ResponseHandlers responseHandlers,
             McpMetadata metadata) {
         this.connectionManager = connectionManager;
         this.toolHandler = new ToolMessageHandler(toolManager, config.tools().pageSize());
@@ -47,6 +58,8 @@ public class McpMessageHandler {
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager,
                 config.resourceTemplates().pageSize());
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
+        this.notificationManager = notificationManager;
+        this.responseHandlers = responseHandlers;
         this.config = config;
         this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
     }
@@ -54,12 +67,11 @@ public class McpMessageHandler {
     public void handle(JsonObject message, McpConnectionBase connection, Sender sender, SecuritySupport securitySupport) {
         if (Messages.isResponse(message)) {
             // Response from a client
-            // Currently we discard all responses, including pong responses
-            LOG.debugf("Discard client response: %s", message);
+            responseHandlers.handleResponse(message.getValue("id"), message);
         } else {
             switch (connection.status()) {
                 case NEW -> initializeNew(message, sender, connection, securitySupport);
-                case INITIALIZING -> initializing(message, sender, connection);
+                case INITIALIZING -> initializing(message, sender, connection, securitySupport);
                 case IN_OPERATION -> operation(message, sender, connection, securitySupport);
                 case SHUTDOWN -> sender.send(
                         Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection was already shut down"));
@@ -103,11 +115,37 @@ public class McpMessageHandler {
         }
     }
 
-    private void initializing(JsonObject message, Sender sender, McpConnectionBase connection) {
+    private void initializing(JsonObject message, Sender sender, McpConnectionBase connection,
+            SecuritySupport securitySupport) {
         String method = message.getString("method");
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (connection.setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", connection.id());
+                // Call init methods
+                List<NotificationManager.NotificationInfo> infos = notificationManager.infoStream()
+                        .filter(n -> n.type() == Type.INITIALIZED).toList();
+                if (!infos.isEmpty()) {
+                    ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, null, null, sender, null,
+                            responseHandlers);
+                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders,
+                            securitySupport);
+                    for (NotificationManager.NotificationInfo notification : infos) {
+                        try {
+                            Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
+                                    featureExecutionContext);
+                            fu.onComplete(new Handler<AsyncResult<Void>>() {
+                                @Override
+                                public void handle(AsyncResult<Void> ar) {
+                                    if (ar.failed()) {
+                                        LOG.errorf(ar.cause(), "Unable to call notification method: %s", notification);
+                                    }
+                                }
+                            });
+                        } catch (McpException e) {
+                            LOG.errorf(e, "Unable to call notification method: %s", notification);
+                        }
+                    }
+                }
             }
         } else if (PING.equals(method)) {
             ping(message, sender);
@@ -121,6 +159,10 @@ public class McpMessageHandler {
     static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     static final String NOTIFICATIONS_MESSAGE = "notifications/message";
     static final String NOTIFICATIONS_PROGRESS = "notifications/progress";
+    static final String NOTIFICATIONS_TOOLS_LIST_CHANGED = "notifications/tools/list_changed";
+    static final String NOTIFICATIONS_RESOURCES_LIST_CHANGED = "notifications/resources/list_changed";
+    static final String NOTIFICATIONS_PROMPTS_LIST_CHANGED = "notifications/prompts/list_changed";
+    static final String NOTIFICATIONS_ROOTS_LIST_CHANGED = "notifications/roots/list_changed";
     static final String PROMPTS_LIST = "prompts/list";
     static final String PROMPTS_GET = "prompts/get";
     static final String TOOLS_LIST = "tools/list";
@@ -131,6 +173,7 @@ public class McpMessageHandler {
     static final String RESOURCES_SUBSCRIBE = "resources/subscribe";
     static final String RESOURCES_UNSUBSCRIBE = "resources/unsubscribe";
     static final String PING = "ping";
+    static final String ROOTS_LIST = "roots/list";
     static final String COMPLETION_COMPLETE = "completion/complete";
     static final String LOGGING_SET_LEVEL = "logging/setLevel";
     // non-standard messages
@@ -152,9 +195,39 @@ public class McpMessageHandler {
             case COMPLETION_COMPLETE -> complete(message, sender, connection, securitySupport);
             case LOGGING_SET_LEVEL -> setLogLevel(message, sender, connection);
             case Q_CLOSE -> close(message, sender, connection);
+            case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(sender, connection, securitySupport);
             default -> sender.send(
                     Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
         }
+    }
+
+    private Object rootsListChanged(Sender sender, McpConnection connection, SecuritySupport securitySupport) {
+        // Call init methods
+        List<NotificationManager.NotificationInfo> infos = notificationManager.infoStream()
+                .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
+        if (!infos.isEmpty()) {
+            ArgumentProviders argProviders = new ArgumentProviders(Map.of(), connection, null, null, sender, null,
+                    responseHandlers);
+            FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders,
+                    securitySupport);
+            for (NotificationManager.NotificationInfo notification : infos) {
+                try {
+                    Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
+                            featureExecutionContext);
+                    fu.onComplete(new Handler<AsyncResult<Void>>() {
+                        @Override
+                        public void handle(AsyncResult<Void> ar) {
+                            if (ar.failed()) {
+                                LOG.errorf(ar.cause(), "Unable to call notification method: %s", notification);
+                            }
+                        }
+                    });
+                } catch (McpException e) {
+                    LOG.errorf(e, "Unable to call notification method: %s", notification);
+                }
+            }
+        }
+        return null;
     }
 
     private void setLogLevel(JsonObject message, Sender sender, McpConnection connection) {

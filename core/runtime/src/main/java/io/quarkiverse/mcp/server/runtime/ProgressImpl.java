@@ -11,6 +11,14 @@ import io.quarkiverse.mcp.server.ProgressTracker;
 
 class ProgressImpl implements Progress {
 
+    static ProgressImpl from(ArgumentProviders argProviders) {
+        ProgressToken token = null;
+        if (argProviders.progressToken() != null) {
+            token = new ProgressToken(argProviders.progressToken());
+        }
+        return new ProgressImpl(token, argProviders.sender());
+    }
+
     private final Optional<ProgressToken> token;
 
     private final Sender sender;

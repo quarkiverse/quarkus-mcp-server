@@ -41,14 +41,19 @@ public class Messages {
     }
 
     public static JsonObject newPing(Object id) {
-        return new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", id)
-                .put("method", "ping");
+        return newRequest(id, "ping");
+    }
+
+    public static JsonObject newRequest(Object id, String method) {
+        JsonObject response = new JsonObject();
+        response.put("jsonrpc", JsonRPC.VERSION);
+        response.put("id", id);
+        response.put("method", method);
+        return response;
     }
 
     public static boolean isResponse(JsonObject message) {
-        return message.containsKey("result") && message.containsKey("error");
+        return message.containsKey("result") || message.containsKey("error");
     }
 
     static Cursor getCursor(JsonObject message, Sender sender) {

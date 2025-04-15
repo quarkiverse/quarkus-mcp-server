@@ -58,16 +58,16 @@ public class ProgressTrackerTest extends ProgressTest {
                         Thread.currentThread().interrupt();
                     }
                     try {
-                        tracker.advance(1000);
+                        tracker.advanceAndForget(1000);
                         throw new AssertionError();
                     } catch (IllegalStateException expected) {
                     }
-                    CompletableFuture<Void> cf = tracker.advanceAsync(BigDecimal.valueOf(1000))
+                    CompletableFuture<Void> cf = tracker.advance(BigDecimal.valueOf(1000))
                             .subscribeAsCompletionStage();
                     if (!cf.isCompletedExceptionally()) {
                         throw new AssertionError();
                     }
-                    tracker.advance();
+                    tracker.advanceAndForget();
                 }
                 ret.complete("ok");
             });

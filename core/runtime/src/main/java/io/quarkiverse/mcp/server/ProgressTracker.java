@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 import java.math.BigDecimal;
 import java.util.function.Function;
 
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -25,15 +26,16 @@ public interface ProgressTracker {
      *
      * @throws IllegalStateException if the total has been set and the progress exceeds it
      */
-    void advance(BigDecimal value);
+    void advanceAndForget(BigDecimal value);
 
     /**
      * Advance the progress by the specified value and send a {@code notifications/progress} message to the client
-     * asynchronously. Returns a failed {@link Uni} if the total has been set and the progress exceeds it
+     * asynchronously. Returns a failed {@link Uni} if the total has been set and the progress exceeds it.
      *
      * @return a new {@link Uni} that completes with a {@code null} item
      */
-    Uni<Void> advanceAsync(BigDecimal value);
+    @CheckReturnValue
+    Uni<Void> advance(BigDecimal value);
 
     /**
      * Advance the progress and send a {@code notifications/progress} message to the client without waiting for the result.
@@ -42,8 +44,8 @@ public interface ProgressTracker {
      *
      * @throws IllegalStateException if the total has been set and the progress exceeds it
      */
-    default void advance() {
-        advance(step());
+    default void advanceAndForget() {
+        advanceAndForget(step());
     }
 
     /**
@@ -54,8 +56,8 @@ public interface ProgressTracker {
      *
      * @throws IllegalStateException if the total has been set and the progress exceeds it
      */
-    default void advance(long value) {
-        advance(new BigDecimal(value));
+    default void advanceAndForget(long value) {
+        advanceAndForget(new BigDecimal(value));
     }
 
     /**
@@ -66,8 +68,8 @@ public interface ProgressTracker {
      *
      * @throws IllegalStateException if the total has been set and the progress exceeds it
      */
-    default void advance(double value) {
-        advance(new BigDecimal(value));
+    default void advanceAndForget(double value) {
+        advanceAndForget(new BigDecimal(value));
     }
 
     /**
@@ -107,20 +109,20 @@ public interface ProgressTracker {
         Builder setTotal(double total);
 
         /**
-         * The default step is used for {@link ProgressTracker#advance()} method.
+         * The default step is used for {@link ProgressTracker#advanceAndForget()} method.
          *
          * @param step
          * @return self
-         * @see ProgressTracker#advance()
+         * @see ProgressTracker#advanceAndForget()
          */
         Builder setDefaultStep(long step);
 
         /**
-         * The default step is used for {@link ProgressTracker#advance()} method.
+         * The default step is used for {@link ProgressTracker#advanceAndForget()} method.
          *
          * @param step
          * @return self
-         * @see ProgressTracker#advance()
+         * @see ProgressTracker#advanceAndForget()
          */
         Builder setDefaultStep(double step);
 

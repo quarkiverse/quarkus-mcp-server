@@ -15,6 +15,7 @@ import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
@@ -30,6 +31,7 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
@@ -83,6 +85,8 @@ class DotNames {
     static final DotName TOOL_MANAGER = DotName.createSimple(ToolManager.class);
     static final DotName PROMPT_MANAGER = DotName.createSimple(PromptManager.class);
     static final DotName PROGRESS = DotName.createSimple(Progress.class);
+    static final DotName NOTIFICATION = DotName.createSimple(Notification.class);
+    static final DotName ROOTS = DotName.createSimple(Roots.class);
 
     static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
     static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");
