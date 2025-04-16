@@ -118,6 +118,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Completion API
 
@@ -166,6 +167,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Programmatic API
 
@@ -251,6 +253,7 @@ A `@Resource` method may accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Programmatic API
 
@@ -355,6 +358,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Completion API
 
@@ -403,6 +407,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Programmatic API
 
@@ -498,6 +503,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestId`
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
 
 === Programmatic API
 
@@ -800,6 +806,38 @@ public class MyRoots {
 <1> Maps connection ids (client sessions) to lists of roots.
 <2> Obtain the list of roots when an MCP client sends the `notifications/initialized` message.
 <3> Update the list of roots when an MCP client sends the `notifications/roots/list_changed` message.
+
+
+== Sampling
+
+If an MCP client supports the `sampling` capability the server can request LLM sampling from language models via client.
+Any server feature method can accept the `io.quarkiverse.mcp.server.Sampling` parameter.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+   @Tool(description = "A tool that is using sampling...")
+   Uni<String> samplingFoo(Sampling sampling) { <1>
+      if (sampling.isSupported()) {
+         SamplingRequest samplingRequest = sampling.requestBuilder() <2>
+                        .setMaxTokens(100)
+                        .addMessage(SamplingMessage.withUserRole("What's happening?"))
+                        .build();
+         return samplingRequest.send().map(resp -> resp.content().asText().text()); <3>
+      } else {
+         return Uni.createFrom().item("Sampling not supported");
+      }
+   }
+}
+----
+<1> The `Sampling` parameter is injected automatically.
+<2> If sampling is supported a convenient builder can be used to construct a `SamplingRequest`.
+<3> The server sends a sampling request and when a sampling response returns the tool method completes.
 
 == Security
 

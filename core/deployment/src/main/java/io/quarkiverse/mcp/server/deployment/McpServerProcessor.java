@@ -40,11 +40,15 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.ModelHint;
+import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.Role;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -71,6 +75,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
+import io.quarkiverse.mcp.server.runtime.SamplingRequestImpl;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
@@ -470,7 +475,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.REQUEST_ID)
                         || paramType.name().equals(DotNames.REQUEST_URI)
                         || paramType.name().equals(DotNames.PROGRESS)
-                        || paramType.name().equals(DotNames.ROOTS)) {
+                        || paramType.name().equals(DotNames.ROOTS)
+                        || paramType.name().equals(DotNames.SAMPLING)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -479,7 +485,10 @@ class McpServerProcessor {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
                 EmbeddedResource.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
                 FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
-                BlobResourceContents.class, Role.class).methods().build());
+                BlobResourceContents.class, Role.class, SamplingMessage.class, ModelPreferences.class, ModelHint.class,
+                IncludeContext.class,
+                SamplingRequestImpl.class)
+                .methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
     }
@@ -624,9 +633,10 @@ class McpServerProcessor {
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.MCP_CONNECTION)
                     && !param.type().name().equals(DotNames.MCP_LOG)
-                    && !param.type().name().equals(DotNames.ROOTS)) {
+                    && !param.type().name().equals(DotNames.ROOTS)
+                    && !param.type().name().equals(DotNames.SAMPLING)) {
                 throw new IllegalStateException(
-                        "Notification methods must only consume built-in parameter types [McpConnection, McpLog, Roots]: "
+                        "Notification methods must only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling]: "
                                 + method);
             }
         }
@@ -731,6 +741,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.PROGRESS;
         } else if (type.name().equals(DotNames.ROOTS)) {
             return FeatureArgument.Provider.ROOTS;
+        } else if (type.name().equals(DotNames.SAMPLING)) {
+            return FeatureArgument.Provider.SAMPLING;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

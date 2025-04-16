@@ -31,6 +31,11 @@ class RootsImpl implements Roots {
     }
 
     @Override
+    public boolean isSupported() {
+        return initialRequest.supportsRoots();
+    }
+
+    @Override
     public Uni<List<Root>> list() {
         if (!initialRequest.supportsRoots()) {
             throw new IllegalStateException(

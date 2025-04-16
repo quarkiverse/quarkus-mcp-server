@@ -45,11 +45,18 @@ public class Messages {
     }
 
     public static JsonObject newRequest(Object id, String method) {
-        JsonObject response = new JsonObject();
-        response.put("jsonrpc", JsonRPC.VERSION);
-        response.put("id", id);
-        response.put("method", method);
-        return response;
+        return newRequest(id, method, null);
+    }
+
+    public static JsonObject newRequest(Object id, String method, Object params) {
+        JsonObject request = new JsonObject();
+        request.put("jsonrpc", JsonRPC.VERSION);
+        request.put("id", id);
+        request.put("method", method);
+        if (params != null) {
+            request.put("params", params);
+        }
+        return request;
     }
 
     public static boolean isResponse(JsonObject message) {

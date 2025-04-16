@@ -263,7 +263,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                     new RequestId(argumentProviders.requestId()),
                     new RequestUri(argumentProviders.uri()),
                     ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders));
+                    RootsImpl.from(argumentProviders),
+                    SamplingImpl.from(argumentProviders));
         }
 
     }

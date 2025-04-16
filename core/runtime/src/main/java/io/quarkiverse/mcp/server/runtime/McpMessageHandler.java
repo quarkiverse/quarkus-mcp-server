@@ -174,6 +174,7 @@ public class McpMessageHandler {
     static final String RESOURCES_UNSUBSCRIBE = "resources/unsubscribe";
     static final String PING = "ping";
     static final String ROOTS_LIST = "roots/list";
+    static final String SAMPLING_CREATE_MESSAGE = "sampling/createMessage";
     static final String COMPLETION_COMPLETE = "completion/complete";
     static final String LOGGING_SET_LEVEL = "logging/setLevel";
     // non-standard messages

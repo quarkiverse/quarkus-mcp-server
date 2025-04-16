@@ -13,6 +13,11 @@ import io.smallrye.mutiny.Uni;
 public interface Roots {
 
     /**
+     * @return {@code true} if the client supports the {@code roots} capability, {@code false} otherwise
+     */
+    boolean isSupported();
+
+    /**
      * Send a {@code roots/list} message.
      *
      * @throws IllegalStateException if the client does not support the {@code roots} capability
