@@ -70,7 +70,7 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
     }
 
     record ResourceTemplateArguments(Map<String, String> args, McpConnection connection, McpLog log, RequestId requestId,
-            RequestUri requestUri, Progress progress, Roots roots) {
+            RequestUri requestUri, Progress progress, Roots roots, Sampling sampling) {
 
     }
 

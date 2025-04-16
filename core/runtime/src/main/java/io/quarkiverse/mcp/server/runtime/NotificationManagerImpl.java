@@ -177,8 +177,9 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         @Override
         protected NotificationArguments createArguments(ArgumentProviders argumentProviders) {
             return new NotificationArguments(argumentProviders.connection(),
-                    log(Feature.NOTIFICATION.toString().toLowerCase() + ":" + name, name, argumentProviders), new RootsImpl(
-                            argumentProviders.connection().initialRequest(), argumentProviders.sender(), responseHandlers));
+                    log(Feature.NOTIFICATION.toString().toLowerCase() + ":" + name, name, argumentProviders),
+                    RootsImpl.from(argumentProviders),
+                    SamplingImpl.from(argumentProviders));
         }
 
     }

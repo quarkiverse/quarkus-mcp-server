@@ -170,7 +170,8 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
                     log(feature().toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders));
+                    RootsImpl.from(argumentProviders),
+                    SamplingImpl.from(argumentProviders));
         }
 
     }

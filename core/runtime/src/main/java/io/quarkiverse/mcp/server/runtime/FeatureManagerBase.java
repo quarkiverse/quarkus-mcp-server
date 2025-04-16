@@ -139,6 +139,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = ProgressImpl.from(argProviders);
             } else if (arg.provider() == Provider.ROOTS) {
                 ret[idx] = RootsImpl.from(argProviders);
+            } else if (arg.provider() == Provider.SAMPLING) {
+                ret[idx] = SamplingImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.required()) {

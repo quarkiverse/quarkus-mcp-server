@@ -186,7 +186,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                     log(Feature.PROMPT.toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders));
+                    RootsImpl.from(argumentProviders),
+                    SamplingImpl.from(argumentProviders));
         }
 
         @Override

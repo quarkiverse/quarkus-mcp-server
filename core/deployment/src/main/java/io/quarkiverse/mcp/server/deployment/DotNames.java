@@ -32,6 +32,7 @@ import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
@@ -87,6 +88,7 @@ class DotNames {
     static final DotName PROGRESS = DotName.createSimple(Progress.class);
     static final DotName NOTIFICATION = DotName.createSimple(Notification.class);
     static final DotName ROOTS = DotName.createSimple(Roots.class);
+    static final DotName SAMPLING = DotName.createSimple(Sampling.class);
 
     static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
     static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");

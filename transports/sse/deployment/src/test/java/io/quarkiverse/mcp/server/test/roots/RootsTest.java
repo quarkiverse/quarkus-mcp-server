@@ -107,7 +107,7 @@ public class RootsTest extends McpServerTest {
 
         @Notification(Type.INITIALIZED)
         void init(McpConnection connection, Roots roots) {
-            if (connection.initialRequest().supportsRoots()) {
+            if (roots.isSupported()) {
                 rootsMap.put(connection.id(), roots.listAndAwait());
             }
             INIT_LATCH.countDown();

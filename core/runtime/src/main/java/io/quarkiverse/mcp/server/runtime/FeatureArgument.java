@@ -24,5 +24,6 @@ public record FeatureArgument(String name, String description, boolean required,
         MCP_LOG,
         PROGRESS,
         ROOTS,
+        SAMPLING,
     }
 }
