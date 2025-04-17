@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.sse.client;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -109,9 +110,17 @@ public abstract class SseClient {
         @Override
         public void onError(Throwable t) {
             Throwable root = getRootCause(t);
-            if (!(root instanceof EOFException)) {
-                LOG.errorf(t, "Error in SSE stream");
+            if (root instanceof IOException io) {
+                if (io.getMessage().contains("Request cancelled")) {
+                    // This is ok - no need to log anything
+                    return;
+                }
             }
+            if (root instanceof EOFException) {
+                // EOF is not a problem
+                return;
+            }
+            LOG.errorf(t, "Error in SSE stream");
         }
 
         @Override

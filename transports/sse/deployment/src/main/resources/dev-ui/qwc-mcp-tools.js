@@ -31,6 +31,9 @@ export class QwcMcpTools extends LitElement {
         code {
           font-size: 85%;
         }
+        div.buttons {
+          margin-top: 2em;
+        }
         `;
 
     static properties = {
@@ -63,22 +66,45 @@ export class QwcMcpTools extends LitElement {
     _renderToolCall() {
         return html`
         <div class="tool-call">
-        <vaadin-split-layout>
+        <h3>Call tool: ${this._selectedTool.name}</h3>
+        <vaadin-split-layout style="min-height: 10em;">
             <master-content style="width: 50%;">
-                <p>Calling tool <strong>${this._selectedTool.name}</strong> with arguments:</p>
-                <qui-code-block id="tool_request_text" mode='json' showLineNumbers
+                <vaadin-checkbox 
+                        id="tool_force_new_session" 
+                        label="Force new session" 
+                        helper-text="Initialize a new MCP session for the request">
+                </vaadin-checkbox>
+                <vaadin-text-field 
+                        id="tool_bearer_token"
+                        label="Bearer Token"
+                        value=""
+                        clear-button-visible
+                        style="width: 97%;">
+                        <vaadin-tooltip 
+                            slot="tooltip" 
+                            text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
+                        </vaadin-tooltip>
+                </vaadin-text-field>
+                <br>
+                Arguments:
+                <qui-code-block 
+                    id="tool_request_text"
+                    mode='json' 
+                    showLineNumbers
                     content='${this._prettyJson(this._selectedTool.inputPrototype)}'
                     value='${this._prettyJson(this._selectedTool.inputPrototype)}' 
-                    theme='${themeState.theme.name}' editable>
+                    theme='${themeState.theme.name}' 
+                    editable>
                 </qui-code-block>
             </master-content>
-            <detail-content style="width: 50%;">
-                <qui-code-block id="tool_response_text" mode='json' showLineNumbers content='\n\n\n\n\n'
+            <detail-content style="width: 50%; padding-left: 1em;">
+                Response:
+                <qui-code-block id="tool_response_text" mode='json' showLineNumbers content=''
                     theme='${themeState.theme.name}'>
                 </qui-code-block>
             </detail-content>
         </vaadin-split-layout>
-        <div>
+        <div class="buttons">
         <vaadin-button @click="${this._callTool}" theme="primary">
            Call
         </vaadin-button>
@@ -178,12 +204,16 @@ export class QwcMcpTools extends LitElement {
     }
 
     _callTool() {
+        const bearerToken = this.shadowRoot.getElementById('tool_bearer_token');
+        const forceNewSession = this.shadowRoot.getElementById('tool_force_new_session');
         const requestTextArea = this.shadowRoot.getElementById('tool_request_text');
         const responseTextArea = this.shadowRoot.getElementById('tool_response_text');
         const content = requestTextArea.getAttribute('value');
         this.jsonRpc.callTool({
             name: this._selectedTool.name,
-            args: content
+            args: content,
+            bearerToken: bearerToken.value,
+            forceNewSession: forceNewSession.checked
         }).then(jsonRpcResponse => {
             responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
         });

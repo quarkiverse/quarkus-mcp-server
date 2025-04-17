@@ -31,6 +31,9 @@ export class QwcMcpPromptCompletions extends LitElement {
         code {
           font-size: 85%;
         }
+        div.buttons {
+          margin-top: 2em;
+        }
         `;
 
     static properties = {
@@ -63,25 +66,39 @@ export class QwcMcpPromptCompletions extends LitElement {
     _renderPromptComplete() {
         return html`
         <div class="prompt-complete">
+        <h3>Complete prompt: ${this._selectedCompletion.name}</h3>
         <vaadin-split-layout>
             <master-content style="width: 50%;">
-                <p>Complete the argument <strong>${this._selectedCompletion.argumentName}</strong> for prompt <strong>${this._selectedCompletion.name}</strong>:
-                <br>
+                <vaadin-checkbox 
+                    id="prompt_force_new_session" 
+                    label="Force new session" 
+                    helper-text="Initialize a new MCP session for the request">
+                </vaadin-checkbox>    
+                <vaadin-text-field 
+                    id="prompt_bearer_token"
+                    label="Bearer Token"
+                    value="" 
+                    clear-button-visible
+                    style="width: 97%;">
+                    <vaadin-tooltip 
+                        slot="tooltip" 
+                        text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
+                    </vaadin-tooltip>
+                </vaadin-text-field>
                 <vaadin-text-field
-                                id="prompt_completion_text"
-                                value=""
-                                placeholder="Value to autocomplete"
-                                style="font-family: monospace;width: 15em;"
-                             >
-                </p>
+                    id="prompt_completion_text"
+                    value=""
+                    label="Argument: ${this._selectedCompletion.argumentName}"
+                    style="font-family: monospace;width: 15em;">
+                </vaadin-text-field>
             </master-content>
             <detail-content style="width: 50%;">
-                <qui-code-block id="prompt_completion_response_text" mode='json' showLineNumbers content='\n\n\n\n\n'
+                <qui-code-block id="prompt_completion_response_text" mode='json' showLineNumbers content=''
                     theme='${themeState.theme.name}'>
                 </qui-code-block>
             </detail-content>
         </vaadin-split-layout>
-        <div>
+        <div class="buttons">
         <vaadin-button @click="${this._completePrompt}" theme="primary">
            Complete
         </vaadin-button>
@@ -135,13 +152,17 @@ export class QwcMcpPromptCompletions extends LitElement {
     }
 
     _completePrompt() {
+        const bearerToken = this.shadowRoot.getElementById('prompt_bearer_token');
+        const forceNewSession = this.shadowRoot.getElementById('prompt_force_new_session');
         const requestInput = this.shadowRoot.getElementById('prompt_completion_text');
         const responseTextArea = this.shadowRoot.getElementById('prompt_completion_response_text');
         const content = requestInput.value;
         this.jsonRpc.completePrompt({
             name: this._selectedCompletion.name,
             argumentName: this._selectedCompletion.argumentName,
-            argumentValue: content
+            argumentValue: content,
+            bearerToken: bearerToken.value,
+            forceNewSession: forceNewSession.checked
         }).then(jsonRpcResponse => {
             responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
         });

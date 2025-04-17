@@ -12,17 +12,23 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import jakarta.enterprise.context.ApplicationScoped;
+
+import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
@@ -42,6 +48,8 @@ import io.vertx.core.json.JsonObject;
 @ApplicationScoped
 public class SseMcpJsonRPCService {
 
+    private static final Logger LOG = Logger.getLogger(SseMcpJsonRPCService.class);
+
     private final ToolManager toolManager;
     private final PromptManager promptManager;
     private final PromptCompletionManager promptCompletionManager;
@@ -49,11 +57,9 @@ public class SseMcpJsonRPCService {
     private final ResourceTemplateManager resourceTemplateManager;
     private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
 
-    private final DevUISseClient sseClient;
-    private final AtomicReference<URI> messageEndpoint;
+    private final URI sseEndpoint;
+    private final DevUIClient client;
     private final HttpClient httpClient;
-    private final AtomicBoolean initialized;
-    private final AtomicInteger idGenerator;
 
     public SseMcpJsonRPCService(ToolManager toolManager, PromptManager promptManager, ResourceManager resourceManager,
             ResourceTemplateManager resourceTemplateManager, PromptCompletionManager promptCompletionManager,
@@ -65,19 +71,17 @@ public class SseMcpJsonRPCService {
         this.resourceManager = resourceManager;
         this.resourceTemplateManager = resourceTemplateManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
-        this.sseClient = new DevUISseClient(URI.create(new StringBuilder("http://")
+        this.sseEndpoint = URI.create(new StringBuilder("http://")
                 .append(httpConfig.host())
                 .append(":")
                 .append(httpConfig.port())
                 .append(httpBuildConfig.rootPath())
                 .append(pathToAppend(httpBuildConfig.rootPath(), mcpSseBuildConfig.rootPath()))
-                .append(pathToAppend(mcpSseBuildConfig.rootPath(), "sse")).toString()));
-        this.messageEndpoint = new AtomicReference<>();
+                .append(pathToAppend(mcpSseBuildConfig.rootPath(), "sse")).toString());
+        this.client = new DevUIClient();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        this.initialized = new AtomicBoolean();
-        this.idGenerator = new AtomicInteger();
     }
 
     public JsonArray getToolsData() {
@@ -201,79 +205,42 @@ public class SseMcpJsonRPCService {
         inputPrototype.put(arg.name(), arg.type().getTypeName() + ": " + arg.description());
     }
 
-    public JsonObject callTool(String name, JsonObject args) throws IOException, InterruptedException {
+    public JsonObject callTool(String name, JsonObject args, String bearerToken, boolean forceNewSession)
+            throws IOException, InterruptedException {
         if (toolManager.getTool(name) == null) {
             return new JsonObject().put("error", "Tool not found: " + name);
         }
-        JsonObject initRet = ensureInitialized();
-        if (initRet != null) {
-            return initRet;
-        }
-        Integer requestId = idGenerator.incrementAndGet();
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", requestId)
                 .put("method", "tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", args));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(messageEndpoint.get())
-                .version(Version.HTTP_1_1)
-                .POST(BodyPublishers.ofString(message.encode()))
-                .build();
-        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-        if (response.statusCode() != 200) {
-            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
-        }
-        // Wait for the response
-        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+        return client.sendRequest(message, bearerToken, forceNewSession);
     }
 
-    public JsonObject getPrompt(String name, JsonObject args) throws IOException, InterruptedException {
+    public JsonObject getPrompt(String name, JsonObject args, String bearerToken, boolean forceNewSession)
+            throws IOException, InterruptedException {
         if (promptManager.getPrompt(name) == null) {
             return new JsonObject().put("error", "Prompt not found: " + name);
         }
-        JsonObject initRet = ensureInitialized();
-        if (initRet != null) {
-            return initRet;
-        }
-        Integer requestId = idGenerator.incrementAndGet();
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", requestId)
                 .put("method", "prompts/get")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", args));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(messageEndpoint.get())
-                .version(Version.HTTP_1_1)
-                .POST(BodyPublishers.ofString(message.encode()))
-                .build();
-        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-        if (response.statusCode() != 200) {
-            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
-        }
-        // Wait for the response
-        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+        return client.sendRequest(message, bearerToken, forceNewSession);
     }
 
-    public JsonObject completePrompt(String name, String argumentName, String argumentValue)
+    public JsonObject completePrompt(String name, String argumentName, String argumentValue, String bearerToken,
+            boolean forceNewSession)
             throws IOException, InterruptedException {
         if (promptCompletionManager.getCompletion(name, argumentName) == null) {
             return new JsonObject().put("error", "Prompt completion not found: " + name);
         }
-        JsonObject initRet = ensureInitialized();
-        if (initRet != null) {
-            return initRet;
-        }
-        Integer requestId = idGenerator.incrementAndGet();
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", requestId)
                 .put("method", "completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
@@ -282,62 +249,30 @@ public class SseMcpJsonRPCService {
                         .put("argument", new JsonObject()
                                 .put("name", argumentName)
                                 .put("value", argumentValue)));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(messageEndpoint.get())
-                .version(Version.HTTP_1_1)
-                .POST(BodyPublishers.ofString(message.encode()))
-                .build();
-        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-        if (response.statusCode() != 200) {
-            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
-        }
-        // Wait for the response
-        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+        return client.sendRequest(message, bearerToken, forceNewSession);
     }
 
-    public JsonObject readResource(String uri) throws IOException, InterruptedException {
+    public JsonObject readResource(String uri, String bearerToken, boolean forceNewSession)
+            throws IOException, InterruptedException {
         if (uri == null || uri.isBlank()) {
             return new JsonObject().put("error", "Resource uri must be set");
         }
-        JsonObject initRet = ensureInitialized();
-        if (initRet != null) {
-            return initRet;
-        }
-        Integer requestId = idGenerator.incrementAndGet();
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", requestId)
                 .put("method", "resources/read")
                 .put("params", new JsonObject()
                         .put("uri", uri));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(messageEndpoint.get())
-                .version(Version.HTTP_1_1)
-                .POST(BodyPublishers.ofString(message.encode()))
-                .build();
-        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-        if (response.statusCode() != 200) {
-            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
-        }
-        // Wait for the response
-        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+        return client.sendRequest(message, bearerToken, forceNewSession);
     }
 
-    public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue)
+    public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue, String bearerToken,
+            boolean forceNewSession)
             throws IOException, InterruptedException {
         if (resourceTemplateCompletionManager.getCompletion(name, argumentName) == null) {
             return new JsonObject().put("error", "Resource template completion not found: " + name);
         }
-        JsonObject initRet = ensureInitialized();
-        if (initRet != null) {
-            return initRet;
-        }
-        Integer requestId = idGenerator.incrementAndGet();
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
-                .put("id", requestId)
                 .put("method", "completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
@@ -347,62 +282,7 @@ public class SseMcpJsonRPCService {
                                 .put("name", argumentName)
                                 .put("value", argumentValue)));
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(messageEndpoint.get())
-                .version(Version.HTTP_1_1)
-                .POST(BodyPublishers.ofString(message.encode()))
-                .build();
-        HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-        if (response.statusCode() != 200) {
-            return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
-        }
-        // Wait for the response
-        return new JsonObject().put("response", sseClient.awaitResponse(requestId));
-    }
-
-    private JsonObject ensureInitialized() throws InterruptedException, IOException {
-        if (initialized.compareAndSet(false, true)) {
-            sseClient.connect(httpClient, Map.of());
-            sseClient.awaitEndpoint();
-
-            Integer initId = idGenerator.incrementAndGet();
-            JsonObject initMessage = new JsonObject()
-                    .put("jsonrpc", JsonRPC.VERSION)
-                    .put("id", initId)
-                    .put("method", "initialize")
-                    .put("params",
-                            new JsonObject()
-                                    .put("clientInfo", new JsonObject()
-                                            .put("name", "devui-client")
-                                            .put("version", "1.0"))
-                                    .put("protocolVersion", "2024-11-05"));
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(messageEndpoint.get())
-                    .version(Version.HTTP_1_1)
-                    .POST(BodyPublishers.ofString(initMessage.encode()))
-                    .build();
-            HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
-            if (response.statusCode() != 200) {
-                return new JsonObject().put("error", "Init failed with invalid HTTP status: " + response.statusCode());
-            }
-            sseClient.awaitResponse(initId);
-
-            // Send "notifications/initialized"
-            JsonObject nofitication = new JsonObject()
-                    .put("jsonrpc", JsonRPC.VERSION)
-                    .put("method", "notifications/initialized");
-            request = HttpRequest.newBuilder()
-                    .uri(messageEndpoint.get())
-                    .version(Version.HTTP_1_1)
-                    .POST(BodyPublishers.ofString(nofitication.encode()))
-                    .build();
-            response = httpClient.send(request, BodyHandlers.discarding());
-            if (response.statusCode() != 200) {
-                return new JsonObject().put("error",
-                        "Init notification failed with invalid HTTP status: " + response.statusCode());
-            }
-        }
-        return null;
+        return client.sendRequest(message, bearerToken, forceNewSession);
     }
 
     private String pathToAppend(String prev, String path) {
@@ -421,6 +301,97 @@ public class SseMcpJsonRPCService {
         }
     }
 
+    class DevUIClient {
+
+        private final Lock lock = new ReentrantLock();
+
+        private final AtomicInteger idGenerator = new AtomicInteger();
+
+        private volatile DevUISseClient sseClient;
+
+        private volatile CompletableFuture<HttpResponse<Void>> sseFuture;
+
+        private final AtomicReference<URI> messageEndpoint = new AtomicReference<>();
+
+        JsonObject sendRequest(JsonObject message, String bearerToken, boolean forceNewSession)
+                throws InterruptedException, IOException {
+            lock.lock();
+            try {
+                boolean init = sseClient == null || forceNewSession;
+                if (init) {
+                    if (sseFuture != null) {
+                        try {
+                            sseFuture.cancel(true);
+                        } catch (Throwable e) {
+                            LOG.warnf(e, "Unable to close the SSE connection");
+                        }
+                    }
+                    sseClient = new DevUISseClient(sseEndpoint, me -> messageEndpoint.set(me));
+                    Map<String, String> headers = new HashMap<>();
+                    if (bearerToken != null && !bearerToken.isBlank()) {
+                        headers.put("Authorization", "Bearer " + bearerToken);
+                    }
+                    sseFuture = sseClient.connect(httpClient, headers);
+                    sseClient.awaitEndpoint();
+
+                    Integer initId = idGenerator.incrementAndGet();
+                    JsonObject initMessage = new JsonObject()
+                            .put("jsonrpc", JsonRPC.VERSION)
+                            .put("id", initId)
+                            .put("method", "initialize")
+                            .put("params",
+                                    new JsonObject()
+                                            .put("clientInfo", new JsonObject()
+                                                    .put("name", "devui-client")
+                                                    .put("version", "1.0"))
+                                            .put("protocolVersion", "2024-11-05"));
+
+                    HttpRequest request = newRequest(bearerToken, initMessage.encode());
+                    HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
+                    if (response.statusCode() != 200) {
+                        return new JsonObject().put("error", "Init failed with invalid HTTP status: " + response.statusCode());
+                    }
+                    sseClient.awaitResponse(initId);
+
+                    // Send "notifications/initialized"
+                    JsonObject nofitication = new JsonObject()
+                            .put("jsonrpc", JsonRPC.VERSION)
+                            .put("method", "notifications/initialized");
+                    request = newRequest(bearerToken, nofitication.encode());
+                    response = httpClient.send(request, BodyHandlers.discarding());
+                    if (response.statusCode() != 200) {
+                        return new JsonObject().put("error",
+                                "Init notification failed with invalid HTTP status: " + response.statusCode());
+                    }
+                }
+
+                Integer requestId = idGenerator.incrementAndGet();
+                message.put("id", requestId);
+                HttpRequest request = newRequest(bearerToken, message.encode());
+                HttpResponse<?> response = httpClient.send(request, BodyHandlers.discarding());
+                if (response.statusCode() != 200) {
+                    return new JsonObject().put("error", "Invalid HTTP status: " + response.statusCode());
+                }
+                // Wait for the response
+                return new JsonObject().put("response", sseClient.awaitResponse(requestId));
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        private HttpRequest newRequest(String bearerToken, String body) {
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(messageEndpoint.get())
+                    .version(Version.HTTP_1_1)
+                    .POST(BodyPublishers.ofString(body));
+            if (bearerToken != null && !bearerToken.isBlank()) {
+                builder.header("Authorization", "Bearer " + bearerToken);
+            }
+            return builder.build();
+        }
+
+    }
+
     class DevUISseClient extends SseClient {
 
         private static final int AWAIT_ATTEMPTS = 50;
@@ -428,11 +399,14 @@ public class SseMcpJsonRPCService {
 
         private final CountDownLatch endpointLatch = new CountDownLatch(1);
 
+        private final Consumer<URI> messageEndpointConsumer;
+
         private final ConcurrentMap<Integer, JsonObject> responses;
 
-        public DevUISseClient(URI sseUri) {
+        public DevUISseClient(URI sseUri, Consumer<URI> messageEndpointConsumer) {
             super(sseUri);
             this.responses = new ConcurrentHashMap<Integer, JsonObject>();
+            this.messageEndpointConsumer = messageEndpointConsumer;
         }
 
         void awaitEndpoint() throws InterruptedException {
@@ -455,7 +429,7 @@ public class SseMcpJsonRPCService {
         protected void process(SseEvent event) {
             if ("endpoint".equals(event.name())) {
                 String endpoint = event.data().strip();
-                messageEndpoint.set(connectUri.resolve(endpoint));
+                messageEndpointConsumer.accept(connectUri.resolve(endpoint));
                 endpointLatch.countDown();
             } else if ("message".equals(event.name())) {
                 JsonObject json = new JsonObject(event.data());
