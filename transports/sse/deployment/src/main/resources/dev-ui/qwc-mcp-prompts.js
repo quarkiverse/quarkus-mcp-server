@@ -63,9 +63,29 @@ export class QwcMcpPrompts extends LitElement {
     _renderPromptGet() {
         return html`
         <div class="prompt-get">
+        <h3>Get prompt: ${this._selectedPrompt.name}</h3>
         <vaadin-split-layout>
             <master-content style="width: 50%;">
-                <p>Get prompt <strong>${this._selectedPrompt.name}</strong> with arguments:</p>
+                <vaadin-horizontal-layout theme="spacing" style="align-items: center;">
+                            <vaadin-text-field 
+                                    id="prompt_bearer_token"
+                                    label="Bearer Token"
+                                    value="" 
+                                    clear-button-visible
+                                    style="width: 20em;">
+                                    <vaadin-tooltip 
+                                        slot="tooltip" 
+                                        text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
+                                    </vaadin-tooltip>
+                            </vaadin-text-field>
+                            <vaadin-checkbox 
+                                    id="prompt_force_new_session" 
+                                    label="Force new session" 
+                                    helper-text="Initialize a new MCP session for the request">
+                            </vaadin-checkbox>
+                </vaadin-horizontal-layout>
+                            
+                Arguments:
                 <qui-code-block id="prompt_request_text" mode='json' showLineNumbers
                     content='${this._prettyJson(this._selectedPrompt.inputPrototype)}'
                     value='${this._prettyJson(this._selectedPrompt.inputPrototype)}' 
@@ -73,7 +93,7 @@ export class QwcMcpPrompts extends LitElement {
                 </qui-code-block>
             </master-content>
             <detail-content style="width: 50%;">
-                <qui-code-block id="prompt_response_text" mode='json' showLineNumbers content='\n\n\n\n\n'
+                <qui-code-block id="prompt_response_text" mode='json' showLineNumbers content=''
                     theme='${themeState.theme.name}'>
                 </qui-code-block>
             </detail-content>
@@ -170,12 +190,16 @@ export class QwcMcpPrompts extends LitElement {
     }
 
     _getPrompt() {
+        const bearerToken = this.shadowRoot.getElementById('prompt_bearer_token');
+        const forceNewSession = this.shadowRoot.getElementById('prompt_force_new_session');
         const requestTextArea = this.shadowRoot.getElementById('prompt_request_text');
         const responseTextArea = this.shadowRoot.getElementById('prompt_response_text');
         const content = requestTextArea.getAttribute('value');
         this.jsonRpc.getPrompt({
             name: this._selectedPrompt.name,
-            args: content
+            args: content,
+            bearerToken: bearerToken.value,
+            forceNewSession: forceNewSession.checked
         }).then(jsonRpcResponse => {
             responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
         });
