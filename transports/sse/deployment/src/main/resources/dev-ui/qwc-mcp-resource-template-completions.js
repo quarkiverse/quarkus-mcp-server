@@ -25,7 +25,7 @@ export class QwcMcpResourceTemplateCompletions extends LitElement {
           padding-bottom: 10px;
           height: 100%;
         }
-        .prompt-get {
+        .resource-template-complete {
           padding-left: 0.5em;
         }
         code {
@@ -62,21 +62,38 @@ export class QwcMcpResourceTemplateCompletions extends LitElement {
 
     _renderResourceTemplateComplete() {
         return html`
-        <div class="prompt-get">
+        <div class="resource-template-complete">
+        <h3>Complete resource template: ${this._selectedCompletion.name}</h3>
         <vaadin-split-layout>
             <master-content style="width: 50%;">
-                <p>Complete the argument <strong>${this._selectedCompletion.argumentName}</strong> for resource template <strong>${this._selectedCompletion.name}</strong>:
-                <br>
-                            <vaadin-text-field
-                                id="resource_template_completion_text"
-                                value=""
-                                placeholder="Value to autocomplete"
-                                style="font-family: monospace;width: 15em;"
-                             >
+                <vaadin-horizontal-layout theme="spacing" style="align-items: center;">
+                                 <vaadin-text-field 
+                                     id="resource_bearer_token"
+                                     label="Bearer Token"
+                                     value="" 
+                                     clear-button-visible
+                                     style="width: 20em;">
+                                     <vaadin-tooltip 
+                                        slot="tooltip" 
+                                        text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
+                                     </vaadin-tooltip>
+                                 </vaadin-text-field>
+                                 <vaadin-checkbox 
+                                    id="resource_force_new_session" 
+                                    label="Force new session" 
+                                    helper-text="Initialize a new MCP session for the request">
+                                 </vaadin-checkbox>
+                            </vaadin-horizontal-layout>
+                <vaadin-text-field
+                     id="resource_template_completion_text"
+                     value=""
+                     label="Argument: ${this._selectedCompletion.argumentName}"
+                     style="font-family: monospace;width: 15em;"
+                >
                 </p>
             </master-content>
             <detail-content style="width: 50%;">
-                <qui-code-block id="resource_template_completion_response_text" mode='json' showLineNumbers content='\n\n\n\n\n'
+                <qui-code-block id="resource_template_completion_response_text" mode='json' showLineNumbers content=''
                     theme='${themeState.theme.name}'>
                 </qui-code-block>
             </detail-content>
@@ -135,13 +152,17 @@ export class QwcMcpResourceTemplateCompletions extends LitElement {
     }
 
     _completeResourceTemplate() {
+        const bearerToken = this.shadowRoot.getElementById('resource_bearer_token');
+        const forceNewSession = this.shadowRoot.getElementById('resource_force_new_session');
         const requestInput = this.shadowRoot.getElementById('resource_template_completion_text');
         const responseTextArea = this.shadowRoot.getElementById('resource_template_completion_response_text');
         const content = requestInput.value;
         this.jsonRpc.completeResourceTemplate({
             name: this._selectedCompletion.name,
             argumentName: this._selectedCompletion.argumentName,
-            argumentValue: content
+            argumentValue: content,
+            bearerToken: bearerToken.value,
+            forceNewSession: forceNewSession.checked
         }).then(jsonRpcResponse => {
             responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
         });

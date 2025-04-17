@@ -63,12 +63,30 @@ export class QwcMcpResources extends LitElement {
     _renderResourceRead() {
         return html`
         <div class="resource-read">
+        <h3>Read resource: ${this._selectedResource.name}</h3>
         <vaadin-split-layout>
             <master-content style="width: 50%;">
-                <p>Read resource <strong>${this._selectedResource.name}</strong> with URI <code>${this._selectedResource.uri}</code></p>
+                    <vaadin-horizontal-layout theme="spacing" style="align-items: center;">
+                            <vaadin-text-field 
+                                    id="resource_bearer_token"
+                                    label="Bearer Token"
+                                    value="" 
+                                    clear-button-visible
+                                    style="width: 20em;">
+                                    <vaadin-tooltip 
+                                        slot="tooltip" 
+                                        text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
+                                    </vaadin-tooltip>
+                            </vaadin-text-field>
+                            <vaadin-checkbox 
+                                    id="resource_force_new_session" 
+                                    label="Force new session" 
+                                    helper-text="Initialize a new MCP session for the request">
+                            </vaadin-checkbox>
+                    </vaadin-horizontal-layout>
             </master-content>
             <detail-content style="width: 50%;">
-                <qui-code-block id="resource_response_text" mode='json' showLineNumbers content='\n\n\n\n\n'
+                <qui-code-block id="resource_response_text" mode='json' showLineNumbers content=''
                     theme='${themeState.theme.name}'>
                 </qui-code-block>
             </detail-content>
@@ -144,9 +162,13 @@ export class QwcMcpResources extends LitElement {
     }
 
     _readResource() {
+        const bearerToken = this.shadowRoot.getElementById('resource_bearer_token');
+        const forceNewSession = this.shadowRoot.getElementById('resource_force_new_session');
         const responseTextArea = this.shadowRoot.getElementById('resource_response_text');
         this.jsonRpc.readResource({
             uri: this._selectedResource.uri,
+            bearerToken: bearerToken.value,
+            forceNewSession: forceNewSession.checked
         }).then(jsonRpcResponse => {
             responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
         });
