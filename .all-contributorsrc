@@ -70,6 +70,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "sberyozkin",
+      "name": "Sergey Beryozkin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/467639?v=4",
+      "profile": "https://github.com/sberyozkin",
+      "contributions": [
+        "example"
+      ]
     }
   ],
   "contributorsPerLine": 7,
