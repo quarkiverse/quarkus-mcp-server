@@ -1,6 +1,6 @@
 # Quarkus Model Context Protocol (MCP) Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-7-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-8-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -95,6 +95,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/gastaldi"><img src="https://avatars.githubusercontent.com/u/54133?v=4?s=100" width="100px;" alt="George Gastaldi"/><br /><sub><b>George Gastaldi</b></sub></a><br /><a href="#infra-gastaldi" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/jmartisk"><img src="https://avatars.githubusercontent.com/u/937315?v=4?s=100" width="100px;" alt="Jan Martiska"/><br /><sub><b>Jan Martiska</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=jmartisk" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://iocanel.com"><img src="https://avatars.githubusercontent.com/u/402008?v=4?s=100" width="100px;" alt="Ioannis Canellos"/><br /><sub><b>Ioannis Canellos</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=iocanel" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sberyozkin"><img src="https://avatars.githubusercontent.com/u/467639?v=4?s=100" width="100px;" alt="Sergey Beryozkin"/><br /><sub><b>Sergey Beryozkin</b></sub></a><br /><a href="#example-sberyozkin" title="Examples">💡</a></td>
     </tr>
   </tbody>
 </table>
