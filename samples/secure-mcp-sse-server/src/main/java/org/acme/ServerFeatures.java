@@ -10,7 +10,7 @@ public class ServerFeatures {
 
     @Inject
     SecurityIdentity identity;
-
+    
     @Authenticated
     @Tool(name = "user-name-provider", description = "Provides a name of the current user")
     TextContent provideUserName() {
