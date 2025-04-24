@@ -278,7 +278,7 @@ public class MyResources {
           .setDescription("Alpha resource file")
           .setHandler(
               args -> new ResourceResponse(
-                                    List.of(BlobResourceContents.create(args.requestUri().value(), Files.readAllBytes(Paths.ALPHA)))))
+                                    List.of(BlobResourceContents.create(args.requestUri().value(), Files.readAllBytes(Path.of("alpha.txt"))))))
           .register(); <4>
     }
 }

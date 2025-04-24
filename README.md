@@ -64,7 +64,7 @@ public class ServerFeatures {
 
     @Resource(uri = "file:///project/alpha")
     BlobResourceContents alpha(RequestUri uri) throws IOException{
-        return BlobResourceContents.create(uri.value(), Files.readAllBytes(Paths.ALPHA));
+        return BlobResourceContents.create(uri.value(), Files.readAllBytes(Path.of("alpha.txt")));
     }
 
 }
