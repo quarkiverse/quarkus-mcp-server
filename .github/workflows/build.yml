@@ -58,10 +58,11 @@ jobs:
       - name: Build with Maven (Native)
         run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
 
-      - name: Build samples/secure-mcp-sse-server with Maven
+      - name: Build sample projects with Maven
         run: |
           set -e
-          (cd samples/secure-mcp-sse-server && ./mvnw -B verify) &
-          (cd samples/weather && ./mvnw -B verify) &
+          for dir in samples/*/ ; do
+            (cd "$dir" && ./mvnw -B verify) &
+          done
           wait
 
