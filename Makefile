@@ -3,6 +3,8 @@
 build:
 	set -e
 
+	mvn --version
+
 	echo -e "☕️👷‍♂️Java Build"
 	mvn -B clean install -fae -Dno-format
 
