@@ -14,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import jakarta.annotation.Priority;
 import jakarta.enterprise.invoke.Invoker;
 import jakarta.inject.Singleton;
 
@@ -32,12 +34,16 @@ import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
+import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
+import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.ModelHint;
@@ -53,6 +59,7 @@ import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
+import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
 import io.quarkiverse.mcp.server.runtime.EncoderMapper;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.Feature;
@@ -100,11 +107,14 @@ import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.AdditionalIndexedClassesBuildItem;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
+import io.quarkus.deployment.util.JandexUtil;
 import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
@@ -116,6 +126,8 @@ import io.quarkus.gizmo.ResultHandle;
 
 class McpServerProcessor {
 
+    private static final Logger LOG = Logger.getLogger(McpServerProcessor.class);
+
     private static final Map<DotName, Feature> ANNOTATION_TO_FEATURE = Map.of(
             DotNames.PROMPT, PROMPT,
             DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
@@ -125,6 +137,8 @@ class McpServerProcessor {
             DotNames.TOOL, TOOL,
             DotNames.LANGCHAIN4J_TOOL, TOOL,
             DotNames.NOTIFICATION, NOTIFICATION);
+
+    private static final String DEFAULT_VALUE = "defaultValue";
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
@@ -167,6 +181,7 @@ class McpServerProcessor {
 
     @BuildStep
     void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
+            List<DefaultValueConverterBuildItem> defaultValueConverters, CombinedIndexBuildItem combinedIndex,
             BuildProducer<FeatureMethodBuildItem> features, BuildProducer<ValidationErrorBuildItem> errors) {
         Map<Feature, List<FeatureMethodBuildItem>> found = new HashMap<>();
 
@@ -176,7 +191,8 @@ class McpServerProcessor {
                 AnnotationInstance featureAnnotation = getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
                     Feature feature = getFeature(featureAnnotation);
-                    validateFeatureMethod(method, feature, featureAnnotation);
+                    validateFeatureMethod(method, feature, featureAnnotation, defaultValueConverters,
+                            combinedIndex.getComputingIndex());
                     String name;
                     if (feature == PROMPT_COMPLETE
                             || feature == RESOURCE_TEMPLATE_COMPLETE) {
@@ -333,6 +349,7 @@ class McpServerProcessor {
     void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             List<FeatureMethodBuildItem> featureMethods, TransformedAnnotationsBuildItem transformedAnnotations,
+            List<DefaultValueConverterBuildItem> defaultValueConverters,
             BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
 
         // Note that the generated McpMetadata impl must be considered an application class
@@ -452,6 +469,17 @@ class McpServerProcessor {
         }
         initsMethod.returnValue(retInits);
 
+        //  io.quarkiverse.mcp.server.runtime.McpMetadata.defaultValueConverters()
+        MethodCreator convertersMethod = metadataCreator.getMethodCreator("defaultValueConverters", Map.class);
+        ResultHandle retConverters = Gizmo.newHashMap(convertersMethod);
+        for (DefaultValueConverterBuildItem converter : defaultValueConverters) {
+            ResultHandle converterType = Types.getTypeHandle(convertersMethod, converter.getArgumentType());
+            ResultHandle converterInstance = convertersMethod
+                    .newInstance(MethodDescriptor.ofConstructor(converter.getClassName()));
+            Gizmo.mapOperations(convertersMethod).on(retConverters).put(converterType, converterInstance);
+        }
+        convertersMethod.returnValue(retConverters);
+
         metadataCreator.close();
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
@@ -463,6 +491,7 @@ class McpServerProcessor {
 
     @BuildStep
     void registerForReflection(List<FeatureMethodBuildItem> featureMethods,
+            List<DefaultValueConverterBuildItem> defaultValueConverters,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
             BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies) {
         // FIXME this is not ideal, JsonObject.encode() may use Jackson under the hood which requires reflection
@@ -482,6 +511,12 @@ class McpServerProcessor {
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
             }
         }
+        // Register all default value converters
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(defaultValueConverters.stream()
+                .map(DefaultValueConverterBuildItem::getClassName).toList().toArray(String[]::new))
+                .constructors()
+                .build());
+
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
                 EmbeddedResource.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
                 FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
@@ -493,7 +528,64 @@ class McpServerProcessor {
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
     }
 
-    private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation) {
+    @BuildStep
+    AdditionalIndexedClassesBuildItem indexBuiltinDefaultValueConverters() {
+        return new AdditionalIndexedClassesBuildItem(BuiltinDefaultValueConverters.class.getName(),
+                BuiltinDefaultValueConverters.BooleanConverter.class.getName(),
+                BuiltinDefaultValueConverters.ByteConverter.class.getName(),
+                BuiltinDefaultValueConverters.ShortConverter.class.getName(),
+                BuiltinDefaultValueConverters.IntegerConverter.class.getName(),
+                BuiltinDefaultValueConverters.LongConverter.class.getName(),
+                BuiltinDefaultValueConverters.FloatConverter.class.getName(),
+                BuiltinDefaultValueConverters.DoubleConverter.class.getName(),
+                BuiltinDefaultValueConverters.CharacterConverter.class.getName());
+    }
+
+    @BuildStep
+    public void collectDefaultValueConverters(CombinedIndexBuildItem combinedIndex,
+            BuildProducer<DefaultValueConverterBuildItem> converters) {
+
+        Map<org.jboss.jandex.Type, List<DefaultValueConverterBuildItem>> found = new HashMap<>();
+        for (ClassInfo converter : combinedIndex.getIndex().getAllKnownImplementors(DefaultValueConverter.class)) {
+            if (converter.isAbstract()) {
+                continue;
+            }
+            if (!Modifier.isPublic(converter.flags())) {
+                LOG.warnf("Non-public default value converter ignored: %s", converter);
+                continue;
+            }
+            if (!converter.hasNoArgsConstructor()) {
+                LOG.warnf("Default value converter that does not declare a no-args constructor ignored: %s", converter);
+                continue;
+            }
+            int priority;
+            AnnotationInstance priorityAnnotation = converter.annotation(Priority.class);
+            if (priorityAnnotation != null) {
+                priority = priorityAnnotation.value().asInt();
+            } else {
+                priority = 0;
+            }
+            List<org.jboss.jandex.Type> typeParams = JandexUtil.resolveTypeParameters(converter.name(),
+                    DotNames.DEFAULT_VALUE_CONVERTER, combinedIndex.getComputingIndex());
+            org.jboss.jandex.Type argumentType = typeParams.get(0);
+            found.compute(argumentType, (k, v) -> {
+                if (v == null) {
+                    v = new ArrayList<>();
+                }
+                v.add(new DefaultValueConverterBuildItem(priority, converter.name().toString(), argumentType));
+                return v;
+            });
+        }
+
+        for (List<DefaultValueConverterBuildItem> list : found.values()) {
+            list.sort(Comparator.comparingInt(DefaultValueConverterBuildItem::getPriority).reversed());
+            // Only the converter with highest priority is used
+            converters.produce(list.get(0));
+        }
+    }
+
+    private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation,
+            List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index) {
         if (Modifier.isStatic(method.flags())) {
             throw new IllegalStateException(feature + " method must not be static: " + method);
         }
@@ -506,7 +598,7 @@ class McpServerProcessor {
         switch (feature) {
             case PROMPT -> validatePromptMethod(method);
             case PROMPT_COMPLETE -> validatePromptCompleteMethod(method);
-            case TOOL -> validateToolMethod(method);
+            case TOOL -> validateToolMethod(method, defaultValueConverters, index);
             case RESOURCE -> validateResourceMethod(method);
             case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation);
             case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
@@ -573,8 +665,38 @@ class McpServerProcessor {
             ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.EMBEDDED_RESOURCE),
             ClassType.create(DotNames.STRING));
 
-    private void validateToolMethod(MethodInfo method) {
-        // No need to validate return type
+    private void validateToolMethod(MethodInfo method, List<DefaultValueConverterBuildItem> defaultValueConverters,
+            IndexView index) {
+        for (MethodParameterInfo p : method.parameters()) {
+            AnnotationInstance toolArg = p.annotation(DotNames.TOOL_ARG);
+            if (toolArg != null) {
+                AnnotationValue defaultValueValue = toolArg.value(DEFAULT_VALUE);
+                if (defaultValueValue != null) {
+                    // Strings and enums are handled specifically
+                    if (p.type().name().equals(DotNames.STRING)) {
+                        continue;
+                    }
+                    if (p.type().kind() == Kind.CLASS) {
+                        ClassInfo pclazz = index.getClassByName(p.type().name());
+                        if (pclazz != null && pclazz.isEnum()) {
+                            continue;
+                        }
+                    }
+                    // Make sure primitives are boxed
+                    org.jboss.jandex.Type argType;
+                    if (p.type().kind() == Kind.PRIMITIVE) {
+                        argType = PrimitiveType.box(p.type().asPrimitiveType());
+                    } else {
+                        argType = p.type();
+                    }
+                    if (defaultValueConverters.stream().noneMatch(c -> c.getArgumentType().equals(argType))) {
+                        throw new IllegalStateException(
+                                "No matching default value converter found for argument type [" + p.type() + "] declared on: "
+                                        + p);
+                    }
+                }
+            }
+        }
     }
 
     private boolean useEncoder(org.jboss.jandex.Type type, Set<org.jboss.jandex.Type> types) {
@@ -664,13 +786,14 @@ class McpServerProcessor {
         MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
 
         ResultHandle args = Gizmo.newArrayList(metaMethod);
-        for (MethodParameterInfo pi : featureMethod.getMethod().parameters()) {
-            String name = pi.name();
+        for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
+            String name = param.name();
             String description = "";
             // Argument is required by default
             boolean required = true;
+            String defaultValue = null;
             if (argAnnotationName != null) {
-                AnnotationInstance argAnnotation = pi.declaredAnnotation(argAnnotationName);
+                AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
                 if (argAnnotation != null) {
                     AnnotationValue nameValue;
                     if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
@@ -689,21 +812,27 @@ class McpServerProcessor {
                     if (requiredValue != null) {
                         // Annotation value always takes precedence
                         required = requiredValue.asBoolean();
-                    } else if (DotNames.OPTIONAL.equals(pi.type().name())) {
-                        // No annotation value is defined and Optional type is used
+                    } else if (DotNames.OPTIONAL.equals(param.type().name())
+                            || hasDefaultValue(param)) {
+                        // No annotation value is defined and Optional type is used or default value set
                         required = false;
                     }
-                } else if (DotNames.OPTIONAL.equals(pi.type().name())) {
+                    AnnotationValue defaultValueValue = argAnnotation.value(DEFAULT_VALUE);
+                    if (defaultValueValue != null) {
+                        defaultValue = defaultValueValue.asString();
+                    }
+                } else if (DotNames.OPTIONAL.equals(param.type().name())) {
                     // No annotation is defined and Optional type is used
                     required = false;
                 }
             }
-            ResultHandle type = Types.getTypeHandle(metaMethod, pi.type());
-            ResultHandle provider = metaMethod.load(providerFrom(pi.type()));
+            ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
+            ResultHandle provider = metaMethod.load(providerFrom(param.type()));
             ResultHandle arg = metaMethod.newInstance(
                     MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
-                            Type.class, FeatureArgument.Provider.class),
+                            Type.class, String.class, FeatureArgument.Provider.class),
                     metaMethod.load(name), metaMethod.load(description), metaMethod.load(required), type,
+                    defaultValue != null ? metaMethod.load(defaultValue) : metaMethod.loadNull(),
                     provider);
             Gizmo.listOperations(metaMethod).on(args).add(arg);
         }
@@ -726,6 +855,14 @@ class McpServerProcessor {
 
         Gizmo.listOperations(method).on(retList)
                 .add(method.invokeVirtualMethod(metaMethod.getMethodDescriptor(), method.getThis()));
+    }
+
+    private boolean hasDefaultValue(MethodParameterInfo param) {
+        AnnotationInstance anno = param.annotation(DotNames.TOOL_ARG);
+        if (anno == null) {
+            anno = param.annotation(DotNames.PROMPT_ARG);
+        }
+        return anno != null && anno.value(DEFAULT_VALUE) != null;
     }
 
     private FeatureArgument.Provider providerFrom(org.jboss.jandex.Type type) {

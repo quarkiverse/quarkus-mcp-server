@@ -33,6 +33,14 @@ public class ToolComplexArgumentTest extends McpServerTest {
                                 .put("names", new JsonArray().add("foo")
                                         .add("bar"))),
                 "MyArg[price=10, names=[foo, bar]]");
+
+        assertResult("alphas",
+                new JsonObject().put("myArgs",
+                        new JsonArray().add(new JsonObject()
+                                .put("price", 10)
+                                .put("names", new JsonArray().add("foo")
+                                        .add("bar")))),
+                "[MyArg[price=10, names=[foo, bar]]]");
     }
 
     private void assertResult(String toolName, JsonObject arguments, String expectedErrorText) {
@@ -57,6 +65,11 @@ public class ToolComplexArgumentTest extends McpServerTest {
         @Tool
         String alpha(MyArg myArg) {
             return myArg.toString();
+        }
+
+        @Tool
+        String alphas(List<MyArg> myArgs) {
+            return myArgs.toString();
         }
 
         public record MyArg(int price, List<String> names) {

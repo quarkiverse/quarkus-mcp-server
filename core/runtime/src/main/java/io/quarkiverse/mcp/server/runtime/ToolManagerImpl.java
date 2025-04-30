@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,6 +22,7 @@ import com.github.victools.jsonschema.generator.SchemaGenerator;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaVersion;
 
+import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
@@ -38,6 +40,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final ConcurrentMap<String, ToolInfo> tools;
 
+    final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
+
     ToolManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
@@ -48,6 +52,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.schemaGenerator = new SchemaGenerator(
                 new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON).without(
                         Option.SCHEMA_VERSION_INDICATOR).build());
+        this.defaultValueConverters = metadata.defaultValueConverters();
     }
 
     @Override
@@ -103,7 +108,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return new McpException("Invalid tool name: " + id, JsonRPC.INVALID_PARAMS);
     }
 
-    Object generateSchema(Type type, String description) {
+    @Override
+    protected Map<Type, DefaultValueConverter<?>> defaultValueConverters() {
+        return defaultValueConverters;
+    }
+
+    Object generateSchema(Type type, String description, String defaultValue) {
         JsonNode jsonNode = schemaGenerator.generateSchema(type);
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
@@ -118,6 +128,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             }
             if (description != null && !description.isBlank()) {
                 objectNode.put("description", description);
+            }
+            if (defaultValue != null) {
+                Object converted = convert(defaultValue, type);
+                objectNode.putPOJO("default", converted);
             }
             return objectNode;
         }
@@ -148,7 +162,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public List<ToolArgument> arguments() {
             return metadata.info().serializedArguments().stream()
-                    .map(fa -> new ToolArgument(fa.name(), fa.description(), fa.required(), fa.type())).toList();
+                    .map(fa -> new ToolArgument(fa.name(), fa.description(), fa.required(), fa.type(), fa.defaultValue()))
+                    .toList();
         }
 
         @Override
@@ -157,7 +172,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
             for (FeatureArgument a : metadata.info().serializedArguments()) {
-                properties.put(a.name(), generateSchema(a.type(), a.description()));
+                properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
                 if (a.required()) {
                     required.add(a.name());
                 }
@@ -183,8 +198,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
-        public ToolDefinition addArgument(String name, String description, boolean required, Type type) {
-            arguments.add(new ToolArgument(name, description, required, type));
+        public ToolDefinition addArgument(String name, String description, boolean required, Type type, String defaultValue) {
+            arguments.add(new ToolArgument(name, description, required, type, defaultValue));
             return this;
         }
 
@@ -227,7 +242,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
             for (ToolArgument a : arguments) {
-                properties.put(a.name(), generateSchema(a.type(), a.description()));
+                properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
                 if (a.required()) {
                     required.add(a.name());
                 }
@@ -241,7 +256,14 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         protected ToolArguments createArguments(ArgumentProviders argumentProviders) {
-            return new ToolArguments(argumentProviders.args(),
+            Map<String, Object> args = argumentProviders.args();
+            // Set default value if argument is missing
+            for (ToolArgument a : arguments) {
+                if (a.defaultValue() != null && !args.containsKey(a.name())) {
+                    args.put(a.name(), convert(a.defaultValue(), a.type()));
+                }
+            }
+            return new ToolArguments(args,
                     argumentProviders.connection(),
                     log(Feature.TOOL.toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),

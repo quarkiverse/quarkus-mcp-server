@@ -29,4 +29,8 @@ public @interface PromptArg {
      */
     boolean required() default true;
 
+    /**
+     * The default value is used when an MCP client does not provide an argument value.
+     */
+    String defaultValue() default "";
 }

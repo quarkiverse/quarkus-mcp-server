@@ -15,6 +15,15 @@ public record PromptResponse(String description, List<PromptMessage> messages) {
      * @param messages
      * @return a new response
      */
+    public static PromptResponse withMessages(PromptMessage... messages) {
+        return new PromptResponse(null, List.of(messages));
+    }
+
+    /**
+     *
+     * @param messages
+     * @return a new response
+     */
     public static PromptResponse withMessages(List<PromptMessage> messages) {
         return new PromptResponse(null, messages);
     }

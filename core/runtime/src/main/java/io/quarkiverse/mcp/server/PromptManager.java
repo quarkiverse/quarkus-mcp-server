@@ -56,7 +56,19 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
          * @param required
          * @return self
          */
-        PromptDefinition addArgument(String name, String description, boolean required);
+        default PromptDefinition addArgument(String name, String description, boolean required) {
+            return addArgument(name, description, required, null);
+        }
+
+        /**
+         *
+         * @param name
+         * @param description
+         * @param required
+         * @param defaultValue
+         * @return self
+         */
+        PromptDefinition addArgument(String name, String description, boolean required, String defaultValue);
 
     }
 
@@ -64,7 +76,7 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
             Progress progress, Roots roots, Sampling sampling) {
     }
 
-    record PromptArgument(String name, String description, boolean required) {
+    record PromptArgument(String name, String description, boolean required, String defaultValue) {
 
     }
 }

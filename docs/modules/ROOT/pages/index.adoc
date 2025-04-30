@@ -89,7 +89,7 @@ public class MyPrompts {
     FooService fooService;
 
     @Prompt(description = "Put you description here.") <3>
-    PromptMessage foo(@PromptArg(description = "The name") String name) { <4>
+    PromptMessage foo(@PromptArg(description = "The name", defaultValue = "Max") String name) { <4>
         return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
     }
 
@@ -98,7 +98,7 @@ public class MyPrompts {
 <1> The `@Singleton` scope is added automatically, if needed.
 <2> `MyPrompts` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
 <3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name.
-<4> The `@PromptArg` can be used to customize the description of an argument.
+<4> The `@PromptArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
 
 The result of a "prompt get" operation is always represented as a `PromptResponse`.
 However, the annotated method can also return other types that are converted according to the following rules.
@@ -464,7 +464,7 @@ public class MyTools {
     FooService fooService;
 
     @Tool(description = "Put you description here.") <3>
-    ToolResponse foo(@ToolArg(description = "The name") String name) {
+    ToolResponse foo(@ToolArg(description = "The name", defaultValue = "Andy") String name) { <4>
         return ToolResponse.success(
                 new TextContent(fooService.ping(name)));
     }
@@ -474,6 +474,7 @@ public class MyTools {
 <1> The `@Singleton` scope is added automatically, if needed.
 <2> `MyTools` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
 <3> `@Tool` annotates a business method of a CDI bean that should be exposed as a tool. By default, the name of the tool is derived from the method name.
+<4> The `@ToolArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
 
 TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response is a failed `ToolResponse` and the message of the exception is used as the text of the result content. It is also possible to annotate the method or declaring class with `@io.quarkiverse.mcp.server.WrapBusinessError` - in that case, an exception thrown is wrapped automatically in a `ToolCallException` if it's assignable from any of the specified exception classes.
 

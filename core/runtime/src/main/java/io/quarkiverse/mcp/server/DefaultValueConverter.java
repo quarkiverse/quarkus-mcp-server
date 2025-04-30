@@ -1,0 +1,24 @@
+package io.quarkiverse.mcp.server;
+
+import jakarta.annotation.Priority;
+
+/**
+ * Converts default values from {@link String} to an argument object of a specific type.
+ * <p>
+ * Converters are discovered automatically, i.e. all implementations in a Quarkus application are registered.
+ * <p>
+ * An implementation may be annotated with {@link Priority}. If multiple converters of the same priority exist for a specific
+ * argument type, then only the converter with highest priority is registered.
+ *
+ * @see ToolArg#defaultValue()
+ * @param <TYPE> the agrument type
+ */
+public interface DefaultValueConverter<TYPE> {
+
+    /**
+     * @param defaultValue (must not be {@code null})
+     * @return the converted object
+     */
+    TYPE convert(String defaultValue);
+
+}

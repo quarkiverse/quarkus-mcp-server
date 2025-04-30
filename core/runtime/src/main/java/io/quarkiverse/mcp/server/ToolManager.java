@@ -56,7 +56,21 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
          * @param type
          * @return self
          */
-        ToolDefinition addArgument(String name, String description, boolean required, java.lang.reflect.Type type);
+        default ToolDefinition addArgument(String name, String description, boolean required, java.lang.reflect.Type type) {
+            return addArgument(name, description, required, type, null);
+        }
+
+        /**
+         *
+         * @param name
+         * @param description
+         * @param required
+         * @param type
+         * @param defaultValue
+         * @return self
+         */
+        ToolDefinition addArgument(String name, String description, boolean required, java.lang.reflect.Type type,
+                String defaultValue);
 
     }
 
@@ -65,7 +79,7 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
     }
 
-    record ToolArgument(String name, String description, boolean required, java.lang.reflect.Type type) {
+    record ToolArgument(String name, String description, boolean required, java.lang.reflect.Type type, String defaultValue) {
 
     }
 }
