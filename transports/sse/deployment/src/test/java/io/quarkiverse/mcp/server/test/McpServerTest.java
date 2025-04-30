@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
@@ -48,7 +47,7 @@ public abstract class McpServerTest {
         messageEndpoint = null;
     }
 
-    protected URI initClient() throws URISyntaxException {
+    protected URI initClient() {
         return initClient(null);
     }
 
@@ -108,7 +107,7 @@ public abstract class McpServerTest {
         return null;
     }
 
-    protected URI initClient(Consumer<JsonObject> initResultAssert) throws URISyntaxException {
+    protected URI initClient(Consumer<JsonObject> initResultAssert) {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);

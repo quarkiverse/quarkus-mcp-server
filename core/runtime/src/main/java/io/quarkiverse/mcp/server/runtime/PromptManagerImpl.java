@@ -1,12 +1,14 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
@@ -120,7 +122,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public List<PromptArgument> arguments() {
             return metadata.info().serializedArguments().stream()
-                    .map(a -> new PromptArgument(a.name(), a.description(), a.required())).toList();
+                    .map(a -> new PromptArgument(a.name(), a.description(), a.required(), a.defaultValue())).toList();
         }
 
         @Override
@@ -142,8 +144,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
-        public PromptDefinition addArgument(String name, String description, boolean required) {
-            arguments.add(new PromptArgument(name, description, required));
+        public PromptDefinition addArgument(String name, String description, boolean required, String defaultValue) {
+            arguments.add(new PromptArgument(name, description, required, defaultValue));
             return this;
         }
 
@@ -181,8 +183,16 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
         @Override
         protected PromptArguments createArguments(ArgumentProviders argumentProviders) {
-            return new PromptArguments(argumentProviders.args().entrySet().stream()
-                    .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toString())), argumentProviders.connection(),
+            Map<String, String> args = new HashMap<>();
+            for (Entry<String, Object> e : argumentProviders.args().entrySet()) {
+                args.put(e.getKey(), e.getValue().toString());
+            }
+            for (PromptArgument a : arguments) {
+                if (a.defaultValue() != null && !args.containsKey(a.name())) {
+                    args.put(a.name(), a.defaultValue());
+                }
+            }
+            return new PromptArguments(args, argumentProviders.connection(),
                     log(Feature.PROMPT.toString().toLowerCase() + ":" + name, name, argumentProviders),
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),

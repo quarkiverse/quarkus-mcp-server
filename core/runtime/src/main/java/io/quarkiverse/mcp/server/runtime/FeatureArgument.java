@@ -2,7 +2,11 @@ package io.quarkiverse.mcp.server.runtime;
 
 import io.vertx.core.json.JsonObject;
 
-public record FeatureArgument(String name, String description, boolean required, java.lang.reflect.Type type,
+public record FeatureArgument(String name,
+        String description,
+        boolean required,
+        java.lang.reflect.Type type,
+        String defaultValue,
         Provider provider) {
 
     public JsonObject asJson() {

@@ -16,10 +16,10 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.invoke.Invoker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpLog;
@@ -38,8 +38,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.FeatureInfo> {
 
@@ -143,6 +141,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = SamplingImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
+                if (val == null && arg.defaultValue() != null) {
+                    val = convert(arg.defaultValue(), arg.type());
+                }
                 if (val == null && arg.required()) {
                     throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
                 }
@@ -151,19 +152,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 if (val instanceof Map map) {
                     // json object
                     JavaType javaType = mapper.getTypeFactory().constructType(argType);
-                    try {
-                        val = mapper.readValue(new JsonObject(map).encode(), javaType);
-                    } catch (JsonProcessingException e) {
-                        throw new IllegalStateException(e);
-                    }
+                    val = mapper.convertValue(map, javaType);
                 } else if (val instanceof List list) {
                     // json array
                     JavaType javaType = mapper.getTypeFactory().constructType(argType);
-                    try {
-                        val = mapper.readValue(new JsonArray(list).encode(), javaType);
-                    } catch (JsonProcessingException e) {
-                        throw new IllegalStateException(e);
-                    }
+                    val = mapper.convertValue(list, javaType);
                 } else if (argType instanceof Class clazz && clazz.isEnum()) {
                     val = Enum.valueOf(clazz, val.toString());
                 } else if (val instanceof Number num) {
@@ -463,6 +456,58 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return ret;
         }
 
+    }
+
+    protected Map<Type, DefaultValueConverter<?>> defaultValueConverters() {
+        return Map.of();
+    }
+
+    protected Object convert(String value, Type type) {
+        if (String.class.equals(type)) {
+            return value;
+        }
+        type = box(type);
+        DefaultValueConverter<?> converter = defaultValueConverters().get(type);
+        if (converter != null) {
+            return converter.convert(value);
+        }
+        if (type instanceof Class clazz) {
+            if (clazz.isEnum()) {
+                for (Object constant : clazz.getEnumConstants()) {
+                    if (constant.toString().equalsIgnoreCase(value)) {
+                        return constant;
+                    }
+                }
+            }
+        }
+        throw new IllegalArgumentException(
+                "Unable to convert the default value for argument type [" + type
+                        + "] - provide a custom converter implementation");
+    }
+
+    static Type box(Type type) {
+        if (type instanceof Class clazz) {
+            if (!clazz.isPrimitive()) {
+                return type;
+            } else if (clazz.equals(Boolean.TYPE)) {
+                return Boolean.class;
+            } else if (clazz.equals(Character.TYPE)) {
+                return Character.class;
+            } else if (clazz.equals(Byte.TYPE)) {
+                return Byte.class;
+            } else if (clazz.equals(Short.TYPE)) {
+                return Short.class;
+            } else if (clazz.equals(Integer.TYPE)) {
+                return Integer.class;
+            } else if (clazz.equals(Long.TYPE)) {
+                return Long.class;
+            } else if (clazz.equals(Float.TYPE)) {
+                return Float.class;
+            } else if (clazz.equals(Double.TYPE)) {
+                return Double.class;
+            }
+        }
+        return type;
     }
 
 }

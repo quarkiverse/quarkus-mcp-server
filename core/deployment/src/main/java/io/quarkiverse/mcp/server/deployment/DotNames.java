@@ -11,6 +11,7 @@ import io.quarkiverse.mcp.server.CompletePrompt;
 import io.quarkiverse.mcp.server.CompleteResourceTemplate;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -89,6 +90,7 @@ class DotNames {
     static final DotName NOTIFICATION = DotName.createSimple(Notification.class);
     static final DotName ROOTS = DotName.createSimple(Roots.class);
     static final DotName SAMPLING = DotName.createSimple(Sampling.class);
+    static final DotName DEFAULT_VALUE_CONVERTER = DotName.createSimple(DefaultValueConverter.class);
 
     static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
     static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");
