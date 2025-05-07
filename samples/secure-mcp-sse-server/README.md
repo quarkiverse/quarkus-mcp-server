@@ -50,6 +50,21 @@ jbang org.acme:secure-mcp-sse-server:1.0.0-SNAPSHOT:runner
 
 Access `http://localhost:8080/login`, login to GitHub, and copy the returned access token.
 
+[NOTE]
+====
+By default, Quarkus GitHub provider submits the client id and secret in the HTTP Authorization header.
+However, GitHub may require that both client id and secret are submitted as form parameters instead.
+
+When you get HTTP 401 error after logging in to GitHub and being redirected back to Quarkus MCP server,
+try to replace `%prod.quarkus.oidc.login.credentials.secret=${github.client.secret}` property
+with the following two properties instead:
+
+```properties
+%prod.quarkus.oidc.login.credentials.client-secret.method=post
+%prod.quarkus.oidc.login.credentials.client-secret.value=${github.client.secret}
+```
+====
+
 ### Use MCP inspector to call the tool
 
 Launch MCP inspector:
