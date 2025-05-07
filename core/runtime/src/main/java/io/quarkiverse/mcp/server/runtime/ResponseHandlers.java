@@ -9,6 +9,7 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
@@ -37,7 +38,7 @@ public class ResponseHandlers {
         return nextId;
     }
 
-    void handleResponse(Object id, JsonObject message) {
+    Future<Void> handleResponse(Object id, JsonObject message) {
         if (id == null) {
             LOG.debugf("Discard client response with no id: %s", message);
         } else {
@@ -51,9 +52,11 @@ public class ResponseHandlers {
                     c.accept(message);
                 } catch (Throwable e) {
                     LOG.errorf(e, "Unable to process the response with id %s", id);
+                    return Future.failedFuture(e);
                 }
             }
         }
+        return Future.succeededFuture();
     }
 
     private Long coerceResponseId(Object id) {

@@ -31,14 +31,14 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.notifications = new ConcurrentHashMap<>();
-        for (FeatureMetadata<Void> notification : metadata.inits()) {
+        for (FeatureMetadata<Void> notification : metadata.notifications()) {
             NotificationMethod notificationMethod = new NotificationMethod(notification);
             this.notifications.put(key(notificationMethod), notificationMethod);
         }
     }
 
     @Override
-    Stream<NotificationInfo> infoStream() {
+    public Stream<NotificationInfo> infoStream() {
         return notifications.values().stream();
     }
 

@@ -2,8 +2,6 @@ package io.quarkiverse.mcp.server.test.complete;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -20,7 +18,7 @@ public class InvalidPromptCompleteTest extends McpServerTest {
                     root -> root.addClasses(MyPrompts.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         JsonObject completeMessage = newMessage("completion/complete")
                 .put("params", new JsonObject()

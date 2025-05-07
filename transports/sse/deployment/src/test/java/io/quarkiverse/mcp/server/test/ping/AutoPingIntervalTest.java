@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.test.ping;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,7 @@ public class AutoPingIntervalTest extends McpServerTest {
             .overrideConfigKey("quarkus.mcp.server.auto-ping-interval", "1s");
 
     @Test
-    public void testPing() throws URISyntaxException {
+    public void testPing() {
         initClient();
         client().setRequestConsumer(r -> {
             JsonObject pongMessage = Messages.newResult(r.getValue("id"), new JsonObject());

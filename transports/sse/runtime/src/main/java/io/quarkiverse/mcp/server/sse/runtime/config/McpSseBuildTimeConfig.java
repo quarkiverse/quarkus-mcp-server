@@ -10,7 +10,10 @@ import io.smallrye.config.WithDefault;
 public interface McpSseBuildTimeConfig {
 
     /**
-     * The SSE endpoint is exposed at `\{rootPath}/sse`. By default, it's `/mcp/sse`.
+     * The MCP endpoint (as defined in the specification `2025-03-26`) is exposed at `\{rootPath}`. By default, it's `/mcp`.
+     *
+     * The SSE endpoint (as defined in the specification `2024-11-05`) is exposed at `\{rootPath}/sse`. By default, it's
+     * `/mcp/sse`.
      *
      * @asciidoclet
      */

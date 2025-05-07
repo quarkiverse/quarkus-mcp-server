@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -35,7 +34,7 @@ public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
     ResourceTemplateCompletionManager manager;
 
     @Test
-    public void testCompletion() throws URISyntaxException {
+    public void testCompletion() {
         initClient();
 
         manager.newCompletion("foo_template")

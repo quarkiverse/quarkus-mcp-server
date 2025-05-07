@@ -32,7 +32,7 @@ public interface McpMetadata {
 
     List<FeatureMetadata<CompletionResponse>> resourceTemplateCompletions();
 
-    List<FeatureMetadata<Void>> inits();
+    List<FeatureMetadata<Void>> notifications();
 
     Map<Type, DefaultValueConverter<?>> defaultValueConverters();
 

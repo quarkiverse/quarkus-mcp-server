@@ -90,9 +90,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     protected FeatureInvoker<ResourceResponse> getInvoker(String id) {
         // This method is used by ResourceManager during "resources/read" - the id is a URI
         // We need to iterate over all templates and find the matching URI template
+        return (FeatureInvoker<ResourceResponse>) findMatching(id);
+    }
+
+    public ResourceTemplateInfo findMatching(String uri) {
         for (ResourceTemplateMetadata t : templates.values()) {
-            if (t.variableMatcher().matches(id)) {
-                return (FeatureInvoker<ResourceResponse>) t.info();
+            if (t.variableMatcher().matches(uri)) {
+                return t.info();
             }
         }
         return null;

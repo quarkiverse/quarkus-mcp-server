@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.tools.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.Base64;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class SecuredSseEndpointTest extends McpServerTest {
     }
 
     @Test
-    public void testSseEndpoint() throws URISyntaxException, InterruptedException, ExecutionException, TimeoutException {
+    public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
         McpSseClient client = newClient();
 
         CompletableFuture<HttpResponse<Void>> cf = client.connect();

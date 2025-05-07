@@ -13,7 +13,6 @@ import jakarta.inject.Inject;
 import dev.langchain4j.agent.tool.P;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
@@ -62,7 +61,7 @@ public class MyTools {
     }
 
     @dev.langchain4j.agent.tool.Tool(name = "charlie", value = { "My description" })
-    String langchain4jCharlie(@P(value = "day") DayOfWeek d, McpConnection connection, McpLog log) {
+    String langchain4jCharlie(@P(value = "day") DayOfWeek d, McpConnection connection) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();

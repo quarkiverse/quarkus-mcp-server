@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -16,7 +15,7 @@ import io.vertx.core.json.JsonObject;
 public abstract class ProgressTest extends McpServerTest {
 
     @Test
-    public void testNotifications() throws URISyntaxException {
+    public void testNotifications() {
         String token = "abcd";
         initClient();
         JsonObject message = newMessage("tools/call")

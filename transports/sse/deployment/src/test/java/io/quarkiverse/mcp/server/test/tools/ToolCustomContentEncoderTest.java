@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import jakarta.annotation.Priority;
 import jakarta.inject.Singleton;
 
@@ -29,7 +27,7 @@ public class ToolCustomContentEncoderTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class, MyObject.class, MyObjectEncoder.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         JsonObject message = newMessage("tools/call")
                 .put("params", new JsonObject()

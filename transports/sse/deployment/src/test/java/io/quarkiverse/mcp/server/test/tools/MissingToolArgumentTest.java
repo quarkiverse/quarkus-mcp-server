@@ -2,8 +2,6 @@ package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -23,7 +21,7 @@ public class MissingToolArgumentTest extends McpServerTest {
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyTools.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         JsonObject message = newMessage("tools/call")
                 .put("params", new JsonObject()
