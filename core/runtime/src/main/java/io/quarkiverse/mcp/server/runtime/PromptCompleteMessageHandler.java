@@ -16,9 +16,9 @@ class PromptCompleteMessageHandler extends CompletionMessageHandler {
     }
 
     @Override
-    protected Future<CompletionResponse> execute(String key, ArgumentProviders argProviders, SecuritySupport securitySupport)
+    protected Future<CompletionResponse> execute(String key, ArgumentProviders argProviders, McpRequest mcpRequest)
             throws McpException {
-        return manager.execute(key, new FeatureExecutionContext(argProviders, securitySupport));
+        return manager.execute(key, new FeatureExecutionContext(argProviders, mcpRequest));
     }
 
 }

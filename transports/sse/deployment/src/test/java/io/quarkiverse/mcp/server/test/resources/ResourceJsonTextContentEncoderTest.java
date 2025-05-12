@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.resources;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ public class ResourceJsonTextContentEncoderTest extends McpServerTest {
                     root -> root.addClasses(MyResources.class, MyObject.class));
 
     @Test
-    public void testEncoder() throws URISyntaxException {
+    public void testEncoder() {
         initClient();
         assertResourceReadResponse("file:///bravo", 2);
         assertResourceReadResponse("file:///1", 3);

@@ -4,6 +4,7 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import io.quarkiverse.mcp.server.sse.runtime.SseMcpMessageHandler;
 import io.quarkiverse.mcp.server.sse.runtime.SseMcpServerRecorder;
+import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler;
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseBuildTimeConfig;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
@@ -25,7 +26,9 @@ public class SseMcpServerProcessor {
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(SseMcpMessageHandler.class));
+        additionalBeans.produce(
+                AdditionalBeanBuildItem.builder().setUnremovable()
+                        .addBeanClasses(SseMcpMessageHandler.class, StreamableHttpMcpMessageHandler.class).build());
     }
 
     @Record(RUNTIME_INIT)
@@ -37,10 +40,16 @@ public class SseMcpServerProcessor {
         // By default /mcp
         String mcpPath = rootPath.relativePath(config.rootPath());
 
+        // Streamable HTTP transport
+        routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath)
+                .withRouteCustomizer(recorder.addBodyHandler(bodyHandler.getHandler()))
+                .withRequestHandler(recorder.createMcpEndpointHandler())
+                .build());
+
+        // SSE/HTTP transport
         routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath.endsWith("/") ? mcpPath + "sse" : mcpPath + "/sse")
                 .withRequestHandler(recorder.createSseEndpointHandler(mcpPath))
                 .build());
-
         routes.produce(RouteBuildItem.newFrameworkRoute(mcpPath + "/" + "messages/:id")
                 .withRouteCustomizer(recorder.addBodyHandler(bodyHandler.getHandler()))
                 .withRequestHandler(recorder.createMessagesEndpointHandler())

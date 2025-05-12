@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.prompts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.annotation.Priority;
@@ -30,7 +29,7 @@ public class PromptCustomResponseEncoderTest extends McpServerTest {
                     root -> root.addClasses(MyPrompts.class, MyObject.class, MyObjectEncoder.class));
 
     @Test
-    public void testEncoder() throws URISyntaxException {
+    public void testEncoder() {
         initClient();
         JsonObject message = newMessage("prompts/get")
                 .put("params", new JsonObject()

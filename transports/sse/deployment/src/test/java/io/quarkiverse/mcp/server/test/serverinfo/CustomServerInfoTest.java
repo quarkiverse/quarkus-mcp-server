@@ -3,8 +3,6 @@ package io.quarkiverse.mcp.server.test.serverinfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -24,7 +22,7 @@ public class CustomServerInfoTest extends McpServerTest {
             .overrideConfigKey("quarkus.mcp.server.server-info.version", VERSION);
 
     @Test
-    public void testServerInfo() throws URISyntaxException {
+    public void testServerInfo() {
         initClient(result -> {
             JsonObject serverInfo = result.getJsonObject("serverInfo");
             assertNotNull(serverInfo);

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +32,7 @@ public class ToolCustomResponseEncoderTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class, MyObject.class, MyObjectEncoder.class));
 
     @Test
-    public void testEncoder() throws URISyntaxException {
+    public void testEncoder() {
         initClient();
         JsonObject message = newMessage("tools/call")
                 .put("params", new JsonObject()

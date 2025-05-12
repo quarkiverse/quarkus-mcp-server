@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
@@ -21,10 +23,10 @@ public abstract class McpServerTest {
     private static final Logger LOG = Logger.getLogger(McpServerTest.class);
 
     @TestHTTPResource
-    URI testUri;
+    protected URI testUri;
 
     private volatile McpSseClient client;
-    private volatile URI messageEndpoint;
+    protected volatile URI messageEndpoint;
 
     public static QuarkusUnitTest defaultConfig() {
         return defaultConfig(500);
@@ -63,26 +65,49 @@ public abstract class McpServerTest {
         return "/mcp";
     }
 
-    public void send(JsonObject data) {
-        sendAndValidate(data).statusCode(200);
+    protected Map<String, Object> defaultHeaders() {
+        return Map.of();
     }
 
-    public ValidatableResponse sendAndValidate(JsonObject data) {
-        if (messageEndpoint == null || client == null) {
+    public ValidatableResponse send(JsonObject data) {
+        return send(data.encode());
+    }
+
+    public ValidatableResponse send(String data) {
+        return sendAndValidate(data, Map.of()).statusCode(200);
+    }
+
+    public ValidatableResponse send(JsonObject data, Map<String, Object> additionalHeaders) {
+        return send(data.encode(), additionalHeaders);
+    }
+
+    public ValidatableResponse send(String data, Map<String, Object> additionalHeaders) {
+        return sendAndValidate(data, additionalHeaders);
+    }
+
+    public ValidatableResponse sendAndValidate(JsonObject data, Map<String, Object> additionalHeaders) {
+        return sendAndValidate(data.encode(), additionalHeaders);
+    }
+
+    public ValidatableResponse sendAndValidate(String data, Map<String, Object> additionalHeaders) {
+        if (requiresClientInit() && (messageEndpoint == null || client == null)) {
             throw new IllegalStateException("SSE client not initialized");
         }
+        Map<String, Object> headers = new HashMap<>(defaultHeaders());
+        headers.putAll(additionalHeaders);
         return RestAssured.given()
                 .when()
-                .body(data.encode())
+                .headers(headers)
+                .body(data)
                 .post(messageEndpoint)
                 .then();
     }
 
-    public void sendSecured(JsonObject data, String username, String password) {
-        if (messageEndpoint == null || client == null) {
+    public ValidatableResponse sendSecured(JsonObject data, String username, String password) {
+        if (requiresClientInit() && (messageEndpoint == null || client == null)) {
             throw new IllegalStateException("SSE client not initialized");
         }
-        RestAssured.given()
+        return RestAssured.given()
                 .auth()
                 .preemptive()
                 .basic(username, password)
@@ -107,7 +132,26 @@ public abstract class McpServerTest {
         return null;
     }
 
+    protected JsonObject newInitMessage() {
+        JsonObject initMessage = newMessage("initialize");
+        JsonObject params = new JsonObject()
+                .put("clientInfo", new JsonObject()
+                        .put("name", "test-client")
+                        .put("version", "1.0"))
+                .put("protocolVersion", "2024-11-05");
+        JsonObject clientCapabilities = getClientCapabilities();
+        if (clientCapabilities != null) {
+            params.put("capabilities", clientCapabilities);
+        }
+        initMessage.put("params", params);
+        return initMessage;
+    }
+
     protected URI initClient(Consumer<JsonObject> initResultAssert) {
+        return initClient(initResultAssert, Map.of());
+    }
+
+    protected URI initClient(Consumer<JsonObject> initResultAssert, Map<String, String> headers) {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
@@ -121,17 +165,7 @@ public abstract class McpServerTest {
 
         LOG.infof("Client received endpoint: %s", endpoint);
 
-        JsonObject initMessage = newMessage("initialize");
-        JsonObject params = new JsonObject()
-                .put("clientInfo", new JsonObject()
-                        .put("name", "test-client")
-                        .put("version", "1.0"))
-                .put("protocolVersion", "2024-11-05");
-        JsonObject clientCapabilities = getClientCapabilities();
-        if (clientCapabilities != null) {
-            params.put("capabilities", clientCapabilities);
-        }
-        initMessage.put("params", params);
+        JsonObject initMessage = newInitMessage();
 
         Entry<String, String> baseAuth = initBaseAuth();
         if (baseAuth != null) {
@@ -169,17 +203,17 @@ public abstract class McpServerTest {
     }
 
     protected JsonObject newMessage(String method) {
-        if (client == null) {
+        if (requiresClientInit() && client == null) {
             throw clientNotInitialized();
         }
         return new JsonObject()
                 .put("jsonrpc", "2.0")
                 .put("method", method)
-                .put("id", client.nextRequestId());
+                .put("id", nextRequestId());
     }
 
     protected JsonObject newNotification(String method) {
-        if (client == null) {
+        if (requiresClientInit() && client == null) {
             throw clientNotInitialized();
         }
         return new JsonObject()
@@ -188,7 +222,7 @@ public abstract class McpServerTest {
     }
 
     protected JsonObject newResult(Object requestId, JsonObject result) {
-        if (client == null) {
+        if (requiresClientInit() && client == null) {
             throw clientNotInitialized();
         }
         return new JsonObject()
@@ -203,5 +237,13 @@ public abstract class McpServerTest {
 
     private IllegalStateException clientNotInitialized() {
         return new IllegalStateException("SSE client not initialized");
+    }
+
+    protected boolean requiresClientInit() {
+        return true;
+    }
+
+    protected int nextRequestId() {
+        return client.nextRequestId();
     }
 }

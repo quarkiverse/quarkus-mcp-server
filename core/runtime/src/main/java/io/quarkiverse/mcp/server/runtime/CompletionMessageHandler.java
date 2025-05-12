@@ -6,9 +6,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.McpConnection;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 public abstract class CompletionMessageHandler extends MessageHandler {
@@ -22,11 +20,11 @@ public abstract class CompletionMessageHandler extends MessageHandler {
     }
 
     protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
-            SecuritySupport securitySupport) throws McpException;
+            McpRequest mcpRequest) throws McpException;
 
-    void complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
+    Future<Void> complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
             McpConnection connection,
-            SecuritySupport securitySupport) {
+            McpRequest mcpRequest) {
         String referenceName = ref.getString("name");
         String argumentName = argument.getString("name");
 
@@ -39,30 +37,22 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                 Messages.getProgressToken(message), responseHandlers);
 
         try {
-            Future<CompletionResponse> fu = execute(key, argProviders, securitySupport);
-            fu.onComplete(new Handler<AsyncResult<CompletionResponse>>() {
-                @Override
-                public void handle(AsyncResult<CompletionResponse> ar) {
-                    if (ar.succeeded()) {
-                        CompletionResponse completionResponse = ar.result();
-                        JsonObject result = new JsonObject();
-                        JsonObject completion = new JsonObject()
-                                .put("values", completionResponse.values());
-                        if (completionResponse.total() != null) {
-                            completion.put("total", completionResponse.total());
-                        }
-                        if (completionResponse.hasMore() != null) {
-                            completion.put("hasMore", completionResponse.hasMore());
-                        }
-                        result.put("completion", completion);
-                        sender.sendResult(id, result);
-                    } else {
-                        handleFailure(id, sender, connection, ar.cause(), LOG, "Unable to complete %s", referenceName);
-                    }
+            Future<CompletionResponse> fu = execute(key, argProviders, mcpRequest);
+            return fu.compose(completionResponse -> {
+                JsonObject result = new JsonObject();
+                JsonObject completion = new JsonObject()
+                        .put("values", completionResponse.values());
+                if (completionResponse.total() != null) {
+                    completion.put("total", completionResponse.total());
                 }
-            });
+                if (completionResponse.hasMore() != null) {
+                    completion.put("hasMore", completionResponse.hasMore());
+                }
+                result.put("completion", completion);
+                return sender.sendResult(id, result);
+            }, cause -> handleFailure(id, sender, connection, cause, LOG, "Unable to complete %s", referenceName));
         } catch (McpException e) {
-            sender.sendError(id, e.getJsonRpcError(), e.getMessage());
+            return sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }
     }
 

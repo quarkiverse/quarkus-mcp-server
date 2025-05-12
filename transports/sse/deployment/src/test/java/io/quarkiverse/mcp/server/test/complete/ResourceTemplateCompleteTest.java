@@ -3,8 +3,6 @@ package io.quarkiverse.mcp.server.test.complete;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -21,7 +19,7 @@ public class ResourceTemplateCompleteTest extends McpServerTest {
                     root -> root.addClasses(MyResourceTemplates.class));
 
     @Test
-    public void testCompletion() throws URISyntaxException {
+    public void testCompletion() {
         initClient();
         JsonObject completeMessage = newMessage("completion/complete")
                 .put("params", new JsonObject()

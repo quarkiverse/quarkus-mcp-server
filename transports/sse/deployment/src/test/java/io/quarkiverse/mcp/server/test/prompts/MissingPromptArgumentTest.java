@@ -2,8 +2,6 @@ package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URISyntaxException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -23,7 +21,7 @@ public class MissingPromptArgumentTest extends McpServerTest {
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyPrompts.class));
 
     @Test
-    public void testError() throws URISyntaxException {
+    public void testError() {
         initClient();
         JsonObject message = newMessage("prompts/get")
                 .put("params", new JsonObject()

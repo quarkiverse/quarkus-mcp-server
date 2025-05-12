@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.URISyntaxException;
-
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
@@ -40,7 +38,7 @@ public class ToolSecurityTest extends McpServerTest {
     }
 
     @Test
-    public void testSecuredTool() throws URISyntaxException {
+    public void testSecuredTool() {
         initClient();
 
         // Test injected SecurityIdentity

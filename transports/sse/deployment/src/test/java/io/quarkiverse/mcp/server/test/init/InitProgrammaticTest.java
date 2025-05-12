@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.test.init;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +30,7 @@ public class InitProgrammaticTest extends McpServerTest {
     MyTools myTools;
 
     @Test
-    public void testInitRequest() throws URISyntaxException, InterruptedException {
+    public void testInitRequest() throws InterruptedException {
         initClient();
         assertTrue(MyTools.INIT_LATCH.await(5, TimeUnit.SECONDS));
         assertTrue(myTools.initCalled.get());

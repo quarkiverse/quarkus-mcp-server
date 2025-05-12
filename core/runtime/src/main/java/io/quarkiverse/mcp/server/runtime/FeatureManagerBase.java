@@ -76,7 +76,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         throw notFound(id);
     }
 
-    record FeatureExecutionContext(ArgumentProviders argProviders, SecuritySupport securitySupport) {
+    record FeatureExecutionContext(ArgumentProviders argProviders, McpRequest mcpRequest) {
     }
 
     protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
@@ -197,7 +197,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     protected Future<RESULT> execute(ExecutionModel executionModel, FeatureExecutionContext executionContext,
             Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();
-        ActivationSupport<RESULT> activation = new ActivationSupport<>(action, executionContext.securitySupport());
+        ActivationSupport<RESULT> activation = new ActivationSupport<>(action, executionContext.mcpRequest());
 
         Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -267,12 +267,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     private class ActivationSupport<T> implements Callable<Uni<T>> {
 
         private final Callable<Uni<T>> delegate;
-
         private final SecuritySupport securitySupport;
+        private final ContextSupport contextSupport;
 
-        private ActivationSupport(Callable<Uni<T>> delegate, SecuritySupport securitySupport) {
+        private ActivationSupport(Callable<Uni<T>> delegate, McpRequest mcpRequest) {
             this.delegate = delegate;
-            this.securitySupport = securitySupport;
+            this.securitySupport = mcpRequest.securitySupport();
+            this.contextSupport = mcpRequest.contextSupport();
         }
 
         @Override
@@ -285,6 +286,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 return delegate.call();
             } else {
                 requestContext.activate();
+                if (contextSupport != null) {
+                    contextSupport.requestContextActivated();
+                }
                 if (securitySupport != null && currentIdentityAssociation != null) {
                     securitySupport.setCurrentIdentity(currentIdentityAssociation);
                 }

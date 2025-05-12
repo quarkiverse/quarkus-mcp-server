@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.net.URISyntaxException;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -31,7 +30,7 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
     ResourceTemplateManager manager;
 
     @Test
-    public void testResources() throws URISyntaxException {
+    public void testResources() {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             String name = i + "";
