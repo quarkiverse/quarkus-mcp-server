@@ -148,6 +148,10 @@ public abstract class McpServerTest {
     }
 
     protected URI initClient(Consumer<JsonObject> initResultAssert) {
+        return initClient(initResultAssert, Map.of());
+    }
+
+    protected URI initClient(Consumer<JsonObject> initResultAssert, Map<String, String> headers) {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);

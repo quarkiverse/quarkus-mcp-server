@@ -60,7 +60,7 @@ class ToolMessageHandler extends MessageHandler {
 
         try {
             Future<ToolResponse> fu = manager.execute(toolName,
-                    new FeatureExecutionContext(argProviders, mcpRequest.securitySupport()));
+                    new FeatureExecutionContext(argProviders, mcpRequest));
             return fu.compose(toolResponse -> mcpRequest.sender().sendResult(id, toolResponse), cause -> {
                 if (cause instanceof ToolCallException tce) {
                     // Business logic error should result in ToolResponse with isError:true

@@ -28,6 +28,7 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
@@ -51,6 +52,7 @@ import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
 import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -78,13 +80,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private final PromptCompletionManager promptCompletionManager;
     private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
     private final NotificationManagerImpl notificationManager;
+    private final CurrentVertxRequest currentVertxRequest;
 
     StreamableHttpMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
-            ResponseHandlers serverRequests,
+            ResponseHandlers serverRequests, CurrentVertxRequest currentVertxRequest,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata);
@@ -96,6 +99,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.promptCompletionManager = promptCompleteManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompleteManager;
         this.notificationManager = notificationManager;
+        this.currentVertxRequest = currentVertxRequest;
     }
 
     @Override
@@ -154,8 +158,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         };
+        ContextSupport contextSupport = new ContextSupport() {
+            @Override
+            public void requestContextActivated() {
+                currentVertxRequest.setCurrent(ctx);
+            }
+        };
 
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(json, connection, securitySupport, ctx.response(), mcpSessionId == null);
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(json, connection, securitySupport, ctx.response(), mcpSessionId == null,
+                contextSupport);
         ScanResult result = scan(mcpRequest);
         if (result.forceSseInit()) {
             mcpRequest.initiateSse();
@@ -420,8 +431,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         final HttpServerResponse response;
 
         public HttpMcpRequest(Object json, McpConnectionBase connection, SecuritySupport securitySupport,
-                HttpServerResponse response, boolean newSession) {
-            super(json, connection, null, securitySupport);
+                HttpServerResponse response, boolean newSession, ContextSupport contextSupport) {
+            super(json, connection, null, securitySupport, contextSupport);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;

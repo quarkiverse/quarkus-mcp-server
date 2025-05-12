@@ -12,6 +12,8 @@ public interface McpRequest {
 
     SecuritySupport securitySupport();
 
+    ContextSupport contextSupport();
+
     default void messageReceived(JsonObject message) {
         if (connection().trafficLogger() != null) {
             connection().trafficLogger().messageReceived(message, connection());

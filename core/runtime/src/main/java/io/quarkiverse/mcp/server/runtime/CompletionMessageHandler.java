@@ -20,11 +20,11 @@ public abstract class CompletionMessageHandler extends MessageHandler {
     }
 
     protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
-            SecuritySupport securitySupport) throws McpException;
+            McpRequest mcpRequest) throws McpException;
 
     Future<Void> complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
             McpConnection connection,
-            SecuritySupport securitySupport) {
+            McpRequest mcpRequest) {
         String referenceName = ref.getString("name");
         String argumentName = argument.getString("name");
 
@@ -37,7 +37,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                 Messages.getProgressToken(message), responseHandlers);
 
         try {
-            Future<CompletionResponse> fu = execute(key, argProviders, securitySupport);
+            Future<CompletionResponse> fu = execute(key, argProviders, mcpRequest);
             return fu.compose(completionResponse -> {
                 JsonObject result = new JsonObject();
                 JsonObject completion = new JsonObject()

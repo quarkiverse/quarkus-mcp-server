@@ -59,7 +59,7 @@ class PromptMessageHandler extends MessageHandler {
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName,
-                    new FeatureExecutionContext(argProviders, mcpRequest.securitySupport()));
+                    new FeatureExecutionContext(argProviders, mcpRequest));
             return fu.compose(promptResponse -> {
                 JsonObject result = new JsonObject();
                 if (promptResponse.description() != null) {

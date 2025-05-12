@@ -85,7 +85,7 @@ class ResourceMessageHandler extends MessageHandler {
                 Messages.getProgressToken(message), manager.responseHandlers);
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
-                    new FeatureExecutionContext(argProviders, mcpRequest.securitySupport()));
+                    new FeatureExecutionContext(argProviders, mcpRequest));
             return fu.compose(resourceResponse -> mcpRequest.sender().sendResult(id, resourceResponse),
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
                             "Unable to read resource %s", resourceUri));

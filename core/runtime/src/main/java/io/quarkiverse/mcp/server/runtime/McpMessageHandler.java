@@ -186,8 +186,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
                             mcpRequest.sender(), null,
                             responseHandlers);
-                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders,
-                            mcpRequest.securitySupport());
+                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
                         try {
                             Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
@@ -270,8 +269,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
                     mcpRequest.sender(), null,
                     responseHandlers);
-            FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders,
-                    mcpRequest.securitySupport());
+            FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
             for (NotificationManager.NotificationInfo notification : infos) {
                 try {
                     Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
@@ -328,10 +326,10 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 } else {
                     if ("ref/prompt".equals(referenceType)) {
                         return promptCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(),
-                                mcpRequest.connection(), mcpRequest.securitySupport());
+                                mcpRequest.connection(), mcpRequest);
                     } else if ("ref/resource".equals(referenceType)) {
                         return resourceTemplateCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(),
-                                mcpRequest.connection(), mcpRequest.securitySupport());
+                                mcpRequest.connection(), mcpRequest);
                     } else {
                         return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));
