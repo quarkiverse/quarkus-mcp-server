@@ -12,6 +12,15 @@ Start the application in the dev mode:
 ./mvnw quarkus:dev
 ```
 
+It also starts a https://quarkus.io/guides/security-openid-connect-dev-services#dev-services-for-keycloak[Keycloak Dev Services container].
+
+[NOTE]
+====
+Adding the `quarkus.keycloak.devservices.java-opts=-XX:UseSVE=0` configuration property may help to workaround Keycloak Dev Services startup problems on some Mac OS systems.
+
+Alternatively, you can enable a https://quarkus.io/guides/security-openid-connect-dev-services#dev-services-for-oidc[lightweight OIDC Dev Services] option with `quarkus.oidc.devservices.enabled=true`.
+====
+
 ### Use OIDC Dev UI to login to Keycloak and copy the access token
 
 Use https://quarkus.io/guides/security-openid-connect-dev-services#dev-services-for-keycloak[OIDC DevUI] to login to Keycloak as a user `alice` with a password `alice` and copy an acquired access token.
