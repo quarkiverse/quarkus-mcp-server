@@ -5,11 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.function.Consumer;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import io.quarkiverse.mcp.server.test.McpSseClient;
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -19,16 +20,24 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @QuarkusTest
-public class ServerFeaturesTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ServerFeaturesTest {
 
     @TestHTTPResource
     URI testUri;
 
     McpSseClient client;
 
+    URI endpoint;
+
+    @BeforeAll
+    void beforeEach() {
+        client = createMcpSseClient(testUri);
+        endpoint = initClient(testUri);
+    }
+
     @Test
-    public void testPrompt() throws URISyntaxException {
-        URI endpoint = initClient();
+    void testPrompt() {
 
         JsonObject promptListMessage = newMessage("prompts/list");
 
@@ -57,8 +66,7 @@ public class ServerFeaturesTest {
     }
 
     @Test
-    public void testTool() throws URISyntaxException {
-        URI endpoint = initClient();
+    void testTool() {
 
         JsonObject toolListMessage = newMessage("tools/list");
 
@@ -90,8 +98,7 @@ public class ServerFeaturesTest {
     }
 
     @Test
-    public void testResource() throws URISyntaxException {
-        URI endpoint = initClient();
+    void testResource() {
 
         JsonObject resourceListMessage = newMessage("resources/list");
 
@@ -115,16 +122,23 @@ public class ServerFeaturesTest {
                 "file:///project/alpha");
     }
 
-    protected URI initClient() throws URISyntaxException {
+    protected static McpSseClient createMcpSseClient(URI testUri) {
         String testUriStr = testUri.toString();
         if (testUriStr.endsWith("/")) {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
-        client = new McpSseClient(URI.create(testUriStr + "/mcp/sse"));
+        return new McpSseClient(URI.create(testUriStr + "/mcp/sse"));
+    }
+
+    protected URI initClient(URI testUri) {
+        String testUriStr = testUri.toString();
+        if (testUriStr.endsWith("/")) {
+            testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
+        }
         client.connect();
         var event = client.waitForFirstEvent();
         String messagesUri = testUriStr + event.data().strip();
-        URI endpoint = URI.create(messagesUri);
+        final var endpointUri = URI.create(messagesUri);
 
         JsonObject initMessage = newMessage("initialize")
                 .put("params",
@@ -137,7 +151,7 @@ public class ServerFeaturesTest {
         given().contentType(ContentType.JSON)
                 .when()
                 .body(initMessage.encode())
-                .post(endpoint)
+                .post(endpointUri)
                 .then()
                 .statusCode(200);
 
@@ -154,11 +168,11 @@ public class ServerFeaturesTest {
                 .body(new JsonObject()
                         .put("jsonrpc", "2.0")
                         .put("method", "notifications/initialized").encode())
-                .post(endpoint)
+                .post(endpointUri)
                 .then()
                 .statusCode(200);
 
-        return endpoint;
+        return endpointUri;
     }
 
     protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
