@@ -12,11 +12,11 @@ import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
 
 @Singleton
-public class ResourceTemplateCompleteManagerImpl extends CompletionManagerBase implements ResourceTemplateCompletionManager {
+public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase implements ResourceTemplateCompletionManager {
 
     private final ResourceTemplateManagerImpl resourceTemplateManager;
 
-    ResourceTemplateCompleteManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
+    ResourceTemplateCompletionManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
             ConnectionManager connectionManager, ResourceTemplateManagerImpl resourceTemplateManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);

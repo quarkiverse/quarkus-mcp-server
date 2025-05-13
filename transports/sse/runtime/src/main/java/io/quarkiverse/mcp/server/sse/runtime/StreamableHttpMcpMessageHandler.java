@@ -19,13 +19,9 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
-import io.quarkiverse.mcp.server.PromptCompletionManager;
-import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
-import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
@@ -41,7 +37,7 @@ import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
@@ -73,32 +69,18 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private final McpMetadata metadata;
 
-    private final ToolManager toolManager;
-    private final PromptManager promptManager;
-    private final ResourceManager resourceManager;
-    private final ResourceTemplateManagerImpl resourceTemplateManager;
-    private final PromptCompletionManager promptCompletionManager;
-    private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
-    private final NotificationManagerImpl notificationManager;
     private final CurrentVertxRequest currentVertxRequest;
 
     StreamableHttpMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
+            ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
             ResponseHandlers serverRequests, CurrentVertxRequest currentVertxRequest,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata);
         this.metadata = metadata;
-        this.toolManager = toolManager;
-        this.promptManager = promptManager;
-        this.resourceManager = resourceManager;
-        this.resourceTemplateManager = resourceTemplateManager;
-        this.promptCompletionManager = promptCompleteManager;
-        this.resourceTemplateCompletionManager = resourceTemplateCompleteManager;
-        this.notificationManager = notificationManager;
         this.currentVertxRequest = currentVertxRequest;
     }
 

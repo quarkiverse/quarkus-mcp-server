@@ -8,9 +8,9 @@ import io.vertx.core.Future;
 
 class ResourceTemplateCompleteMessageHandler extends CompletionMessageHandler {
 
-    private final ResourceTemplateCompleteManagerImpl manager;
+    private final ResourceTemplateCompletionManagerImpl manager;
 
-    ResourceTemplateCompleteMessageHandler(ResourceTemplateCompleteManagerImpl manager) {
+    ResourceTemplateCompleteMessageHandler(ResourceTemplateCompletionManagerImpl manager) {
         super(manager.responseHandlers);
         this.manager = Objects.requireNonNull(manager);
     }

@@ -28,6 +28,13 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private static final Logger LOG = Logger.getLogger(McpMessageHandler.class);
 
     protected final ConnectionManager connectionManager;
+    protected final PromptManagerImpl promptManager;
+    protected final ToolManagerImpl toolManager;
+    protected final ResourceManagerImpl resourceManager;
+    protected final PromptCompletionManagerImpl promptCompletionManager;
+    protected final ResourceTemplateManagerImpl resourceTemplateManager;
+    protected final ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager;
+    protected final NotificationManagerImpl notificationManager;
 
     private final ToolMessageHandler toolHandler;
     private final PromptMessageHandler promptHandler;
@@ -36,32 +43,38 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
-    private final NotificationManagerImpl notificationManager;
-
     private final ResponseHandlers responseHandlers;
 
     protected final McpRuntimeConfig config;
 
-    private final Map<String, Object> serverInfo;
+    private final McpMetadata metadata;
 
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
-            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
+            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
+            PromptCompletionManagerImpl promptCompletionManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompleteManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
+            ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
+            NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
             McpMetadata metadata) {
         this.connectionManager = connectionManager;
+        this.promptManager = promptManager;
+        this.toolManager = toolManager;
+        this.resourceManager = resourceManager;
+        this.resourceTemplateManager = resourceTemplateManager;
+        this.promptCompletionManager = promptCompletionManager;
+        this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
         this.toolHandler = new ToolMessageHandler(toolManager, config.tools().pageSize());
         this.promptHandler = new PromptMessageHandler(promptManager, config.prompts().pageSize());
-        this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompleteManager);
+        this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompletionManager);
         this.resourceHandler = new ResourceMessageHandler(resourceManager, config.resources().pageSize());
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager,
                 config.resourceTemplates().pageSize());
-        this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompleteManager);
+        this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompletionManager);
         this.notificationManager = notificationManager;
         this.responseHandlers = responseHandlers;
         this.config = config;
-        this.serverInfo = serverInfo(promptManager, toolManager, resourceManager, resourceTemplateManager, metadata);
+        this.metadata = metadata;
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
@@ -144,7 +157,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // we could perform a "dummy" initialization
         if (!INITIALIZE.equals(method)) {
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT && config.devMode().dummyInit()) {
-                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), DEFAULT_PROTOCOL_VERSION,
+                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), SUPPORTED_PROTOCOL_VERSIONS.get(0),
                         List.of());
                 if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", mcpRequest.connection().id());
@@ -163,10 +176,11 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, msg);
         }
 
-        if (mcpRequest.connection().initialize(decodeInitializeRequest(params))) {
+        InitialRequest initialRequest = decodeInitializeRequest(params);
+        if (mcpRequest.connection().initialize(initialRequest)) {
             // The server MUST respond with its own capabilities and information
             afterInitialize(mcpRequest);
-            return mcpRequest.sender().sendResult(id, serverInfo);
+            return mcpRequest.sender().sendResult(id, serverInfo(initialRequest));
         } else {
             initializeFailed(mcpRequest);
             String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
@@ -370,12 +384,17 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities));
     }
 
-    private static final String DEFAULT_PROTOCOL_VERSION = "2024-11-05";
+    private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-03-26", "2024-11-05");
 
-    private Map<String, Object> serverInfo(PromptManagerImpl promptManager, ToolManagerImpl toolManager,
-            ResourceManagerImpl resourceManager, ResourceTemplateManagerImpl resourceTemplateManager, McpMetadata metadata) {
+    private Map<String, Object> serverInfo(InitialRequest initialRequest) {
         Map<String, Object> info = new HashMap<>();
-        info.put("protocolVersion", DEFAULT_PROTOCOL_VERSION);
+
+        // Note that currently the protocol version does not affect the behavior of the server in any way
+        String version = SUPPORTED_PROTOCOL_VERSIONS.get(0);
+        if (SUPPORTED_PROTOCOL_VERSIONS.contains(initialRequest.protocolVersion())) {
+            version = initialRequest.protocolVersion();
+        }
+        info.put("protocolVersion", version);
 
         String serverName = config.serverInfo().name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class).orElse("N/A"));
@@ -384,14 +403,19 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
-        if (!promptManager.isEmpty() || metadata.isPromptManagerUsed()) {
+        if (!promptManager.isEmpty()) {
             capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!toolManager.isEmpty() || metadata.isToolManagerUsed()) {
+        if (!toolManager.isEmpty()) {
             capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!resourceManager.isEmpty() || !resourceTemplateManager.isEmpty() || metadata.isResourceManagerUsed()) {
+        if (!resourceManager.isEmpty()
+                || !resourceTemplateManager.isEmpty()) {
             capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
+        }
+        if (!promptCompletionManager.isEmpty()
+                || !resourceTemplateCompletionManager.isEmpty()) {
+            capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);

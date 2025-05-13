@@ -23,14 +23,4 @@ public record TextContent(String text) implements Content {
         return this;
     }
 
-    @Override
-    public ImageContent asImage() {
-        throw new IllegalArgumentException("Not an image");
-    }
-
-    @Override
-    public EmbeddedResource asResource() {
-        throw new IllegalArgumentException("Not a resource");
-    }
-
 }
