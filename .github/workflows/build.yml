@@ -31,6 +31,30 @@ defaults:
     shell: bash
 
 jobs:
+  build-native:
+    name: Build on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        #        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Prepare git
+        run: git config --global core.autocrlf false
+        if: startsWith(matrix.os, 'windows')
+
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: 'maven'
+
+      - name: Build with Maven (Native)
+        run: mvn -B verify -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
+
   build:
     name: Build on ${{ matrix.os }}
     strategy:
@@ -55,5 +79,22 @@ jobs:
       - name: Build with Maven
         run: mvn -B clean install -Dno-format
 
-      - name: Build with Maven (Native)
-        run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
+      - name: Build sample projects with Maven
+        run: |
+          set -e
+          pids=()
+          for dir in samples/*/ ; do
+          (cd "$dir" && ./mvnw -B -ff verify) &
+          pids+=($!)
+          done
+          
+          failure=0
+          for pid in "${pids[@]}"; do
+          wait "$pid" || failure=1
+          done
+          
+          if [ $failure -ne 0 ]; then
+          echo "At least one sample build failed."
+          exit 1
+          fi
+
