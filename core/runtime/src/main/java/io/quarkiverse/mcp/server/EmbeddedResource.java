@@ -21,16 +21,6 @@ public record EmbeddedResource(ResourceContents resource) implements Content {
     }
 
     @Override
-    public TextContent asText() {
-        throw new IllegalArgumentException("Not a text");
-    }
-
-    @Override
-    public ImageContent asImage() {
-        throw new IllegalArgumentException("Not an image");
-    }
-
-    @Override
     public EmbeddedResource asResource() {
         return this;
     }

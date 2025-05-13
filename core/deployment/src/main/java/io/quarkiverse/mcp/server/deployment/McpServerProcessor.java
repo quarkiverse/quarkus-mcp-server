@@ -41,6 +41,7 @@ import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
@@ -77,7 +78,7 @@ import io.quarkiverse.mcp.server.runtime.PromptEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceContentsEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
-import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompleteManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
@@ -148,7 +149,7 @@ class McpServerProcessor {
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
-                ResourceTemplateCompleteManagerImpl.class, NotificationManagerImpl.class);
+                ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class);
         // Encoders
         unremovable.addBeanClasses(JsonTextContentEncoder.class, JsonTextResourceContentsEncoder.class);
         // Result mappers
@@ -362,8 +363,10 @@ class McpServerProcessor {
                 .interfaces(McpMetadata.class)
                 .build();
 
-        boolean isResourceManagerUsed = false, isResourceTemplateManagerUsed = false, isPromptManagerUsed = false,
-                isToolManagerUsed = false;
+        boolean isResourceManagerUsed = false;
+        boolean isResourceTemplateManagerUsed = false;
+        boolean isPromptManagerUsed = false;
+        boolean isToolManagerUsed = false;
         for (InjectionPointInfo ip : beanDiscovery.getInjectionPoints()) {
             if (ip.getRequiredType().name().equals(DotNames.RESOURCE_MANAGER)) {
                 isResourceManagerUsed = true;
@@ -520,7 +523,8 @@ class McpServerProcessor {
                 .build());
 
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
-                EmbeddedResource.class, PromptResponse.class, PromptMessage.class, ToolResponse.class, FeatureMethodInfo.class,
+                EmbeddedResource.class, AudioContent.class, PromptResponse.class, PromptMessage.class, ToolResponse.class,
+                FeatureMethodInfo.class,
                 FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
                 BlobResourceContents.class, Role.class, SamplingMessage.class, ModelPreferences.class, ModelHint.class,
                 IncludeContext.class,
