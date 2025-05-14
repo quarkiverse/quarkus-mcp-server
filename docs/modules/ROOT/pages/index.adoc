@@ -945,6 +945,9 @@ $ docker run --rm --network=host node:18 npx @modelcontextprotocol/inspector
 However, `--network=host` does not work for Mac and Windows.
 Mac and Windows developers will need to export the default MCP inspector port (`5137`) and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
 
+
+TIP: When inspecting a server that uses the "Streamable HTTP" or HTTP/SSE transport, you need to configure the proper path in the MCP inspector. The path should be  `${quarkus.mcp.server.sse.root-path}` for "Streamable HTTP" and `${quarkus.mcp.server.sse.root-path}/sse` for HTTP/SSE; i.e. `/mcp` and `/mcp/sse` by default.
+
 [source,console]
 ----
 $ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
