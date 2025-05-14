@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,6 +31,7 @@ import jakarta.enterprise.invoke.Invoker;
 import jakarta.inject.Singleton;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
@@ -164,6 +166,7 @@ class McpServerProcessor {
     AutoAddScopeBuildItem autoAddScope() {
         return AutoAddScopeBuildItem.builder()
                 .containsAnnotations(ANNOTATION_TO_FEATURE.keySet().toArray(DotName[]::new))
+                .anyMethodMatches(this::isFeatureMethod)
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build();
     }
@@ -184,6 +187,12 @@ class McpServerProcessor {
     void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters, CombinedIndexBuildItem combinedIndex,
             BuildProducer<FeatureMethodBuildItem> features, BuildProducer<ValidationErrorBuildItem> errors) {
+
+        List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, errors);
+        if (!wrongUsages.isEmpty()) {
+            errors.produce(new ValidationErrorBuildItem(wrongUsages));
+        }
+
         Map<Feature, List<FeatureMethodBuildItem>> found = new HashMap<>();
 
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
@@ -306,6 +315,31 @@ class McpServerProcessor {
                     String message = "Resource template %s does not exist for completion: %s"
                             .formatted(completion.getName(), completion);
                     errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                }
+            }
+        }
+    }
+
+    private List<Throwable> findWrongAnnotationUsage(CombinedIndexBuildItem combinedIndex,
+            BuildProducer<ValidationErrorBuildItem> validationErrors) {
+        List<Throwable> wrongUsages = new ArrayList<>();
+        for (Map.Entry<DotName, Feature> e : ANNOTATION_TO_FEATURE.entrySet()) {
+            findWrongMethods(combinedIndex.getIndex(), e.getKey(), e.getValue(), wrongUsages);
+        }
+        return wrongUsages;
+    }
+
+    private void findWrongMethods(IndexView index, DotName annotationName, Feature feature, List<Throwable> wrongUsages) {
+        for (AnnotationInstance annotation : index.getAnnotations(annotationName)) {
+            if (annotation.target().kind() == AnnotationTarget.Kind.METHOD) {
+                if (Modifier.isStatic(annotation.target().asMethod().flags())) {
+                    wrongUsages
+                            .add(new IllegalStateException(feature + " method must not be static: "
+                                    + methodDesc(annotation.target().asMethod())));
+                } else if (annotation.target().asMethod().declaringClass().isInterface()) {
+                    wrongUsages
+                            .add(new IllegalStateException(feature + " method must not be declared on an interface: "
+                                    + methodDesc(annotation.target().asMethod())));
                 }
             }
         }
@@ -593,13 +627,13 @@ class McpServerProcessor {
     private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation,
             List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index) {
         if (Modifier.isStatic(method.flags())) {
-            throw new IllegalStateException(feature + " method must not be static: " + method);
+            throw new IllegalStateException(feature + " method must not be static: " + methodDesc(method));
         }
         if (Modifier.isPrivate(method.flags())) {
-            throw new IllegalStateException(feature + " method must not be private: " + method);
+            throw new IllegalStateException(feature + " method must not be private: " + methodDesc(method));
         }
         if (method.returnType().kind() == Kind.VOID && feature != NOTIFICATION) {
-            throw new IllegalStateException(feature + " method may not return void: " + method);
+            throw new IllegalStateException(feature + " method may not return void: " + methodDesc(method));
         }
         switch (feature) {
             case PROMPT -> validatePromptMethod(method);
@@ -622,7 +656,8 @@ class McpServerProcessor {
         List<MethodParameterInfo> parameters = parameters(method);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
-                throw new IllegalStateException("Prompt method must only consume String parameters: " + method);
+                throw new IllegalStateException(
+                        "Prompt method must only consume String parameters: " + methodDesc(method));
             }
         }
     }
@@ -639,12 +674,13 @@ class McpServerProcessor {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!COMPLETE_TYPES.contains(type)) {
-            throw new IllegalStateException("Unsupported Prompt complete method return type: " + method);
+            throw new IllegalStateException("Unsupported Prompt complete method return type: " + methodDesc(method));
         }
 
         List<MethodParameterInfo> parameters = parameters(method);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
-            throw new IllegalStateException("Prompt complete must consume exactly one String argument: " + method);
+            throw new IllegalStateException(
+                    "Prompt complete must consume exactly one String argument: " + methodDesc(method));
         }
     }
 
@@ -657,12 +693,14 @@ class McpServerProcessor {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (!COMPLETE_TYPES.contains(type)) {
-            throw new IllegalStateException("Unsupported Resource template complete method return type: " + method);
+            throw new IllegalStateException(
+                    "Unsupported Resource template complete method return type: " + methodDesc(method));
         }
 
         List<MethodParameterInfo> parameters = parameters(method);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
-            throw new IllegalStateException("Resource template complete must consume exactly one String argument: " + method);
+            throw new IllegalStateException(
+                    "Resource template complete must consume exactly one String argument: " + methodDesc(method));
         }
     }
 
@@ -725,7 +763,7 @@ class McpServerProcessor {
         List<MethodParameterInfo> parameters = parameters(method);
         if (!parameters.isEmpty()) {
             throw new IllegalStateException(
-                    "Resource method may only accept built-in parameter types" + method);
+                    "Resource method may only accept built-in parameter types" + methodDesc(method));
         }
     }
 
@@ -741,11 +779,13 @@ class McpServerProcessor {
         List<MethodParameterInfo> parameters = parameters(method);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
-                throw new IllegalStateException("Resource template method must only consume String parameters: " + method);
+                throw new IllegalStateException(
+                        "Resource template method must only consume String parameters: " + methodDesc(method));
             }
             if (!variableMatcher.variables().contains(param.name())) {
                 throw new IllegalStateException(
-                        "Parameter [" + param.name() + "] does not match an URI template variable: " + method);
+                        "Parameter [" + param.name() + "] does not match an URI template variable: "
+                                + methodDesc(method));
             }
         }
     }
@@ -765,7 +805,7 @@ class McpServerProcessor {
                     && !param.type().name().equals(DotNames.SAMPLING)) {
                 throw new IllegalStateException(
                         "Notification methods must only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling]: "
-                                + method);
+                                + methodDesc(method));
             }
         }
     }
@@ -780,6 +820,17 @@ class McpServerProcessor {
         for (DotName annotationName : ANNOTATION_TO_FEATURE.keySet()) {
             if (beanClass.hasAnnotation(annotationName)) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isFeatureMethod(MethodInfo method) {
+        if (!Modifier.isStatic(method.flags())) {
+            for (DotName annotationName : ANNOTATION_TO_FEATURE.keySet()) {
+                if (method.hasDeclaredAnnotation(annotationName)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -1012,7 +1063,7 @@ class McpServerProcessor {
                         || transformedAnnotations.hasAnnotation(method, DotNames.BLOCKING)
                         || transformedAnnotations.hasAnnotation(method, DotNames.NON_BLOCKING))) {
             throw new IllegalStateException("Kotlin `suspend` functions in MCP components may not be "
-                    + "annotated @Blocking, @NonBlocking or @RunOnVirtualThread: " + method);
+                    + "annotated @Blocking, @NonBlocking or @RunOnVirtualThread: " + methodDesc(method));
         }
         if (transformedAnnotations.hasAnnotation(method, DotNames.RUN_ON_VIRTUAL_THREAD)
                 || transformedAnnotations.hasAnnotation(method.declaringClass(), DotNames.RUN_ON_VIRTUAL_THREAD)) {
@@ -1045,8 +1096,24 @@ class McpServerProcessor {
                 return !name.equals(DotNames.UNI) && !name.equals(DotNames.MULTI);
             default:
                 throw new IllegalStateException(
-                        "Unsupported return type:" + method);
+                        "Unsupported return type:" + methodDesc(method));
         }
+    }
+
+    private static String methodDesc(MethodInfo method) {
+        StringBuilder builder = new StringBuilder()
+                .append(method.declaringClass().name().withoutPackagePrefix())
+                .append("#")
+                .append(method.name())
+                .append('(');
+        for (Iterator<org.jboss.jandex.Type> it = method.parameterTypes().iterator(); it.hasNext();) {
+            builder.append(it.next());
+            if (it.hasNext()) {
+                builder.append(", ");
+            }
+        }
+        builder.append(')');
+        return builder.toString();
     }
 
 }
