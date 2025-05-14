@@ -51,15 +51,19 @@ import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
+import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
@@ -163,12 +167,31 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    AutoAddScopeBuildItem autoAddScope() {
-        return AutoAddScopeBuildItem.builder()
+    void autoScopes(BuildProducer<AutoAddScopeBuildItem> autoScopes) {
+        // Add @Singleton to a class that contains a feature annotation
+        // and at least one non-static method annotated with a feature annotation
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
                 .containsAnnotations(ANNOTATION_TO_FEATURE.keySet().toArray(DotName[]::new))
                 .anyMethodMatches(this::isFeatureMethod)
                 .defaultScope(BuiltinScope.SINGLETON)
-                .build();
+                .build());
+        // Add @Singleton to filters
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(ToolFilter.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(PromptFilter.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(ResourceFilter.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(ResourceTemplateFilter.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
     }
 
     @BuildStep

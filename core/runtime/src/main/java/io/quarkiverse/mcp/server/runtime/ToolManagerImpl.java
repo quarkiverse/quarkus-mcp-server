@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,10 +25,13 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaVersion;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -36,14 +41,23 @@ import io.vertx.core.json.JsonObject;
 @Singleton
 public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> implements ToolManager {
 
+    private static final Logger LOG = Logger.getLogger(ToolManagerImpl.class);
+
     private final SchemaGenerator schemaGenerator;
 
     final ConcurrentMap<String, ToolInfo> tools;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
-    ToolManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+    final List<ToolFilter> filters;
+
+    ToolManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            @All List<ToolFilter> filters) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
@@ -53,16 +67,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON).without(
                         Option.SCHEMA_VERSION_INDICATOR).build());
         this.defaultValueConverters = metadata.defaultValueConverters();
+        this.filters = filters;
     }
 
     @Override
-    Stream<ToolInfo> infoStream() {
-        return tools.values().stream();
-    }
-
-    @Override
-    public int size() {
-        return tools.size();
+    Stream<ToolInfo> infos(McpConnection connection) {
+        return tools.values().stream().filter(t -> test(t, connection));
     }
 
     @Override
@@ -95,9 +105,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ToolResponse> getInvoker(String id) {
+    protected FeatureInvoker<ToolResponse> getInvoker(String id, McpConnection connection) {
         ToolInfo tool = tools.get(id);
-        if (tool instanceof FeatureInvoker fi) {
+        if (tool instanceof FeatureInvoker fi
+                && test(tool, connection)) {
             return fi;
         }
         return null;
@@ -136,6 +147,22 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             return objectNode;
         }
         return jsonNode;
+    }
+
+    private boolean test(ToolInfo tool, McpConnection connection) {
+        if (filters.isEmpty()) {
+            return true;
+        }
+        for (ToolFilter filter : filters) {
+            try {
+                if (!filter.test(tool, connection)) {
+                    return false;
+                }
+            } catch (RuntimeException e) {
+                LOG.errorf(e, "Unable to apply filter: %s", filter);
+            }
+        }
+        return true;
     }
 
     class ToolMethod extends FeatureMetadataInvoker<ToolResponse> implements ToolManager.ToolInfo {

@@ -68,7 +68,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
 
         JsonObject completeResponse = waitForLastResponse();
 
-        JsonObject completeResult = assertResponseMessage(completeMessage, completeResponse);
+        JsonObject completeResult = assertResultResponse(completeMessage, completeResponse);
         assertNotNull(completeResult);
         JsonArray values = completeResult.getJsonObject("completion").getJsonArray("values");
         assertEquals(1, values.size());
@@ -86,7 +86,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
 
         completeResponse = waitForLastResponse();
 
-        completeResult = assertResponseMessage(completeMessage, completeResponse);
+        completeResult = assertResultResponse(completeMessage, completeResponse);
         assertNotNull(completeResult);
         values = completeResult.getJsonObject("completion").getJsonArray("values");
         assertEquals(1, values.size());

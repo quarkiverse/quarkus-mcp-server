@@ -31,7 +31,7 @@ public class PromptsTest extends McpServerTest {
 
         JsonObject promptListResponse = waitForLastResponse();
 
-        JsonObject promptListResult = assertResponseMessage(promptListMessage, promptListResponse);
+        JsonObject promptListResult = assertResultResponse(promptListMessage, promptListResponse);
         assertNotNull(promptListResult);
         JsonArray prompts = promptListResult.getJsonArray("prompts");
         assertEquals(6, prompts.size());
@@ -80,7 +80,7 @@ public class PromptsTest extends McpServerTest {
 
         JsonObject promptGetResponse = waitForLastResponse();
 
-        JsonObject promptGetResult = assertResponseMessage(promptGetMessage, promptGetResponse);
+        JsonObject promptGetResult = assertResultResponse(promptGetMessage, promptGetResponse);
         assertNotNull(promptGetResult);
         JsonArray messages = promptGetResult.getJsonArray("messages");
         assertEquals(1, messages.size());

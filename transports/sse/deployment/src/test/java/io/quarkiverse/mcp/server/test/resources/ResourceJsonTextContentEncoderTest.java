@@ -38,7 +38,7 @@ public class ResourceJsonTextContentEncoderTest extends McpServerTest {
                         .put("uri", uri));
         send(message);
         JsonObject resourceResponse = waitForLastResponse();
-        JsonObject resourceResult = assertResponseMessage(message, resourceResponse);
+        JsonObject resourceResult = assertResultResponse(message, resourceResponse);
         assertNotNull(resourceResult);
         JsonArray contents = resourceResult.getJsonArray("contents");
         assertEquals(1, contents.size());

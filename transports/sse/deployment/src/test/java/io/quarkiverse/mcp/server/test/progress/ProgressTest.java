@@ -29,7 +29,7 @@ public abstract class ProgressTest extends McpServerTest {
         assertProgressNotification(notifications.get(9), token, 10, 10.2, "Long running progress: 10");
 
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         assertFalse(result.getBoolean("isError"));
         JsonArray content = result.getJsonArray("content");

@@ -61,7 +61,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
 
         JsonObject resourcesListResponse = waitForLastResponse();
 
-        JsonObject resourcesListResult = assertResponseMessage(resourcesListMessage, resourcesListResponse);
+        JsonObject resourcesListResult = assertResultResponse(resourcesListMessage, resourcesListResponse);
         assertNotNull(resourcesListResult);
         JsonArray resources = resourcesListResult.getJsonArray("resources");
         assertEquals(expectedSize, resources.size());
@@ -84,7 +84,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                         .put("uri", uri));
         send(message);
         JsonObject resourceResponse = waitForLastResponse();
-        JsonObject resourceResult = assertResponseMessage(message, resourceResponse);
+        JsonObject resourceResult = assertResultResponse(message, resourceResponse);
         assertNotNull(resourceResult);
         JsonArray contents = resourceResult.getJsonArray("contents");
         assertEquals(1, contents.size());

@@ -14,12 +14,17 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -29,25 +34,30 @@ import io.vertx.core.json.JsonObject;
 @Singleton
 public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, PromptInfo> implements PromptManager {
 
+    private static final Logger LOG = Logger.getLogger(PromptManagerImpl.class);
+
     final ConcurrentMap<String, PromptInfo> prompts;
 
-    PromptManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+    final List<PromptFilter> filters;
+
+    PromptManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            @All List<PromptFilter> filters) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
             this.prompts.put(f.info().name(), new PromptMethod(f));
         }
+        this.filters = filters;
     }
 
     @Override
-    Stream<PromptInfo> infoStream() {
-        return prompts.values().stream();
-    }
-
-    @Override
-    public int size() {
-        return prompts.size();
+    Stream<PromptInfo> infos(McpConnection connection) {
+        return prompts.values().stream().filter(p -> test(p, connection));
     }
 
     @Override
@@ -74,11 +84,6 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         });
     }
 
-    @Override
-    public boolean isEmpty() {
-        return prompts.isEmpty();
-    }
-
     IllegalArgumentException promptWithNameAlreadyExists(String name) {
         return new IllegalArgumentException("A prompt with name [" + name + "] already exits");
     }
@@ -90,12 +95,29 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<PromptResponse> getInvoker(String id) {
+    protected FeatureInvoker<PromptResponse> getInvoker(String id, McpConnection connection) {
         PromptInfo prompt = prompts.get(id);
-        if (prompt instanceof FeatureInvoker fi) {
+        if (prompt instanceof FeatureInvoker fi
+                && test(prompt, connection)) {
             return fi;
         }
         return null;
+    }
+
+    private boolean test(PromptInfo prompt, McpConnection connection) {
+        if (filters.isEmpty()) {
+            return true;
+        }
+        for (PromptFilter filter : filters) {
+            try {
+                if (!filter.test(prompt, connection)) {
+                    return false;
+                }
+            } catch (RuntimeException e) {
+                LOG.errorf(e, "Unable to apply filter: %s", filter);
+            }
+        }
+        return true;
     }
 
     class PromptMethod extends FeatureMetadataInvoker<PromptResponse> implements PromptManager.PromptInfo {

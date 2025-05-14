@@ -60,7 +60,7 @@ class ResourceMessageHandler extends MessageHandler {
 
         JsonArray resources = new JsonArray();
         JsonObject result = new JsonObject().put("resources", resources);
-        Page<ResourceInfo> page = manager.fetchPage(cursor, pageSize);
+        Page<ResourceInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
         for (ResourceInfo info : page) {
             resources.add(info.asJson());
         }

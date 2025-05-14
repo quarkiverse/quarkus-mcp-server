@@ -29,7 +29,7 @@ public class ResourcesTest extends McpServerTest {
 
         JsonObject resourcesListResponse = waitForLastResponse();
 
-        JsonObject resourcesListResult = assertResponseMessage(resourcesListMessage, resourcesListResponse);
+        JsonObject resourcesListResult = assertResultResponse(resourcesListMessage, resourcesListResponse);
         assertNotNull(resourcesListResult);
         JsonArray resources = resourcesListResult.getJsonArray("resources");
         assertEquals(4, resources.size());
@@ -67,7 +67,7 @@ public class ResourcesTest extends McpServerTest {
 
         JsonObject resourceReadResponse = waitForLastResponse();
 
-        JsonObject resourceReadResult = assertResponseMessage(resourceReadMessage, resourceReadResponse);
+        JsonObject resourceReadResult = assertResultResponse(resourceReadMessage, resourceReadResponse);
         assertNotNull(resourceReadResult);
         JsonArray contents = resourceReadResult.getJsonArray("contents");
         assertEquals(1, contents.size());

@@ -40,7 +40,7 @@ public class ToolJsonTextContentEncoderTest extends McpServerTest {
                                 .put("price", 1)));
         send(message);
         JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(message, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");

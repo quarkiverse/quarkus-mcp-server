@@ -37,7 +37,7 @@ public class NumberArgumentTest extends McpServerTest {
                                 .put("echo", 42.1)));
         send(message);
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         assertFalse(result.getBoolean("isError"));
         JsonArray content = result.getJsonArray("content");

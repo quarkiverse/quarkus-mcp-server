@@ -55,7 +55,7 @@ public class RootsTest extends McpServerTest {
                         .put("name", "firstRoot"));
         send(toolCallMessage);
         JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");
@@ -86,7 +86,7 @@ public class RootsTest extends McpServerTest {
                         .put("name", "firstRoot"));
         send(toolCallMessage);
         toolCallResponse = waitForLastResponse();
-        toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
+        toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         content = toolCallResult.getJsonArray("content");

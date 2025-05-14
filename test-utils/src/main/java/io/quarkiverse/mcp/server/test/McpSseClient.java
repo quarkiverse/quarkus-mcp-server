@@ -64,6 +64,21 @@ public class McpSseClient extends SseClient {
         return responses;
     }
 
+    public JsonObject waitForResponse(JsonObject request) {
+        int id = request.getInteger("id");
+        Awaitility.await().until(() -> getResponse(id) != null);
+        return getResponse(id);
+    }
+
+    public JsonObject getResponse(int id) {
+        for (JsonObject r : responses) {
+            if (r.getInteger("id") == id) {
+                return r;
+            }
+        }
+        return null;
+    }
+
     public void clearRequests() {
         requests.clear();
     }

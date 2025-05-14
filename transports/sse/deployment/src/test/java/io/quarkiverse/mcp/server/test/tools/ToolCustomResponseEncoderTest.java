@@ -60,7 +60,7 @@ public class ToolCustomResponseEncoderTest extends McpServerTest {
     }
 
     private void assertResponse(JsonObject message, JsonObject toolCallResponse, boolean isError, String text) {
-        JsonObject toolCallResult = assertResponseMessage(message, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
         assertNotNull(toolCallResult);
         assertTrue(toolCallResult.getBoolean("isError") == isError);
         JsonArray content = toolCallResult.getJsonArray("content");

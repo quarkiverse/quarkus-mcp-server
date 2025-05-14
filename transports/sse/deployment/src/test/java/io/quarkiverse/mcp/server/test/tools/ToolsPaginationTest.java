@@ -44,7 +44,7 @@ public class ToolsPaginationTest extends McpServerTest {
         send(message);
 
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         JsonArray tools = result.getJsonArray("tools");
         assertEquals(3, tools.size());
@@ -59,7 +59,7 @@ public class ToolsPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         tools = result.getJsonArray("tools");
         assertEquals(3, tools.size());
@@ -74,7 +74,7 @@ public class ToolsPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         tools = result.getJsonArray("tools");
         assertEquals(2, tools.size());

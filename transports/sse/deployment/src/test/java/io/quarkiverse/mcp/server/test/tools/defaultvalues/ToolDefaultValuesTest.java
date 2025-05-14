@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
@@ -48,7 +47,7 @@ public class ToolDefaultValuesTest extends McpServerTest {
 
         JsonObject toolListResponse = waitForLastResponse();
 
-        JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
+        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
         JsonArray tools = toolListResult.getJsonArray("tools");
         assertEquals(2, tools.size());
@@ -89,22 +88,6 @@ public class ToolDefaultValuesTest extends McpServerTest {
                 new JsonObject(), "true");
     }
 
-    private void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
-        JsonObject tool = null;
-        for (int i = 0; i < tools.size(); i++) {
-            JsonObject t = tools.getJsonObject(i);
-            if (name.equals(t.getString("name"))) {
-                tool = t;
-            }
-        }
-        if (description != null) {
-            assertEquals(description, tool.getString("description"));
-        }
-        if (inputSchemaAsserter != null) {
-            inputSchemaAsserter.accept(tool.getJsonObject("inputSchema"));
-        }
-    }
-
     private void assertResult(String toolName, JsonObject arguments, String expectedErrorText) {
         JsonObject message = newMessage("tools/call")
                 .put("params", new JsonObject()
@@ -112,7 +95,7 @@ public class ToolDefaultValuesTest extends McpServerTest {
                         .put("arguments", arguments));
         send(message);
         JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(message, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");

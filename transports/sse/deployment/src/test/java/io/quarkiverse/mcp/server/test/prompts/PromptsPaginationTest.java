@@ -49,7 +49,7 @@ public class PromptsPaginationTest extends McpServerTest {
         send(message);
 
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         JsonArray prompts = result.getJsonArray("prompts");
         assertEquals(3, prompts.size());
@@ -64,7 +64,7 @@ public class PromptsPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         prompts = result.getJsonArray("prompts");
         assertEquals(3, prompts.size());
@@ -79,7 +79,7 @@ public class PromptsPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         prompts = result.getJsonArray("prompts");
         assertEquals(2, prompts.size());

@@ -66,7 +66,7 @@ public class ProgrammaticPromptTest extends McpServerTest {
 
         JsonObject promptsListResponse = waitForLastResponse();
 
-        JsonObject promptsListResult = assertResponseMessage(promptsListMessage, promptsListResponse);
+        JsonObject promptsListResult = assertResultResponse(promptsListMessage, promptsListResponse);
         assertNotNull(promptsListResult);
         JsonArray prompts = promptsListResult.getJsonArray("prompts");
         assertEquals(expectedSize, prompts.size());
@@ -90,7 +90,7 @@ public class ProgrammaticPromptTest extends McpServerTest {
                         .put("arguments", arguments));
         send(message);
         JsonObject resourceResponse = waitForLastResponse();
-        JsonObject resourceResult = assertResponseMessage(message, resourceResponse);
+        JsonObject resourceResult = assertResultResponse(message, resourceResponse);
         assertNotNull(resourceResult);
         JsonArray messages = resourceResult.getJsonArray("messages");
         assertEquals(1, messages.size());

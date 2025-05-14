@@ -49,7 +49,7 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
         send(message);
 
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         JsonArray resources = result.getJsonArray("resourceTemplates");
         assertEquals(3, resources.size());
@@ -64,7 +64,7 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         resources = result.getJsonArray("resourceTemplates");
         assertEquals(3, resources.size());
@@ -79,7 +79,7 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
         send(message);
 
         response = waitForLastResponse();
-        result = assertResponseMessage(message, response);
+        result = assertResultResponse(message, response);
         assertNotNull(result);
         resources = result.getJsonArray("resourceTemplates");
         assertEquals(2, resources.size());

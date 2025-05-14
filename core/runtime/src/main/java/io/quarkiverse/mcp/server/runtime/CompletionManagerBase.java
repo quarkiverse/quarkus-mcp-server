@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -47,18 +48,13 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     }
 
     @Override
-    Stream<CompletionInfo> infoStream() {
+    Stream<CompletionInfo> infos(McpConnection connection) {
         return completions.values().stream();
-    }
-
-    @Override
-    public int size() {
-        return completions.size();
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<CompletionResponse> getInvoker(String id) {
+    protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpConnection connection) {
         CompletionInfo completion = completions.get(id);
         if (completion instanceof FeatureInvoker fi) {
             return fi;
