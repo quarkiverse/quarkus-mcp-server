@@ -95,7 +95,7 @@ public class ToolSecurityTest extends McpServerTest {
     }
 
     private void assertToolResponse(JsonObject message, JsonObject response, String expectedText) {
-        JsonObject toolResult = assertResponseMessage(message, response);
+        JsonObject toolResult = assertResultResponse(message, response);
         assertNotNull(toolResult);
         assertFalse(toolResult.getBoolean("isError"));
         JsonArray content = toolResult.getJsonArray("content");

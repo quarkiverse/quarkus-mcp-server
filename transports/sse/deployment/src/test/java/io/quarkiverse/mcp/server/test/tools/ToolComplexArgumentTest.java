@@ -49,7 +49,7 @@ public class ToolComplexArgumentTest extends McpServerTest {
                         .put("arguments", arguments));
         send(message);
         JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(message, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
         assertNotNull(toolCallResult);
         assertFalse(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");

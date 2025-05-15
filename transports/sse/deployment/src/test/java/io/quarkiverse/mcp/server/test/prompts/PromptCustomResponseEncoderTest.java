@@ -38,7 +38,7 @@ public class PromptCustomResponseEncoderTest extends McpServerTest {
                                 .put("price", "10")));
         send(message);
         JsonObject response = waitForLastResponse();
-        JsonObject result = assertResponseMessage(message, response);
+        JsonObject result = assertResultResponse(message, response);
         assertNotNull(result);
         JsonArray messages = result.getJsonArray("messages");
         assertEquals(1, messages.size());

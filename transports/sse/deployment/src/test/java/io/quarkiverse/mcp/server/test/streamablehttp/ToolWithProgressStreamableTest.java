@@ -65,7 +65,7 @@ public class ToolWithProgressStreamableTest extends StreamableHttpTest {
         }
         assertNotNull(response);
 
-        JsonObject result = assertResponseMessage(msg, response);
+        JsonObject result = assertResultResponse(msg, response);
         assertNotNull(result);
         assertFalse(result.getBoolean("isError"));
         JsonArray content = result.getJsonArray("content");

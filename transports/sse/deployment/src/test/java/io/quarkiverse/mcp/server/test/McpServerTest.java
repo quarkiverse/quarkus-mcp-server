@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.test;
 
+import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -16,6 +17,7 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.restassured.RestAssured;
 import io.restassured.response.ValidatableResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public abstract class McpServerTest {
@@ -176,7 +178,7 @@ public abstract class McpServerTest {
 
         JsonObject initResponse = waitForLastResponse();
 
-        JsonObject initResult = assertResponseMessage(initMessage, initResponse);
+        JsonObject initResult = assertResultResponse(initMessage, initResponse);
         assertNotNull(initResult);
         assertEquals("2024-11-05", initResult.getString("protocolVersion"));
 
@@ -196,10 +198,39 @@ public abstract class McpServerTest {
         return endpoint;
     }
 
-    protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
-        assertEquals(message.getInteger("id"), response.getInteger("id"));
+    protected void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
+        JsonObject tool = null;
+        for (int i = 0; i < tools.size(); i++) {
+            JsonObject t = tools.getJsonObject(i);
+            if (name.equals(t.getString("name"))) {
+                tool = t;
+            }
+        }
+        if (tool == null) {
+            fail("Tool not found: " + name);
+        }
+        if (description != null) {
+            assertEquals(description, tool.getString("description"));
+        }
+        if (inputSchemaAsserter != null) {
+            inputSchemaAsserter.accept(tool.getJsonObject("inputSchema"));
+        }
+    }
+
+    protected JsonObject assertResultResponse(JsonObject request, JsonObject response) {
+        assertEquals(request.getInteger("id"), response.getInteger("id"));
         assertEquals("2.0", response.getString("jsonrpc"));
-        return response.getJsonObject("result");
+        JsonObject result = response.getJsonObject("result");
+        assertNotNull(result);
+        return result;
+    }
+
+    protected JsonObject assertErrorResponse(JsonObject request, JsonObject response) {
+        assertEquals(request.getInteger("id"), response.getInteger("id"));
+        assertEquals("2.0", response.getString("jsonrpc"));
+        JsonObject error = response.getJsonObject("error");
+        assertNotNull(error);
+        return error;
     }
 
     protected JsonObject newMessage(String method) {

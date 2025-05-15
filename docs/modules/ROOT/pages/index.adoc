@@ -900,6 +900,42 @@ public class MyTools {
 <1> Permit only authenticated users. All CDI business methods are protected.
 <2> Permit only user with role `admin`.
 
+== Filters
+
+It is possible to determine the set of visible/accesible tools, prompts, resources and resource templates for a specific MCP client.
+Any CDI bean that implements `ToolFilter`, `PrompFilter`, `ResourceFilter` and `ResourceTemplateFilter` respectively is automatically applied.
+Filters should be fast and efficient, and should never block the current thread (read data from a socket, write data to disk, etc.) because they can be executed on an event loop.
+If a filter throws an unchecked exception then its execution is ignored and the next filter is applied.
+
+Multiple filters are sorted by `InjectableBean#getPriority()` and executed sequentially.
+Higher priority is executed first.
+Only features that match all the filters are visible/accesible. 
+
+.Filters Example
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.ToolFilter;
+import io.quarkiverse.mcp.server.PromptFilter;
+
+// @Singleton is added automatically
+public class MyFilters {
+
+   @Override
+   public boolean test(PromptInfo prompt, McpConnection connection) {
+     // Skip clients that do not support sampling
+     return connection.initialRequest().supportsSampling();
+   }
+   
+   @Override
+   public boolean test(ToolInfo tool, McpConnection connection) {
+       // Skip tools registered programmatically
+       return tool.isMethod();
+   }
+}
+----
+
 == Traffic logging
 
 The extension can log JSON messages sent and received for debugging purposes.

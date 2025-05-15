@@ -39,7 +39,7 @@ public class ToolBusinessErrorTest extends McpServerTest {
                         .put("arguments", arguments));
         send(message);
         JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResponseMessage(message, toolCallResponse);
+        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
         assertNotNull(toolCallResult);
         assertTrue(toolCallResult.getBoolean("isError"));
         JsonArray content = toolCallResult.getJsonArray("content");

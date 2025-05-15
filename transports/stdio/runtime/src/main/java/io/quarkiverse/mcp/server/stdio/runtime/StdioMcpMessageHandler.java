@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,8 +32,10 @@ import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkus.runtime.Quarkus;
+import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
+import io.smallrye.common.vertx.VertxContext;
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 
 @Singleton
@@ -84,22 +87,25 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
                                 Quarkus.asyncExit(0);
                                 return;
                             }
+                            Object json;
                             try {
-                                Object json;
-                                try {
-                                    json = Json.decodeValue(line);
-                                } catch (Exception e) {
-                                    String msg = "Unable to parse the JSON message";
-                                    LOG.errorf(e, msg);
-                                    connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
-                                    return;
-                                }
-                                McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null, null);
-                                handle(mcpRequest);
-                            } catch (DecodeException e) {
+                                json = Json.decodeValue(line);
+                            } catch (Exception e) {
                                 String msg = "Unable to parse the JSON message";
                                 LOG.errorf(e, msg);
+                                connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
+                                return;
                             }
+                            Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
+                            VertxContextSafetyToggle.setContextSafe(context, true);
+                            context.executeBlocking(new Callable<>() {
+                                @Override
+                                public Object call() throws Exception {
+                                    McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null, null);
+                                    handle(mcpRequest);
+                                    return null;
+                                }
+                            });
                         }
                     } catch (IOException e) {
                         LOG.errorf(e, "Error reading stdio");

@@ -37,7 +37,7 @@ class ToolMessageHandler extends MessageHandler {
 
         JsonArray tools = new JsonArray();
         JsonObject result = new JsonObject().put("tools", tools);
-        Page<ToolManager.ToolInfo> page = manager.fetchPage(cursor, pageSize);
+        Page<ToolManager.ToolInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
         for (ToolManager.ToolInfo info : page) {
             tools.add(info.asJson());
         }

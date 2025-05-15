@@ -16,7 +16,10 @@ import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkus.arc.Arc;
+import io.quarkus.arc.ManagedContext;
 import io.quarkus.runtime.LaunchMode;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -78,6 +81,36 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
+        // We activate the request context for every MCP request
+        // This is suboptimal in some cases but it simplifies further processing
+        final SecuritySupport securitySupport = mcpRequest.securitySupport();
+        final ContextSupport contextSupport = mcpRequest.contextSupport();
+        final CurrentIdentityAssociation currentIdentityAssociation = currentIdentityAssociation();
+
+        ManagedContext requestContext = Arc.container().requestContext();
+        if (requestContext.isActive()) {
+            if (securitySupport != null && currentIdentityAssociation != null) {
+                securitySupport.setCurrentIdentity(currentIdentityAssociation);
+            }
+            return handleMcpRequest(mcpRequest);
+        } else {
+            requestContext.activate();
+            if (contextSupport != null) {
+                contextSupport.requestContextActivated();
+            }
+            if (securitySupport != null && currentIdentityAssociation != null) {
+                securitySupport.setCurrentIdentity(currentIdentityAssociation);
+            }
+            try {
+                return handleMcpRequest(mcpRequest).onComplete(ar -> requestContext.terminate());
+            } catch (Throwable e) {
+                requestContext.terminate();
+                throw e;
+            }
+        }
+    }
+
+    private Future<?> handleMcpRequest(MCP_REQUEST mcpRequest) {
         Object json = mcpRequest.json();
         if (json instanceof JsonObject message) {
             // Single request, notification, or response
@@ -133,11 +166,15 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // No-op
     }
 
-    public Future<Void> handleResponse(JsonObject message) {
+    protected CurrentIdentityAssociation currentIdentityAssociation() {
+        return null;
+    }
+
+    private Future<Void> handleResponse(JsonObject message) {
         return responseHandlers.handleResponse(message.getValue("id"), message);
     }
 
-    public Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
+    private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
         return switch (mcpRequest.connection().status()) {
             case NEW -> initializeNew(message, mcpRequest);
             case INITIALIZING -> initializing(message, mcpRequest);
@@ -180,7 +217,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (mcpRequest.connection().initialize(initialRequest)) {
             // The server MUST respond with its own capabilities and information
             afterInitialize(mcpRequest);
-            return mcpRequest.sender().sendResult(id, serverInfo(initialRequest));
+            return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest));
         } else {
             initializeFailed(mcpRequest);
             String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
@@ -194,7 +231,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
                 // Call init methods
-                List<NotificationManager.NotificationInfo> infos = notificationManager.infoStream()
+                List<NotificationManager.NotificationInfo> infos = notificationManager.infos(mcpRequest.connection())
                         .filter(n -> n.type() == Type.INITIALIZED).toList();
                 if (!infos.isEmpty()) {
                     ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
@@ -277,7 +314,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> rootsListChanged(McpRequest mcpRequest) {
         // Call init methods
-        List<NotificationManager.NotificationInfo> infos = notificationManager.infoStream()
+        List<NotificationManager.NotificationInfo> infos = notificationManager.infos(mcpRequest.connection())
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
         if (!infos.isEmpty()) {
             ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
@@ -386,7 +423,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-03-26", "2024-11-05");
 
-    private Map<String, Object> serverInfo(InitialRequest initialRequest) {
+    private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest) {
         Map<String, Object> info = new HashMap<>();
 
         // Note that currently the protocol version does not affect the behavior of the server in any way
@@ -397,24 +434,26 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         info.put("protocolVersion", version);
 
         String serverName = config.serverInfo().name()
-                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class).orElse("N/A"));
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
+                        .orElse("N/A"));
         String serverVersion = config.serverInfo().version()
-                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class).orElse("N/A"));
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
+                        .orElse("N/A"));
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
-        if (!promptManager.isEmpty()) {
+        if (!promptManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!toolManager.isEmpty()) {
+        if (toolManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!resourceManager.isEmpty()
-                || !resourceTemplateManager.isEmpty()) {
+        if (!resourceManager.hasInfos(mcpRequest.connection())
+                || !resourceTemplateManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!promptCompletionManager.isEmpty()
-                || !resourceTemplateCompletionManager.isEmpty()) {
+        if (!promptCompletionManager.hasInfos(mcpRequest.connection())
+                || !resourceTemplateCompletionManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());

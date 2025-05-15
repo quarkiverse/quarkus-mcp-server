@@ -12,14 +12,19 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
+import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -27,6 +32,8 @@ import io.vertx.core.json.JsonObject;
 
 @Singleton
 public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, ResourceInfo> implements ResourceManager {
+
+    private static final Logger LOG = Logger.getLogger(ResourceManagerImpl.class);
 
     final ResourceTemplateManagerImpl resourceTemplateManager;
 
@@ -36,9 +43,16 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     // uri -> subscribers (connection ids)
     final ConcurrentMap<String, List<String>> subscribers;
 
-    ResourceManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ResourceTemplateManagerImpl resourceTemplateManager, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+    final List<ResourceFilter> filters;
+
+    ResourceManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ResourceTemplateManagerImpl resourceTemplateManager,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            @All List<ResourceFilter> filters) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.resourceTemplateManager = resourceTemplateManager;
         this.resources = new ConcurrentHashMap<>();
@@ -46,16 +60,12 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
             this.resources.put(f.info().uri(), new ResourceMethod(f));
         }
+        this.filters = filters;
     }
 
     @Override
-    Stream<ResourceInfo> infoStream() {
-        return resources.values().stream();
-    }
-
-    @Override
-    public int size() {
-        return resources.size();
+    Stream<ResourceInfo> infos(McpConnection connection) {
+        return resources.values().stream().filter(r -> test(r, connection));
     }
 
     @Override
@@ -124,12 +134,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpConnection connection) {
         ResourceInfo resource = resources.get(id);
-        if (resource instanceof FeatureInvoker fi) {
+        if (resource instanceof FeatureInvoker fi
+                && test(resource, connection)) {
             return fi;
         }
-        return resourceTemplateManager.getInvoker(id);
+        return resourceTemplateManager.getInvoker(id, connection);
     }
 
     @Override
@@ -159,6 +170,22 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     @Override
     protected McpException notFound(String id) {
         return new McpException("Invalid resource uri: " + id, JsonRPC.RESOURCE_NOT_FOUND);
+    }
+
+    private boolean test(ResourceInfo resource, McpConnection connection) {
+        if (filters.isEmpty()) {
+            return true;
+        }
+        for (ResourceFilter filter : filters) {
+            try {
+                if (!filter.test(resource, connection)) {
+                    return false;
+                }
+            } catch (RuntimeException e) {
+                LOG.errorf(e, "Unable to apply filter: %s", filter);
+            }
+        }
+        return true;
     }
 
     class ResourceMethod extends FeatureMetadataInvoker<ResourceResponse> implements ResourceManager.ResourceInfo {

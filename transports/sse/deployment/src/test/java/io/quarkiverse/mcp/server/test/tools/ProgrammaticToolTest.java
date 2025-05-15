@@ -65,7 +65,7 @@ public class ProgrammaticToolTest extends McpServerTest {
 
         JsonObject toolsListResponse = waitForLastResponse();
 
-        JsonObject toolsListResult = assertResponseMessage(toolsListMessage, toolsListResponse);
+        JsonObject toolsListResult = assertResultResponse(toolsListMessage, toolsListResponse);
         assertNotNull(toolsListResult);
         JsonArray tools = toolsListResult.getJsonArray("tools");
         assertEquals(expectedSize, tools.size());
@@ -89,7 +89,7 @@ public class ProgrammaticToolTest extends McpServerTest {
                         .put("arguments", arguments));
         send(message);
         JsonObject toolResponse = waitForLastResponse();
-        JsonObject toolResult = assertResponseMessage(message, toolResponse);
+        JsonObject toolResult = assertResultResponse(message, toolResponse);
         assertNotNull(toolResult);
         assertFalse(toolResult.getBoolean("isError"));
         JsonArray content = toolResult.getJsonArray("content");

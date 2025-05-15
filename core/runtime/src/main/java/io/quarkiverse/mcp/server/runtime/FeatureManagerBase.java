@@ -22,12 +22,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
-import io.quarkus.arc.Arc;
-import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
@@ -64,7 +63,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
-        FeatureInvoker<RESULT> invoker = getInvoker(id);
+        FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest().connection());
         if (invoker != null) {
             return execute(invoker.executionModel(), executionContext, new Callable<Uni<RESULT>>() {
                 @Override
@@ -84,18 +83,20 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     public Iterator<INFO> iterator() {
-        return infoStream().sorted().iterator();
+        return infos(null).sorted().iterator();
     }
 
-    public Page<INFO> fetchPage(Cursor cursor, int pageSize) {
-        if (isEmpty()) {
+    public Page<INFO> fetchPage(McpRequest mcpRequest, Cursor cursor, int pageSize) {
+        McpConnection connection = mcpRequest.connection();
+        long count = infos(connection).count();
+        if (count == 0) {
             return Page.empty();
         }
-        if (size() <= pageSize) {
+        if (count <= pageSize) {
             // Pagination is not needed
-            return new Page<>(infoStream().sorted().toList(), true);
+            return new Page<>(infos(connection).sorted().toList(), true);
         }
-        List<INFO> result = infoStream()
+        List<INFO> result = infos(connection)
                 .filter(r -> r.createdAt().isAfter(cursor.createdAt())
                         && (cursor.name() == null
                                 || r.name().compareTo(cursor.name()) > 0))
@@ -109,12 +110,14 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return new Page<>(result, true);
     }
 
-    abstract Stream<INFO> infoStream();
+    /**
+     * @param connection (may be {@code null})
+     * @return the stream of accesible infos
+     */
+    abstract Stream<INFO> infos(McpConnection connection);
 
-    public abstract int size();
-
-    public boolean isEmpty() {
-        return size() < 1;
+    public boolean hasInfos(McpConnection connection) {
+        return infos(connection).count() > 0;
     }
 
     @SuppressWarnings("unchecked")
@@ -190,14 +193,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return num;
     }
 
-    protected abstract FeatureInvoker<RESULT> getInvoker(String id);
+    protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpConnection connection);
 
     protected abstract McpException notFound(String id);
 
     protected Future<RESULT> execute(ExecutionModel executionModel, FeatureExecutionContext executionContext,
             Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();
-        ActivationSupport<RESULT> activation = new ActivationSupport<>(action, executionContext.mcpRequest());
 
         Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -212,7 +214,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                         @Override
                         public void run() {
                             try {
-                                activation.call().subscribe().with(ret::complete, ret::fail);
+                                action.call().subscribe().with(ret::complete, ret::fail);
                             } catch (Throwable e) {
                                 ret.fail(e);
                             }
@@ -225,7 +227,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 @Override
                 public Void call() {
                     try {
-                        activation.call().subscribe().with(ret::complete, ret::fail);
+                        action.call().subscribe().with(ret::complete, ret::fail);
                     } catch (Throwable e) {
                         ret.fail(e);
                     }
@@ -238,7 +240,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 @Override
                 public void handle(Void event) {
                     try {
-                        activation.call().subscribe().with(ret::complete, ret::fail);
+                        action.call().subscribe().with(ret::complete, ret::fail);
                     } catch (Throwable e) {
                         ret.fail(e);
                     }
@@ -262,45 +264,6 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         for (McpConnectionBase c : connectionManager) {
             c.send(Messages.newNotification(method));
         }
-    }
-
-    private class ActivationSupport<T> implements Callable<Uni<T>> {
-
-        private final Callable<Uni<T>> delegate;
-        private final SecuritySupport securitySupport;
-        private final ContextSupport contextSupport;
-
-        private ActivationSupport(Callable<Uni<T>> delegate, McpRequest mcpRequest) {
-            this.delegate = delegate;
-            this.securitySupport = mcpRequest.securitySupport();
-            this.contextSupport = mcpRequest.contextSupport();
-        }
-
-        @Override
-        public Uni<T> call() throws Exception {
-            ManagedContext requestContext = Arc.container().requestContext();
-            if (requestContext.isActive()) {
-                if (securitySupport != null && currentIdentityAssociation != null) {
-                    securitySupport.setCurrentIdentity(currentIdentityAssociation);
-                }
-                return delegate.call();
-            } else {
-                requestContext.activate();
-                if (contextSupport != null) {
-                    contextSupport.requestContextActivated();
-                }
-                if (securitySupport != null && currentIdentityAssociation != null) {
-                    securitySupport.setCurrentIdentity(currentIdentityAssociation);
-                }
-                try {
-                    return delegate.call().eventually(requestContext::terminate);
-                } catch (Throwable e) {
-                    requestContext.terminate();
-                    throw e;
-                }
-            }
-        }
-
     }
 
     interface FeatureInvoker<R> {

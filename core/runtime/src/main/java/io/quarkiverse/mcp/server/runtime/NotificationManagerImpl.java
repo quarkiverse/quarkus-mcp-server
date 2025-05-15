@@ -12,6 +12,7 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -38,13 +39,8 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     }
 
     @Override
-    public Stream<NotificationInfo> infoStream() {
+    public Stream<NotificationInfo> infos(McpConnection connection) {
         return notifications.values().stream();
-    }
-
-    @Override
-    public int size() {
-        return notifications.size();
     }
 
     @Override
@@ -68,7 +64,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<Void> getInvoker(String id) {
+    protected FeatureInvoker<Void> getInvoker(String id, McpConnection connection) {
         NotificationInfo init = notifications.get(id);
         if (init instanceof FeatureInvoker fi) {
             return fi;

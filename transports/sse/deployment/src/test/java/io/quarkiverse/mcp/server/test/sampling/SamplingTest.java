@@ -62,7 +62,7 @@ public class SamplingTest extends McpServerTest {
             send(message);
 
             JsonObject toolCallResponse = waitForLastResponse();
-            JsonObject toolCallResult = assertResponseMessage(toolCallMessage, toolCallResponse);
+            JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
             assertNotNull(toolCallResult);
             assertFalse(toolCallResult.getBoolean("isError"));
             JsonArray content = toolCallResult.getJsonArray("content");

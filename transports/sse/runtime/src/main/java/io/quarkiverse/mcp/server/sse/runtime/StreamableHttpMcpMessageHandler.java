@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
@@ -71,17 +72,26 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private final CurrentVertxRequest currentVertxRequest;
 
-    StreamableHttpMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
+    private final CurrentIdentityAssociation currentIdentityAssociation;
+
+    StreamableHttpMcpMessageHandler(McpRuntimeConfig config,
+            ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
-            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
+            ToolManagerImpl toolManager,
+            ResourceManagerImpl resourceManager,
+            PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl notificationManager,
-            ResponseHandlers serverRequests, CurrentVertxRequest currentVertxRequest,
+            ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
+            NotificationManagerImpl notificationManager,
+            ResponseHandlers serverRequests,
+            CurrentVertxRequest currentVertxRequest,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
+        this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 
     @Override
@@ -195,6 +205,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
     }
 
+    @Override
+    protected CurrentIdentityAssociation currentIdentityAssociation() {
+        return currentIdentityAssociation;
+    }
+
     private boolean accepts(List<String> accepts, String contentType) {
         for (String accept : accepts) {
             if (accept.contains(contentType)) {
@@ -229,13 +244,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         // Scan the request payload and attempt to identify messages that should force SSE init
         // such as a tool call with the Progress param
         if (mcpRequest.json() instanceof JsonObject message) {
-            forceSseInit = forceSse(message);
+            forceSseInit = forceSse(mcpRequest, message);
             containsRequest = Messages.isRequest(message);
         } else if (mcpRequest.json() instanceof JsonArray batch) {
             if (!Messages.isResponse(batch.getJsonObject(0))) {
                 // The batch contains at least 2 requests/notifications
                 // or 1 requests/notification that forces SSE init
-                forceSseInit = batch.size() > 1 || forceSse(batch.getJsonObject(0));
+                forceSseInit = batch.size() > 1 || forceSse(mcpRequest, batch.getJsonObject(0));
                 for (Object e : batch) {
                     if (e instanceof JsonObject message && Messages.isRequest(message)) {
                         containsRequest = true;
@@ -247,7 +262,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return new ScanResult(forceSseInit, containsRequest);
     }
 
-    private boolean forceSse(JsonObject message) {
+    private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message) {
         String method = message.getString("method");
         if (method != null) {
             if (Messages.isRequest(message) && FORCE_SSE_REQUESTS.contains(method)) {
@@ -395,11 +410,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         }
-        List<NotificationManager.NotificationInfo> infos = notificationManager.infoStream()
-                .filter(n -> !n.isMethod() && n.type() == Type.from(method)).toList();
-        if (!infos.isEmpty()) {
-            // Always force SSE init for a notification added programatically
-            return true;
+        for (NotificationManager.NotificationInfo info : notificationManager) {
+            if (!info.isMethod() && info.type() == Type.from(method)) {
+                // Always force SSE init for a notification added programatically
+                return true;
+            }
         }
         return false;
     }

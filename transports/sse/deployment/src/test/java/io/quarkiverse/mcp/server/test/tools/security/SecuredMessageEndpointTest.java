@@ -49,7 +49,7 @@ public class SecuredMessageEndpointTest extends McpServerTest {
 
         JsonObject toolListResponse = waitForLastResponse();
 
-        JsonObject toolListResult = assertResponseMessage(toolListMessage, toolListResponse);
+        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
         assertNotNull(toolListResult);
         JsonArray tools = toolListResult.getJsonArray("tools");
         assertEquals(1, tools.size());

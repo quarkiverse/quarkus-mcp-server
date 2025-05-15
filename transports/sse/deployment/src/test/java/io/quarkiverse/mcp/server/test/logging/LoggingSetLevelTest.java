@@ -56,7 +56,7 @@ public class LoggingSetLevelTest extends McpServerTest {
 
         JsonObject toolGetResponse = waitForLastResponse();
 
-        JsonObject toolGetResult = assertResponseMessage(toolGetMessage, toolGetResponse);
+        JsonObject toolGetResult = assertResultResponse(toolGetMessage, toolGetResponse);
         assertNotNull(toolGetResult);
         JsonArray content = toolGetResult.getJsonArray("content");
         assertEquals(1, content.size());

@@ -36,7 +36,7 @@ class PromptMessageHandler extends MessageHandler {
 
         JsonArray prompts = new JsonArray();
         JsonObject result = new JsonObject().put("prompts", prompts);
-        Page<PromptManager.PromptInfo> page = manager.fetchPage(cursor, pageSize);
+        Page<PromptManager.PromptInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
         for (PromptManager.PromptInfo info : page) {
             prompts.add(info.asJson());
         }

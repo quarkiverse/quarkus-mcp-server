@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.sse.runtime;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
@@ -39,16 +40,25 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
 
     private final CurrentVertxRequest currentVertxRequest;
 
-    protected SseMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
+    private final CurrentIdentityAssociation currentIdentityAssociation;
+
+    protected SseMcpMessageHandler(McpRuntimeConfig config,
+            ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
-            ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
+            ToolManagerImpl toolManager,
+            ResourceManagerImpl resourceManager,
+            PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
-            ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
-            ResponseHandlers serverRequests, CurrentVertxRequest currentVertxRequest,
+            ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
+            NotificationManagerImpl initManager,
+            ResponseHandlers serverRequests,
+            CurrentVertxRequest currentVertxRequest,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata);
         this.currentVertxRequest = currentVertxRequest;
+        this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 
     @Override
@@ -113,6 +123,11 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             }
         });
 
+    }
+
+    @Override
+    protected CurrentIdentityAssociation currentIdentityAssociation() {
+        return currentIdentityAssociation;
     }
 
 }

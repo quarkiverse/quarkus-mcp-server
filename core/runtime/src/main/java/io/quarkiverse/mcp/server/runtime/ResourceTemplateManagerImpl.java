@@ -17,14 +17,19 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
+import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -34,26 +39,31 @@ import io.vertx.core.json.JsonObject;
 public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResponse, ResourceTemplateInfo>
         implements ResourceTemplateManager {
 
+    private static final Logger LOG = Logger.getLogger(ResourceTemplateManagerImpl.class);
+
     final ConcurrentMap<String, ResourceTemplateMetadata> templates;
 
-    ResourceTemplateManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+    final List<ResourceTemplateFilter> filters;
+
+    ResourceTemplateManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            @All List<ResourceTemplateFilter> filters) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
             this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
                     new ResourceTemplateMethod(fm)));
         }
+        this.filters = filters;
     }
 
     @Override
-    Stream<ResourceTemplateInfo> infoStream() {
-        return templates.values().stream().map(ResourceTemplateMetadata::info);
-    }
-
-    @Override
-    public int size() {
-        return templates.size();
+    Stream<ResourceTemplateInfo> infos(McpConnection connection) {
+        return templates.values().stream().map(ResourceTemplateMetadata::info).filter(rt -> test(rt, connection));
     }
 
     @Override
@@ -87,10 +97,15 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpConnection connection) {
         // This method is used by ResourceManager during "resources/read" - the id is a URI
         // We need to iterate over all templates and find the matching URI template
-        return (FeatureInvoker<ResourceResponse>) findMatching(id);
+        ResourceTemplateInfo found = findMatching(id);
+        if (found instanceof FeatureInvoker fi
+                && test(found, connection)) {
+            return fi;
+        }
+        return null;
     }
 
     public ResourceTemplateInfo findMatching(String uri) {
@@ -100,6 +115,22 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             }
         }
         return null;
+    }
+
+    private boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection) {
+        if (filters.isEmpty()) {
+            return true;
+        }
+        for (ResourceTemplateFilter filter : filters) {
+            try {
+                if (!filter.test(resourceTemplate, connection)) {
+                    return false;
+                }
+            } catch (RuntimeException e) {
+                LOG.errorf(e, "Unable to apply filter: %s", filter);
+            }
+        }
+        return true;
     }
 
     record ResourceTemplateMetadata(VariableMatcher variableMatcher, ResourceTemplateInfo info) {

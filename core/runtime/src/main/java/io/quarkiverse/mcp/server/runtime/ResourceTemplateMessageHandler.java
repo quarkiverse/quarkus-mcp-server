@@ -31,7 +31,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
 
         JsonArray templates = new JsonArray();
         JsonObject result = new JsonObject().put("resourceTemplates", templates);
-        Page<ResourceTemplateManager.ResourceTemplateInfo> page = manager.fetchPage(cursor, pageSize);
+        Page<ResourceTemplateManager.ResourceTemplateInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
         for (ResourceTemplateManager.ResourceTemplateInfo info : page) {
             templates.add(info.asJson());
         }
