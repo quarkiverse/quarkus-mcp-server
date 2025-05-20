@@ -920,7 +920,7 @@ import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.PromptFilter;
 
 // @Singleton is added automatically
-public class MyFilters {
+public class MyFilters implements ToolFilter, PromptFilter {
 
    @Override
    public boolean test(PromptInfo prompt, McpConnection connection) {
