@@ -44,6 +44,8 @@ public class SseMcpServerRecorder {
                     openSseStream(ctx);
                 } else if (HttpMethod.POST.equals(method)) {
                     handler.handle(ctx);
+                } else if (HttpMethod.DELETE.equals(method)) {
+                    handler.terminateSession(ctx);
                 } else {
                     throw new IllegalArgumentException("Unexpected HTTP method: " + method);
                 }
