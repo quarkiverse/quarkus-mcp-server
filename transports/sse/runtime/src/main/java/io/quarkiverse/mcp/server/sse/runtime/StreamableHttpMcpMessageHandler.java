@@ -187,6 +187,26 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         });
     }
 
+    public void terminateSession(RoutingContext ctx) {
+        HttpServerRequest request = ctx.request();
+        String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
+        if (mcpSessionId == null) {
+            LOG.errorf("Mcp session id header is missing: %s", ctx.normalizedPath());
+            ctx.fail(404);
+            return;
+        }
+        McpConnectionBase connection = connectionManager.get(mcpSessionId);
+        if (connection == null) {
+            LOG.errorf("Mcp session not found: %s", mcpSessionId);
+            ctx.fail(404);
+            return;
+        }
+        if (connectionManager.remove(connection.id())) {
+            LOG.infof("Mcp session terminated: %s", connection.id());
+        }
+        ctx.end();
+    }
+
     @Override
     protected void afterInitialize(HttpMcpRequest mcpRequest) {
         // Add the "Mcp-Session-Id" header to the response to the "Initialize" request
