@@ -32,12 +32,12 @@ defaults:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
+    name: JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-#        os: [windows-latest, macos-latest, ubuntu-latest]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
+        java-version: [17, 21]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Prepare git
@@ -45,15 +45,36 @@ jobs:
         if: startsWith(matrix.os, 'windows')
 
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: ${{ matrix.java-version }}
           cache: 'maven'
 
       - name: Build with Maven
         run: mvn -B clean install -Dno-format
+
+  build-native:
+    name: Native / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        java-version: [17]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Prepare git
+        run: git config --global core.autocrlf false
+        if: startsWith(matrix.os, 'windows')
+
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
 
       - name: Build with Maven (Native)
         run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
