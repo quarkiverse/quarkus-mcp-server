@@ -31,7 +31,7 @@ public class PromptsPaginationTest extends McpServerTest {
     PromptManager manager;
 
     @Test
-    public void testResources() {
+    public void testPrompts() {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             String name = i + "";

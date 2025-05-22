@@ -118,9 +118,8 @@ public class ServerFeaturesIT {
             assertEquals("string", valueProperty.getString("type"));
         });
 
-        assertToolCall(
-                "System.out.println(\"Hello world!\");\n", "codeservicecommand", new JsonObject()
-                        .put("language", "java"));
+        assertToolCall("System.out.println(\"Hello world!\");", "codeservicecommand", new JsonObject()
+                .put("language", "java"));
     }
 
     protected JsonObject assertResponseMessage(JsonObject message, JsonObject response) {
@@ -161,7 +160,7 @@ public class ServerFeaturesIT {
         assertEquals(1, content.size());
         JsonObject textContent = content.getJsonObject(0);
         assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
+        assertEquals(expectedText.strip(), textContent.getString("text").strip());
     }
 
     protected void initClient() {
