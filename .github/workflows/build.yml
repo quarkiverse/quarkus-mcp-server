@@ -77,4 +77,31 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven (Native)
-        run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
+        run: mvn -B clean install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
+
+  build-samples:
+    name: Samples / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        java-version: [17]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Prepare git
+        run: git config --global core.autocrlf false
+        if: startsWith(matrix.os, 'windows')
+
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
+
+      - name: Build sample - weather
+        run: mvn -B clean install -f samples/weather/pom.xml
+        
+      - name: Build sample - secure-mcp-sse-server
+        run: mvn -B clean install -f samples/secure-mcp-sse-server/pom.xml 
