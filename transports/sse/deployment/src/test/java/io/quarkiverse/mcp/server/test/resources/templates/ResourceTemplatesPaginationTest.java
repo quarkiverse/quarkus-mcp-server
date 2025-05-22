@@ -30,7 +30,7 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
     ResourceTemplateManager manager;
 
     @Test
-    public void testResources() {
+    public void testResourceTemplates() {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             String name = i + "";
