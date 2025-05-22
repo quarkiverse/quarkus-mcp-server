@@ -3,6 +3,9 @@ package io.quarkiverse.mcp.server.test.tools;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.Instant;
 
 import jakarta.inject.Inject;
 
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
@@ -27,7 +31,7 @@ public class ToolsPaginationTest extends McpServerTest {
     ToolManager manager;
 
     @Test
-    public void testResources() {
+    public void testTools() {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             String name = i + "";
@@ -36,6 +40,12 @@ public class ToolsPaginationTest extends McpServerTest {
                     .setHandler(
                             args -> ToolResponse.success("Result " + name))
                     .register();
+        }
+
+        Instant lastCreatedAt = Instant.EPOCH;
+        for (ToolInfo info : manager) {
+            assertTrue(info.createdAt().isAfter(lastCreatedAt));
+            lastCreatedAt = info.createdAt();
         }
 
         initClient();

@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.lang.reflect.Type;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -282,7 +283,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata) {
             this.metadata = metadata;
-            this.createdAt = Instant.now();
+            this.createdAt = nextTimestamp();
         }
 
         @Override
@@ -375,7 +376,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread) {
             this.name = name;
             this.description = description;
-            this.createdAt = Instant.now();
+            this.createdAt = nextTimestamp();
             this.fun = fun;
             this.asyncFun = asyncFun;
             this.runOnVirtualThread = runOnVirtualThread;
@@ -475,6 +476,19 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }
         }
         return type;
+    }
+
+    private static volatile Instant lastTimestamp = Instant.EPOCH;
+
+    private synchronized static Instant nextTimestamp() {
+        Instant ts = Instant.now();
+        if (ts.isAfter(lastTimestamp)) {
+            lastTimestamp = ts;
+            return ts;
+        }
+        ts = lastTimestamp.plus(1, ChronoUnit.MILLIS);
+        lastTimestamp = ts;
+        return ts;
     }
 
 }
