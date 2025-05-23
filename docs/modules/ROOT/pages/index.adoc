@@ -53,6 +53,8 @@ The MCP endpoint (as defined in `2025-03-26`) is exposed at `\{rootPath}`, i.e. 
 The SSE endpoint (as defined in `2024-11-05`) is exposed at `\{rootPath}/sse`, i.e. `/mcp/sse` by default.
 The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
+NOTE: The https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#resumability-and-redelivery[Resumability and Redelivery] for the Streamable HTTP is not supported yet.
+
 == Supported server features
 
 An MCP server provides some building blocks to enrich the context of language models in AI apps.
