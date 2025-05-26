@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
@@ -40,8 +41,6 @@ import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseBuildTimeConfig;
-import io.quarkus.vertx.http.runtime.VertxHttpBuildTimeConfig;
-import io.quarkus.vertx.http.runtime.VertxHttpConfig;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -63,8 +62,9 @@ public class SseMcpJsonRPCService {
 
     public SseMcpJsonRPCService(ToolManager toolManager, PromptManager promptManager, ResourceManager resourceManager,
             ResourceTemplateManager resourceTemplateManager, PromptCompletionManager promptCompletionManager,
-            ResourceTemplateCompletionManager resourceTemplateCompletionManager, VertxHttpConfig httpConfig,
-            VertxHttpBuildTimeConfig httpBuildConfig, McpSseBuildTimeConfig mcpSseBuildConfig) {
+            ResourceTemplateCompletionManager resourceTemplateCompletionManager,
+            @ConfigProperty(name = "quarkus.http.host") String host, @ConfigProperty(name = "quarkus.http.port") int port,
+            @ConfigProperty(name = "quarkus.http.root-path") String rootPath, McpSseBuildTimeConfig mcpSseBuildConfig) {
         this.toolManager = toolManager;
         this.promptManager = promptManager;
         this.promptCompletionManager = promptCompletionManager;
@@ -72,11 +72,11 @@ public class SseMcpJsonRPCService {
         this.resourceTemplateManager = resourceTemplateManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
         this.sseEndpoint = URI.create(new StringBuilder("http://")
-                .append(httpConfig.host())
+                .append(host)
                 .append(":")
-                .append(httpConfig.port())
-                .append(httpBuildConfig.rootPath())
-                .append(pathToAppend(httpBuildConfig.rootPath(), mcpSseBuildConfig.rootPath()))
+                .append(port)
+                .append(rootPath)
+                .append(pathToAppend(rootPath, mcpSseBuildConfig.rootPath()))
                 .append(pathToAppend(mcpSseBuildConfig.rootPath(), "sse")).toString());
         this.client = new DevUIClient();
         this.httpClient = HttpClient.newBuilder()
