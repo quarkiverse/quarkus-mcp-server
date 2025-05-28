@@ -25,4 +25,8 @@ public interface McpRequest {
             connection().trafficLogger().messageSent(message, connection());
         }
     }
+
+    void operationStart();
+
+    void operationEnd();
 }
