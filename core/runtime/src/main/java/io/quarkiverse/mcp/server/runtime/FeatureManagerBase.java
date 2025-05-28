@@ -29,13 +29,9 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
-import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
-import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
@@ -201,30 +197,19 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     protected Future<RESULT> execute(ExecutionModel executionModel, FeatureExecutionContext executionContext,
             Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();
-
-        Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
-        VertxContextSafetyToggle.setContextSafe(context, true);
-
         if (executionModel == ExecutionModel.VIRTUAL_THREAD) {
-            // While counter-intuitive, we switch to a safe context, so that context is captured and attached
-            // to the virtual thread.
-            context.runOnContext(new Handler<Void>() {
+            VirtualThreadsRecorder.getCurrent().execute(new Runnable() {
                 @Override
-                public void handle(Void event) {
-                    VirtualThreadsRecorder.getCurrent().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                action.call().subscribe().with(ret::complete, ret::fail);
-                            } catch (Throwable e) {
-                                ret.fail(e);
-                            }
-                        }
-                    });
+                public void run() {
+                    try {
+                        action.call().subscribe().with(ret::complete, ret::fail);
+                    } catch (Throwable e) {
+                        ret.fail(e);
+                    }
                 }
             });
         } else if (executionModel == ExecutionModel.WORKER_THREAD) {
-            context.executeBlocking(new Callable<Void>() {
+            Vertx.currentContext().executeBlocking(new Callable<Void>() {
                 @Override
                 public Void call() {
                     try {
@@ -237,16 +222,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }, false);
         } else {
             // Event loop
-            context.runOnContext(new Handler<Void>() {
-                @Override
-                public void handle(Void event) {
-                    try {
-                        action.call().subscribe().with(ret::complete, ret::fail);
-                    } catch (Throwable e) {
-                        ret.fail(e);
-                    }
-                }
-            });
+            try {
+                action.call().subscribe().with(ret::complete, ret::fail);
+            } catch (Throwable e) {
+                ret.fail(e);
+            }
         }
         return ret.future();
     }
