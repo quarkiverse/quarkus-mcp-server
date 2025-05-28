@@ -60,7 +60,7 @@ NOTE: The https://modelcontextprotocol.io/specification/2025-03-26/basic/transpo
 An MCP server provides some building blocks to enrich the context of language models in AI apps.
 In this extension, a _server feature_ (prompt, resource, tool, etc.) is either represented as a _business method_ of a CDI bean or registered programmatically.
 The execution model and context handling follow the idiomatic approach used in fundamental Quarkus extensions (such as `quarkus-rest` and `quarkus-scheduler`).
-For example, when a server feature is executed, the CDI request context is activated and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
+For example, when a server feature is executed, the CDI request context is active and a https://quarkus.io/guides/duplicated-context[Vert.x duplicated context] is created.
 
 === Execution model
 
@@ -81,6 +81,12 @@ The execution model is determined by the method signature and additional annotat
  with `@RunOnVirtualThread`.
 * Methods annotated with `@RunOnVirtualThread` or declared in class annotated with `@RunOnVirtualThread` must execute on
  a virtual thread, each invocation spawns a new virtual thread.
+
+=== CDI request context
+
+Each feature method execution is associated with a new CDI request context.
+This means that if a client sends a batch of MCP requests (e.g. multiple `tools/call` messages) then each MCP request (e.g. `@Tool` method invocation) receives a different instance of a `@RequestScoped` bean.
+However, if the `HTTP` transport is used then all MCP requests will have the same `io.vertx.core.http.HttpServerRequest` injected.
 
 == Prompts
 

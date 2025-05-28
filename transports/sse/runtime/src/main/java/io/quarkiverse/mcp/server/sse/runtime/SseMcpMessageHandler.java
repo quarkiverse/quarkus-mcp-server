@@ -27,6 +27,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
 import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -54,9 +55,10 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             ResponseHandlers serverRequests,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            McpMetadata metadata) {
+            McpMetadata metadata,
+            Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx);
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
@@ -114,7 +116,8 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             }
         };
 
-        McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, securitySupport, contextSupport);
+        McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, securitySupport, contextSupport,
+                currentIdentityAssociation);
         handle(mcpRequest).onComplete(ar -> {
             if (ar.succeeded()) {
                 ctx.end();
@@ -122,12 +125,6 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
                 ctx.response().setStatusCode(500).end();
             }
         });
-
-    }
-
-    @Override
-    protected CurrentIdentityAssociation currentIdentityAssociation() {
-        return currentIdentityAssociation;
     }
 
 }

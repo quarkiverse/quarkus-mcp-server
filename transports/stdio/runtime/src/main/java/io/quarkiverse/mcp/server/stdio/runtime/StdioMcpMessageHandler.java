@@ -47,8 +47,6 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
 
     private final TrafficLogger trafficLogger;
 
-    private final Vertx vertx;
-
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     protected StdioMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
@@ -60,11 +58,10 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
             McpMetadata metadata,
             Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx);
         this.executor = Executors.newSingleThreadExecutor();
         this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
                 : null;
-        this.vertx = vertx;
     }
 
     public void initialize(PrintStream stdout, McpRuntimeConfig config) {
@@ -101,7 +98,8 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
                             context.executeBlocking(new Callable<>() {
                                 @Override
                                 public Object call() throws Exception {
-                                    McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null, null);
+                                    McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null, null,
+                                            null);
                                     handle(mcpRequest);
                                     return null;
                                 }
