@@ -53,6 +53,7 @@ import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
 import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -86,9 +87,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResponseHandlers serverRequests,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            McpMetadata metadata) {
+            McpMetadata metadata,
+            Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata);
+                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata, vertx);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
@@ -158,7 +160,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         };
 
         HttpMcpRequest mcpRequest = new HttpMcpRequest(json, connection, securitySupport, ctx.response(), mcpSessionId == null,
-                contextSupport);
+                contextSupport, currentIdentityAssociation);
         ScanResult result = scan(mcpRequest);
         if (result.forceSseInit()) {
             mcpRequest.initiateSse();
@@ -223,11 +225,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpRequest.newSession) {
             connectionManager.remove(mcpRequest.connection().id());
         }
-    }
-
-    @Override
-    protected CurrentIdentityAssociation currentIdentityAssociation() {
-        return currentIdentityAssociation;
     }
 
     private boolean accepts(List<String> accepts, String contentType) {
@@ -448,8 +445,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         final HttpServerResponse response;
 
         public HttpMcpRequest(Object json, McpConnectionBase connection, SecuritySupport securitySupport,
-                HttpServerResponse response, boolean newSession, ContextSupport contextSupport) {
-            super(json, connection, null, securitySupport, contextSupport);
+                HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
+                CurrentIdentityAssociation currentIdentityAssociation) {
+            super(json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;

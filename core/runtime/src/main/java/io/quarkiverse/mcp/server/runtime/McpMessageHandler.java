@@ -16,13 +16,15 @@ import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
-import io.quarkus.arc.Arc;
-import io.quarkus.arc.ManagedContext;
 import io.quarkus.runtime.LaunchMode;
-import io.quarkus.security.identity.CurrentIdentityAssociation;
+import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
+import io.smallrye.common.vertx.VertxContext;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -50,6 +52,8 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     protected final McpRuntimeConfig config;
 
+    protected final Vertx vertx;
+
     private final McpMetadata metadata;
 
     protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
@@ -59,7 +63,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
-            McpMetadata metadata) {
+            McpMetadata metadata, Vertx vertx) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -78,39 +82,10 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.responseHandlers = responseHandlers;
         this.config = config;
         this.metadata = metadata;
+        this.vertx = vertx;
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
-        // We activate the request context for every MCP request
-        // This is suboptimal in some cases but it simplifies further processing
-        final SecuritySupport securitySupport = mcpRequest.securitySupport();
-        final ContextSupport contextSupport = mcpRequest.contextSupport();
-        final CurrentIdentityAssociation currentIdentityAssociation = currentIdentityAssociation();
-
-        ManagedContext requestContext = Arc.container().requestContext();
-        if (requestContext.isActive()) {
-            if (securitySupport != null && currentIdentityAssociation != null) {
-                securitySupport.setCurrentIdentity(currentIdentityAssociation);
-            }
-            return handleMcpRequest(mcpRequest);
-        } else {
-            requestContext.activate();
-            if (contextSupport != null) {
-                contextSupport.requestContextActivated();
-            }
-            if (securitySupport != null && currentIdentityAssociation != null) {
-                securitySupport.setCurrentIdentity(currentIdentityAssociation);
-            }
-            try {
-                return handleMcpRequest(mcpRequest).onComplete(ar -> requestContext.terminate());
-            } catch (Throwable e) {
-                requestContext.terminate();
-                throw e;
-            }
-        }
-    }
-
-    private Future<?> handleMcpRequest(MCP_REQUEST mcpRequest) {
         Object json = mcpRequest.json();
         if (json instanceof JsonObject message) {
             // Single request, notification, or response
@@ -164,10 +139,6 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     protected void afterInitialize(MCP_REQUEST mcpRequest) {
         // No-op
-    }
-
-    protected CurrentIdentityAssociation currentIdentityAssociation() {
-        return null;
     }
 
     private Future<Void> handleResponse(JsonObject message) {
@@ -291,25 +262,42 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     public static final String Q_CLOSE = "q/close";
 
     private Future<Void> operation(JsonObject message, McpRequest mcpRequest) {
-        String method = message.getString("method");
-        return switch (method) {
-            case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
-            case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest);
-            case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest);
-            case TOOLS_CALL -> toolHandler.toolsCall(message, mcpRequest);
-            case PING -> ping(message, mcpRequest);
-            case RESOURCES_LIST -> resourceHandler.resourcesList(message, mcpRequest);
-            case RESOURCES_READ -> resourceHandler.resourcesRead(message, mcpRequest);
-            case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, mcpRequest);
-            case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, mcpRequest);
-            case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, mcpRequest);
-            case COMPLETION_COMPLETE -> complete(message, mcpRequest);
-            case LOGGING_SET_LEVEL -> setLogLevel(message, mcpRequest);
-            case Q_CLOSE -> close(message, mcpRequest);
-            case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(mcpRequest);
-            default -> mcpRequest.sender().send(
-                    Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
-        };
+        // Create a new duplicated context and process the operation on this context
+        Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
+        VertxContextSafetyToggle.setContextSafe(context, true);
+        Promise<Void> ret = Promise.promise();
+
+        context.runOnContext(v -> {
+            mcpRequest.operationStart();
+            String method = message.getString("method");
+            Future<Void> future = switch (method) {
+                case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
+                case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest);
+                case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest);
+                case TOOLS_CALL -> toolHandler.toolsCall(message, mcpRequest);
+                case PING -> ping(message, mcpRequest);
+                case RESOURCES_LIST -> resourceHandler.resourcesList(message, mcpRequest);
+                case RESOURCES_READ -> resourceHandler.resourcesRead(message, mcpRequest);
+                case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, mcpRequest);
+                case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, mcpRequest);
+                case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, mcpRequest);
+                case COMPLETION_COMPLETE -> complete(message, mcpRequest);
+                case LOGGING_SET_LEVEL -> setLogLevel(message, mcpRequest);
+                case Q_CLOSE -> close(message, mcpRequest);
+                case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(mcpRequest);
+                default -> mcpRequest.sender().send(
+                        Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
+            };
+            future.onComplete(r -> {
+                mcpRequest.operationEnd();
+                if (r.failed()) {
+                    ret.fail(r.cause());
+                } else {
+                    ret.complete();
+                }
+            });
+        });
+        return ret.future();
     }
 
     private Future<Void> rootsListChanged(McpRequest mcpRequest) {
