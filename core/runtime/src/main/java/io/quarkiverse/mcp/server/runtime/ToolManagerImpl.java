@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -187,6 +188,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public Optional<ToolAnnotations> annotations() {
+            return Optional.ofNullable(metadata.info().toolAnnotations());
+        }
+
+        @Override
         public List<ToolArgument> arguments() {
             return metadata.info().serializedArguments().stream()
                     .map(fa -> new ToolArgument(fa.name(), fa.description(), fa.required(), fa.type(), fa.defaultValue()))
@@ -204,6 +210,15 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     required.add(a.name());
                 }
             }
+            ToolAnnotations toolAnnotations = metadata.info().toolAnnotations();
+            if (toolAnnotations != null) {
+                tool.put("annotations", new JsonObject()
+                        .put("title", toolAnnotations.title())
+                        .put("destructiveHint", toolAnnotations.destructiveHint())
+                        .put("idempotentHint", toolAnnotations.idempotentHint())
+                        .put("openWorldHint", toolAnnotations.openWorldHint())
+                        .put("readOnlyHint", toolAnnotations.readOnlyHint()));
+            }
             tool.put("inputSchema", new JsonObject()
                     .put("type", "object")
                     .put("properties", properties)
@@ -219,6 +234,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         private final List<ToolArgument> arguments;
 
+        private ToolAnnotations annotations;
+
         private ToolDefinitionImpl(String name) {
             super(name);
             this.arguments = new ArrayList<>();
@@ -231,10 +248,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition setAnnotations(ToolAnnotations annotations) {
+            this.annotations = annotations;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, description, fun, asyncFun,
-                    runOnVirtualThread, arguments);
+                    runOnVirtualThread, arguments, annotations);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
                 throw toolAlreadyExists(name);
@@ -250,15 +273,24 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         private final List<ToolArgument> arguments;
 
+        private final Optional<ToolAnnotations> annotations;
+
         private ToolDefinitionInfo(String name, String description, Function<ToolArguments, ToolResponse> fun,
-                Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments) {
+                Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
+                ToolAnnotations annotations) {
             super(name, description, fun, asyncFun, runOnVirtualThread);
             this.arguments = List.copyOf(arguments);
+            this.annotations = Optional.ofNullable(annotations);
         }
 
         @Override
         public List<ToolArgument> arguments() {
             return arguments;
+        }
+
+        @Override
+        public Optional<ToolAnnotations> annotations() {
+            return annotations;
         }
 
         @Override
@@ -273,6 +305,14 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 if (a.required()) {
                     required.add(a.name());
                 }
+            }
+            if (annotations.isPresent()) {
+                tool.put("annotations", new JsonObject()
+                        .put("title", annotations.get().title())
+                        .put("destructiveHint", annotations.get().destructiveHint())
+                        .put("idempotentHint", annotations.get().idempotentHint())
+                        .put("openWorldHint", annotations.get().openWorldHint())
+                        .put("readOnlyHint", annotations.get().readOnlyHint()));
             }
             tool.put("inputSchema", new JsonObject()
                     .put("type", "object")
