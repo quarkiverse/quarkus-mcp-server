@@ -2,8 +2,15 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
 
-public record FeatureMethodInfo(String name, String description, String uri, String mimeType, List<FeatureArgument> arguments,
-        String declaringClassName) {
+import io.quarkiverse.mcp.server.ToolManager;
+
+public record FeatureMethodInfo(String name,
+        String description,
+        String uri,
+        String mimeType,
+        List<FeatureArgument> arguments,
+        String declaringClassName,
+        ToolManager.ToolAnnotations toolAnnotations) {
 
     public List<FeatureArgument> serializedArguments() {
         if (arguments == null) {

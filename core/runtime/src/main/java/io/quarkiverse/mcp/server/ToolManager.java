@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 
@@ -39,6 +40,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         List<ToolArgument> arguments();
 
+        Optional<ToolAnnotations> annotations();
+
     }
 
     /**
@@ -72,14 +75,26 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         ToolDefinition addArgument(String name, String description, boolean required, java.lang.reflect.Type type,
                 String defaultValue);
 
+        /**
+         *
+         * @param annotations
+         * @return self
+         */
+        ToolDefinition setAnnotations(ToolAnnotations annotations);
+
     }
 
     record ToolArguments(Map<String, Object> args, McpConnection connection, McpLog log, RequestId requestId, Progress progress,
             Roots roots, Sampling sampling) {
-
     }
 
     record ToolArgument(String name, String description, boolean required, java.lang.reflect.Type type, String defaultValue) {
+    }
 
+    /**
+     * @see Tool#annotations()
+     */
+    record ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint,
+            boolean openWorldHint) {
     }
 }

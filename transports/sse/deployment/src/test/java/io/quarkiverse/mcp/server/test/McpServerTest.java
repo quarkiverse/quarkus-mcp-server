@@ -199,6 +199,11 @@ public abstract class McpServerTest {
     }
 
     protected void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter) {
+        assertTool(tools, name, description, inputSchemaAsserter, null);
+    }
+
+    protected void assertTool(JsonArray tools, String name, String description, Consumer<JsonObject> inputSchemaAsserter,
+            Consumer<JsonObject> annotationsAsserter) {
         JsonObject tool = null;
         for (int i = 0; i < tools.size(); i++) {
             JsonObject t = tools.getJsonObject(i);
@@ -214,6 +219,9 @@ public abstract class McpServerTest {
         }
         if (inputSchemaAsserter != null) {
             inputSchemaAsserter.accept(tool.getJsonObject("inputSchema"));
+        }
+        if (annotationsAsserter != null) {
+            annotationsAsserter.accept(tool.getJsonObject("annotations"));
         }
     }
 

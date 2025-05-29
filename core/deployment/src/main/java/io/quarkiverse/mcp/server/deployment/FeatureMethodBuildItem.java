@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import org.jboss.jandex.MethodInfo;
 
+import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
@@ -28,8 +29,11 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final String uri;
     private final String mimeType;
 
+    // Tool-only
+    private final ToolManager.ToolAnnotations toolAnnotations;
+
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description, String uri,
-            String mimeType, Feature feature) {
+            String mimeType, Feature feature, ToolManager.ToolAnnotations toolAnnotations) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -38,6 +42,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.description = description;
         this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
+        this.toolAnnotations = toolAnnotations;
     }
 
     BeanInfo getBean() {
@@ -70,6 +75,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Feature getFeature() {
         return feature;
+    }
+
+    public ToolManager.ToolAnnotations getToolAnnotations() {
+        return toolAnnotations;
     }
 
     boolean isTool() {

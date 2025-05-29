@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.List;
@@ -49,8 +50,49 @@ public @interface Tool {
     String name() default ELEMENT_NAME;
 
     /**
-     * An optional description.
+     * A human-readable description of the tool. A hint to the model.
      */
     String description() default "";
+
+    /**
+     * Additional hints for clients.
+     * <p>
+     * Note that the default value of this annotation member is ignored. In other words, the annotations have to be declared
+     * explicitly in order to be included in Tool metadata.
+     */
+    Annotations annotations() default @Annotations;
+
+    @Retention(RUNTIME)
+    @Target(ElementType.ANNOTATION_TYPE)
+    public @interface Annotations {
+
+        /**
+         * A human-readable title for the tool.
+         */
+        String title() default "";
+
+        /**
+         * If true, the tool does not modify its environment.
+         */
+        boolean readOnlyHint() default false;
+
+        /**
+         * If true, the tool may perform destructive updates to its environment. If false, the tool performs only additive
+         * updates.
+         */
+        boolean destructiveHint() default true;
+
+        /**
+         * If true, calling the tool repeatedly with the same arguments will have no additional effect on the its environment.
+         */
+        boolean idempotentHint() default false;
+
+        /**
+         * If true, this tool may interact with an "open world" of external entities. If false, the tool's domain of interaction
+         * is closed.
+         */
+        boolean openWorldHint() default true;
+
+    }
 
 }

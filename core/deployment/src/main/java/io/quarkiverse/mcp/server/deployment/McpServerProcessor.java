@@ -64,6 +64,8 @@ import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolFilter;
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
@@ -252,6 +254,8 @@ class McpServerProcessor {
 
                     String uri = null;
                     String mimeType = null;
+                    ToolManager.ToolAnnotations toolAnnotations = null;
+
                     if (feature == RESOURCE) {
                         AnnotationValue uriValue = featureAnnotation.value("uri");
                         uri = uriValue != null ? uriValue.asString() : null;
@@ -262,9 +266,25 @@ class McpServerProcessor {
                         uri = uriValue != null ? uriValue.asString() : null;
                         AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
                         mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+                    } else if (feature == TOOL) {
+                        // Tool annotations
+                        AnnotationValue annotations = featureAnnotation.value("annotations");
+                        if (annotations != null) {
+                            AnnotationInstance annotationsAnnotation = annotations.asNested();
+                            AnnotationValue titleValue = annotationsAnnotation.value("title");
+                            AnnotationValue readOnlyHintValue = annotationsAnnotation.value("readOnlyHint");
+                            AnnotationValue destructiveHintValue = annotationsAnnotation.value("destructiveHint");
+                            AnnotationValue idempotentHintValue = annotationsAnnotation.value("idempotentHint");
+                            AnnotationValue openWorldHintValue = annotationsAnnotation.value("openWorldHint");
+                            toolAnnotations = new ToolAnnotations(titleValue != null ? titleValue.asString() : null,
+                                    readOnlyHintValue != null ? readOnlyHintValue.asBoolean() : false,
+                                    destructiveHintValue != null ? destructiveHintValue.asBoolean() : true,
+                                    idempotentHintValue != null ? idempotentHintValue.asBoolean() : false,
+                                    openWorldHintValue != null ? openWorldHintValue.asBoolean() : true);
+                        }
                     }
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                            description, uri, mimeType, feature);
+                            description, uri, mimeType, feature, toolAnnotations);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -609,7 +629,7 @@ class McpServerProcessor {
             BuildProducer<DefaultValueConverterBuildItem> converters) {
 
         Map<org.jboss.jandex.Type, List<DefaultValueConverterBuildItem>> found = new HashMap<>();
-        for (ClassInfo converter : combinedIndex.getIndex().getAllKnownImplementors(DefaultValueConverter.class)) {
+        for (ClassInfo converter : combinedIndex.getIndex().getAllKnownImplementations(DefaultValueConverter.class)) {
             if (converter.isAbstract()) {
                 continue;
             }
@@ -916,13 +936,29 @@ class McpServerProcessor {
                     provider);
             Gizmo.listOperations(metaMethod).on(args).add(arg);
         }
+        ResultHandle toolAnnotations;
+        if (featureMethod.isTool() && featureMethod.getToolAnnotations() != null) {
+            ToolAnnotations annotations = featureMethod.getToolAnnotations();
+            toolAnnotations = metaMethod.newInstance(
+                    MethodDescriptor.ofConstructor(ToolManager.ToolAnnotations.class, String.class, boolean.class,
+                            boolean.class, boolean.class, boolean.class),
+                    metaMethod.load(annotations.title()),
+                    metaMethod.load(annotations.readOnlyHint()),
+                    metaMethod.load(annotations.destructiveHint()),
+                    metaMethod.load(annotations.idempotentHint()),
+                    metaMethod.load(annotations.openWorldHint()));
+        } else {
+            toolAnnotations = metaMethod.loadNull();
+        }
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        List.class, String.class),
+                        List.class, String.class, ToolManager.ToolAnnotations.class),
                 metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
-                args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()));
+                args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
+                toolAnnotations);
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
