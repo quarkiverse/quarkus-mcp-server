@@ -944,6 +944,61 @@ public class MyFilters implements ToolFilter, PromptFilter {
 }
 ----
 
+== Multiple server configurations
+
+IMPORTANT:  Multiple server configurations only make sense for transports that support multiple MCP clients (e.g. HTTP/SSE). Therefore, the application startup will fail if multiple server configurations are detected and the `stdio` transport is used.
+
+It is possible to bind features, such as tools, prompts, and resources, to a specific server configuration.
+Typically, you might need to define multiple MCP endpoints to handle different security requirements.
+Another option is that it's possible to change the name of the server included in the response to an `initialize` request.
+
+A feature is bound to exactly one server configuration.
+The default configuration is used unless an explicit binding exists.
+
+.Multiple Servers Example
+[source, properties]
+----
+quarkus.mcp.server.server-info.name=Alpha server <1>
+quarkus.mcp.server.bravo.server-info.name=Bravo server <2>
+
+quarkus.mcp.server.sse.root-path=/alpha/mcp <3>
+quarkus.mcp.server.bravo.sse.root-path=/bravo/mcp <4>
+----
+<1> Set the server name for the default server. Note that the default server name can be omitted. 
+<2> Set the server name for the `bravo` server.
+<3> Set the root path for the default server, i.e. the MCP endpoint is exposed at `/alpha/mcp`.
+<4> Set the root path for the `bravo` server, i.e. the MCP endpoint is exposed at `/bravo/mcp`.
+
+You can use the `@io.quarkiverse.mcp.server.McpServer` annotation to bind a feature to a server configuration declaratively.
+If no `@McpServer` annotation is declared then the default server configuration is used.
+
+.`@McpServer` Example
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+   // No @McpServer annotation means the default server configuration 
+   @Tool(description = "Put you description here.")
+   String atool() {
+      return "...some content";
+   }
+   
+   @McpServer("bravo") <1> 
+   @Tool(description = "Put you description here.")
+   String btool() {
+      return "...some content";
+   }  
+}
+----
+<1> `MyTools#btool` is bound to the server configuration `bravo`, i.e. it's exposed with the `/bravo/mcp` endpoint. It's not available at `/alpha/mcp`.
+
+TIP: The programmatic API also makes it possible to set the server configuration name; e.g. `ToolDefinition#setServerName()`.
+
 == Traffic logging
 
 The extension can log JSON messages sent and received for debugging purposes.

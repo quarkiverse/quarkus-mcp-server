@@ -56,8 +56,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     }
 
     @Override
-    Stream<PromptInfo> infos(McpConnection connection) {
-        return prompts.values().stream().filter(p -> test(p, connection));
+    Stream<PromptInfo> infos() {
+        return prompts.values().stream();
+    }
+
+    @Override
+    Stream<PromptInfo> filter(Stream<PromptInfo> infos, McpConnection connection) {
+        return infos.filter(p -> test(p, connection));
     }
 
     @Override
@@ -95,17 +100,18 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<PromptResponse> getInvoker(String id, McpConnection connection) {
+    protected FeatureInvoker<PromptResponse> getInvoker(String id, McpRequest mcpRequest) {
         PromptInfo prompt = prompts.get(id);
         if (prompt instanceof FeatureInvoker fi
-                && test(prompt, connection)) {
+                && matches(prompt, mcpRequest)
+                && test(prompt, mcpRequest.connection())) {
             return fi;
         }
         return null;
     }
 
     private boolean test(PromptInfo prompt, McpConnection connection) {
-        if (filters.isEmpty()) {
+        if (filters.isEmpty() || connection == null) {
             return true;
         }
         for (PromptFilter filter : filters) {
@@ -134,6 +140,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public String description() {
             return metadata.info().description();
+        }
+
+        @Override
+        public String serverName() {
+            return metadata.info().serverName();
         }
 
         @Override
@@ -174,7 +185,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public PromptInfo register() {
             validate();
-            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, description, fun, asyncFun,
+            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments);
             PromptInfo existing = prompts.putIfAbsent(name, ret);
             if (existing != null) {
@@ -191,10 +202,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
         private final List<PromptArgument> arguments;
 
-        private PromptDefinitionInfo(String name, String description, Function<PromptArguments, PromptResponse> fun,
+        private PromptDefinitionInfo(String name, String description, String serverName,
+                Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
                 List<PromptArgument> arguments) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.arguments = List.copyOf(arguments);
         }
 

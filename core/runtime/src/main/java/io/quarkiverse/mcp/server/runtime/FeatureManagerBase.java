@@ -25,6 +25,7 @@ import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -60,7 +61,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
-        FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest().connection());
+        FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest());
         if (invoker != null) {
             return execute(invoker.executionModel(), executionContext, new Callable<Uni<RESULT>>() {
                 @Override
@@ -80,20 +81,19 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     public Iterator<INFO> iterator() {
-        return infos(null).sorted().iterator();
+        return infos().sorted().iterator();
     }
 
     public Page<INFO> fetchPage(McpRequest mcpRequest, Cursor cursor, int pageSize) {
-        McpConnection connection = mcpRequest.connection();
-        long count = infos(connection).count();
+        long count = infosForRequest(mcpRequest).count();
         if (count == 0) {
             return Page.empty();
         }
         if (count <= pageSize) {
             // Pagination is not needed
-            return new Page<>(infos(connection).sorted().toList(), true);
+            return new Page<>(infosForRequest(mcpRequest).sorted().toList(), true);
         }
-        List<INFO> result = infos(connection)
+        List<INFO> result = infosForRequest(mcpRequest)
                 .filter(r -> r.createdAt().isAfter(cursor.createdAt())
                         && (cursor.name() == null
                                 || r.name().compareTo(cursor.name()) > 0))
@@ -107,14 +107,30 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return new Page<>(result, true);
     }
 
+    Stream<INFO> infosForRequest(McpRequest mcpRequest) {
+        return filter(infos().filter(i -> matches(i, mcpRequest)), mcpRequest.connection());
+    }
+
+    /**
+     *
+     * @return the stream of all infos
+     */
+    abstract Stream<INFO> infos();
+
     /**
      * @param connection (may be {@code null})
      * @return the stream of accesible infos
      */
-    abstract Stream<INFO> infos(McpConnection connection);
+    Stream<INFO> filter(Stream<INFO> infos, McpConnection connection) {
+        return infos;
+    }
 
-    public boolean hasInfos(McpConnection connection) {
-        return infos(connection).count() > 0;
+    public boolean hasInfos(McpRequest mcpRequest) {
+        return infosForRequest(mcpRequest).count() > 0;
+    }
+
+    protected boolean matches(INFO info, McpRequest mcpRequest) {
+        return info.serverName().equals(mcpRequest.serverName());
     }
 
     @SuppressWarnings("unchecked")
@@ -190,7 +206,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return num;
     }
 
-    protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpConnection connection);
+    protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpRequest mcpRequest);
 
     protected abstract McpException notFound(String id);
 
@@ -298,9 +314,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected Function<ARGUMENTS, RESPONSE> fun;
         protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected boolean runOnVirtualThread;
+        protected String serverName;
 
         protected FeatureDefinitionBase(String name) {
             this.name = Objects.requireNonNull(name);
+            this.serverName = McpServer.DEFAULT;
         }
 
         @SuppressWarnings("unchecked")
@@ -310,6 +328,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         public THIS setDescription(String description) {
             this.description = Objects.requireNonNull(description);
+            return self();
+        }
+
+        public THIS setServerName(String serverName) {
+            this.serverName = Objects.requireNonNull(serverName);
             return self();
         }
 
@@ -347,15 +370,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         protected final String name;
         protected final String description;
+        protected final String serverName;
         protected final Instant createdAt;
         protected final Function<ARGUMENTS, RESPONSE> fun;
         protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected final boolean runOnVirtualThread;
 
-        protected FeatureDefinitionInfoBase(String name, String description, Function<ARGUMENTS, RESPONSE> fun,
+        protected FeatureDefinitionInfoBase(String name, String description, String serverName,
+                Function<ARGUMENTS, RESPONSE> fun,
                 Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread) {
             this.name = name;
             this.description = description;
+            this.serverName = serverName;
             this.createdAt = nextTimestamp();
             this.fun = fun;
             this.asyncFun = asyncFun;
@@ -370,6 +396,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         @Override
         public String description() {
             return description;
+        }
+
+        @Override
+        public String serverName() {
+            return serverName;
         }
 
         @Override

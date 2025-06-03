@@ -64,8 +64,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     @Override
-    Stream<ResourceInfo> infos(McpConnection connection) {
-        return resources.values().stream().filter(r -> test(r, connection));
+    Stream<ResourceInfo> infos() {
+        return resources.values().stream();
+    }
+
+    @Override
+    Stream<ResourceInfo> filter(Stream<ResourceInfo> infos, McpConnection connection) {
+        return infos.filter(r -> test(r, connection));
     }
 
     @Override
@@ -73,12 +78,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         return resources.get(Objects.requireNonNull(uri));
     }
 
-    void subscribe(String uri, String connectionId) {
-        if (getResource(uri) == null) {
+    void subscribe(String uri, McpRequest mcpRequest) {
+        ResourceInfo info = getResource(uri);
+        if (info == null || !matches(info, mcpRequest)) {
             throw notFound(uri);
         }
         List<String> ids = new CopyOnWriteArrayList<>();
-        ids.add(connectionId);
+        ids.add(mcpRequest.connection().id());
         subscribers.merge(uri, ids, (old, val) -> Stream.concat(old.stream(), val.stream())
                 .collect(Collectors.toCollection(CopyOnWriteArrayList::new)));
     }
@@ -134,13 +140,14 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpConnection connection) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest) {
         ResourceInfo resource = resources.get(id);
         if (resource instanceof FeatureInvoker fi
-                && test(resource, connection)) {
+                && matches(resource, mcpRequest)
+                && test(resource, mcpRequest.connection())) {
             return fi;
         }
-        return resourceTemplateManager.getInvoker(id, connection);
+        return resourceTemplateManager.getInvoker(id, mcpRequest);
     }
 
     @Override
@@ -205,6 +212,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public String serverName() {
+            return metadata.info().serverName();
+        }
+
+        @Override
         public String uri() {
             return metadata.info().uri();
         }
@@ -237,10 +249,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private final String uri;
         private final String mimeType;
 
-        private ResourceDefinitionInfo(String name, String description, Function<ResourceArguments, ResourceResponse> fun,
+        private ResourceDefinitionInfo(String name, String description, String serverName,
+                Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.uri = uri;
             this.mimeType = mimeType;
         }
@@ -313,7 +326,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public ResourceInfo register() {
             validate();
-            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, description, fun, asyncFun,
+            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, description, serverName, fun, asyncFun,
                     runOnVirtualThread, uri, mimeType);
             ResourceInfo existing = resources.putIfAbsent(uri, ret);
             if (existing != null) {

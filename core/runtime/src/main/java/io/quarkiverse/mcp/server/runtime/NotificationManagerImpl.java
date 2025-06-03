@@ -12,7 +12,6 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -39,8 +38,19 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     }
 
     @Override
-    public Stream<NotificationInfo> infos(McpConnection connection) {
+    Stream<NotificationInfo> infos() {
         return notifications.values().stream();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected FeatureInvoker<Void> getInvoker(String id, McpRequest mcpRequest) {
+        NotificationInfo init = notifications.get(id);
+        if (init instanceof FeatureInvoker fi
+                && matches(init, mcpRequest)) {
+            return fi;
+        }
+        return null;
     }
 
     @Override
@@ -60,16 +70,6 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
     IllegalArgumentException notificationAlreadyExists(Type type, String name) {
         return new IllegalArgumentException("A " + type + " notification with name [" + name + "] already exits");
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    protected FeatureInvoker<Void> getInvoker(String id, McpConnection connection) {
-        NotificationInfo init = notifications.get(id);
-        if (init instanceof FeatureInvoker fi) {
-            return fi;
-        }
-        return null;
     }
 
     @Override
@@ -100,6 +100,11 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         @Override
         public String description() {
             return metadata.info().description();
+        }
+
+        @Override
+        public String serverName() {
+            return metadata.info().serverName();
         }
 
         @Override
@@ -137,7 +142,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             if (type == null) {
                 throw new IllegalStateException("Type must be set");
             }
-            NotificationDefinitionInfo ret = new NotificationDefinitionInfo(name, description, fun, asyncFun,
+            NotificationDefinitionInfo ret = new NotificationDefinitionInfo(name, description, serverName, fun, asyncFun,
                     runOnVirtualThread, type);
             String key = key(ret);
 
@@ -154,9 +159,10 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
         private final Notification.Type type;
 
-        private NotificationDefinitionInfo(String name, String description, Function<NotificationArguments, Void> fun,
+        private NotificationDefinitionInfo(String name, String description, String serverName,
+                Function<NotificationArguments, Void> fun,
                 Function<NotificationArguments, Uni<Void>> asyncFun, boolean runOnVirtualThread, Notification.Type type) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.type = type;
         }
 

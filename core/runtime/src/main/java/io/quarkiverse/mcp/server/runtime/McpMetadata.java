@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
@@ -11,6 +12,8 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
 
 public interface McpMetadata {
+
+    Set<String> serverNames();
 
     List<FeatureMetadata<PromptResponse>> prompts();
 

@@ -20,13 +20,19 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
     interface FeatureInfo extends Comparable<FeatureInfo> {
 
         /**
-         * It is guaranteed that name is uniqe for a specific feature.
+         * It is guaranteed that the name is unique for a specific feature.
          *
          * @return the name
          */
         String name();
 
         String description();
+
+        /**
+         * @return the name of the respective server configuration
+         * @see McpServer
+         */
+        String serverName();
 
         /**
          * @return {@code true} if backed by a business method of a CDI bean, {@code false} otherwise
@@ -57,6 +63,14 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          * @return self
          */
         THIS setDescription(String description);
+
+        /**
+         *
+         * @param serverName
+         * @return self
+         * @see McpServer
+         */
+        THIS setServerName(String serverName);
 
         /**
          *

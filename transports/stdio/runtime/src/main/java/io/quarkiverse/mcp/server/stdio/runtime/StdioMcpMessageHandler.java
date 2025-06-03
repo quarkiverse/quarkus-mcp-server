@@ -16,6 +16,7 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -30,7 +31,8 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
@@ -49,7 +51,9 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-    protected StdioMcpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager,
+    private final McpServerRuntimeConfig serverConfig;
+
+    protected StdioMcpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
@@ -60,15 +64,20 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx);
         this.executor = Executors.newSingleThreadExecutor();
-        this.trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
+        if (config.servers().size() > 1) {
+            throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");
+        }
+        this.serverConfig = config.servers().values().iterator().next();
+        this.trafficLogger = serverConfig.trafficLogging().enabled()
+                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
                 : null;
     }
 
-    public void initialize(PrintStream stdout, McpRuntimeConfig config) {
+    public void initialize(PrintStream stdout) {
         if (initialized.compareAndSet(false, true)) {
             String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-            StdioMcpConnection connection = new StdioMcpConnection(connectionId, config.clientLogging().defaultLevel(),
-                    trafficLogger, config.autoPingInterval(), stdout, vertx);
+            StdioMcpConnection connection = new StdioMcpConnection(connectionId, serverConfig.clientLogging().defaultLevel(),
+                    trafficLogger, serverConfig.autoPingInterval(), stdout, vertx);
             connectionManager.add(connection);
             InputStream in = System.in;
             executor.submit(new Runnable() {
@@ -98,7 +107,8 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
                             context.executeBlocking(new Callable<>() {
                                 @Override
                                 public Object call() throws Exception {
-                                    McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, null, null,
+                                    McpRequestImpl mcpRequest = new McpRequestImpl(McpServer.DEFAULT, json, connection,
+                                            connection, null, null,
                                             null);
                                     handle(mcpRequest);
                                     return null;

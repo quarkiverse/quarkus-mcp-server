@@ -8,6 +8,8 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,11 +20,11 @@ class PromptMessageHandler extends MessageHandler {
 
     private final PromptManagerImpl manager;
 
-    private final int pageSize;
+    private final McpServersRuntimeConfig config;
 
-    PromptMessageHandler(PromptManagerImpl manager, int pageSize) {
+    PromptMessageHandler(PromptManagerImpl manager, McpServersRuntimeConfig config) {
         this.manager = Objects.requireNonNull(manager);
-        this.pageSize = pageSize;
+        this.config = config;
     }
 
     Future<Void> promptsList(JsonObject message, McpRequest mcpRequest) {
@@ -33,6 +35,12 @@ class PromptMessageHandler extends MessageHandler {
         }
 
         LOG.debugf("List prompts [id: %s, cursor: %s]", id, cursor);
+
+        McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + mcpRequest.serverName());
+        }
+        int pageSize = serverConfig.prompts().pageSize();
 
         JsonArray prompts = new JsonArray();
         JsonObject result = new JsonObject().put("prompts", prompts);

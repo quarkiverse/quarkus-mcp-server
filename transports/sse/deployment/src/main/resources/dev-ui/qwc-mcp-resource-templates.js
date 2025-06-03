@@ -173,6 +173,7 @@ export class QwcMcpResourceTemplates extends LitElement {
         const uri = this.shadowRoot.getElementById('resource_template_uri');
         const responseTextArea = this.shadowRoot.getElementById('resource_response_text');
         this.jsonRpc.readResource({
+            serverName: this._selectedResourceTemplate.serverName,
             uri: uri.value,
             bearerToken: bearerToken.value,
             forceNewSession: forceNewSession.checked

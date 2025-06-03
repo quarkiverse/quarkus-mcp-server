@@ -2,20 +2,30 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.CompletionManager;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
+import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
@@ -50,13 +60,14 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final ResponseHandlers responseHandlers;
 
-    protected final McpRuntimeConfig config;
+    protected final McpServersRuntimeConfig config;
 
     protected final Vertx vertx;
 
     private final McpMetadata metadata;
 
-    protected McpMessageHandler(McpRuntimeConfig config, ConnectionManager connectionManager, PromptManagerImpl promptManager,
+    protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
+            PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
             PromptCompletionManagerImpl promptCompletionManager,
             ResourceTemplateManagerImpl resourceTemplateManager,
@@ -71,18 +82,21 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.resourceTemplateManager = resourceTemplateManager;
         this.promptCompletionManager = promptCompletionManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
-        this.toolHandler = new ToolMessageHandler(toolManager, config.tools().pageSize());
-        this.promptHandler = new PromptMessageHandler(promptManager, config.prompts().pageSize());
+        this.toolHandler = new ToolMessageHandler(toolManager, config);
+        this.promptHandler = new PromptMessageHandler(promptManager, config);
         this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompletionManager);
-        this.resourceHandler = new ResourceMessageHandler(resourceManager, config.resources().pageSize());
-        this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager,
-                config.resourceTemplates().pageSize());
+        this.resourceHandler = new ResourceMessageHandler(resourceManager, config);
+        this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager, config);
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompletionManager);
         this.notificationManager = notificationManager;
         this.responseHandlers = responseHandlers;
         this.config = config;
         this.metadata = metadata;
         this.vertx = vertx;
+
+        if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
+            validateServerConfigs();
+        }
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
@@ -155,6 +169,14 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         };
     }
 
+    private McpServerRuntimeConfig serverConfig(MCP_REQUEST mcpRequest) {
+        McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + mcpRequest.serverName());
+        }
+        return serverConfig;
+    }
+
     private Future<Void> initializeNew(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = message.getValue("id");
         String method = message.getString("method");
@@ -164,7 +186,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // However, in the dev mode if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
         // we could perform a "dummy" initialization
         if (!INITIALIZE.equals(method)) {
-            if (LaunchMode.current() == LaunchMode.DEVELOPMENT && config.devMode().dummyInit()) {
+            if (LaunchMode.current() == LaunchMode.DEVELOPMENT && serverConfig(mcpRequest).devMode().dummyInit()) {
                 InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), SUPPORTED_PROTOCOL_VERSIONS.get(0),
                         List.of());
                 if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
@@ -188,7 +210,11 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (mcpRequest.connection().initialize(initialRequest)) {
             // The server MUST respond with its own capabilities and information
             afterInitialize(mcpRequest);
-            return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest));
+            mcpRequest.contextStart();
+            return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest))
+                    .onComplete(r -> {
+                        mcpRequest.contextEnd();
+                    });
         } else {
             initializeFailed(mcpRequest);
             String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
@@ -202,7 +228,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
                 // Call init methods
-                List<NotificationManager.NotificationInfo> infos = notificationManager.infos(mcpRequest.connection())
+                List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                         .filter(n -> n.type() == Type.INITIALIZED).toList();
                 if (!infos.isEmpty()) {
                     ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
@@ -268,7 +294,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         Promise<Void> ret = Promise.promise();
 
         context.runOnContext(v -> {
-            mcpRequest.operationStart();
+            mcpRequest.contextStart();
             String method = message.getString("method");
             Future<Void> future = switch (method) {
                 case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
@@ -289,7 +315,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                         Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
             };
             future.onComplete(r -> {
-                mcpRequest.operationEnd();
+                mcpRequest.contextEnd();
                 if (r.failed()) {
                     ret.fail(r.cause());
                 } else {
@@ -302,7 +328,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> rootsListChanged(McpRequest mcpRequest) {
         // Call init methods
-        List<NotificationManager.NotificationInfo> infos = notificationManager.infos(mcpRequest.connection())
+        List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
         if (!infos.isEmpty()) {
             ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
@@ -421,32 +447,82 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         info.put("protocolVersion", version);
 
-        String serverName = config.serverInfo().name()
+        String serverName = serverConfig(mcpRequest).serverInfo().name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
                         .orElse("N/A"));
-        String serverVersion = config.serverInfo().version()
+        String serverVersion = serverConfig(mcpRequest).serverInfo().version()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
                         .orElse("N/A"));
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
-        if (!promptManager.hasInfos(mcpRequest.connection())) {
+        if (promptManager.hasInfos(mcpRequest)) {
             capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (toolManager.hasInfos(mcpRequest.connection())) {
+        if (toolManager.hasInfos(mcpRequest)) {
             capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!resourceManager.hasInfos(mcpRequest.connection())
-                || !resourceTemplateManager.hasInfos(mcpRequest.connection())) {
+        if (resourceManager.hasInfos(mcpRequest)
+                || resourceTemplateManager.hasInfos(mcpRequest)) {
             capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!promptCompletionManager.hasInfos(mcpRequest.connection())
-                || !resourceTemplateCompletionManager.hasInfos(mcpRequest.connection())) {
+        if (promptCompletionManager.hasInfos(mcpRequest)
+                || resourceTemplateCompletionManager.hasInfos(mcpRequest)) {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);
         return info;
+    }
+
+    private void validateServerConfigs() {
+        List<FeatureInfo> invalid = new ArrayList<>();
+        Set<String> serverNames = new HashSet<>(metadata.serverNames());
+        serverNames.addAll(config.servers().keySet());
+        for (ToolManager.ToolInfo info : toolManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (PromptManager.PromptInfo info : promptManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (ResourceManager.ResourceInfo info : resourceManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (ResourceTemplateManager.ResourceTemplateInfo info : resourceTemplateManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (NotificationManager.NotificationInfo info : notificationManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (CompletionManager.CompletionInfo info : promptCompletionManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+        for (CompletionManager.CompletionInfo info : resourceTemplateCompletionManager) {
+            if (!serverNames.contains(info.serverName())) {
+                invalid.add(info);
+            }
+        }
+
+        if (!invalid.isEmpty()) {
+            IllegalStateException ise = new IllegalStateException("Invalid server name");
+            for (FeatureInfo info : invalid) {
+                ise.addSuppressed(new IllegalStateException(
+                        String.format("Invalid server name [%s] used for: %s", info.serverName(), info)));
+            }
+            throw ise;
+        }
     }
 
 }

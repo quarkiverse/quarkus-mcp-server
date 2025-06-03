@@ -8,6 +8,8 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,11 +20,11 @@ class ResourceMessageHandler extends MessageHandler {
 
     private final ResourceManagerImpl manager;
 
-    private final int pageSize;
+    private final McpServersRuntimeConfig config;
 
-    ResourceMessageHandler(ResourceManagerImpl manager, int pageSize) {
+    ResourceMessageHandler(ResourceManagerImpl manager, McpServersRuntimeConfig config) {
         this.manager = Objects.requireNonNull(manager);
-        this.pageSize = pageSize;
+        this.config = config;
     }
 
     Future<Void> resourcesSubscribe(JsonObject message, McpRequest mcpRequest) {
@@ -33,7 +35,7 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
-        manager.subscribe(resourceUri, mcpRequest.connection().id());
+        manager.subscribe(resourceUri, mcpRequest);
         return Future.succeededFuture();
     }
 
@@ -57,6 +59,12 @@ class ResourceMessageHandler extends MessageHandler {
         }
 
         LOG.debugf("List resources [id: %s, cursor: %s]", id, cursor);
+
+        McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + mcpRequest.serverName());
+        }
+        int pageSize = serverConfig.resources().pageSize();
 
         JsonArray resources = new JsonArray();
         JsonObject result = new JsonObject().put("resources", resources);

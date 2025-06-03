@@ -28,6 +28,7 @@ public abstract class McpServerTest {
     protected URI testUri;
 
     private volatile McpSseClient client;
+
     protected volatile URI messageEndpoint;
 
     public static QuarkusUnitTest defaultConfig() {
@@ -241,6 +242,11 @@ public abstract class McpServerTest {
         return error;
     }
 
+    protected void assertErrorMessage(JsonObject request, JsonObject response, String expectedText) {
+        JsonObject error = assertErrorResponse(request, response);
+        assertEquals(expectedText, error.getString("message"));
+    }
+
     protected JsonObject newMessage(String method) {
         if (requiresClientInit() && client == null) {
             throw clientNotInitialized();
@@ -249,6 +255,24 @@ public abstract class McpServerTest {
                 .put("jsonrpc", "2.0")
                 .put("method", method)
                 .put("id", nextRequestId());
+    }
+
+    protected JsonObject newToolCallMessage(String toolName) {
+        return newMessage("tools/call")
+                .put("params", new JsonObject()
+                        .put("name", toolName));
+    }
+
+    protected JsonObject newPromptGetMessage(String promptName) {
+        return newMessage("prompts/get")
+                .put("params", new JsonObject()
+                        .put("name", promptName));
+    }
+
+    protected JsonObject newResourceReadMessage(String uri) {
+        return newMessage("resources/read")
+                .put("params", new JsonObject()
+                        .put("uri", uri));
     }
 
     protected JsonObject newNotification(String method) {

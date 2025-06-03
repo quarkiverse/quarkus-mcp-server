@@ -8,7 +8,8 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.annotations.Recorder;
@@ -27,18 +28,21 @@ public class SseMcpServerRecorder {
 
     private static final Logger LOG = Logger.getLogger(SseMcpServerRecorder.class);
 
-    private final McpRuntimeConfig config;
+    static final String CONTEXT_KEY = "mcp.sse.server-name";
 
-    public SseMcpServerRecorder(McpRuntimeConfig config) {
+    private final McpServersRuntimeConfig config;
+
+    public SseMcpServerRecorder(McpServersRuntimeConfig config) {
         this.config = config;
     }
 
-    public Handler<RoutingContext> createMcpEndpointHandler() {
+    public Handler<RoutingContext> createMcpEndpointHandler(String serverName) {
         StreamableHttpMcpMessageHandler handler = Arc.container().instance(StreamableHttpMcpMessageHandler.class).get();
         return new Handler<RoutingContext>() {
 
             @Override
             public void handle(RoutingContext ctx) {
+                ctx.put(CONTEXT_KEY, serverName);
                 HttpMethod method = ctx.request().method();
                 if (HttpMethod.GET.equals(method)) {
                     openSseStream(ctx);
@@ -57,17 +61,21 @@ public class SseMcpServerRecorder {
         ctx.response().setStatusCode(405).end();
     }
 
-    public Handler<RoutingContext> createSseEndpointHandler(String mcpPath) {
+    public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
+
+        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
-        TrafficLogger trafficLogger = config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
+        TrafficLogger trafficLogger = serverConfig.trafficLogging().enabled()
+                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
                 : null;
 
         return new Handler<RoutingContext>() {
 
             @Override
             public void handle(RoutingContext ctx) {
+                ctx.put(CONTEXT_KEY, serverName);
                 HttpServerResponse response = ctx.response();
                 response.setChunked(true);
                 response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
@@ -75,8 +83,9 @@ public class SseMcpServerRecorder {
                 String id = ConnectionManager.connectionId();
                 LOG.debugf("SSE connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, config.clientLogging().defaultLevel(), trafficLogger,
-                        config.autoPingInterval(), response);
+                SseMcpConnection connection = new SseMcpConnection(id, serverConfig.clientLogging().defaultLevel(),
+                        trafficLogger,
+                        serverConfig.autoPingInterval(), response);
                 connectionManager.add(connection);
 
                 // TODO we cannot override the close handler set/used by Quarkus HTTP
@@ -128,8 +137,16 @@ public class SseMcpServerRecorder {
         };
     }
 
-    public Handler<RoutingContext> createMessagesEndpointHandler() {
-        return Arc.container().instance(SseMcpMessageHandler.class).get();
+    public Handler<RoutingContext> createMessagesEndpointHandler(String serverName) {
+        SseMcpMessageHandler handler = Arc.container().instance(SseMcpMessageHandler.class).get();
+        return new Handler<RoutingContext>() {
+
+            @Override
+            public void handle(RoutingContext ctx) {
+                ctx.put(CONTEXT_KEY, serverName);
+                handler.handle(ctx);
+            }
+        };
     }
 
 }

@@ -9,6 +9,8 @@ import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -19,11 +21,11 @@ class ToolMessageHandler extends MessageHandler {
 
     private final ToolManagerImpl manager;
 
-    private final int pageSize;
+    private final McpServersRuntimeConfig config;
 
-    ToolMessageHandler(ToolManagerImpl manager, int pageSize) {
+    ToolMessageHandler(ToolManagerImpl manager, McpServersRuntimeConfig config) {
         this.manager = Objects.requireNonNull(manager);
-        this.pageSize = pageSize;
+        this.config = config;
     }
 
     Future<Void> toolsList(JsonObject message, McpRequest mcpRequest) {
@@ -34,6 +36,12 @@ class ToolMessageHandler extends MessageHandler {
         }
 
         LOG.debugf("List tools [id: %s, cursor: %s]", id, cursor);
+
+        McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + mcpRequest.serverName());
+        }
+        int pageSize = serverConfig.tools().pageSize();
 
         JsonArray tools = new JsonArray();
         JsonObject result = new JsonObject().put("tools", tools);

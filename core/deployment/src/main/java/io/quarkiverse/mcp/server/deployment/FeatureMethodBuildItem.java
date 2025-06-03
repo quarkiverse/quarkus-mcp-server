@@ -32,8 +32,11 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
 
+    // Server config name
+    private final String server;
+
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description, String uri,
-            String mimeType, Feature feature, ToolManager.ToolAnnotations toolAnnotations) {
+            String mimeType, Feature feature, ToolManager.ToolAnnotations toolAnnotations, String server) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -43,6 +46,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
         this.toolAnnotations = toolAnnotations;
+        this.server = server;
     }
 
     BeanInfo getBean() {
@@ -77,8 +81,12 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature;
     }
 
-    public ToolManager.ToolAnnotations getToolAnnotations() {
+    ToolManager.ToolAnnotations getToolAnnotations() {
         return toolAnnotations;
+    }
+
+    String getServer() {
+        return server;
     }
 
     boolean isTool() {

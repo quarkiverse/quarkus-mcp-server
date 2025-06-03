@@ -13,6 +13,11 @@ config_property_copy_button:+++quarkus.mcp.server.server-info.name+++[]
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".server-info.name`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.name+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 The name of the server is included in the response to an `initialize` request. By default, the value of the
@@ -34,6 +39,11 @@ ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.version+++[]
 endif::add-copy-button-to-config-props[]
 
+
+`quarkus.mcp.server."server-name".server-info.version`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.version+++[]
+endif::add-copy-button-to-config-props[]
 
 [.description]
 --
@@ -57,6 +67,11 @@ config_property_copy_button:+++quarkus.mcp.server.traffic-logging.enabled+++[]
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".traffic-logging.enabled`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".traffic-logging.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 If set to `true` then JSON messages received/sent are logged.
@@ -77,6 +92,11 @@ ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.traffic-logging.text-limit+++[]
 endif::add-copy-button-to-config-props[]
 
+
+`quarkus.mcp.server."server-name".traffic-logging.text-limit`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".traffic-logging.text-limit+++[]
+endif::add-copy-button-to-config-props[]
 
 [.description]
 --
@@ -99,6 +119,11 @@ config_property_copy_button:+++quarkus.mcp.server.client-logging.default-level++
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".client-logging.default-level`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 The default log level.
@@ -120,6 +145,11 @@ config_property_copy_button:+++quarkus.mcp.server.auto-ping-interval+++[]
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".auto-ping-interval`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 The interval after which, when set, the server sends a ping message to the connected client automatically.
@@ -137,33 +167,16 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.dev-mode.dummy-init+++[]
-endif::add-copy-button-to-config-props[]
-
-
-[.description]
---
-If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
-the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++`
-endif::add-copy-button-to-env-var[]
---
-|boolean
-|`true`
-
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size[`quarkus.mcp.server.resources.page-size`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.resources.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
+
+`quarkus.mcp.server."server-name".resources.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
 
 [.description]
 --
@@ -186,6 +199,11 @@ config_property_copy_button:+++quarkus.mcp.server.resource-templates.page-size++
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".resource-templates.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used.
@@ -206,6 +224,11 @@ ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
+
+`quarkus.mcp.server."server-name".tools.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
 
 [.description]
 --
@@ -228,6 +251,11 @@ config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".prompts.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 If the number of prompts exceeds the page size then pagination is enabled and the given page size is used.
@@ -242,6 +270,54 @@ endif::add-copy-button-to-env-var[]
 --
 |int
 |`50`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".dev-mode.dummy-init`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
+the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy[`quarkus.mcp.server.invalid-server-name-strategy`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.invalid-server-name-strategy+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The strategy used when server features, such as tools, prompts, and resources, reference an non-existent server name.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`fail`, `ignore`
+|`fail`
 
 |===
 

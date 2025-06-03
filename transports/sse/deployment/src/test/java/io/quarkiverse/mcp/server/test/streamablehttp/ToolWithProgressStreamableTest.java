@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.StreamableHttpTest;
 import io.quarkiverse.mcp.server.test.StreamableMcpSseClient;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonArray;
