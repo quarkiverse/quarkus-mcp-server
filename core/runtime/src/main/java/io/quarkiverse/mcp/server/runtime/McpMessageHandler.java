@@ -430,18 +430,18 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
-        if (!promptManager.hasInfos(mcpRequest.connection())) {
+        if (promptManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
         if (toolManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!resourceManager.hasInfos(mcpRequest.connection())
-                || !resourceTemplateManager.hasInfos(mcpRequest.connection())) {
+        if (resourceManager.hasInfos(mcpRequest.connection())
+                || resourceTemplateManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
         }
-        if (!promptCompletionManager.hasInfos(mcpRequest.connection())
-                || !resourceTemplateCompletionManager.hasInfos(mcpRequest.connection())) {
+        if (promptCompletionManager.hasInfos(mcpRequest.connection())
+                || resourceTemplateCompletionManager.hasInfos(mcpRequest.connection())) {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
