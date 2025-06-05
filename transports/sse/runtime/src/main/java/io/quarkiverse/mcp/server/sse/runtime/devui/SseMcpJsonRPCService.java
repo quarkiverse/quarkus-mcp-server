@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -40,7 +41,8 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.sse.client.SseClient;
-import io.quarkiverse.mcp.server.sse.runtime.config.McpSseBuildTimeConfig;
+import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServerBuildTimeConfig;
+import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServersBuildTimeConfig;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -56,32 +58,39 @@ public class SseMcpJsonRPCService {
     private final ResourceTemplateManager resourceTemplateManager;
     private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
 
-    private final URI sseEndpoint;
-    private final DevUIClient client;
-    private final HttpClient httpClient;
+    private final Map<String, ServerClient> serverClients;
+
+    record ServerClient(URI sseEndpoint, DevUIClient client, HttpClient httpClient) {
+
+        public ServerClient(URI sseEndpoint, HttpClient httpClient) {
+            this(sseEndpoint, new DevUIClient(sseEndpoint, httpClient), httpClient);
+        }
+    }
 
     public SseMcpJsonRPCService(ToolManager toolManager, PromptManager promptManager, ResourceManager resourceManager,
             ResourceTemplateManager resourceTemplateManager, PromptCompletionManager promptCompletionManager,
             ResourceTemplateCompletionManager resourceTemplateCompletionManager,
             @ConfigProperty(name = "quarkus.http.host") String host, @ConfigProperty(name = "quarkus.http.port") int port,
-            @ConfigProperty(name = "quarkus.http.root-path") String rootPath, McpSseBuildTimeConfig mcpSseBuildConfig) {
+            @ConfigProperty(name = "quarkus.http.root-path") String rootPath, McpSseServersBuildTimeConfig config) {
         this.toolManager = toolManager;
         this.promptManager = promptManager;
         this.promptCompletionManager = promptCompletionManager;
         this.resourceManager = resourceManager;
         this.resourceTemplateManager = resourceTemplateManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
-        this.sseEndpoint = URI.create(new StringBuilder("http://")
-                .append(host)
-                .append(":")
-                .append(port)
-                .append(rootPath)
-                .append(pathToAppend(rootPath, mcpSseBuildConfig.rootPath()))
-                .append(pathToAppend(mcpSseBuildConfig.rootPath(), "sse")).toString());
-        this.client = new DevUIClient();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        this.serverClients = new HashMap<>();
+        for (Entry<String, McpSseServerBuildTimeConfig> e : config.servers().entrySet()) {
+            serverClients.put(e.getKey(), new ServerClient(URI.create(new StringBuilder("http://")
+                    .append(host)
+                    .append(":")
+                    .append(port)
+                    .append(rootPath)
+                    .append(pathToAppend(rootPath, e.getValue().rootPath()))
+                    .append(pathToAppend(e.getValue().rootPath(), "sse")).toString()),
+                    HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .build()));
+        }
     }
 
     public JsonArray getToolsData() {
@@ -136,7 +145,7 @@ public class SseMcpJsonRPCService {
     public JsonArray getResourcesData() {
         JsonArray ret = new JsonArray();
         for (ResourceManager.ResourceInfo resource : resourceManager) {
-            ret.add(resource.asJson());
+            ret.add(resource.asJson().put("serverName", resource.serverName()));
         }
         return ret;
     }
@@ -144,7 +153,8 @@ public class SseMcpJsonRPCService {
     public JsonArray getResourceTemplatesData() {
         JsonArray ret = new JsonArray();
         for (ResourceTemplateManager.ResourceTemplateInfo resourceTemplate : resourceTemplateManager) {
-            ret.add(resourceTemplate.asJson());
+            ret.add(resourceTemplate.asJson()
+                    .put("serverName", resourceTemplate.serverName()));
         }
         return ret;
     }
@@ -207,38 +217,44 @@ public class SseMcpJsonRPCService {
 
     public JsonObject callTool(String name, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        if (toolManager.getTool(name) == null) {
+        ToolManager.ToolInfo info = toolManager.getTool(name);
+        if (info == null) {
             return new JsonObject().put("error", "Tool not found: " + name);
         }
+        ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
                 .put("method", "tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", args));
-        return client.sendRequest(message, bearerToken, forceNewSession);
+        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
     }
 
     public JsonObject getPrompt(String name, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        if (promptManager.getPrompt(name) == null) {
+        PromptManager.PromptInfo info = promptManager.getPrompt(name);
+        if (info == null) {
             return new JsonObject().put("error", "Prompt not found: " + name);
         }
+        ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
                 .put("method", "prompts/get")
                 .put("params", new JsonObject()
                         .put("name", name)
                         .put("arguments", args));
-        return client.sendRequest(message, bearerToken, forceNewSession);
+        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
     }
 
     public JsonObject completePrompt(String name, String argumentName, String argumentValue, String bearerToken,
             boolean forceNewSession)
             throws IOException, InterruptedException {
-        if (promptCompletionManager.getCompletion(name, argumentName) == null) {
+        CompletionManager.CompletionInfo info = promptCompletionManager.getCompletion(name, argumentName);
+        if (info == null) {
             return new JsonObject().put("error", "Prompt completion not found: " + name);
         }
+        ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
                 .put("method", "completion/complete")
@@ -249,11 +265,14 @@ public class SseMcpJsonRPCService {
                         .put("argument", new JsonObject()
                                 .put("name", argumentName)
                                 .put("value", argumentValue)));
-        return client.sendRequest(message, bearerToken, forceNewSession);
+        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
     }
 
-    public JsonObject readResource(String uri, String bearerToken, boolean forceNewSession)
+    public JsonObject readResource(String serverName, String uri, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
+        if (serverName == null || serverName.isBlank()) {
+            return new JsonObject().put("error", "Server name must be set");
+        }
         if (uri == null || uri.isBlank()) {
             return new JsonObject().put("error", "Resource uri must be set");
         }
@@ -262,15 +281,17 @@ public class SseMcpJsonRPCService {
                 .put("method", "resources/read")
                 .put("params", new JsonObject()
                         .put("uri", uri));
-        return client.sendRequest(message, bearerToken, forceNewSession);
+        return serverClients.get(serverName).client().sendRequest(message, bearerToken, forceNewSession);
     }
 
     public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue, String bearerToken,
             boolean forceNewSession)
             throws IOException, InterruptedException {
-        if (resourceTemplateCompletionManager.getCompletion(name, argumentName) == null) {
+        CompletionManager.CompletionInfo info = resourceTemplateCompletionManager.getCompletion(name, argumentName);
+        if (info == null) {
             return new JsonObject().put("error", "Resource template completion not found: " + name);
         }
+        ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRPC.VERSION)
                 .put("method", "completion/complete")
@@ -282,7 +303,7 @@ public class SseMcpJsonRPCService {
                                 .put("name", argumentName)
                                 .put("value", argumentValue)));
 
-        return client.sendRequest(message, bearerToken, forceNewSession);
+        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
     }
 
     private String pathToAppend(String prev, String path) {
@@ -301,7 +322,11 @@ public class SseMcpJsonRPCService {
         }
     }
 
-    class DevUIClient {
+    static class DevUIClient {
+
+        private final URI sseEndpoint;
+
+        private final HttpClient httpClient;
 
         private final Lock lock = new ReentrantLock();
 
@@ -312,6 +337,11 @@ public class SseMcpJsonRPCService {
         private volatile CompletableFuture<HttpResponse<Void>> sseFuture;
 
         private final AtomicReference<URI> messageEndpoint = new AtomicReference<>();
+
+        DevUIClient(URI sseEndpoint, HttpClient httpClient) {
+            this.sseEndpoint = sseEndpoint;
+            this.httpClient = httpClient;
+        }
 
         JsonObject sendRequest(JsonObject message, String bearerToken, boolean forceNewSession)
                 throws InterruptedException, IOException {
@@ -392,7 +422,7 @@ public class SseMcpJsonRPCService {
 
     }
 
-    class DevUISseClient extends SseClient {
+    static class DevUISseClient extends SseClient {
 
         private static final int AWAIT_ATTEMPTS = 50;
         private static final int AWAIT_SLEEP = 100; // ms

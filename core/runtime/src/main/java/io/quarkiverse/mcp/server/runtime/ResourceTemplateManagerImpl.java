@@ -62,8 +62,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     @Override
-    Stream<ResourceTemplateInfo> infos(McpConnection connection) {
-        return templates.values().stream().map(ResourceTemplateMetadata::info).filter(rt -> test(rt, connection));
+    Stream<ResourceTemplateInfo> infos() {
+        return templates.values().stream().map(ResourceTemplateMetadata::info);
+    }
+
+    @Override
+    Stream<ResourceTemplateInfo> filter(Stream<ResourceTemplateInfo> infos, McpConnection connection) {
+        return infos.filter(rt -> test(rt, connection));
     }
 
     @Override
@@ -97,12 +102,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpConnection connection) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest) {
         // This method is used by ResourceManager during "resources/read" - the id is a URI
         // We need to iterate over all templates and find the matching URI template
         ResourceTemplateInfo found = findMatching(id);
         if (found instanceof FeatureInvoker fi
-                && test(found, connection)) {
+                && matches(found, mcpRequest)
+                && test(found, mcpRequest.connection())) {
             return fi;
         }
         return null;
@@ -231,6 +237,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public String serverName() {
+            return metadata.info().serverName();
+        }
+
+        @Override
         public String uriTemplate() {
             return metadata.info().uri();
         }
@@ -259,11 +270,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final String uriTemplate;
         private final String mimeType;
 
-        private ResourceTemplateDefinitionInfo(String name, String description,
+        private ResourceTemplateDefinitionInfo(String name, String description, String serverName,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.uriTemplate = uri;
             this.mimeType = mimeType;
         }
@@ -330,7 +341,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         public ResourceTemplateInfo register() {
             validate();
-            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, description, fun, asyncFun,
+            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, description, serverName,
+                    fun, asyncFun,
                     runOnVirtualThread, uriTemplate, mimeType);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));

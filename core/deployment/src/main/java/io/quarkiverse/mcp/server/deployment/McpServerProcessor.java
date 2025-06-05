@@ -49,6 +49,7 @@ import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.PromptFilter;
@@ -283,8 +284,19 @@ class McpServerProcessor {
                                     openWorldHintValue != null ? openWorldHintValue.asBoolean() : true);
                         }
                     }
+
+                    String server = McpServer.DEFAULT;
+                    AnnotationInstance serverAnotation = method.declaredAnnotation(DotNames.MCP_SERVER);
+                    if (serverAnotation == null) {
+                        // Try the declaring class
+                        serverAnotation = method.declaringClass().declaredAnnotation(DotNames.MCP_SERVER);
+                    }
+                    if (serverAnotation != null) {
+                        server = serverAnotation.value().asString();
+                    }
+
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                            description, uri, mimeType, feature, toolAnnotations);
+                            description, uri, mimeType, feature, toolAnnotations, server);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -424,11 +436,15 @@ class McpServerProcessor {
 
     @Record(RUNTIME_INIT)
     @BuildStep
-    void generateMetadata(McpServerRecorder recorder, RecorderContext recorderContext,
+    void generateMetadata(McpServerRecorder recorder,
+            RecorderContext recorderContext,
             BeanDiscoveryFinishedBuildItem beanDiscovery,
-            List<FeatureMethodBuildItem> featureMethods, TransformedAnnotationsBuildItem transformedAnnotations,
+            List<FeatureMethodBuildItem> featureMethods,
+            TransformedAnnotationsBuildItem transformedAnnotations,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
-            BuildProducer<GeneratedClassBuildItem> generatedClasses, BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
+            List<ServerNameBuildItem> serverNames,
+            BuildProducer<GeneratedClassBuildItem> generatedClasses,
+            BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
 
         // Note that the generated McpMetadata impl must be considered an application class
         // so that it can see the generated invokers
@@ -561,6 +577,14 @@ class McpServerProcessor {
             Gizmo.mapOperations(convertersMethod).on(retConverters).put(converterType, converterInstance);
         }
         convertersMethod.returnValue(retConverters);
+
+        // McpMetadata.serverNames()
+        MethodCreator serverNamesMethod = metadataCreator.getMethodCreator("serverNames", Set.class);
+        ResultHandle set = Gizmo.newHashSet(serverNamesMethod);
+        for (ServerNameBuildItem serverName : serverNames) {
+            Gizmo.setOperations(serverNamesMethod).on(set).add(serverNamesMethod.load(serverName.getName()));
+        }
+        serverNamesMethod.returnValue(set);
 
         metadataCreator.close();
 
@@ -953,12 +977,12 @@ class McpServerProcessor {
 
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        List.class, String.class, ToolManager.ToolAnnotations.class),
+                        List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
                 metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations);
+                toolAnnotations, metaMethod.load(featureMethod.getServer()));
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));

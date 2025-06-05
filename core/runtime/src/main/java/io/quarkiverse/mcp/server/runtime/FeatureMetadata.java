@@ -12,7 +12,9 @@ import io.vertx.core.json.JsonObject;
  *
  * @param <M> The response message
  */
-public record FeatureMetadata<M>(Feature feature, FeatureMethodInfo info, Invoker<Object, Object> invoker,
+public record FeatureMetadata<M>(Feature feature,
+        FeatureMethodInfo info,
+        Invoker<Object, Object> invoker,
         ExecutionModel executionModel,
         Function<Object, Uni<M>> resultMapper) implements Comparable<FeatureMetadata<M>> {
 

@@ -3,6 +3,8 @@ package io.quarkiverse.mcp.server.runtime;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -13,11 +15,11 @@ class ResourceTemplateMessageHandler extends MessageHandler {
 
     private final ResourceTemplateManagerImpl manager;
 
-    private final int pageSize;
+    private final McpServersRuntimeConfig config;
 
-    ResourceTemplateMessageHandler(ResourceTemplateManagerImpl manager, int pageSize) {
+    ResourceTemplateMessageHandler(ResourceTemplateManagerImpl manager, McpServersRuntimeConfig config) {
         this.manager = manager;
-        this.pageSize = pageSize;
+        this.config = config;
     }
 
     Future<Void> resourceTemplatesList(JsonObject message, McpRequest mcpRequest) {
@@ -28,6 +30,12 @@ class ResourceTemplateMessageHandler extends MessageHandler {
         }
 
         LOG.debugf("List resource templates [id: %s, cursor: %s]", id, cursor);
+
+        McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + mcpRequest.serverName());
+        }
+        int pageSize = serverConfig.resourceTemplates().pageSize();
 
         JsonArray templates = new JsonArray();
         JsonObject result = new JsonObject().put("resourceTemplates", templates);

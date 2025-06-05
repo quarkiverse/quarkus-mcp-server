@@ -10,7 +10,8 @@ public record FeatureMethodInfo(String name,
         String mimeType,
         List<FeatureArgument> arguments,
         String declaringClassName,
-        ToolManager.ToolAnnotations toolAnnotations) {
+        ToolManager.ToolAnnotations toolAnnotations,
+        String serverName) {
 
     public List<FeatureArgument> serializedArguments() {
         if (arguments == null) {

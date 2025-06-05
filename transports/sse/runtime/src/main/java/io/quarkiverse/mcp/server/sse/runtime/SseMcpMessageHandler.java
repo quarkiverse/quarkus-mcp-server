@@ -21,7 +21,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
@@ -43,7 +43,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
 
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
-    protected SseMcpMessageHandler(McpRuntimeConfig config,
+    protected SseMcpMessageHandler(McpServersRuntimeConfig config,
             ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager,
@@ -65,6 +65,11 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
 
     @Override
     public void handle(RoutingContext ctx) {
+        String serverName = ctx.get(SseMcpServerRecorder.CONTEXT_KEY);
+        if (serverName == null) {
+            throw new IllegalStateException("Server name not defined");
+        }
+
         HttpServerRequest request = ctx.request();
         String connectionId = ctx.pathParam("id");
         if (connectionId == null) {
@@ -116,7 +121,8 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             }
         };
 
-        McpRequestImpl mcpRequest = new McpRequestImpl(json, connection, connection, securitySupport, contextSupport,
+        McpRequestImpl mcpRequest = new McpRequestImpl(serverName, json, connection, connection, securitySupport,
+                contextSupport,
                 currentIdentityAssociation);
         handle(mcpRequest).onComplete(ar -> {
             if (ar.succeeded()) {

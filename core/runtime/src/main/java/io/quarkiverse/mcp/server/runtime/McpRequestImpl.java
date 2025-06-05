@@ -6,6 +6,7 @@ import io.quarkus.security.identity.CurrentIdentityAssociation;
 
 public class McpRequestImpl implements McpRequest {
 
+    private final String serverName;
     private final Object json;
     private final McpConnectionBase connection;
     private final Sender sender;
@@ -15,8 +16,10 @@ public class McpRequestImpl implements McpRequest {
     private final ManagedContext requestContext;
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
-    public McpRequestImpl(Object json, McpConnectionBase connection, Sender sender, SecuritySupport securitySupport,
+    public McpRequestImpl(String serverName, Object json, McpConnectionBase connection, Sender sender,
+            SecuritySupport securitySupport,
             ContextSupport requestContextSupport, CurrentIdentityAssociation currentIdentityAssociation) {
+        this.serverName = serverName;
         this.json = json;
         this.connection = connection;
         this.sender = sender;
@@ -24,6 +27,11 @@ public class McpRequestImpl implements McpRequest {
         this.requestContextSupport = requestContextSupport;
         this.requestContext = Arc.container().requestContext();
         this.currentIdentityAssociation = currentIdentityAssociation;
+    }
+
+    @Override
+    public String serverName() {
+        return serverName;
     }
 
     @Override
@@ -52,7 +60,7 @@ public class McpRequestImpl implements McpRequest {
     }
 
     @Override
-    public void operationStart() {
+    public void contextStart() {
         final SecuritySupport securitySupport = securitySupport();
         final ContextSupport contextSupport = contextSupport();
         if (requestContext.isActive()) {
@@ -71,7 +79,7 @@ public class McpRequestImpl implements McpRequest {
     }
 
     @Override
-    public void operationEnd() {
+    public void contextEnd() {
         requestContext.terminate();
     }
 

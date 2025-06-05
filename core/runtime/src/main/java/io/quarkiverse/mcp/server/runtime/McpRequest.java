@@ -4,6 +4,8 @@ import io.vertx.core.json.JsonObject;
 
 public interface McpRequest {
 
+    String serverName();
+
     Object json();
 
     McpConnectionBase connection();
@@ -26,7 +28,7 @@ public interface McpRequest {
         }
     }
 
-    void operationStart();
+    void contextStart();
 
-    void operationEnd();
+    void contextEnd();
 }

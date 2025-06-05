@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -48,15 +47,16 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     }
 
     @Override
-    Stream<CompletionInfo> infos(McpConnection connection) {
+    Stream<CompletionInfo> infos() {
         return completions.values().stream();
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpConnection connection) {
+    protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpRequest mcpRequest) {
         CompletionInfo completion = completions.get(id);
-        if (completion instanceof FeatureInvoker fi) {
+        if (completion instanceof FeatureInvoker fi
+                && matches(completion, mcpRequest)) {
             return fi;
         }
         return null;
@@ -89,6 +89,11 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         @Override
         public String description() {
             return metadata.info().description();
+        }
+
+        @Override
+        public String serverName() {
+            return metadata.info().serverName();
         }
 
         @Override
@@ -125,7 +130,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         public CompletionInfo register() {
             validate();
             validateReference(name, argumentName);
-            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(name, description, fun, asyncFun,
+            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(name, description, serverName, fun, asyncFun,
                     runOnVirtualThread, argumentName);
             String key = ret.name() + "_" + ret.argumentName();
             CompletionInfo existing = completions.putIfAbsent(key, ret);
@@ -139,11 +144,11 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     class CompletionDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<CompletionArguments, CompletionResponse>
             implements CompletionManager.CompletionInfo {
 
-        protected CompletionDefinitionInfo(String name, String description,
+        protected CompletionDefinitionInfo(String name, String description, String serverName,
                 Function<CompletionArguments, CompletionResponse> fun,
                 Function<CompletionArguments, Uni<CompletionResponse>> asyncFun, boolean runOnVirtualThread,
                 String argumentName) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.argumentName = argumentName;
         }
 

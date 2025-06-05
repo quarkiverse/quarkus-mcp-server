@@ -1,13 +1,9 @@
 package io.quarkiverse.mcp.server.sse.runtime.config;
 
-import io.quarkus.runtime.annotations.ConfigPhase;
-import io.quarkus.runtime.annotations.ConfigRoot;
-import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
+import io.smallrye.config.WithName;
 
-@ConfigMapping(prefix = "quarkus.mcp.server.sse")
-@ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
-public interface McpSseBuildTimeConfig {
+public interface McpSseServerBuildTimeConfig {
 
     /**
      * The MCP endpoint (as defined in the specification `2025-03-26`) is exposed at `\{rootPath}`. By default, it's `/mcp`.
@@ -17,6 +13,7 @@ public interface McpSseBuildTimeConfig {
      *
      * @asciidoclet
      */
+    @WithName("sse.root-path")
     @WithDefault("/mcp")
     String rootPath();
 

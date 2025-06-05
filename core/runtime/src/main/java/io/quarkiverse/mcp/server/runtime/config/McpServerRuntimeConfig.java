@@ -4,14 +4,9 @@ import java.time.Duration;
 import java.util.Optional;
 
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
-import io.quarkus.runtime.annotations.ConfigPhase;
-import io.quarkus.runtime.annotations.ConfigRoot;
-import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
-@ConfigMapping(prefix = "quarkus.mcp.server")
-@ConfigRoot(phase = ConfigPhase.RUN_TIME)
-public interface McpRuntimeConfig {
+public interface McpServerRuntimeConfig {
 
     /**
      * The server info is included in the response to an `initialize` request.
@@ -38,11 +33,6 @@ public interface McpRuntimeConfig {
     Optional<Duration> autoPingInterval();
 
     /**
-     * Dev mode config.
-     */
-    DevMode devMode();
-
-    /**
      * Resources config.
      */
     Resources resources();
@@ -61,6 +51,11 @@ public interface McpRuntimeConfig {
      * Prompts config.
      */
     Prompts prompts();
+
+    /**
+     * Dev mode config.
+     */
+    DevMode devMode();
 
     public interface TrafficLogging {
 

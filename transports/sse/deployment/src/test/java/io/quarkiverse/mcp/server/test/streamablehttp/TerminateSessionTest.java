@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.StreamableHttpTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonObject;

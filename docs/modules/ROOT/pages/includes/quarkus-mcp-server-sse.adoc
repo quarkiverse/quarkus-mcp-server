@@ -13,6 +13,11 @@ config_property_copy_button:+++quarkus.mcp.server.sse.root-path+++[]
 endif::add-copy-button-to-config-props[]
 
 
+`quarkus.mcp.server."server-name".sse.root-path`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".sse.root-path+++[]
+endif::add-copy-button-to-config-props[]
+
 [.description]
 --
 The MCP endpoint (as defined in the specification `2025-03-26`) is exposed at `\{rootPath}`. By default, it's `/mcp`.

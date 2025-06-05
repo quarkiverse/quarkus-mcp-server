@@ -167,6 +167,7 @@ export class QwcMcpResources extends LitElement {
         const forceNewSession = this.shadowRoot.getElementById('resource_force_new_session');
         const responseTextArea = this.shadowRoot.getElementById('resource_response_text');
         this.jsonRpc.readResource({
+            serverName: this._selectedResource.serverName,
             uri: this._selectedResource.uri,
             bearerToken: bearerToken.value,
             forceNewSession: forceNewSession.checked

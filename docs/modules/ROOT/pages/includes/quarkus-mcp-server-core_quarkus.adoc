@@ -1,0 +1,321 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-server-info-name[`quarkus.server-info.name`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.server-info.name+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".server-info.name`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".server-info.name+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The name of the server is included in the response to an `initialize` request. By default, the value of the
+`quarkus.application.name` config property is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_NAME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SERVER_INFO_NAME+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-server-info-version]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-server-info-version[`quarkus.server-info.version`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.server-info.version+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".server-info.version`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".server-info.version+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The version of the server is included in the response to an `initialize` request. By default, the value of the
+`quarkus.application.version` config property is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_VERSION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SERVER_INFO_VERSION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-traffic-logging-enabled[`quarkus.traffic-logging.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.traffic-logging.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".traffic-logging.enabled`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".traffic-logging.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then JSON messages received/sent are logged.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TRAFFIC_LOGGING_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`false`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-traffic-logging-text-limit[`quarkus.traffic-logging.text-limit`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.traffic-logging.text-limit+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".traffic-logging.text-limit`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".traffic-logging.text-limit+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The number of characters of a text message which will be logged if traffic logging is enabled.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TRAFFIC_LOGGING_TEXT_LIMIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TRAFFIC_LOGGING_TEXT_LIMIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`200`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-client-logging-default-level[`quarkus.client-logging.default-level`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".client-logging.default-level`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default log level.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`alert`, `critical`, `debug`, `emergency`, `error`, `info`, `notice`, `warning`
+|`info`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-auto-ping-interval[`quarkus.auto-ping-interval`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".auto-ping-interval`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The interval after which, when set, the server sends a ping message to the connected client automatically.
+
+Ping messages are not sent automatically by default.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_AUTO_PING_INTERVAL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_AUTO_PING_INTERVAL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resources-page-size[`quarkus.resources.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".resources.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of resources exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_RESOURCES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resource-templates-page-size[`quarkus.resource-templates.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".resource-templates.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-tools-page-size[`quarkus.tools.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".tools.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of tools exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TOOLS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TOOLS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-prompts-page-size[`quarkus.prompts.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".prompts.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of prompts exceeds the page size then pagination is enabled and the given page size is used.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_PROMPTS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_PROMPTS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-dev-mode-dummy-init[`quarkus.dev-mode.dummy-init`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".dev-mode.dummy-init`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
+the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DEV_MODE_DUMMY_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DEV_MODE_DUMMY_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
+
+|===
+
+ifndef::no-duration-note[]
+[NOTE]
+[id=duration-note-anchor-quarkus-mcp-server-core_quarkus]
+.About the Duration format
+====
+To write duration values, use the standard `java.time.Duration` format.
+See the link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html#parse(java.lang.CharSequence)[Duration#parse() Java API documentation] for more information.
+
+You can also use a simplified format, starting with a number:
+
+* If the value is only a number, it represents time in seconds.
+* If the value is a number followed by `ms`, it represents time in milliseconds.
+
+In other cases, the simplified format is translated to the `java.time.Duration` format for parsing:
+
+* If the value is a number followed by `h`, `m`, or `s`, it is prefixed with `PT`.
+* If the value is a number followed by `d`, it is prefixed with `P`.
+====
+endif::no-duration-note[]

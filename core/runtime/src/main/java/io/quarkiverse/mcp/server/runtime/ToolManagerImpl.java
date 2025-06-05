@@ -72,8 +72,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     @Override
-    Stream<ToolInfo> infos(McpConnection connection) {
-        return tools.values().stream().filter(t -> test(t, connection));
+    Stream<ToolInfo> infos() {
+        return tools.values().stream();
+    }
+
+    @Override
+    Stream<ToolInfo> filter(Stream<ToolInfo> infos, McpConnection connection) {
+        return infos.filter(t -> test(t, connection));
     }
 
     @Override
@@ -106,10 +111,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ToolResponse> getInvoker(String id, McpConnection connection) {
+    protected FeatureInvoker<ToolResponse> getInvoker(String id, McpRequest mcpRequest) {
         ToolInfo tool = tools.get(id);
         if (tool instanceof FeatureInvoker fi
-                && test(tool, connection)) {
+                && matches(tool, mcpRequest)
+                && test(tool, mcpRequest.connection())) {
             return fi;
         }
         return null;
@@ -151,7 +157,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     private boolean test(ToolInfo tool, McpConnection connection) {
-        if (filters.isEmpty()) {
+        if (filters.isEmpty() || connection == null) {
             return true;
         }
         for (ToolFilter filter : filters) {
@@ -180,6 +186,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public String description() {
             return metadata.info().description();
+        }
+
+        @Override
+        public String serverName() {
+            return metadata.info().serverName();
         }
 
         @Override
@@ -256,7 +267,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public ToolInfo register() {
             validate();
-            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, description, fun, asyncFun,
+            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
@@ -275,10 +286,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         private final Optional<ToolAnnotations> annotations;
 
-        private ToolDefinitionInfo(String name, String description, Function<ToolArguments, ToolResponse> fun,
+        private ToolDefinitionInfo(String name, String description, String serverName,
+                Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations) {
-            super(name, description, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
         }

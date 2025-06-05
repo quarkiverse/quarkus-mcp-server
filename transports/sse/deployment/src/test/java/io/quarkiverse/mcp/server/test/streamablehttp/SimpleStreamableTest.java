@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.Options;
+import io.quarkiverse.mcp.server.test.StreamableHttpTest;
 import io.quarkiverse.mcp.server.test.tools.MyTools;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.response.ValidatableResponse;

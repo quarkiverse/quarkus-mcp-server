@@ -45,7 +45,8 @@ import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -75,7 +76,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
-    StreamableHttpMcpMessageHandler(McpRuntimeConfig config,
+    StreamableHttpMcpMessageHandler(McpServersRuntimeConfig config,
             ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager,
@@ -98,6 +99,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     @Override
     public void handle(RoutingContext ctx) {
+        String serverName = ctx.get(SseMcpServerRecorder.CONTEXT_KEY);
+        if (serverName == null) {
+            throw new IllegalStateException("Server name not defined");
+        }
+        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
+        // TODO fail if not found
+
         HttpServerRequest request = ctx.request();
 
         // The client MUST include an "Accept" header,
@@ -115,10 +123,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpSessionId == null) {
             String id = ConnectionManager.connectionId();
             LOG.debugf("Streamable connection initialized [%s]", id);
-            connection = new StreamableHttpMcpConnection(id, config.clientLogging().defaultLevel(),
-                    config.trafficLogging().enabled() ? new TrafficLogger(config.trafficLogging().textLimit())
+            connection = new StreamableHttpMcpConnection(id, serverConfig.clientLogging().defaultLevel(),
+                    serverConfig.trafficLogging().enabled() ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
                             : null,
-                    config.autoPingInterval());
+                    serverConfig.autoPingInterval());
             connectionManager.add(connection);
         } else {
             connection = connectionManager.get(mcpSessionId);
@@ -159,7 +167,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         };
 
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(json, connection, securitySupport, ctx.response(), mcpSessionId == null,
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, json, connection, securitySupport, ctx.response(),
+                mcpSessionId == null,
                 contextSupport, currentIdentityAssociation);
         ScanResult result = scan(mcpRequest);
         if (result.forceSseInit()) {
@@ -444,10 +453,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final HttpServerResponse response;
 
-        public HttpMcpRequest(Object json, McpConnectionBase connection, SecuritySupport securitySupport,
+        public HttpMcpRequest(String serverName, Object json, McpConnectionBase connection, SecuritySupport securitySupport,
                 HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation) {
-            super(json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
+            super(serverName, json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;

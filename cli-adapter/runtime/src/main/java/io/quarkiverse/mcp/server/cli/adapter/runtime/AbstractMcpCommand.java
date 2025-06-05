@@ -6,7 +6,6 @@ import java.util.concurrent.Callable;
 
 import jakarta.inject.Inject;
 
-import io.quarkiverse.mcp.server.runtime.config.McpRuntimeConfig;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler;
 import io.quarkus.runtime.Quarkus;
 import picocli.CommandLine;
@@ -20,9 +19,6 @@ public abstract class AbstractMcpCommand implements Callable<Integer> {
 
     @Inject
     StdioMcpMessageHandler mcpMessageHandler;
-
-    @Inject
-    McpRuntimeConfig mcpRuntimeConfig;
 
     public abstract Integer doCall();
 
@@ -38,7 +34,7 @@ public abstract class AbstractMcpCommand implements Callable<Integer> {
         PrintStream stdout = System.out;
         try {
             System.setOut(new PrintStream(OutputStream.nullOutputStream()));
-            mcpMessageHandler.initialize(stdout, mcpRuntimeConfig);
+            mcpMessageHandler.initialize(stdout);
             Quarkus.waitForExit();
         } catch (Exception e) {
             return ExitCode.SOFTWARE;

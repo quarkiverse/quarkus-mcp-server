@@ -7,11 +7,16 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-root-path]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-root-path[`quarkus.root-path`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-sse-root-path]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-sse-root-path[`quarkus.sse.root-path`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.root-path+++[]
+config_property_copy_button:+++quarkus.sse.root-path+++[]
 endif::add-copy-button-to-config-props[]
 
+
+`quarkus."server-name".sse.root-path`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".sse.root-path+++[]
+endif::add-copy-button-to-config-props[]
 
 [.description]
 --
@@ -22,10 +27,10 @@ The SSE endpoint (as defined in the specification `2024-11-05`) is exposed at `\
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_ROOT_PATH+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SSE_ROOT_PATH+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_ROOT_PATH+++`
+Environment variable: `+++QUARKUS_SSE_ROOT_PATH+++`
 endif::add-copy-button-to-env-var[]
 --
 |string
