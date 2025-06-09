@@ -103,9 +103,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (serverName == null) {
             throw new IllegalStateException("Server name not defined");
         }
-        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-        // TODO fail if not found
-
         HttpServerRequest request = ctx.request();
 
         // The client MUST include an "Accept" header,
@@ -123,6 +120,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpSessionId == null) {
             String id = ConnectionManager.connectionId();
             LOG.debugf("Streamable connection initialized [%s]", id);
+            McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
             connection = new StreamableHttpMcpConnection(id, serverConfig.clientLogging().defaultLevel(),
                     serverConfig.trafficLogging().enabled() ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
                             : null,

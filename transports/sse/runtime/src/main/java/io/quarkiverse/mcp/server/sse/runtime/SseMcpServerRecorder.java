@@ -2,6 +2,10 @@ package io.quarkiverse.mcp.server.sse.runtime;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
@@ -10,10 +14,12 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServersBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -32,8 +38,11 @@ public class SseMcpServerRecorder {
 
     private final McpServersRuntimeConfig config;
 
-    public SseMcpServerRecorder(McpServersRuntimeConfig config) {
+    private final McpSseServersBuildTimeConfig sseConfig;
+
+    public SseMcpServerRecorder(McpServersRuntimeConfig config, McpSseServersBuildTimeConfig sseConfig) {
         this.config = config;
+        this.sseConfig = sseConfig;
     }
 
     public Handler<RoutingContext> createMcpEndpointHandler(String serverName) {
@@ -92,10 +101,32 @@ public class SseMcpServerRecorder {
                 setCloseHandler(ctx.request(), id, connectionManager);
 
                 // By default /mcp/messages/{generatedId}
-                String endpointPath = mcpPath.endsWith("/") ? (mcpPath + "messages/" + id) : (mcpPath + "/messages/" + id);
-                LOG.debugf("POST endpoint path: %s", endpointPath);
+                StringBuilder endpointPath = new StringBuilder(mcpPath);
+                if (!mcpPath.endsWith("/")) {
+                    endpointPath.append("/");
+                }
+                endpointPath.append("messages/").append(id);
+                if (sseConfig.servers().get(serverName).sse().messageEndpoint().includeQueryParams()) {
+                    // Do not use HttpServerRequest#params() as it also contains path params
+                    MultiMap queryParams = ctx.queryParams();
+                    if (!queryParams.isEmpty()) {
+                        endpointPath.append("?");
+                        for (Iterator<Entry<String, String>> it = queryParams.iterator(); it.hasNext();) {
+                            var e = it.next();
+                            endpointPath
+                                    .append(e.getKey())
+                                    .append("=")
+                                    .append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+                            if (it.hasNext()) {
+                                endpointPath.append("&");
+                            }
+                        }
+                    }
+                }
 
-                connection.sendEvent("endpoint", endpointPath);
+                String endpoint = endpointPath.toString();
+                LOG.debugf("POST endpoint path: %s", endpoint);
+                connection.sendEvent("endpoint", endpoint);
             }
         };
     }

@@ -55,7 +55,7 @@ public class SseMcpServerProcessor {
         Set<String> rootPaths = new HashSet<>();
         for (Map.Entry<String, McpSseServerBuildTimeConfig> e : config.servers().entrySet()) {
             String serverName = e.getKey();
-            String rootPath = e.getValue().rootPath();
+            String rootPath = e.getValue().sse().rootPath();
             if (!rootPaths.add(rootPath)) {
                 throw new IllegalStateException("Multiple server configurations define the same root path: " + rootPath);
             }
