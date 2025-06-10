@@ -44,7 +44,6 @@ import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
@@ -121,10 +120,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             String id = ConnectionManager.connectionId();
             LOG.debugf("Streamable connection initialized [%s]", id);
             McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-            connection = new StreamableHttpMcpConnection(id, serverConfig.clientLogging().defaultLevel(),
-                    serverConfig.trafficLogging().enabled() ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
-                            : null,
-                    serverConfig.autoPingInterval());
+            connection = new StreamableHttpMcpConnection(id, serverConfig);
             connectionManager.add(connection);
         } else {
             connection = connectionManager.get(mcpSessionId);

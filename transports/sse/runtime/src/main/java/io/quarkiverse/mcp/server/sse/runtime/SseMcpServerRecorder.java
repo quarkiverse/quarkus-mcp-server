@@ -11,7 +11,6 @@ import java.util.function.Consumer;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServersBuildTimeConfig;
@@ -76,9 +75,6 @@ public class SseMcpServerRecorder {
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
-        TrafficLogger trafficLogger = serverConfig.trafficLogging().enabled()
-                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
-                : null;
 
         return new Handler<RoutingContext>() {
 
@@ -92,9 +88,7 @@ public class SseMcpServerRecorder {
                 String id = ConnectionManager.connectionId();
                 LOG.debugf("SSE connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, serverConfig.clientLogging().defaultLevel(),
-                        trafficLogger,
-                        serverConfig.autoPingInterval(), response);
+                SseMcpConnection connection = new SseMcpConnection(id, serverConfig, response);
                 connectionManager.add(connection);
 
                 // TODO we cannot override the close handler set/used by Quarkus HTTP

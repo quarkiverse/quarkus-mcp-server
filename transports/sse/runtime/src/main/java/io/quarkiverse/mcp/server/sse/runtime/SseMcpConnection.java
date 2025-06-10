@@ -1,11 +1,7 @@
 package io.quarkiverse.mcp.server.sse.runtime;
 
-import java.time.Duration;
-import java.util.Optional;
-
-import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
@@ -14,9 +10,8 @@ public class SseMcpConnection extends McpConnectionBase {
 
     private final HttpServerResponse response;
 
-    SseMcpConnection(String id, LogLevel defaultLogLevel, TrafficLogger trafficLogger, Optional<Duration> autoPingInterval,
-            HttpServerResponse response) {
-        super(id, defaultLogLevel, trafficLogger, autoPingInterval);
+    SseMcpConnection(String id, McpServerRuntimeConfig serverConfig, HttpServerResponse response) {
+        super(id, serverConfig);
         this.response = response;
     }
 
