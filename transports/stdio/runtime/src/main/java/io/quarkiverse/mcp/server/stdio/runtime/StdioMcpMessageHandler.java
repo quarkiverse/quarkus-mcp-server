@@ -30,7 +30,6 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.runtime.Quarkus;
@@ -46,8 +45,6 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
     private static final Logger LOG = Logger.getLogger(StdioMcpMessageHandler.class);
 
     private final ExecutorService executor;
-
-    private final TrafficLogger trafficLogger;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -68,16 +65,12 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");
         }
         this.serverConfig = config.servers().values().iterator().next();
-        this.trafficLogger = serverConfig.trafficLogging().enabled()
-                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
-                : null;
     }
 
     public void initialize(PrintStream stdout) {
         if (initialized.compareAndSet(false, true)) {
             String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-            StdioMcpConnection connection = new StdioMcpConnection(connectionId, serverConfig.clientLogging().defaultLevel(),
-                    trafficLogger, serverConfig.autoPingInterval(), stdout, vertx);
+            StdioMcpConnection connection = new StdioMcpConnection(connectionId, serverConfig, stdout, vertx);
             connectionManager.add(connection);
             InputStream in = System.in;
             executor.submit(new Runnable() {

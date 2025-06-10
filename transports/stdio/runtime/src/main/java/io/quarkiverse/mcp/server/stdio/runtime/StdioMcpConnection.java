@@ -1,13 +1,10 @@
 package io.quarkiverse.mcp.server.stdio.runtime;
 
 import java.io.PrintStream;
-import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkus.runtime.BlockingOperationControl;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -20,9 +17,8 @@ public class StdioMcpConnection extends McpConnectionBase {
 
     private final Vertx vertx;
 
-    StdioMcpConnection(String id, LogLevel defaultLogLevel, TrafficLogger trafficLogger, Optional<Duration> autoPingInterval,
-            PrintStream out, Vertx vertx) {
-        super(id, defaultLogLevel, trafficLogger, autoPingInterval);
+    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx) {
+        super(id, serverConfig);
         this.out = out;
         this.vertx = vertx;
     }

@@ -49,7 +49,7 @@ public class ResponseHandlers {
 
     boolean remove(long id) {
         if (handlers.remove(id) != null) {
-            LOG.infof("Removed handler for %s", id);
+            LOG.debugf("Removed response handler for %s", id);
             return true;
         }
         return false;

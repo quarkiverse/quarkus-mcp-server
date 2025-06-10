@@ -284,6 +284,8 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
+The default timeout for a sampling request. Negative and zero durations imply no timeout.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_SAMPLING_DEFAULT_TIMEOUT+++[]
@@ -308,6 +310,8 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
+The default timeout to list roots. Negative and zero durations imply no timeout.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_ROOTS_DEFAULT_TIMEOUT+++[]
@@ -345,6 +349,30 @@ endif::add-copy-button-to-env-var[]
 --
 |boolean
 |`true`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-connection-idle-timeout[`quarkus.connection-idle-timeout`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.connection-idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".connection-idle-timeout`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".connection-idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|`30M`
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-invalid-server-name-strategy[`quarkus.invalid-server-name-strategy`]##
 ifdef::add-copy-button-to-config-props[]

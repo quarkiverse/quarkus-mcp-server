@@ -13,6 +13,7 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Consume;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.RunTimeConfigurationDefaultBuildItem;
 
 public class StdioMcpServerProcessor {
 
@@ -34,6 +35,12 @@ public class StdioMcpServerProcessor {
         if (config.initializationEnabled() && initialization.isEmpty()) {
             recorder.initialize();
         }
+    }
+
+    @BuildStep
+    RunTimeConfigurationDefaultBuildItem noConnectionIdleTimeout() {
+        // Note that multiple server configs are not supported for stdio
+        return new RunTimeConfigurationDefaultBuildItem("quarkus.mcp.server.connection-idle-timeout", "0");
     }
 
 }

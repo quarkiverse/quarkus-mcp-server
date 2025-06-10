@@ -1,12 +1,15 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 
 public abstract class McpConnectionBase implements McpConnection, Sender {
 
@@ -22,14 +25,21 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final Optional<Duration> autoPingInterval;
 
-    protected McpConnectionBase(String id, LogLevel defaultLogLevel, TrafficLogger trafficLogger,
-            Optional<Duration> autoPingInterval) {
+    protected final AtomicLong lastUsed;
+
+    protected final long idleTimeout;
+
+    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.initializeRequest = new AtomicReference<>();
-        this.logLevel = new AtomicReference<>(defaultLogLevel);
-        this.trafficLogger = trafficLogger;
-        this.autoPingInterval = autoPingInterval;
+        this.logLevel = new AtomicReference<>(serverConfig.clientLogging().defaultLevel());
+        this.trafficLogger = serverConfig.trafficLogging().enabled()
+                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
+                : null;
+        this.autoPingInterval = serverConfig.autoPingInterval();
+        this.lastUsed = new AtomicLong(Instant.now().toEpochMilli());
+        this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
     }
 
     @Override
@@ -78,6 +88,18 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     public Optional<Duration> autoPingInterval() {
         return autoPingInterval;
+    }
+
+    public McpConnectionBase touch() {
+        this.lastUsed.set(Instant.now().toEpochMilli());
+        return this;
+    }
+
+    public boolean isIdleTimeoutExpired() {
+        if (idleTimeout <= 0) {
+            return false;
+        }
+        return Instant.now().minusMillis(lastUsed.get()).toEpochMilli() > idleTimeout;
     }
 
 }
