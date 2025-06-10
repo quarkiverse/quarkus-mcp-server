@@ -5,7 +5,6 @@ import java.util.Map;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
-import io.quarkiverse.mcp.server.McpConnection;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -23,7 +22,6 @@ public abstract class CompletionMessageHandler extends MessageHandler {
             McpRequest mcpRequest) throws McpException;
 
     Future<Void> complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
-            McpConnection connection,
             McpRequest mcpRequest) {
         String referenceName = ref.getString("name");
         String argumentName = argument.getString("name");
@@ -33,8 +31,8 @@ public abstract class CompletionMessageHandler extends MessageHandler {
         String key = referenceName + "_" + argumentName;
 
         ArgumentProviders argProviders = new ArgumentProviders(
-                Map.of(argumentName, argument.getString("value")), connection, id, null, sender,
-                Messages.getProgressToken(message), responseHandlers);
+                Map.of(argumentName, argument.getString("value")), mcpRequest.connection(), id, null, sender,
+                Messages.getProgressToken(message), responseHandlers, mcpRequest.serverName());
 
         try {
             Future<CompletionResponse> fu = execute(key, argProviders, mcpRequest);
@@ -50,7 +48,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                 }
                 result.put("completion", completion);
                 return sender.sendResult(id, result);
-            }, cause -> handleFailure(id, sender, connection, cause, LOG, "Unable to complete %s", referenceName));
+            }, cause -> handleFailure(id, sender, mcpRequest.connection(), cause, LOG, "Unable to complete %s", referenceName));
         } catch (McpException e) {
             return sender.sendError(id, e.getJsonRpcError(), e.getMessage());
         }

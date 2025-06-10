@@ -53,6 +53,16 @@ public interface McpServerRuntimeConfig {
     Prompts prompts();
 
     /**
+     * Sampling config.
+     */
+    Sampling sampling();
+
+    /**
+     * Roots config.
+     */
+    Roots roots();
+
+    /**
      * Dev mode config.
      */
     DevMode devMode();
@@ -159,6 +169,25 @@ public interface McpServerRuntimeConfig {
         @WithDefault("50")
         int pageSize();
 
+    }
+
+    public interface Sampling {
+
+        /**
+         * The default timeout for a sampling request. Negative and zero durations imply no timeout.
+         */
+        @WithDefault("60s")
+        Duration defaultTimeout();
+
+    }
+
+    public interface Roots {
+
+        /**
+         * The default timeout to list roots. Negative and zero durations imply no timeout.
+         */
+        @WithDefault("60s")
+        Duration defaultTimeout();
     }
 
 }

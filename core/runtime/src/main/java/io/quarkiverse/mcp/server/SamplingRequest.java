@@ -1,11 +1,13 @@
 package io.quarkiverse.mcp.server;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -60,6 +62,10 @@ public interface SamplingRequest {
 
     /**
      * Send a message to the client.
+     * <p>
+     * If the client does not respond before the timeout expires then the returned {@code Uni} fails with
+     * {@link TimeoutException}. The default timeout is configured with the {@code quarkus.mcp.server.sampling.default-timeout}
+     * config property.
      *
      * @return a new {@link Uni} that completes with a {@code SamplingResponse}
      */
@@ -69,6 +75,9 @@ public interface SamplingRequest {
      * Send a message to the client and wait for the result.
      * <p>
      * Note that this method will block until the client sends the response.
+     * <p>
+     * If the client does not respond before the timeout expires then a {@link TimeoutException} is thrown. The default timeout
+     * is configured with the {@code quarkus.mcp.server.sampling.default-timeout} config property.
      *
      * @return the response
      */
@@ -155,6 +164,15 @@ public interface SamplingRequest {
          * @return self
          */
         Builder setStopSequences(List<String> stopSequences);
+
+        /**
+         * If no timeout is set then the default value configured with the {@code quarkus.mcp.server.sampling.default-timeout}
+         * is used.
+         *
+         * @param timeout
+         * @return self
+         */
+        Builder setTimeout(Duration timeout);
 
         /**
          * @return a new request
