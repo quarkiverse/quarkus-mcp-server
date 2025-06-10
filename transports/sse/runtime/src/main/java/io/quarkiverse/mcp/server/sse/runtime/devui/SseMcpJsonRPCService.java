@@ -85,8 +85,8 @@ public class SseMcpJsonRPCService {
                     .append(":")
                     .append(port)
                     .append(rootPath)
-                    .append(pathToAppend(rootPath, e.getValue().rootPath()))
-                    .append(pathToAppend(e.getValue().rootPath(), "sse")).toString()),
+                    .append(pathToAppend(rootPath, e.getValue().sse().rootPath()))
+                    .append(pathToAppend(e.getValue().sse().rootPath(), "sse")).toString()),
                     HttpClient.newBuilder()
                             .connectTimeout(Duration.ofSeconds(10))
                             .build()));

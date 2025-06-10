@@ -68,6 +68,11 @@ public abstract class McpServerTest {
         return "/mcp";
     }
 
+    protected String ssePath() {
+        // should never start with a slash
+        return "sse";
+    }
+
     protected Map<String, Object> defaultHeaders() {
         return Map.of();
     }
@@ -99,9 +104,11 @@ public abstract class McpServerTest {
         Map<String, Object> headers = new HashMap<>(defaultHeaders());
         headers.putAll(additionalHeaders);
         return RestAssured.given()
+                .urlEncodingEnabled(false)
                 .when()
                 .headers(headers)
                 .body(data)
+                //.log().all()
                 .post(messageEndpoint)
                 .then();
     }
@@ -127,8 +134,9 @@ public abstract class McpServerTest {
             testUriStr = testUriStr.substring(0, testUriStr.length() - 1);
         }
         String sseRootPath = sseRootPath();
+        String ssePath = ssePath();
         return new McpSseClient(
-                URI.create(testUriStr + (sseRootPath.endsWith("/") ? sseRootPath + "sse" : sseRootPath + "/sse")));
+                URI.create(testUriStr + (sseRootPath.endsWith("/") ? sseRootPath + ssePath : sseRootPath + "/" + ssePath)));
     }
 
     protected Entry<String, String> initBaseAuth() {
