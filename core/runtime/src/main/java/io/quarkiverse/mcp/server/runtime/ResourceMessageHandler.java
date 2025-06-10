@@ -89,8 +89,7 @@ class ResourceMessageHandler extends MessageHandler {
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
 
         ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), id, resourceUri,
-                mcpRequest.sender(),
-                Messages.getProgressToken(message), manager.responseHandlers);
+                mcpRequest.sender(), Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
                     new FeatureExecutionContext(argProviders, mcpRequest));

@@ -1,9 +1,11 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.ModelPreferences;
@@ -17,7 +19,7 @@ class SamplingImpl implements Sampling {
 
     static SamplingImpl from(ArgumentProviders argProviders) {
         return new SamplingImpl(argProviders.connection().initialRequest(), argProviders.sender(),
-                argProviders.responseHandlers());
+                argProviders.responseHandlers(), argProviders.responseHandlers().getSamplingTimeout(argProviders.serverName()));
     }
 
     private final InitialRequest initialRequest;
@@ -26,10 +28,13 @@ class SamplingImpl implements Sampling {
 
     private final ResponseHandlers responseHandlers;
 
-    SamplingImpl(InitialRequest initialRequest, Sender sender, ResponseHandlers responseHandlers) {
+    private final Duration timeout;
+
+    SamplingImpl(InitialRequest initialRequest, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
         this.initialRequest = initialRequest;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
+        this.timeout = timeout;
     }
 
     @Override
@@ -56,6 +61,7 @@ class SamplingImpl implements Sampling {
         private ModelPreferences modelPreferences;
         private Map<String, Object> metadata;
         private List<String> stopSequences;
+        private Duration timeout = SamplingImpl.this.timeout;
 
         @Override
         public Builder addMessage(SamplingMessage message) {
@@ -106,13 +112,19 @@ class SamplingImpl implements Sampling {
         }
 
         @Override
+        public Builder setTimeout(Duration timeout) {
+            this.timeout = Objects.requireNonNull(timeout);
+            return this;
+        }
+
+        @Override
         public SamplingRequest build() {
             if (maxTokens == null) {
                 throw new IllegalStateException("maxTokens must be set");
             }
             return new SamplingRequestImpl(maxTokens, List.copyOf(messages), temperature, systemPrompt, includeContext,
                     modelPreferences, metadata, stopSequences,
-                    sender, responseHandlers);
+                    sender, responseHandlers, timeout);
         }
 
     }

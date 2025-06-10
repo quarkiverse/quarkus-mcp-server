@@ -1,9 +1,13 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -17,11 +21,14 @@ import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingResponse;
 import io.quarkiverse.mcp.server.TextContent;
+import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 @JsonInclude(Include.NON_NULL)
 public class SamplingRequestImpl implements SamplingRequest {
+
+    private static final Logger LOG = Logger.getLogger(SamplingRequestImpl.class);
 
     private final long maxTokens;
     private final List<SamplingMessage> messages;
@@ -34,11 +41,12 @@ public class SamplingRequestImpl implements SamplingRequest {
 
     private final Sender sender;
     private final ResponseHandlers responseHandlers;
+    private final Duration timeout;
 
     SamplingRequestImpl(long maxTokens, List<SamplingMessage> messages, BigDecimal temperature, String systemPrompt,
-            IncludeContext includeContext,
-            ModelPreferences modelPreferences, Map<String, Object> metadata, List<String> stopSequences, Sender sender,
-            ResponseHandlers responseHandlers) {
+            IncludeContext includeContext, ModelPreferences modelPreferences, Map<String, Object> metadata,
+            List<String> stopSequences, Sender sender,
+            ResponseHandlers responseHandlers, Duration timeout) {
         this.maxTokens = maxTokens;
         this.messages = messages;
         this.temperature = temperature;
@@ -49,6 +57,7 @@ public class SamplingRequestImpl implements SamplingRequest {
         this.stopSequences = stopSequences;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
+        this.timeout = timeout;
     }
 
     @JsonProperty
@@ -101,9 +110,10 @@ public class SamplingRequestImpl implements SamplingRequest {
 
     @Override
     public Uni<SamplingResponse> send() {
-        return Uni.createFrom().completionStage(() -> {
-            CompletableFuture<SamplingResponse> ret = new CompletableFuture<SamplingResponse>();
-            Long id = responseHandlers.newRequest(m -> {
+        AtomicLong id = new AtomicLong();
+        Uni<SamplingResponse> ret = Uni.createFrom().completionStage(() -> {
+            CompletableFuture<SamplingResponse> future = new CompletableFuture<SamplingResponse>();
+            Long requestId = responseHandlers.newRequest(m -> {
                 JsonObject result = m.getJsonObject("result");
                 if (result == null) {
                     throw new IllegalStateException("Invalid sampling response: " + m);
@@ -118,11 +128,23 @@ public class SamplingRequestImpl implements SamplingRequest {
                     default -> throw new IllegalArgumentException("Unexpected value: " + contentType);
                 };
                 SamplingResponse samplingResponse = new SamplingResponse(c, model, role, result.getString("stopReason"));
-                ret.complete(samplingResponse);
+                future.complete(samplingResponse);
             });
+            id.set(requestId);
             sender.send(Messages.newRequest(id, McpMessageHandler.SAMPLING_CREATE_MESSAGE, this));
-            return ret;
+            return future;
         });
+        if (!timeout.isNegative() && !timeout.isZero()) {
+            ret = ret.ifNoItem()
+                    .after(timeout).fail()
+                    .onFailure(TimeoutException.class).invoke(te -> {
+                        long requestId = id.get();
+                        if (requestId != 0 && responseHandlers.remove(requestId)) {
+                            LOG.debugf("Response handler for %s removed due to timeout", requestId);
+                        }
+                    });
+        }
+        return ret;
     }
 
 }

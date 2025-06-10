@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -9,6 +11,7 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -17,15 +20,21 @@ public class ResponseHandlers {
 
     private static final Logger LOG = Logger.getLogger(ResponseHandlers.class);
 
-    // TODO implement a cleanup timer that will remove "outdated" handlers
     // request id -> response handler
-    private final ConcurrentMap<Long, Consumer<JsonObject>> handlers;
+    private final ConcurrentMap<Long, ResponseHandler> handlers;
 
     private final AtomicLong idGenerator;
 
-    ResponseHandlers() {
+    private final McpServersRuntimeConfig config;
+
+    ResponseHandlers(McpServersRuntimeConfig config) {
         this.handlers = new ConcurrentHashMap<>();
         this.idGenerator = new AtomicLong();
+        this.config = config;
+    }
+
+    public boolean hasHandler(long id) {
+        return handlers.containsKey(id);
     }
 
     Long nextId() {
@@ -34,22 +43,30 @@ public class ResponseHandlers {
 
     Long newRequest(Consumer<JsonObject> responseConsumer) {
         Long nextId = nextId();
-        handlers.put(nextId, responseConsumer);
+        handlers.put(nextId, new ResponseHandler(Instant.now(), responseConsumer));
         return nextId;
+    }
+
+    boolean remove(long id) {
+        if (handlers.remove(id) != null) {
+            LOG.infof("Removed handler for %s", id);
+            return true;
+        }
+        return false;
     }
 
     Future<Void> handleResponse(Object id, JsonObject message) {
         if (id == null) {
             LOG.debugf("Discard client response with no id: %s", message);
         } else {
-            Consumer<JsonObject> c = handlers.remove(coerceResponseId(id));
-            if (c == null) {
-                // Discard all responses for which a consumer is not defined
+            ResponseHandler handler = handlers.remove(coerceResponseId(id));
+            if (handler == null) {
+                // Discard all responses for which a handler is not found
                 // including pong responses
-                LOG.debugf("Discard client response: %s", message);
+                LOG.debugf("Handler not found - discard client response with id %s", id);
             } else {
                 try {
-                    c.accept(message);
+                    handler.operation().accept(message);
                 } catch (Throwable e) {
                     LOG.errorf(e, "Unable to process the response with id %s", id);
                     return Future.failedFuture(e);
@@ -68,6 +85,27 @@ public class ResponseHandlers {
             return Long.parseLong(strId);
         }
         throw new IllegalArgumentException("Unsupported response identifier: " + id);
+    }
+
+    Duration getSamplingTimeout(String serverName) {
+        return config.servers().get(serverName).sampling().defaultTimeout();
+    }
+
+    Duration getRootsTimeout(String serverName) {
+        return config.servers().get(serverName).roots().defaultTimeout();
+    }
+
+    private record ResponseHandler(Instant creationTime, Consumer<JsonObject> operation) {
+
+        public ResponseHandler {
+            if (creationTime == null) {
+                throw new IllegalArgumentException("creationTime must not be null");
+            }
+            if (operation == null) {
+                throw new IllegalArgumentException("operation must not be null");
+            }
+        }
+
     }
 
 }

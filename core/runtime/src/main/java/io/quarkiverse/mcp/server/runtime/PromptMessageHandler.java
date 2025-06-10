@@ -63,7 +63,7 @@ class PromptMessageHandler extends MessageHandler {
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
         ArgumentProviders argProviders = new ArgumentProviders(args, mcpRequest.connection(), id, null, mcpRequest.sender(),
-                Messages.getProgressToken(message), manager.responseHandlers);
+                Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
 
         try {
             Future<PromptResponse> fu = manager.execute(promptName,

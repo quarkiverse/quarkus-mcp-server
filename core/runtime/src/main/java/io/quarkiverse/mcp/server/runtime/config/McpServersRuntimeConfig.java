@@ -28,7 +28,7 @@ public interface McpServersRuntimeConfig {
     /**
      * The strategy used when server features, such as tools, prompts, and resources, reference an non-existent server name.
      */
-    @WithDefault("FAIL")
+    @WithDefault("fail")
     InvalidServerNameStrategy invalidServerNameStrategy();
 
     enum InvalidServerNameStrategy {

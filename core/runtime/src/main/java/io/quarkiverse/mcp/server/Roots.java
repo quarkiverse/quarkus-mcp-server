@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 import java.util.List;
 
 import io.smallrye.common.annotation.CheckReturnValue;
+import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -19,6 +20,10 @@ public interface Roots {
 
     /**
      * Send a {@code roots/list} message.
+     * <p>
+     * If the client does not respond before the timeout expires then the returned {@code Uni} fails with
+     * {@link TimeoutException}. The timeout is configured with the {@code quarkus.mcp.server.roots.default-timeout} config
+     * property.
      *
      * @throws IllegalStateException if the client does not support the {@code roots} capability
      * @return a new {@link Uni} completed with the list of roots
@@ -30,6 +35,9 @@ public interface Roots {
      * Send a {@code roots/list} message and wait for the result.
      * <p>
      * Note that this method will block until the client sends the response.
+     * <p>
+     * If the client does not respond before the timeout expires then a {@link TimeoutException} is thrown. The timeout is
+     * configured with the {@code quarkus.mcp.server.roots.default-timeout} config property.
      *
      * @throws IllegalStateException if the client does not support the {@code roots} capability
      * @return the list of roots
