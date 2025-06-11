@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
+import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.Notification.Type;
@@ -29,6 +30,8 @@ import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidS
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.vertx.UniHelper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -59,6 +62,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
     private final ResponseHandlers responseHandlers;
+    private final List<InitialCheck> initialChecks;
 
     protected final McpServersRuntimeConfig config;
 
@@ -74,7 +78,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
-            McpMetadata metadata, Vertx vertx) {
+            McpMetadata metadata, Vertx vertx, List<InitialCheck> initialChecks) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -90,6 +94,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompletionManager);
         this.notificationManager = notificationManager;
         this.responseHandlers = responseHandlers;
+        this.initialChecks = initialChecks;
         this.config = config;
         this.metadata = metadata;
         this.vertx = vertx;
@@ -207,18 +212,44 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
 
         InitialRequest initialRequest = decodeInitializeRequest(params);
-        if (mcpRequest.connection().initialize(initialRequest)) {
-            // The server MUST respond with its own capabilities and information
-            afterInitialize(mcpRequest);
-            mcpRequest.contextStart();
-            return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest))
-                    .onComplete(r -> {
-                        mcpRequest.contextEnd();
-                    });
-        } else {
-            initializeFailed(mcpRequest);
-            String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
-            return mcpRequest.sender().sendError(id, JsonRPC.INTERNAL_ERROR, msg);
+        // Start the context first
+        mcpRequest.contextStart();
+        // Then apply init checks
+        return UniHelper.toFuture(checkInit(initialRequest, initialChecks, 0)).compose(res -> {
+            if (res.error()) {
+                // An init check failed - send the error message
+                initializeFailed(mcpRequest);
+                return mcpRequest.sender().sendError(id, JsonRPC.INTERNAL_ERROR, res.message());
+            }
+            // Init checks passed - attempt to initialize the connection
+            if (mcpRequest.connection().initialize(initialRequest)) {
+                // The server MUST respond with its own capabilities and information
+                afterInitialize(mcpRequest);
+                return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest));
+            } else {
+                initializeFailed(mcpRequest);
+                String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
+                return mcpRequest.sender().sendError(id, JsonRPC.INTERNAL_ERROR, msg);
+            }
+        }).onComplete(r -> {
+            mcpRequest.contextEnd();
+        });
+    }
+
+    private static Uni<InitialCheck.CheckResult> checkInit(InitialRequest initialRequest, List<InitialCheck> checks, int idx) {
+        if (checks.isEmpty()) {
+            return InitialCheck.CheckResult.successs();
+        }
+        try {
+            return checks.get(idx).perform(initialRequest).chain(res -> {
+                if ((idx < checks.size() - 1)
+                        && !res.error()) {
+                    return checkInit(initialRequest, checks, idx + 1);
+                }
+                return Uni.createFrom().item(res);
+            });
+        } catch (Throwable t) {
+            return Uni.createFrom().failure(t);
         }
     }
 

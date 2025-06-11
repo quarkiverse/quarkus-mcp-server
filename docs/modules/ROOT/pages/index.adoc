@@ -908,6 +908,32 @@ public class MyTools {
 <1> Permit only authenticated users. All CDI business methods are protected.
 <2> Permit only user with role `admin`.
 
+
+== Initial checks
+
+The CDI beans that implement `io.quarkiverse.mcp.server.InitialCheck` are used to perform an initial check when an MCP client connection is initialized, i.e. before the server capabilities are sent back to the client.
+If an initial check fails then the connection is not initialized successfully and the error message is sent back to the client.
+Multiple checks are sorted by `InjectableBean#getPriority()` and executed sequentially. 
+Higher priority is executed first.
+
+.`InitialCheck` Example
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
+
+// @Singleton is added automatically
+public class MyCheck implements InitialCheck {
+
+   public Uni<CheckResult> perform(InitialRequest initialRequest) {
+      return initialRequest.supportsSampling() ? InitialCheck.CheckResult.successs()
+               : InitialCheck.CheckResult.error("Sampling not supported");
+   }
+}
+----
+
 == Filters
 
 It is possible to determine the set of visible/accesible tools, prompts, resources and resource templates for a specific MCP client.
