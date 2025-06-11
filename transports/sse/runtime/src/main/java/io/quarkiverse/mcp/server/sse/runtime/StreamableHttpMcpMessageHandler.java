@@ -17,6 +17,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -47,6 +48,7 @@ import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
+import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
@@ -85,12 +87,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers serverRequests,
+            @All List<InitialCheck> initialChecks,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
             Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata, vertx);
+                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata, vertx,
+                initialChecks);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;

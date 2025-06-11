@@ -49,6 +49,7 @@ import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
@@ -193,6 +194,10 @@ class McpServerProcessor {
                 .build());
         autoScopes.produce(AutoAddScopeBuildItem.builder()
                 .implementsInterface(DotName.createSimple(ResourceTemplateFilter.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(InitialCheck.class))
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build());
     }
