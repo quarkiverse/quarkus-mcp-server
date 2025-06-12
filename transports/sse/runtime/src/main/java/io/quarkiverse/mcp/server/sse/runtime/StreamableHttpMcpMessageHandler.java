@@ -18,6 +18,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -232,6 +233,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpRequest.newSession) {
             connectionManager.remove(mcpRequest.connection().id());
         }
+    }
+
+    @Override
+    protected Transport transport() {
+        return Transport.STREAMABLE_HTTP;
     }
 
     private boolean accepts(List<String> accepts, String contentType) {

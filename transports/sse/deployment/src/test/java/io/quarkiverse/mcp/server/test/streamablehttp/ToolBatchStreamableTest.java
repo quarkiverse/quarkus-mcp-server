@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.StreamableHttpTest;
 import io.quarkiverse.mcp.server.test.StreamableMcpSseClient;
@@ -83,7 +85,10 @@ public class ToolBatchStreamableTest extends StreamableHttpTest {
     public static class MyTools {
 
         @Tool
-        String bravo(int price) {
+        String bravo(int price, McpConnection connection) {
+            if (connection.initialRequest().transport() != Transport.STREAMABLE_HTTP) {
+                throw new IllegalStateException();
+            }
             return "" + price * 42;
         }
     }

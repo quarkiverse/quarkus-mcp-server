@@ -41,7 +41,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
+public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private static final Logger LOG = Logger.getLogger(McpMessageHandler.class);
 
@@ -160,6 +160,8 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // No-op
     }
 
+    protected abstract InitialRequest.Transport transport();
+
     private Future<Void> handleResponse(JsonObject message) {
         return responseHandlers.handleResponse(message.getValue("id"), message);
     }
@@ -193,7 +195,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (!INITIALIZE.equals(method)) {
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT && serverConfig(mcpRequest).devMode().dummyInit()) {
                 InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), SUPPORTED_PROTOCOL_VERSIONS.get(0),
-                        List.of());
+                        List.of(), transport());
                 if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", mcpRequest.connection().id());
                     return operation(message, mcpRequest);
@@ -460,7 +462,7 @@ public class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 clientCapabilities.add(new ClientCapability(name, Map.of()));
             }
         }
-        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities));
+        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
     private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-03-26", "2024-11-05");

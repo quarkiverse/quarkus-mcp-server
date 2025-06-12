@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -58,6 +59,9 @@ public class InitialRequestTest extends McpServerTest {
                 }
                 if (initRequest.clientCapabilities().size() != 1
                         || !initRequest.clientCapabilities().get(0).name().equals("sampling")) {
+                    throw new IllegalStateException();
+                }
+                if (initRequest.transport() != Transport.SSE) {
                     throw new IllegalStateException();
                 }
             }
