@@ -18,6 +18,7 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
@@ -119,6 +120,11 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
                 }
             });
         }
+    }
+
+    @Override
+    protected Transport transport() {
+        return Transport.STDIO;
     }
 
 }

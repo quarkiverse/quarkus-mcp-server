@@ -3,14 +3,30 @@ package io.quarkiverse.mcp.server;
 import java.util.List;
 
 /**
- * The initial request sent from a client.
+ * Represents the initial request sent from a client.
  *
- * @param implementation the client implementation information
- * @param protocolVersion the protocol version supported by the client
- * @param clientCapabilities the capabilities supported by the client
+ * @param implementation the client implementation information (must not be {@code null})
+ * @param protocolVersion the protocol version supported by the client (must not be {@code null})
+ * @param clientCapabilities the capabilities supported by the client (must not be {@code null})
+ * @param transport the transport used by the client (must not be {@code null})
  */
 public record InitialRequest(Implementation implementation, String protocolVersion,
-        List<ClientCapability> clientCapabilities) {
+        List<ClientCapability> clientCapabilities, Transport transport) {
+
+    public InitialRequest {
+        if (implementation == null) {
+            throw new IllegalArgumentException("implementation must not be null");
+        }
+        if (protocolVersion == null) {
+            throw new IllegalArgumentException("protocolVersion must not be null");
+        }
+        if (clientCapabilities == null) {
+            throw new IllegalArgumentException("clientCapabilities must not be null");
+        }
+        if (transport == null) {
+            throw new IllegalArgumentException("transport must not be null");
+        }
+    }
 
     /**
      * @return {@code true} if the client supports the {@link ClientCapability#SAMPLING} capability
@@ -36,6 +52,21 @@ public record InitialRequest(Implementation implementation, String protocolVersi
             }
         }
         return false;
+    }
+
+    public enum Transport {
+        /**
+         * The stdio transport.
+         */
+        STDIO,
+        /**
+         * The HTTP/SSE transport from version 2024-11-05.
+         */
+        SSE,
+        /**
+         * The Streamable HTTP transport from version 2025-03-26.
+         */
+        STREAMABLE_HTTP
     }
 
 }

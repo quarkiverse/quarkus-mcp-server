@@ -1,14 +1,16 @@
 package io.quarkiverse.mcp.server;
 
-import java.util.Objects;
-
 /**
  * "Requests MUST include a string or integer ID."
+ *
+ * @param value (must not be {@code null})
  */
 public record RequestId(Object value) {
 
-    public RequestId(Object value) {
-        this.value = Objects.requireNonNull(value);
+    public RequestId {
+        if (value == null) {
+            throw new IllegalArgumentException("messages must not be null");
+        }
     }
 
     public Integer asInteger() {
