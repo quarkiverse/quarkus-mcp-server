@@ -562,6 +562,15 @@ The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annot
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
 For example, `void` methods are not supported.
 
+=== Customizing JSON Schema Generation
+
+The MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
+This library is configurable through modules that process various annotations (e.g., Jackson, Bean Validation) to enrich the generated schemas.
+
+By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the schema generator server will be automatically configured to use the Jackson module.
+The same goes for `com.github.victools:jsonschema-module-jakarta-validation and `com.github.victools:jsonschema-module-swagger-2`.
+See the <<extension-configuration-reference>> for relevant config properties.
+
 == Notifications
 
 You can annotate a business method of a CDI bean with `@io.quarkiverse.mcp.server.Notification`.

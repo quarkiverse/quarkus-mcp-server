@@ -58,15 +58,14 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
-            @All List<ToolFilter> filters) {
+            @All List<ToolFilter> filters,
+            @All List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             this.tools.put(f.info().name(), new ToolMethod(f));
         }
-        this.schemaGenerator = new SchemaGenerator(
-                new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON).without(
-                        Option.SCHEMA_VERSION_INDICATOR).build());
+        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers);
         this.defaultValueConverters = metadata.defaultValueConverters();
         this.filters = filters;
     }
@@ -237,6 +236,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             return tool;
         }
 
+    }
+
+    private static SchemaGenerator constructSchemaGenerator(
+            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
+        var configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON)
+                .without(Option.SCHEMA_VERSION_INDICATOR);
+        for (SchemaGeneratorConfigCustomizer customizer : schemaGeneratorConfigCustomizers) {
+            customizer.customize(configBuilder);
+        }
+        return new SchemaGenerator(configBuilder.build());
     }
 
     class ToolDefinitionImpl
