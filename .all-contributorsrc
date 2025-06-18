@@ -89,6 +89,17 @@
         "test",
         "infra"
       ]
+    },
+    {
+      "login": "mvduijnhoven",
+      "name": "Martijn van Duijnhoven",
+      "avatar_url": "https://avatars.githubusercontent.com/u/16058040?v=4",
+      "profile": "https://github.com/mvduijnhoven",
+      "contributions": [
+        "code",
+        "test",
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
