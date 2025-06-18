@@ -25,7 +25,7 @@
             <artifactId>quarkus-mcp-server-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>io.quarkus</groupId>
