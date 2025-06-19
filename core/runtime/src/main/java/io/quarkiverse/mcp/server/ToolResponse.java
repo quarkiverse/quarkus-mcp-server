@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Response to a {@code tools/list} request from the client.
+ * Response to a {@code tools/call} request from the client.
  *
  * @param isError {@code true} if the tool call ended in an error
  * @param content the list of content items (must not be {@code null})
