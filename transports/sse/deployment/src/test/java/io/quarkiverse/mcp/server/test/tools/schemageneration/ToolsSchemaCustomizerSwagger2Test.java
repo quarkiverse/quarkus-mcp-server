@@ -13,10 +13,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
@@ -29,18 +31,13 @@ public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
 
     @Test
     public void testSchemaGenerationWithSwagger2Annotations() {
-        initClient();
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
-
-        JsonObject toolListResponse = waitForLastResponse();
-
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(1, tools.size());
-
-        assertTool(tools, "add-products", null, schema -> {
+        McpSseTestClient client = McpAssured.newSseClient()
+                .build()
+                .connect();
+        client.when().toolsList(page -> {
+            assertEquals(1, page.tools().size());
+            ToolInfo addProducts = page.findByName("add-products");
+            JsonObject schema = addProducts.inputSchema();
             assertHasPropertyWithNameTypeDescription(schema, "products", "array");
             assertHasPropertyCount(schema, 1);
             assertHasRequiredProperties(schema, Set.of("products"));
@@ -59,7 +56,7 @@ public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
             assertHasPropertyWithNameTypeDescription(productType, "price", "number");
             assertPropertyHasMinimum(productType, "price", 0);
             assertHasPropertyCount(productType, 4);
-        });
+        }).thenAssertResults();
     }
 
     private void assertHasPropertyWithNameTypeDescription(JsonObject typeObject, String name, String expectedType) {
@@ -94,6 +91,7 @@ public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
         assertEquals(expectedNumberOfProperties, properties.size());
     }
 
+    @SuppressWarnings("unchecked")
     private void assertHasRequiredProperties(JsonObject typeObject, Set<String> expectedRequireProperties) {
         var requiredProperties = new HashSet<Object>(typeObject.getJsonArray("required").getList());
         assertEquals(expectedRequireProperties, requiredProperties);
@@ -120,6 +118,7 @@ public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, minLength = 1)
         private String name;
 
+        @SuppressWarnings("unused")
         private String description;
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, minimum = "0")

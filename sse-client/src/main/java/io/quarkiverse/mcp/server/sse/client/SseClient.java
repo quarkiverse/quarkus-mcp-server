@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow;
+import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
@@ -58,7 +59,7 @@ public abstract class SseClient {
         }
         HttpRequest request = buildConnectRequest(headers);
 
-        return client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber()))
+        return client.sendAsync(request, BodyHandlers.fromLineSubscriber(new SseEventSubscriber(this::process)))
                 .exceptionally(e -> {
                     if (e instanceof CompletionException) {
                         e = e.getCause();
@@ -76,12 +77,18 @@ public abstract class SseClient {
                 });
     }
 
-    class SseEventSubscriber implements Flow.Subscriber<String> {
+    public static class SseEventSubscriber implements Flow.Subscriber<String> {
 
         private Flow.Subscription subscription;
 
         private String event = "message";
         private StringBuilder dataBuffer = new StringBuilder();
+
+        private final Consumer<SseEvent> eventProcessor;
+
+        public SseEventSubscriber(Consumer<SseEvent> eventProcessor) {
+            this.eventProcessor = eventProcessor;
+        }
 
         @Override
         public void onSubscribe(Flow.Subscription subscription) {
@@ -96,7 +103,7 @@ public abstract class SseClient {
                 // Skip comments
             } else if (line.isBlank()) {
                 // Flush
-                process(new SseEvent(event, dataBuffer.toString().strip()));
+                eventProcessor.accept(new SseEvent(event, dataBuffer.toString().strip()));
                 event = "message";
                 dataBuffer = new StringBuilder();
             } else if (line.contains(":")) {

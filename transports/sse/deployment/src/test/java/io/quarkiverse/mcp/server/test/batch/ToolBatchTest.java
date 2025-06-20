@@ -1,12 +1,10 @@
 package io.quarkiverse.mcp.server.test.batch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.annotation.PostConstruct;
@@ -17,11 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolBatchTest extends McpServerTest {
 
@@ -32,49 +31,26 @@ public class ToolBatchTest extends McpServerTest {
 
     @Test
     public void testBatchMessage() {
-        initClient();
-        JsonArray batch = new JsonArray();
-        JsonObject msg1 = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10)));
-        batch.add(msg1);
-        JsonObject msg2 = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", 100)));
-        batch.add(msg2);
-        send(batch.encode(), Map.of("test-foo", "bar"));
+        McpSseTestClient client = McpAssured
+                .newSseClient()
+                .setAdditionalHeaders(m -> MultiMap.caseInsensitiveMultiMap().add("test-foo", "bar"))
+                .build()
+                .connect();
 
-        List<JsonObject> responses = client().waitForResponses(3);
-        String fooId1 = assertResponse(responses, msg1, "420");
-        String fooId2 = assertResponse(responses, msg2, "4200");
-        assertNotEquals(fooId1, fooId2);
-    }
-
-    private String assertResponse(List<JsonObject> responses, JsonObject msg, String expectedText) {
-        JsonObject response = null;
-        for (JsonObject r : responses) {
-            if (r.getInteger("id") == msg.getInteger("id")) {
-                response = r;
-                break;
-            }
-        }
-        assertNotNull(response);
-
-        JsonObject result = assertResultResponse(msg, response);
-        assertNotNull(result);
-        assertFalse(result.getBoolean("isError"));
-        JsonArray content = result.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        String text = textContent.getString("text");
-        assertEquals(expectedText, text.substring(0, text.indexOf("::")));
-        String fooId = text.substring(text.indexOf("::") + 2);
-        return fooId;
+        Set<String> fooIds = new HashSet<>();
+        client.whenBatch()
+                .toolsCall("bravo", Map.of("price", 10), toolResponse -> {
+                    String text = toolResponse.content().get(0).asText().text();
+                    assertEquals("420", text.substring(0, text.indexOf("::")));
+                    fooIds.add(text.substring(text.indexOf("::") + 2));
+                })
+                .toolsCall("bravo", Map.of("price", 100), toolResponse -> {
+                    String text = toolResponse.content().get(0).asText().text();
+                    assertEquals("4200", text.substring(0, text.indexOf("::")));
+                    fooIds.add(text.substring(text.indexOf("::") + 2));
+                })
+                .thenAssertResults();
+        assertEquals(2, fooIds.size());
     }
 
     public static class MyTools {

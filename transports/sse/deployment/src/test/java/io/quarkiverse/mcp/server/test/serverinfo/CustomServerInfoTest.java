@@ -1,14 +1,14 @@
 package io.quarkiverse.mcp.server.test.serverinfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class CustomServerInfoTest extends McpServerTest {
 
@@ -23,11 +23,10 @@ public class CustomServerInfoTest extends McpServerTest {
 
     @Test
     public void testServerInfo() {
-        initClient(result -> {
-            JsonObject serverInfo = result.getJsonObject("serverInfo");
-            assertNotNull(serverInfo);
-            assertEquals(NAME, serverInfo.getString("name"));
-            assertEquals(VERSION, serverInfo.getString("version"));
+        McpAssured.newSseClient().build().connect(initResult -> {
+            assertEquals(NAME, initResult.serverName());
+            assertEquals(VERSION, initResult.serverVersion());
+            assertTrue(initResult.capabilities().stream().anyMatch(c -> c.name().equals("logging")));
         });
     }
 }

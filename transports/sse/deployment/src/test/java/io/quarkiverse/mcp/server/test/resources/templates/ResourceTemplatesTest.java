@@ -1,16 +1,15 @@
 package io.quarkiverse.mcp.server.test.resources.templates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.Checks;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ResourceTemplatesTest extends McpServerTest {
 
@@ -21,39 +20,14 @@ public class ResourceTemplatesTest extends McpServerTest {
 
     @Test
     public void testResourceTemplates() {
-        initClient();
-
-        JsonObject resourceTemplatesListMessage = newMessage("resources/templates/list");
-        send(resourceTemplatesListMessage);
-
-        JsonObject resourceTemplatesListResponse = waitForLastResponse();
-
-        JsonObject resourceTemplatesListResult = assertResultResponse(resourceTemplatesListMessage,
-                resourceTemplatesListResponse);
-        assertNotNull(resourceTemplatesListResult);
-        JsonArray resourceTemplates = resourceTemplatesListResult.getJsonArray("resourceTemplates");
-        assertEquals(2, resourceTemplates.size());
-
-        assertResourceRead("foo:bar", "file:///bar");
-        assertResourceRead("bar:baz", "file:///bar/baz");
-    }
-
-    private void assertResourceRead(String expectedText, String uri) {
-        JsonObject resourceReadMessage = newMessage("resources/read")
-                .put("params", new JsonObject()
-                        .put("uri", uri));
-
-        send(resourceReadMessage);
-
-        JsonObject resourceReadResponse = waitForLastResponse();
-
-        JsonObject resourceReadResult = assertResultResponse(resourceReadMessage, resourceReadResponse);
-        assertNotNull(resourceReadResult);
-        JsonArray contents = resourceReadResult.getJsonArray("contents");
-        assertEquals(1, contents.size());
-        JsonObject textContent = contents.getJsonObject(0);
-        assertEquals(expectedText, textContent.getString("text"));
-        assertEquals(uri, textContent.getString("uri"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .resourcesTemplatesList(p -> {
+                    assertEquals(2, p.size());
+                })
+                .resourcesRead("file:///bar", r -> assertEquals("foo:bar", r.contents().get(0).asText().text()))
+                .resourcesRead("file:///bar/baz", r -> assertEquals("bar:baz", r.contents().get(0).asText().text()))
+                .thenAssertResults();
     }
 
 }

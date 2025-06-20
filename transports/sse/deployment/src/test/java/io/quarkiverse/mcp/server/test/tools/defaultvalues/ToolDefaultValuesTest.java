@@ -21,13 +21,15 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.DurationConverter;
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.LongConverter;
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.MyArgConverter;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolDefaultValuesTest extends McpServerTest {
@@ -40,69 +42,51 @@ public class ToolDefaultValuesTest extends McpServerTest {
 
     @Test
     public void testDefaultValues() {
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsList(page -> {
+                    assertEquals(2, page.tools().size());
 
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
+                    ToolInfo alpha = page.findByName("alpha");
+                    JsonObject alphaSchema = alpha.inputSchema();
+                    JsonObject alphaProperties = alphaSchema.getJsonObject("properties");
+                    assertEquals(10, alphaProperties.size());
 
-        JsonObject toolListResponse = waitForLastResponse();
+                    JsonObject alphaBoolVal = alphaProperties.getJsonObject("boolVal");
+                    assertNotNull(alphaBoolVal);
+                    assertEquals("boolean", alphaBoolVal.getString("type"));
+                    assertEquals(true, alphaBoolVal.getBoolean("default"));
 
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(2, tools.size());
+                    JsonObject timeUnit = alphaProperties.getJsonObject("timeUnit");
+                    assertNotNull(timeUnit);
+                    assertEquals("string", timeUnit.getString("type"));
+                    assertEquals("HOURS", timeUnit.getString("default"));
 
-        assertTool(tools, "alpha", null, schema -> {
-            JsonObject properties = schema.getJsonObject("properties");
-            assertEquals(10, properties.size());
+                    assertTrue(alphaSchema.getJsonArray("required").isEmpty());
 
-            JsonObject boolVal = properties.getJsonObject("boolVal");
-            assertNotNull(boolVal);
-            assertEquals("boolean", boolVal.getString("type"));
-            assertEquals(true, boolVal.getBoolean("default"));
+                    ToolInfo bravo = page.findByName("bravo");
+                    JsonObject bravoSchema = bravo.inputSchema();
+                    JsonObject bravoProperties = bravoSchema.getJsonObject("properties");
+                    assertEquals(1, bravoProperties.size());
 
-            JsonObject timeUnit = properties.getJsonObject("timeUnit");
-            assertNotNull(timeUnit);
-            assertEquals("string", timeUnit.getString("type"));
-            assertEquals("HOURS", timeUnit.getString("default"));
+                    JsonObject bravoBoolVal = bravoProperties.getJsonObject("boolVal");
+                    assertNotNull(bravoBoolVal);
+                    assertEquals("boolean", bravoBoolVal.getString("type"));
+                    assertEquals(true, bravoBoolVal.getBoolean("default"));
 
-            assertTrue(schema.getJsonArray("required").isEmpty());
-        });
+                    assertTrue(bravoSchema.getJsonArray("required").isEmpty());
 
-        assertTool(tools, "bravo", null, schema -> {
-            JsonObject properties = schema.getJsonObject("properties");
-            assertEquals(1, properties.size());
-
-            JsonObject boolVal = properties.getJsonObject("boolVal");
-            assertNotNull(boolVal);
-            assertEquals("boolean", boolVal.getString("type"));
-            assertEquals(true, boolVal.getBoolean("default"));
-
-            assertTrue(schema.getJsonArray("required").isEmpty());
-        });
-
-        assertResult("alpha",
-                new JsonObject(),
-                "true::2::2::2::2.1::2.1::fooo::HOURS::PT5S::MyArg[price=10, names=[foo, bar, baz]]");
-        assertResult("bravo",
-                new JsonObject(), "true");
-    }
-
-    private void assertResult(String toolName, JsonObject arguments, String expectedErrorText) {
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", toolName)
-                        .put("arguments", arguments));
-        send(message);
-        JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedErrorText, textContent.getString("text"));
+                })
+                .toolsCall("alpha", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertEquals("true::2::2::2::2.1::2.1::fooo::HOURS::PT5S::MyArg[price=10, names=[foo, bar, baz]]",
+                            toolResponse.content().get(0).asText().text());
+                })
+                .toolsCall("bravo", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertEquals("true", toolResponse.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public record MyArg(int price, List<String> names) {

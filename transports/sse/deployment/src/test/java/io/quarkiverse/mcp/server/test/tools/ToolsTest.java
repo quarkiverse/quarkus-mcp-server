@@ -1,21 +1,22 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.DayOfWeek;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsTest extends McpServerTest {
@@ -27,76 +28,50 @@ public class ToolsTest extends McpServerTest {
 
     @Test
     public void testTools() {
-        initClient();
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        JsonObject toolListResponse = waitForLastResponse();
+        client.when()
+                .toolsList(page -> {
+                    assertEquals(8, page.size());
 
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(8, tools.size());
+                    JsonObject schema = page.findByName("alpha").inputSchema();
+                    JsonObject properties = schema.getJsonObject("properties");
+                    assertEquals(1, properties.size());
+                    JsonObject priceProperty = properties.getJsonObject("price");
+                    assertNotNull(priceProperty);
+                    assertEquals("integer", priceProperty.getString("type"));
+                    assertEquals("Define the price...", priceProperty.getString("description"));
+                    assertTrue(schema.getJsonArray("required").isEmpty());
 
-        // alpha, bravo, charlie, list_charlie, uni_alpha, uni_bravo, uni_charlie, uni_list_charlie
-        assertTool(tools, "alpha", null, schema -> {
-            JsonObject properties = schema.getJsonObject("properties");
-            assertEquals(1, properties.size());
-            JsonObject priceProperty = properties.getJsonObject("price");
-            assertNotNull(priceProperty);
-            assertEquals("integer", priceProperty.getString("type"));
-            assertEquals("Define the price...", priceProperty.getString("description"));
-            assertTrue(schema.getJsonArray("required").isEmpty());
-        });
-        assertTool(tools, "uni_alpha", null, schema -> {
-            JsonObject properties = schema.getJsonObject("properties");
-            assertEquals(1, properties.size());
-            JsonObject priceProperty = properties.getJsonObject("uni_price");
-            assertNotNull(priceProperty);
-            assertEquals("number", priceProperty.getString("type"));
-            assertEquals(1, schema.getJsonArray("required").size());
-            assertEquals("uni_price", schema.getJsonArray("required").getString(0));
-        });
-        assertTool(tools, "charlie", null, schema -> {
-            JsonObject properties = schema.getJsonObject("properties");
-            assertEquals(1, properties.size());
-            JsonObject dayProperty = properties.getJsonObject("day");
-            assertNotNull(dayProperty);
-            assertEquals("string", dayProperty.getString("type"));
-        });
+                    schema = page.findByName("uni_alpha").inputSchema();
+                    properties = schema.getJsonObject("properties");
+                    assertEquals(1, properties.size());
+                    priceProperty = properties.getJsonObject("uni_price");
+                    assertNotNull(priceProperty);
+                    assertEquals("number", priceProperty.getString("type"));
+                    assertEquals(1, schema.getJsonArray("required").size());
+                    assertEquals("uni_price", schema.getJsonArray("required").getString(0));
 
-        assertToolCall("Hello 1!", "alpha", new JsonObject()
-                .put("price", 1));
-        assertToolCall("Hello 1.0!", "uni_alpha", new JsonObject()
-                .put("uni_price", 1));
-        assertToolCall("Hello 1!", "bravo", new JsonObject()
-                .put("price", 1));
-        assertToolCall("Hello 1!", "uni_bravo", new JsonObject()
-                .put("price", 1));
-        assertToolCall("charlie1", "charlie", new JsonObject().put("day", DayOfWeek.FRIDAY.toString()));
-        assertToolCall("charlie11", "charlie", new JsonObject().put("day", DayOfWeek.MONDAY.toString()));
-        assertToolCall("charlie2", "uni_charlie", new JsonObject());
-        assertToolCall("charlie3", "list_charlie", new JsonObject());
-        assertToolCall("charlie4", "uni_list_charlie", new JsonObject());
-    }
-
-    private void assertToolCall(String expectedText, String name, JsonObject arguments) {
-        JsonObject toolCallMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", arguments));
-        send(toolCallMessage);
-
-        JsonObject toolCallResponse = waitForLastResponse();
-
-        JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
+                    schema = page.findByName("charlie").inputSchema();
+                    properties = schema.getJsonObject("properties");
+                    assertEquals(1, properties.size());
+                    JsonObject dayProperty = properties.getJsonObject("day");
+                    assertNotNull(dayProperty);
+                    assertEquals("string", dayProperty.getString("type"));
+                })
+                .toolsCall("alpha", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                .toolsCall("uni_alpha", Map.of("uni_price", 1),
+                        r -> assertEquals("Hello 1.0!", r.content().get(0).asText().text()))
+                .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                .toolsCall("uni_bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                .toolsCall("charlie", Map.of("day", DayOfWeek.FRIDAY),
+                        r -> assertEquals("charlie1", r.content().get(0).asText().text()))
+                .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY),
+                        r -> assertEquals("charlie11", r.content().get(0).asText().text()))
+                .toolsCall("uni_charlie", r -> assertEquals("charlie2", r.content().get(0).asText().text()))
+                .toolsCall("list_charlie", r -> assertEquals("charlie3", r.content().get(0).asText().text()))
+                .toolsCall("uni_list_charlie", r -> assertEquals("charlie4", r.content().get(0).asText().text()))
+                .thenAssertResults();
     }
 
 }

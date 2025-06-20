@@ -1,8 +1,9 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -11,11 +12,11 @@ import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.WrapBusinessError;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolBusinessErrorTest extends McpServerTest {
 
@@ -26,27 +27,21 @@ public class ToolBusinessErrorTest extends McpServerTest {
 
     @Test
     public void testError() {
-        initClient();
-        assertBusinessError("bravo", new JsonObject().put("price", 10), "Business error");
-        assertBusinessError("charlie", new JsonObject(), "java.lang.IllegalArgumentException: I am not ready!");
-        assertBusinessError("delta", new JsonObject(), "java.lang.NullPointerException: I am null!");
-    }
-
-    private void assertBusinessError(String toolName, JsonObject arguments, String expectedErrorText) {
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", toolName)
-                        .put("arguments", arguments));
-        send(message);
-        JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertTrue(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedErrorText, textContent.getString("text"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsCall("bravo", Map.of("price", 10), r -> {
+                    assertTrue(r.isError());
+                    assertEquals("Business error", r.content().get(0).asText().text());
+                })
+                .toolsCall("charlie", r -> {
+                    assertTrue(r.isError());
+                    assertEquals("java.lang.IllegalArgumentException: I am not ready!", r.content().get(0).asText().text());
+                })
+                .toolsCall("delta", Map.of("price", 10), r -> {
+                    assertTrue(r.isError());
+                    assertEquals("java.lang.NullPointerException: I am null!", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public static class MyTools {

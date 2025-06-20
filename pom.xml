@@ -18,7 +18,7 @@
         <module>transports/sse</module>
         <module>transports/stdio</module>
         <module>sse-client</module>
-        <module>test-utils</module>
+        <module>test</module>
         <module>devtools/stdio-sse-proxy</module>
         <module>cli-adapter</module>
     </modules>

@@ -1,7 +1,6 @@
 package io.quarkiverse.mcp.server.test.resources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
 
@@ -10,11 +9,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ResourceJsonTextContentEncoderTest extends McpServerTest {
 
@@ -25,27 +24,21 @@ public class ResourceJsonTextContentEncoderTest extends McpServerTest {
 
     @Test
     public void testEncoder() {
-        initClient();
-        assertResourceReadResponse("file:///bravo", 2);
-        assertResourceReadResponse("file:///1", 3);
-        assertResourceReadResponse("file:///list_bravo", 4);
-        assertResourceReadResponse("file:///uni_list_bravo", 5);
-    }
-
-    private void assertResourceReadResponse(String uri, int expectedSum) {
-        JsonObject message = newMessage("resources/read")
-                .put("params", new JsonObject()
-                        .put("uri", uri));
-        send(message);
-        JsonObject resourceResponse = waitForLastResponse();
-        JsonObject resourceResult = assertResultResponse(message, resourceResponse);
-        assertNotNull(resourceResult);
-        JsonArray contents = resourceResult.getJsonArray("contents");
-        assertEquals(1, contents.size());
-        JsonObject textContent = contents.getJsonObject(0);
-        assertEquals(uri, textContent.getString("uri"));
-        // Note that quotation marks in the original message must be escaped
-        assertEquals("{\"name\":\"foo\",\"sum\":" + expectedSum + ",\"valid\":true}", textContent.getString("text"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .resourcesRead("file:///bravo", r -> {
+                    assertEquals("{\"name\":\"foo\",\"sum\":2,\"valid\":true}", r.contents().get(0).asText().text());
+                })
+                .resourcesRead("file:///1", r -> {
+                    assertEquals("{\"name\":\"foo\",\"sum\":3,\"valid\":true}", r.contents().get(0).asText().text());
+                })
+                .resourcesRead("file:///list_bravo", r -> {
+                    assertEquals("{\"name\":\"foo\",\"sum\":4,\"valid\":true}", r.contents().get(0).asText().text());
+                })
+                .resourcesRead("file:///uni_list_bravo", r -> {
+                    assertEquals("{\"name\":\"foo\",\"sum\":5,\"valid\":true}", r.contents().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public record MyObject(String name, int sum, boolean valid) {

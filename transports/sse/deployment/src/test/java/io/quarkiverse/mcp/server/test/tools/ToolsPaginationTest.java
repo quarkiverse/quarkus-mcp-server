@@ -1,11 +1,10 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -15,10 +14,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolsPaginationTest extends McpServerTest {
 
@@ -48,55 +47,42 @@ public class ToolsPaginationTest extends McpServerTest {
             lastCreatedAt = info.createdAt();
         }
 
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        AtomicReference<String> cursor = new AtomicReference<>();
 
-        JsonObject message = newMessage("tools/list");
-        send(message);
+        client.when()
+                .toolsList(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals("1", page.tools().get(0).name());
+                    assertEquals("2", page.tools().get(1).name());
+                    assertEquals("3", page.tools().get(2).name());
+                })
+                .thenAssertResults();
 
-        JsonObject response = waitForLastResponse();
-        JsonObject result = assertResultResponse(message, response);
-        assertNotNull(result);
-        JsonArray tools = result.getJsonArray("tools");
-        assertEquals(3, tools.size());
-        String cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
+        client.when()
+                .toolsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals("4", page.tools().get(0).name());
+                    assertEquals("5", page.tools().get(1).name());
+                    assertEquals("6", page.tools().get(2).name());
+                })
+                .send()
+                .thenAssertResults();
 
-        assertTool(tools.getJsonObject(0), "1");
-        assertTool(tools.getJsonObject(1), "2");
-        assertTool(tools.getJsonObject(2), "3");
-
-        message = newMessage("tools/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        tools = result.getJsonArray("tools");
-        assertEquals(3, tools.size());
-        cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
-
-        assertTool(tools.getJsonObject(0), "4");
-        assertTool(tools.getJsonObject(1), "5");
-        assertTool(tools.getJsonObject(2), "6");
-
-        message = newMessage("tools/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        tools = result.getJsonArray("tools");
-        assertEquals(2, tools.size());
-        assertNull(result.getString("nextCursor"));
-
-        assertTool(tools.getJsonObject(0), "7");
-        assertTool(tools.getJsonObject(1), "8");
-    }
-
-    private void assertTool(JsonObject tool, String name) {
-        assertEquals(name, tool.getString("name"));
-        assertEquals(name, tool.getString("description"));
+        client.when()
+                .toolsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    assertEquals(2, page.size());
+                    assertEquals("7", page.tools().get(0).name());
+                    assertEquals("8", page.tools().get(1).name());
+                })
+                .send()
+                .thenAssertResults();
     }
 
 }
