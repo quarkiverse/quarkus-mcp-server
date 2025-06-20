@@ -1,10 +1,10 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Map;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -16,10 +16,10 @@ import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.TextContent;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ProgrammaticPromptTest extends McpServerTest {
@@ -34,68 +34,59 @@ public class ProgrammaticPromptTest extends McpServerTest {
 
     @Test
     public void testPrompts() {
-        initClient();
-        assertPrompts(0);
-        assertPromptGetResponseError("alpha");
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .promptsList(page -> {
+                    assertEquals(0, page.size());
+                })
+                .promptsGet("alpha")
+                .withErrorAssert(e -> assertEquals("Invalid prompt name: alpha", e.message()))
+                .send()
+                .thenAssertResults();
 
         myPrompts.register("alpha", "2");
         assertThrows(IllegalArgumentException.class, () -> myPrompts.register("alpha", "2"));
         assertThrows(NullPointerException.class, () -> myPrompts.register(null, "2"));
 
-        List<JsonObject> notifications = client().waitForNotifications(1);
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
         assertEquals("notifications/prompts/list_changed", notifications.get(0).getString("method"));
 
-        assertPrompts(1);
-        assertPromptGetResponse("alpha", new JsonObject().put("foo", 2), "22");
+        client.when()
+                .promptsList(page -> {
+                    assertEquals(1, page.size());
+                })
+                .promptsGet("alpha", Map.of("foo", "2"), r -> {
+                    assertEquals("22", r.messages().get(0).content().asText().text());
+                })
+                .thenAssertResults();
 
         myPrompts.register("bravo", "3");
 
-        assertPrompts(2);
-        assertEquals("notifications/prompts/list_changed", client().waitForNotifications(1).get(0).getString("method"));
-        assertPromptGetResponse("bravo", new JsonObject().put("foo", 3), "33");
+        notifications = client.waitForNotifications(2).notifications();
+        assertEquals("notifications/prompts/list_changed", notifications.get(1).getString("method"));
+
+        client.when()
+                .promptsList(page -> {
+                    assertEquals(2, page.size());
+                })
+                .promptsGet("bravo", Map.of("foo", "3"), r -> {
+                    assertEquals("33", r.messages().get(0).content().asText().text());
+                })
+                .thenAssertResults();
 
         myPrompts.remove("alpha");
-        assertPrompts(1);
-        assertPromptGetResponseError("alpha");
-        assertPromptGetResponse("bravo", new JsonObject().put("foo", 2), "32");
-    }
 
-    private void assertPrompts(int expectedSize) {
-        JsonObject promptsListMessage = newMessage("prompts/list");
-        send(promptsListMessage);
-
-        JsonObject promptsListResponse = waitForLastResponse();
-
-        JsonObject promptsListResult = assertResultResponse(promptsListMessage, promptsListResponse);
-        assertNotNull(promptsListResult);
-        JsonArray prompts = promptsListResult.getJsonArray("prompts");
-        assertEquals(expectedSize, prompts.size());
-    }
-
-    private void assertPromptGetResponseError(String name) {
-        JsonObject message = newMessage("prompts/get")
-                .put("params", new JsonObject()
-                        .put("name", name));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
-        assertEquals("Invalid prompt name: " + name, response.getJsonObject("error").getString("message"));
-
-    }
-
-    private void assertPromptGetResponse(String name, JsonObject arguments, String expectedText) {
-        JsonObject message = newMessage("prompts/get")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", arguments));
-        send(message);
-        JsonObject resourceResponse = waitForLastResponse();
-        JsonObject resourceResult = assertResultResponse(message, resourceResponse);
-        assertNotNull(resourceResult);
-        JsonArray messages = resourceResult.getJsonArray("messages");
-        assertEquals(1, messages.size());
-        JsonObject textContent = messages.getJsonObject(0).getJsonObject("content");
-        assertEquals(expectedText, textContent.getString("text"));
+        client.when()
+                .promptsList(page -> {
+                    assertEquals(1, page.size());
+                })
+                .promptsGet("alpha")
+                .withErrorAssert(e -> assertEquals("Invalid prompt name: alpha", e.message()))
+                .send()
+                .promptsGet("bravo", Map.of("foo", "2"), r -> {
+                    assertEquals("32", r.messages().get(0).content().asText().text());
+                })
+                .thenAssertResults();
     }
 
     @Singleton

@@ -13,12 +13,13 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
+import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class InitProgrammaticTest extends McpServerTest {
 
@@ -31,7 +32,10 @@ public class InitProgrammaticTest extends McpServerTest {
 
     @Test
     public void testInitRequest() throws InterruptedException {
-        initClient();
+        McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                .build()
+                .connect();
         assertTrue(MyTools.INIT_LATCH.await(5, TimeUnit.SECONDS));
         assertTrue(myTools.initCalled.get());
     }
@@ -58,11 +62,6 @@ public class InitProgrammaticTest extends McpServerTest {
                     }).register();
         }
 
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("sampling", Map.of());
     }
 
 }

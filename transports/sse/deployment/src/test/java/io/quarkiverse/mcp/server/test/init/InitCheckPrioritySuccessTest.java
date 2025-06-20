@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
@@ -25,7 +26,7 @@ public class InitCheckPrioritySuccessTest extends McpServerTest {
 
     @Test
     public void testInitRequest() throws InterruptedException {
-        initClient();
+        McpAssured.newConnectedSseClient();
         assertEquals(BravoCheck.class.getSimpleName(), AlphaCheck.CHECKS.get(0));
         assertEquals(AlphaCheck.class.getSimpleName(), AlphaCheck.CHECKS.get(1));
     }

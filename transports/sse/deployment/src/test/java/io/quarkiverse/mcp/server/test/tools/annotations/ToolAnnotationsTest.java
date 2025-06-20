@@ -2,8 +2,6 @@ package io.quarkiverse.mcp.server.test.tools.annotations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -18,11 +16,12 @@ import io.quarkiverse.mcp.server.Tool.Annotations;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolAnnotationsTest extends McpServerTest {
 
@@ -55,37 +54,26 @@ public class ToolAnnotationsTest extends McpServerTest {
         ToolManager.ToolInfo charlie = manager.getTool("charlie");
         assertTrue(charlie.annotations().isEmpty());
 
-        initClient();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .build()
+                .connect();
 
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
+        client.when().toolsList(page -> {
+            assertEquals(3, page.tools().size());
+            ToolInfo alphaTool = page.findByName("alpha");
+            assertTrue(alphaTool.annotations().get().readOnlyHint());
+            assertFalse(alphaTool.annotations().get().destructiveHint());
+            assertFalse(alphaTool.annotations().get().idempotentHint());
+            assertTrue(alphaTool.annotations().get().openWorldHint());
 
-        JsonObject toolListResponse = waitForLastResponse();
+            ToolInfo bravoTool = page.findByName("bravo");
+            assertFalse(bravoTool.annotations().get().readOnlyHint());
+            assertFalse(bravoTool.annotations().get().destructiveHint());
+            assertFalse(bravoTool.annotations().get().idempotentHint());
+            assertFalse(bravoTool.annotations().get().openWorldHint());
 
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(3, tools.size());
-
-        assertTool(tools, "alpha", null, null, annotations -> {
-            assertEquals("Alpha tool", annotations.getString("title"));
-            assertTrue(annotations.getBoolean("readOnlyHint"));
-            assertFalse(annotations.getBoolean("destructiveHint"));
-            assertFalse(annotations.getBoolean("idempotentHint"));
-            assertTrue(annotations.getBoolean("openWorldHint"));
-        });
-
-        assertTool(tools, "bravo", null, null, annotations -> {
-            assertEquals("Bravo tool", annotations.getString("title"));
-            assertFalse(annotations.getBoolean("readOnlyHint"));
-            assertFalse(annotations.getBoolean("destructiveHint"));
-            assertFalse(annotations.getBoolean("idempotentHint"));
-            assertFalse(annotations.getBoolean("openWorldHint"));
-
-        });
-
-        assertTool(tools, "charlie", null, null, annotations -> {
-            assertNull(annotations);
+            ToolInfo charlieTool = page.findByName("charlie");
+            assertTrue(charlieTool.annotations().isEmpty());
         });
     }
 

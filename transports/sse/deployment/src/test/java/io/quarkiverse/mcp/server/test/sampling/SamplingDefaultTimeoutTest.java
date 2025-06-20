@@ -19,11 +19,14 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
@@ -43,20 +46,26 @@ public class SamplingDefaultTimeoutTest extends McpServerTest {
     public void testSampling() throws InterruptedException {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            initClient();
-            JsonObject toolCallMessage = newToolCallMessage("samplingDefaultTimeout");
+            McpSseTestClient client = McpAssured.newSseClient()
+                    .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                    .build()
+                    .connect();
+
+            JsonObject request = client.newMessage("tools/call")
+                    .put("params", new JsonObject()
+                            .put("name", "samplingDefaultTimeout"));
 
             // We need to send the request on a separate thread
             // because the response is not completed until the sampling response is sent
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    send(toolCallMessage);
+                    client.sendAndForget(request);
                 }
             });
 
             // The server should send a sampling request
-            List<JsonObject> requests = client().waitForRequests(1);
+            List<JsonObject> requests = client.waitForRequests(1).requests();
             assertEquals("sampling/createMessage", requests.get(0).getString("method"));
             Long id = requests.get(0).getLong("id");
             // But the client does not respond...
@@ -90,11 +99,6 @@ public class SamplingDefaultTimeoutTest extends McpServerTest {
                     .replaceWith("nok");
         }
 
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("sampling", Map.of());
     }
 
 }

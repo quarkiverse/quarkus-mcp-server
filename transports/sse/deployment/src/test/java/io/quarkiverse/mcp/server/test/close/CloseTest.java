@@ -1,16 +1,20 @@
 package io.quarkiverse.mcp.server.test.close;
 
-import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 
+import jakarta.inject.Inject;
+
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
-import io.vertx.core.json.JsonObject;
 
 public class CloseTest extends McpServerTest {
 
@@ -18,19 +22,32 @@ public class CloseTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withEmptyApplication();
 
+    @Inject
+    ConnectionManager connectionManager;
+
     @Test
     public void testCloseMessage() {
-        URI endpoint = initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        JsonObject closeMessage = newMessage("q/close");
-        send(closeMessage);
+        URI messageEndpoint = client.messageEndpoint();
+        String messageEndpointStr = messageEndpoint.toString();
+        String id = messageEndpointStr.substring(messageEndpointStr.lastIndexOf("/") + 1);
 
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(closeMessage.encode())
-                .post(endpoint)
-                .then()
-                .statusCode(400);
+        // Send "q/close"
+        client.when()
+                .message(client.newMessage("q/close"))
+                .send()
+                .thenAssertResults();
+
+        // Wait until the connection is removed
+        Awaitility.await().until(() -> !connectionManager.has(id));
+
+        // Send a ping but expect the 400 status code
+        client.when()
+                .validateHttpResponse(response -> {
+                    assertEquals(400, response.statusCode());
+                })
+                .ping().send();
     }
+
 }

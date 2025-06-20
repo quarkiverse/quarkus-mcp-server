@@ -1,6 +1,6 @@
 package io.quarkiverse.mcp.server.test.connectionidletimeout;
 
-import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 
@@ -11,9 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.restassured.http.ContentType;
 
 public class ConnectionIdleTimeoutTest extends McpServerTest {
 
@@ -29,16 +30,22 @@ public class ConnectionIdleTimeoutTest extends McpServerTest {
 
     @Test
     public void testConnectionTimeout() throws InterruptedException {
-        URI endpoint = initClient();
-        String endpointStr = endpoint.toString();
-        String id = endpointStr.substring(endpointStr.lastIndexOf("/") + 1);
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+        URI messageEndpoint = client.messageEndpoint();
+        String messageEndpointStr = messageEndpoint.toString();
+        String id = messageEndpointStr.substring(messageEndpointStr.lastIndexOf("/") + 1);
+
+        // Wait until the connection is removed
         Awaitility.await().until(() -> !connectionManager.has(id));
-        given()
-                .contentType(ContentType.JSON)
-                .when()
-                .body(newMessage("ping").encode())
-                .post(endpoint)
-                .then()
-                .statusCode(400);
+
+        // Send a ping but expect the 400 status code
+        client.when()
+                .validateHttpResponse(response -> {
+                    assertEquals(400, response.statusCode());
+                })
+                .ping()
+                .send()
+                .thenAssertResults();
     }
 }

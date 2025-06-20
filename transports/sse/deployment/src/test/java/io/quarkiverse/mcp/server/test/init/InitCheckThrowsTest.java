@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.init;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.inject.Inject;
@@ -16,14 +15,16 @@ import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
-import io.quarkiverse.mcp.server.test.StreamableHttpTest;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 
-public class InitCheckThrowsTest extends StreamableHttpTest {
+public class InitCheckThrowsTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
@@ -31,11 +32,13 @@ public class InitCheckThrowsTest extends StreamableHttpTest {
 
     @Test
     public void testInitRequest() throws InterruptedException {
+        McpStreamableTestClient client = McpAssured.newStreamableClient().build();
+        JsonObject request = client.newInitMessage();
         RestAssured.given()
                 .when()
-                .headers(Map.of(HttpHeaders.ACCEPT + "", "application/json, text/event-stream"))
-                .body(newInitMessage().encode())
-                .post(messageEndpoint)
+                .header("Accept", "application/json, text/event-stream")
+                .body(request.encode())
+                .post(client.mcpEndpoint())
                 .then()
                 .statusCode(500);
         assertFalse(MyInitCheck.INIT.get());
