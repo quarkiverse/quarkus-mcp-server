@@ -17,6 +17,8 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.invoke.Invoker;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,7 +46,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected final ConnectionManager connectionManager;
 
-    protected final ConcurrentMap<String, McpLogImpl> logs;
+    protected final ConcurrentMap<String, Logger> loggers;
 
     protected final CurrentIdentityAssociation currentIdentityAssociation;
 
@@ -55,7 +57,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
-        this.logs = new ConcurrentHashMap<>();
+        this.loggers = new ConcurrentHashMap<>();
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.responseHandlers = responseHandlers;
     }
@@ -248,8 +250,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected McpLog log(String key, String loggerName, ArgumentProviders argProviders) {
-        return logs.computeIfAbsent(key, k -> new McpLogImpl(argProviders.connection()::logLevel, loggerName, key,
-                argProviders.sender()));
+        Logger logger = loggers.computeIfAbsent(key, k -> Logger.getLogger(loggerName));
+        return new McpLogImpl(argProviders.connection()::logLevel, logger, key, argProviders.sender());
     }
 
     private String logKey(FeatureMetadata<?> metadata) {
