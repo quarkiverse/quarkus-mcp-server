@@ -9,9 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.DayOfWeek;
 import java.util.Map;
 
+import jakarta.inject.Inject;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.Options;
@@ -29,9 +32,20 @@ public class SimpleStreamableTest extends StreamableHttpTest {
             .withApplicationRoot(
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyTools.class));
 
+    @Inject
+    ToolManager toolManager;
+
     @Test
     public void testTools() {
         String mcpSessionId = initSession();
+
+        // Just test that registration does not fail even if notification is not sent
+        toolManager.newTool("foofoo")
+                .setDescription("foofoo")
+                .setHandler(atgs -> null)
+                .register();
+        assertNotNull(toolManager.getTool("foofoo"));
+        assertNotNull(toolManager.removeTool("foofoo"));
 
         JsonObject toolListMessage = newMessage("tools/list");
         ValidatableResponse response = send(toolListMessage, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId));

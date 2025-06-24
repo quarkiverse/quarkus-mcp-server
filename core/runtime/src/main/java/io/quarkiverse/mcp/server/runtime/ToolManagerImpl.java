@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -99,13 +100,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @Override
     public ToolInfo removeTool(String name) {
-        return tools.computeIfPresent(name, (key, value) -> {
+        AtomicReference<ToolInfo> removed = new AtomicReference<>();
+        tools.computeIfPresent(name, (key, value) -> {
             if (!value.isMethod()) {
+                removed.set(value);
                 notifyConnections("notifications/tools/list_changed");
                 return null;
             }
             return value;
         });
+        return removed.get();
     }
 
     @SuppressWarnings("unchecked")

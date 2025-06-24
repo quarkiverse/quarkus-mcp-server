@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,13 +130,16 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     public ResourceInfo removeResource(String uri) {
-        return resources.computeIfPresent(uri, (key, value) -> {
+        AtomicReference<ResourceInfo> removed = new AtomicReference<>();
+        resources.computeIfPresent(uri, (key, value) -> {
             if (!value.isMethod()) {
+                removed.set(value);
                 notifyConnections("notifications/resources/list_changed");
                 return null;
             }
             return value;
         });
+        return removed.get();
     }
 
     @SuppressWarnings("unchecked")
