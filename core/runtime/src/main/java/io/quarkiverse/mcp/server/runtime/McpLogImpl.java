@@ -16,14 +16,14 @@ class McpLogImpl implements McpLog {
 
     private final Supplier<LogLevel> level;
 
-    private final Logger log;
+    private final Logger logger;
 
     private final Sender sender;
 
-    McpLogImpl(Supplier<LogLevel> level, String loggerName, String mcpLoggerName, Sender sender) {
+    McpLogImpl(Supplier<LogLevel> level, Logger logger, String mcpLoggerName, Sender sender) {
         this.mcpLoggerName = mcpLoggerName;
         this.level = level;
-        this.log = Logger.getLogger(loggerName);
+        this.logger = logger;
         this.sender = sender;
     }
 
@@ -50,25 +50,25 @@ class McpLogImpl implements McpLog {
 
     @Override
     public void info(String format, Object... params) {
-        log.infof(format, params);
+        logger.infof(format, params);
         send(LogLevel.INFO, format, params);
     }
 
     @Override
     public void debug(String format, Object... params) {
-        log.debugf(format, params);
+        logger.debugf(format, params);
         send(LogLevel.DEBUG, format, params);
     }
 
     @Override
     public void error(String format, Object... params) {
-        log.errorf(format, params);
+        logger.errorf(format, params);
         send(LogLevel.ERROR, format, params);
     }
 
     @Override
     public void error(Throwable t, String format, Object... params) {
-        log.infof(t, format, params);
+        logger.infof(t, format, params);
         send(LogLevel.ERROR, format, params);
     }
 
