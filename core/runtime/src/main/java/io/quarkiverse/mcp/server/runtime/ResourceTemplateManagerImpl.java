@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -87,13 +88,15 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @Override
     public ResourceTemplateInfo removeResourceTemplate(String name) {
-        ResourceTemplateMetadata metadata = templates.computeIfPresent(name, (key, value) -> {
+        AtomicReference<ResourceTemplateInfo> removed = new AtomicReference<>();
+        templates.computeIfPresent(name, (key, value) -> {
             if (!value.info().isMethod()) {
+                removed.set(value.info);
                 return null;
             }
             return value;
         });
-        return metadata != null ? metadata.info : null;
+        return removed.get();
     }
 
     private VariableMatcher getVariableMatcher(String name) {

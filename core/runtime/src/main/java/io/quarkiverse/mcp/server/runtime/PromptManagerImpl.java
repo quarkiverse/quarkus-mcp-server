@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -80,13 +81,16 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @Override
     public PromptInfo removePrompt(String name) {
-        return prompts.computeIfPresent(name, (key, value) -> {
+        AtomicReference<PromptInfo> removed = new AtomicReference<>();
+        prompts.computeIfPresent(name, (key, value) -> {
             if (!value.isMethod()) {
+                removed.set(value);
                 notifyConnections("notifications/prompts/list_changed");
                 return null;
             }
             return value;
         });
+        return removed.get();
     }
 
     IllegalArgumentException promptWithNameAlreadyExists(String name) {
