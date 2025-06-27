@@ -12,15 +12,17 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
+import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
 
 public class InitCheckSuccessTest extends McpServerTest {
 
@@ -30,7 +32,11 @@ public class InitCheckSuccessTest extends McpServerTest {
 
     @Test
     public void testInitRequest() throws InterruptedException {
-        initClient();
+        McpAssured.newSseClient()
+                .setAdditionalHeaders(m -> MultiMap.caseInsensitiveMultiMap().add("Mcp-Test", "foo"))
+                .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                .build()
+                .connect();
         assertTrue(MyInitCheck.INIT_LATCH.await(50, TimeUnit.SECONDS));
         assertTrue(MyInitCheck.APPLIED.get());
     }
@@ -59,16 +65,6 @@ public class InitCheckSuccessTest extends McpServerTest {
                     : InitialCheck.CheckResult.error("Sampling not supported");
         }
 
-    }
-
-    @Override
-    protected Map<String, Object> defaultHeaders() {
-        return Map.of("Mcp-Test", "foo");
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("sampling", Map.of());
     }
 
 }

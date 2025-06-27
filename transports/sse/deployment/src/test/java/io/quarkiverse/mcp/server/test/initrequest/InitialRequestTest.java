@@ -2,21 +2,21 @@ package io.quarkiverse.mcp.server.test.initrequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class InitialRequestTest extends McpServerTest {
 
@@ -26,23 +26,17 @@ public class InitialRequestTest extends McpServerTest {
 
     @Test
     public void testInitRequest() {
-        initClient();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                .build()
+                .connect();
 
-        JsonObject toolCallMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "testInitRequest"));
-        send(toolCallMessage);
-
-        JsonObject toolCallResponse = waitForLastResponse();
-
-        JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals("ok", textContent.getString("text"));
+        client.when()
+                .toolsCall("testInitRequest", r -> {
+                    assertFalse(r.isError());
+                    assertEquals("ok", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public static class MyTools {
@@ -67,11 +61,6 @@ public class InitialRequestTest extends McpServerTest {
             }
             return "ok";
         }
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("sampling", Map.of());
     }
 
 }

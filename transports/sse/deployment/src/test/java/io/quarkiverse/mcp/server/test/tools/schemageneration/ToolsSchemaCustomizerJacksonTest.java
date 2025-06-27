@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.tools.schemageneration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -15,9 +16,11 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
@@ -30,18 +33,13 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
 
     @Test
     public void testSchemaGenerationWithJacksonAnnotation() {
-        initClient();
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
-
-        JsonObject toolListResponse = waitForLastResponse();
-
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(1, tools.size());
-
-        assertTool(tools, "add-products", null, schema -> {
+        McpSseTestClient client = McpAssured.newSseClient()
+                .build()
+                .connect();
+        client.when().toolsList(page -> {
+            assertEquals(1, page.tools().size());
+            ToolInfo addProducts = page.findByName("add-products");
+            JsonObject schema = addProducts.inputSchema();
             assertHasPropertyWithNameTypeDescription(schema, "products", "array", "The products to add to the catalog");
             assertHasPropertyCount(schema, 1);
             assertHasRequiredProperties(schema, Set.of("products"));
@@ -57,7 +55,7 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
             assertHasPropertyWithNameTypeDescription(productType, "description", "string", null);
             assertHasPropertyWithNameTypeDescription(productType, "price", "number", null);
             assertHasPropertyCount(productType, 4);
-        });
+        }).thenAssertResults();
     }
 
     private void assertHasPropertyWithNameTypeDescription(JsonObject typeObject, String name, String expectedType,
@@ -76,6 +74,7 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
         assertEquals(expectedNumberOfProperties, properties.size());
     }
 
+    @SuppressWarnings("unchecked")
     private void assertHasRequiredProperties(JsonObject typeObject, Set<String> expectedRequireProperties) {
         var requiredProperties = new HashSet<Object>(typeObject.getJsonArray("required").getList());
         assertEquals(expectedRequireProperties, requiredProperties);

@@ -1,8 +1,6 @@
 package io.quarkiverse.mcp.server.test.messageendpoint;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URLEncoder;
@@ -15,11 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class IncludeQueryParamsTest extends McpServerTest {
 
@@ -28,24 +26,27 @@ public class IncludeQueryParamsTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class))
             .overrideConfigKey("quarkus.mcp.server.sse.message-endpoint.include-query-params", "true");
 
-    @Override
-    protected String ssePath() {
-        return new StringBuilder().append("sse?")
-                .append("foo=1")
-                .append("&bar=2")
-                .append("&bar=3")
-                .append("&name=")
-                .append(URLEncoder.encode("Čenda", StandardCharsets.UTF_8))
-                .toString();
-    }
-
     @Test
     public void testQueryParams() {
-        initClient();
-        assertQuery(messageEndpoint.getQuery());
-        JsonObject msg = newToolCallMessage("queryParams");
-        send(msg);
-        assertToolTextContent(msg);
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setSsePath(new StringBuilder().append("/mcp/sse?")
+                        .append("foo=1")
+                        .append("&bar=2")
+                        .append("&bar=3")
+                        .append("&name=")
+                        .append(URLEncoder.encode("Čenda", StandardCharsets.UTF_8))
+                        .toString())
+                .build()
+                .connect();
+
+        assertQuery(client.messageEndpoint().getQuery());
+
+        client.when()
+                .toolsCall("queryParams", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertQuery(toolResponse.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     private void assertQuery(String query) {
@@ -53,19 +54,6 @@ public class IncludeQueryParamsTest extends McpServerTest {
         assertTrue(query.contains("bar=2"));
         assertTrue(query.contains("bar=3"));
         assertTrue(query.contains("name=Čenda"));
-    }
-
-    private void assertToolTextContent(JsonObject msg) {
-        JsonObject response = client().waitForResponse(msg);
-        JsonObject result = assertResultResponse(msg, response);
-        assertNotNull(result);
-        assertFalse(result.getBoolean("isError"));
-        JsonArray content = result.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        String text4 = textContent.getString("text");
-        assertQuery(text4);
     }
 
     public static class MyTools {

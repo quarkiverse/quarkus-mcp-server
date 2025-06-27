@@ -1,14 +1,9 @@
 package io.quarkiverse.mcp.server.test.tools.security;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.http.HttpResponse;
-import java.util.Base64;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -17,8 +12,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkiverse.mcp.server.test.McpSseClient;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
 import io.quarkus.test.QuarkusUnitTest;
@@ -41,20 +37,21 @@ public class SecuredSseEndpointTest extends McpServerTest {
 
     @Test
     public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
-        McpSseClient client = newClient();
+        try {
+            McpSseTestClient client = McpAssured.newSseClient()
+                    .setExpectSseConnectionFailure()
+                    .build()
+                    .connect();
+            assertFalse(client.isConnected());
+        } catch (IllegalStateException expected) {
+            // 401 status during SSE connection
+        }
 
-        CompletableFuture<HttpResponse<Void>> cf = client.connect();
-        // Unauthorized
-        assertEquals(401, cf.get(5, TimeUnit.SECONDS).statusCode());
-
-        // If it succeeds then the returned http response never completes
-        client.connect(Map.of("Authorization", getBasicAuthenticationHeader("bob", "bob")));
-        assertNotNull(client.waitForFirstEvent());
-    }
-
-    private static final String getBasicAuthenticationHeader(String username, String password) {
-        String value = username + ":" + password;
-        return "Basic " + Base64.getEncoder().encodeToString(value.getBytes());
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setBasicAuth("bob", "bob")
+                .build()
+                .connect();
+        assertTrue(client.isConnected());
     }
 
     public static class MyTools {

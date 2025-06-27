@@ -1,16 +1,13 @@
 package io.quarkiverse.mcp.server.test.ping;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.util.List;
-
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.Messages;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class AutoPingIntervalTest extends McpServerTest {
 
@@ -21,14 +18,12 @@ public class AutoPingIntervalTest extends McpServerTest {
 
     @Test
     public void testPing() {
-        initClient();
-        client().setRequestConsumer(r -> {
-            JsonObject pongMessage = Messages.newResult(r.getValue("id"), new JsonObject());
-            send(pongMessage);
-        });
-
-        List<JsonObject> requests = client().waitForRequests(2);
-        JsonObject pingRequest = requests.stream().filter(r -> "ping".equals(r.getString("method"))).findFirst().orElse(null);
-        assertNotNull(pingRequest);
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setAutoPong(true)
+                .build()
+                .connect();
+        // Wait for the first ping from the server
+        Awaitility.await()
+                .until(() -> client.snapshot().requests().stream().anyMatch(r -> "ping".equals(r.getString("method"))));
     }
 }

@@ -1,11 +1,12 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import jakarta.annotation.Priority;
@@ -19,10 +20,10 @@ import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.ToolResponseEncoder;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolCustomResponseEncoderTest extends McpServerTest {
 
@@ -33,41 +34,21 @@ public class ToolCustomResponseEncoderTest extends McpServerTest {
 
     @Test
     public void testEncoder() {
-        initClient();
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10)));
-        send(message);
-        assertResponse(message, waitForLastResponse(), true, "MyObject[name=foo, sum=20, valid=true]");
-
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravos")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10)));
-        send(message);
-        assertResponse(message, waitForLastResponse(), true, "MyObject[name=foo, sum=20, valid=true]");
-
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "deltas")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10)));
-        send(message);
-        assertResponse(message, waitForLastResponse(), false, "[{\"name\":\"foo\",\"sum\":20,\"valid\":true}]");
-    }
-
-    private void assertResponse(JsonObject message, JsonObject toolCallResponse, boolean isError, String text) {
-        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertTrue(toolCallResult.getBoolean("isError") == isError);
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(text, textContent.getString("text"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsCall("bravo", Map.of("price", 10), r -> {
+                    assertTrue(r.isError());
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.content().get(0).asText().text());
+                })
+                .toolsCall("bravos", Map.of("price", 10), r -> {
+                    assertTrue(r.isError());
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.content().get(0).asText().text());
+                })
+                .toolsCall("deltas", Map.of("price", 10), r -> {
+                    assertFalse(r.isError());
+                    assertEquals("[{\"name\":\"foo\",\"sum\":20,\"valid\":true}]", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public record MyObject(String name, int sum, boolean valid) {

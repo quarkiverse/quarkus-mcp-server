@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -14,10 +15,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ResourcesPaginationTest extends McpServerTest {
 
@@ -43,56 +45,68 @@ public class ResourcesPaginationTest extends McpServerTest {
                     .register();
         }
 
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        AtomicReference<String> cursor = new AtomicReference<>();
 
-        JsonObject message = newMessage("resources/list");
-        send(message);
+        client.when()
+                .resourcesList(page -> {
+                    assertEquals(3, page.size());
+                    assertNotNull(page.nextCursor());
+                    ResourceInfo r1 = page.resources().get(0);
+                    assertEquals("1", r1.name());
+                    assertEquals("1", r1.description());
+                    assertEquals("file:///1", r1.uri());
+                    ResourceInfo r2 = page.resources().get(1);
+                    assertEquals("2", r2.name());
+                    assertEquals("2", r2.description());
+                    assertEquals("file:///2", r2.uri());
+                    ResourceInfo r3 = page.resources().get(2);
+                    assertEquals("3", r3.name());
+                    assertEquals("3", r3.description());
+                    assertEquals("file:///3", r3.uri());
+                    cursor.set(page.nextCursor());
+                })
+                .thenAssertResults();
 
-        JsonObject response = waitForLastResponse();
-        JsonObject result = assertResultResponse(message, response);
-        assertNotNull(result);
-        JsonArray resources = result.getJsonArray("resources");
-        assertEquals(3, resources.size());
-        String cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
+        client.when()
+                .resourcesList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    assertEquals(3, page.size());
+                    assertNotNull(page.nextCursor());
+                    ResourceInfo r4 = page.resources().get(0);
+                    assertEquals("4", r4.name());
+                    assertEquals("4", r4.description());
+                    assertEquals("file:///4", r4.uri());
+                    ResourceInfo r5 = page.resources().get(1);
+                    assertEquals("5", r5.name());
+                    assertEquals("5", r5.description());
+                    assertEquals("file:///5", r5.uri());
+                    ResourceInfo r6 = page.resources().get(2);
+                    assertEquals("6", r6.name());
+                    assertEquals("6", r6.description());
+                    assertEquals("file:///6", r6.uri());
+                    cursor.set(page.nextCursor());
+                }).send()
+                .thenAssertResults();
 
-        assertResource(resources.getJsonObject(0), "1", "file:///1");
-        assertResource(resources.getJsonObject(1), "2", "file:///2");
-        assertResource(resources.getJsonObject(2), "3", "file:///3");
+        client.when()
+                .resourcesList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    assertEquals(2, page.size());
+                    assertNull(page.nextCursor());
+                    ResourceInfo r7 = page.resources().get(0);
+                    assertEquals("7", r7.name());
+                    assertEquals("7", r7.description());
+                    assertEquals("file:///7", r7.uri());
+                    ResourceInfo r8 = page.resources().get(1);
+                    assertEquals("8", r8.name());
+                    assertEquals("8", r8.description());
+                    assertEquals("file:///8", r8.uri());
+                }).send()
+                .thenAssertResults();
 
-        message = newMessage("resources/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        resources = result.getJsonArray("resources");
-        assertEquals(3, resources.size());
-        cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
-
-        assertResource(resources.getJsonObject(0), "4", "file:///4");
-        assertResource(resources.getJsonObject(1), "5", "file:///5");
-        assertResource(resources.getJsonObject(2), "6", "file:///6");
-
-        message = newMessage("resources/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        resources = result.getJsonArray("resources");
-        assertEquals(2, resources.size());
-        assertNull(result.getString("nextCursor"));
-
-        assertResource(resources.getJsonObject(0), "7", "file:///7");
-        assertResource(resources.getJsonObject(1), "8", "file:///8");
-    }
-
-    private void assertResource(JsonObject resource, String name, String uri) {
-        assertEquals(name, resource.getString("name"));
-        assertEquals(name, resource.getString("description"));
-        assertEquals(uri, resource.getString("uri"));
     }
 
 }

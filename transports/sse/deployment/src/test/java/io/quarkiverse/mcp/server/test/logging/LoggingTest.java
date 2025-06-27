@@ -1,18 +1,20 @@
 package io.quarkiverse.mcp.server.test.logging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.time.DayOfWeek;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class LoggingTest extends McpServerTest {
@@ -23,13 +25,21 @@ public class LoggingTest extends McpServerTest {
 
     @Test
     public void testLog() {
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        assertToolCall("tuesday:INFO", "charlie", DayOfWeek.TUESDAY);
-        assertToolCall("monday:INFO", "charlie", DayOfWeek.MONDAY);
-        assertToolCall("wednesday:INFO", "charlie", DayOfWeek.WEDNESDAY);
+        Snapshot snapshot = client.when()
+                .toolsCall("charlie", Map.of("day", DayOfWeek.TUESDAY), response -> {
+                    assertEquals("tuesday:INFO", response.content().get(0).asText().text());
+                })
+                .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
+                    assertEquals("monday:INFO", response.content().get(0).asText().text());
+                })
+                .toolsCall("charlie", Map.of("day", DayOfWeek.WEDNESDAY), response -> {
+                    assertEquals("wednesday:INFO", response.content().get(0).asText().text());
+                })
+                .thenAssertResults();
 
-        List<JsonObject> notifications = client().waitForNotifications(2);
+        List<JsonObject> notifications = client.waitForNotifications(2).notifications();
         assertLog(notifications.get(0), LogLevel.INFO, "tool:charlie", "Charlie does not work on MONDAY");
         assertLog(notifications.get(1), LogLevel.CRITICAL, "tool:charlie", "Wednesday is critical!");
     }
@@ -41,21 +51,4 @@ public class LoggingTest extends McpServerTest {
         assertEquals(message, params.getString("data"));
     }
 
-    private void assertToolCall(String expectedText, String name, DayOfWeek day) {
-        JsonObject toolGetMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", new JsonObject().put("day", day)));
-        send(toolGetMessage);
-
-        JsonObject toolGetResponse = waitForLastResponse();
-
-        JsonObject toolGetResult = assertResultResponse(toolGetMessage, toolGetResponse);
-        assertNotNull(toolGetResult);
-        JsonArray content = toolGetResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
-    }
 }

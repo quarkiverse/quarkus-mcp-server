@@ -7,9 +7,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class InvalidServerNameIgnoredTest extends McpServerTest {
 
@@ -21,12 +21,16 @@ public class InvalidServerNameIgnoredTest extends McpServerTest {
 
     @Test
     public void test() {
-        initClient();
-        JsonObject msg1 = newToolCallMessage("bravo");
-        send(msg1);
-        JsonObject r1 = client().waitForResponse(msg1);
-        JsonObject error1 = assertErrorResponse(msg1, r1);
-        assertEquals("Invalid tool name: bravo", error1.getString("message"));
+        McpAssured.newSseClient()
+                .build()
+                .connect()
+                .when()
+                .toolsCall("bravo")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: bravo", error.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     public static class MyTools {

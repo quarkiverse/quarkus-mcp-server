@@ -8,14 +8,27 @@
         <version>999-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>quarkus-mcp-server-test-utils</artifactId>
+    <artifactId>quarkus-mcp-server-test</artifactId>
     <name>Quarkus MCP Server Test Utils</name>
 
     <dependencies>
         <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
             <artifactId>quarkus-mcp-server-sse-client</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>

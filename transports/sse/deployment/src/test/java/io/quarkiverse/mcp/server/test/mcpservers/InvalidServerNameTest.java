@@ -7,15 +7,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class InvalidServerNameTest extends McpServerTest {
+public class InvalidServerNameTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(
-                    root -> root.addClasses(MyTools.class))
+    static final QuarkusUnitTest config = new QuarkusUnitTest()
+            .withApplicationRoot(root -> root.addClasses(MyTools.class))
             .setExpectedException(IllegalStateException.class, true);
 
     @Test

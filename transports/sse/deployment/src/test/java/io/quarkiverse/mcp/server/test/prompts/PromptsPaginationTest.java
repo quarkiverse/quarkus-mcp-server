@@ -1,10 +1,9 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -15,10 +14,10 @@ import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class PromptsPaginationTest extends McpServerTest {
 
@@ -43,55 +42,41 @@ public class PromptsPaginationTest extends McpServerTest {
                     .register();
         }
 
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        AtomicReference<String> cursor = new AtomicReference<>();
+        client.when()
+                .promptsList(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals("1", page.prompts().get(0).name());
+                    assertEquals("2", page.prompts().get(1).name());
+                    assertEquals("3", page.prompts().get(2).name());
+                })
+                .thenAssertResults();
 
-        JsonObject message = newMessage("prompts/list");
-        send(message);
+        client.when()
+                .promptsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals("4", page.prompts().get(0).name());
+                    assertEquals("5", page.prompts().get(1).name());
+                    assertEquals("6", page.prompts().get(2).name());
+                })
+                .send()
+                .thenAssertResults();
 
-        JsonObject response = waitForLastResponse();
-        JsonObject result = assertResultResponse(message, response);
-        assertNotNull(result);
-        JsonArray prompts = result.getJsonArray("prompts");
-        assertEquals(3, prompts.size());
-        String cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
-
-        assertPrompt(prompts.getJsonObject(0), "1");
-        assertPrompt(prompts.getJsonObject(1), "2");
-        assertPrompt(prompts.getJsonObject(2), "3");
-
-        message = newMessage("prompts/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        prompts = result.getJsonArray("prompts");
-        assertEquals(3, prompts.size());
-        cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
-
-        assertPrompt(prompts.getJsonObject(0), "4");
-        assertPrompt(prompts.getJsonObject(1), "5");
-        assertPrompt(prompts.getJsonObject(2), "6");
-
-        message = newMessage("prompts/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        prompts = result.getJsonArray("prompts");
-        assertEquals(2, prompts.size());
-        assertNull(result.getString("nextCursor"));
-
-        assertPrompt(prompts.getJsonObject(0), "7");
-        assertPrompt(prompts.getJsonObject(1), "8");
-    }
-
-    private void assertPrompt(JsonObject prompt, String name) {
-        assertEquals(name, prompt.getString("name"));
-        assertEquals(name, prompt.getString("description"));
+        client.when()
+                .promptsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    assertEquals(2, page.size());
+                    assertEquals("7", page.prompts().get(0).name());
+                    assertEquals("8", page.prompts().get(1).name());
+                })
+                .send()
+                .thenAssertResults();
     }
 
 }
