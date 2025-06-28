@@ -96,9 +96,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return new Page<>(infosForRequest(mcpRequest).sorted().toList(), true);
         }
         List<INFO> result = infosForRequest(mcpRequest)
-                .filter(r -> r.createdAt().isAfter(cursor.createdAt())
-                        && (cursor.name() == null
-                                || r.name().compareTo(cursor.name()) > 0))
+                .filter(r -> {
+                    int cmp = r.createdAt().compareTo(cursor.createdAt());
+                    if (cmp > 0) {
+                        return true;
+                    } else if (cmp == 0) {
+                        // If createdAt is equal, compare name lexicographically
+                        // this assumes that the items were sorted by name before being added to the collection.
+                        return cursor.name() == null || r.name().compareTo(cursor.name()) > 0;
+                    } else {
+                        return false;
+                    }
+                })
                 .sorted()
                 // (pageSize + 1) so that we know if a next page exists
                 .limit(pageSize + 1)
