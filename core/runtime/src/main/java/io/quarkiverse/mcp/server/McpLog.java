@@ -70,7 +70,7 @@ public interface McpLog {
      */
     void error(Throwable t, String format, Object... params);
 
-    public enum LogLevel {
+    enum LogLevel {
         DEBUG,
         INFO,
         NOTICE,
