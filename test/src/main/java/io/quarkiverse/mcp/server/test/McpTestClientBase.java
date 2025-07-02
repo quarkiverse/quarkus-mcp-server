@@ -135,14 +135,14 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected static JsonObject assertResultResponse(JsonObject request, JsonObject response) {
         assertResponse(request, response);
         JsonObject result = response.getJsonObject("result");
-        assertNotNull(result);
+        assertNotNull(result, "Expected result response but received: " + response);
         return result;
     }
 
     protected static JsonObject assertErrorResponse(JsonObject request, JsonObject response) {
         assertResponse(request, response);
         JsonObject error = response.getJsonObject("error");
-        assertNotNull(error);
+        assertNotNull(error, "Expected error response but received: " + response);
         return error;
     }
 
