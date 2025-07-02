@@ -109,7 +109,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         URI endpoint = URI.create(uriBase.toString() + event.data().strip());
         this.messageEndpoint = endpoint;
-        LOG.infof("McpSseTestClient received message endpoint: %s", endpoint);
+        LOG.infof("Message endpoint received: %s", endpoint);
         connected.set(true);
 
         JsonObject initMessage = newInitMessage();
@@ -132,6 +132,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
+        this.initResult = r;
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");

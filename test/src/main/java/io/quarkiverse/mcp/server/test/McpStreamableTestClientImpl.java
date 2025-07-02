@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableAssert;
@@ -25,6 +27,8 @@ import io.vertx.core.json.JsonObject;
 
 class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert, McpStreamableTestClient>
         implements McpStreamableTestClient {
+
+    private static final Logger LOG = Logger.getLogger(McpStreamableTestClientImpl.class);
 
     private final URI mcpEndpoint;
 
@@ -58,10 +62,11 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (response.statusCode() != 200) {
             throw new IllegalStateException("Invalid HTTP response status: " + response.statusCode());
         }
-        this.mcpSessionId = response.headers().firstValue("Mcp-Session-Id").orElse(null);
-        if (this.mcpSessionId == null) {
+        mcpSessionId = response.headers().firstValue("Mcp-Session-Id").orElse(null);
+        if (mcpSessionId == null) {
             throw new IllegalStateException("Mcp-Session-Id header not found: " + response.headers());
         }
+        LOG.infof("Mcp-Session-Id received: %s", mcpSessionId);
 
         JsonObject initResponse = new JsonObject(response.body());
         JsonObject initResult = assertResultResponse(initMessage, initResponse);
@@ -80,11 +85,17 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
-        connected.set(true);
+        this.initResult = r;
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
-        send(nofitication, additionalHeaders(nofitication), clientBasicAuth);
+        response = client.sendSync(nofitication.encode(), additionalHeaders(nofitication));
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                    "Initialization not finished successfully; HTTP response status: " + response.statusCode());
+        }
+
+        connected.set(true);
         return this;
     }
 
