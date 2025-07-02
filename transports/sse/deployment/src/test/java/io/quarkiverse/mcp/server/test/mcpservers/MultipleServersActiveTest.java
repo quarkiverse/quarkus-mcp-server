@@ -1,23 +1,18 @@
 package io.quarkiverse.mcp.server.test.mcpservers;
 
-import static io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.MCP_SESSION_ID_HEADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.test.StreamableHttpTest;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
-public class MultipleServersActiveTest extends StreamableHttpTest {
+public class MultipleServersActiveTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = config(500)
@@ -40,65 +35,74 @@ public class MultipleServersActiveTest extends StreamableHttpTest {
 
     @Test
     public void testAlpha() {
-        String mcpSessionId = initSession(createMessageEndpoint("/alpha/mcp"));
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setMcpPath("/alpha/mcp")
+                .build()
+                .connect();
 
-        JsonObject m1 = newToolCallMessage("alpha");
-        assertToolTextContent(m1, new JsonObject(send(m1, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "1");
-        JsonObject m2 = newToolCallMessage("bravo");
-        assertErrorMessage(m2, new JsonObject(
-                send(m2, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: bravo");
-        JsonObject m3 = newToolCallMessage("charlie");
-        assertErrorMessage(m3, new JsonObject(
-                send(m3, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: charlie");
+        client.when()
+                .toolsCall("alpha", response -> {
+                    assertEquals("1", response.content().get(0).asText().text());
+                })
+                .toolsCall("bravo")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: bravo", error.message());
+                })
+                .send()
+                .toolsCall("charlie")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: charlie", error.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     @Test
     public void testBravo() {
-        String mcpSessionId = initSession(createMessageEndpoint("/bravo/mcp"));
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setMcpPath("/bravo/mcp")
+                .build()
+                .connect();
 
-        JsonObject m1 = newToolCallMessage("alpha");
-        assertErrorMessage(m1, new JsonObject(
-                send(m1, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: alpha");
-        JsonObject m2 = newToolCallMessage("bravo");
-        assertToolTextContent(m2, new JsonObject(send(m2, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "2");
-        JsonObject m3 = newToolCallMessage("charlie");
-        assertErrorMessage(m3, new JsonObject(
-                send(m3, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: charlie");
+        client.when()
+                .toolsCall("bravo", response -> {
+                    assertEquals("2", response.content().get(0).asText().text());
+                })
+                .toolsCall("alpha")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: alpha", error.message());
+                })
+                .send()
+                .toolsCall("charlie")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: charlie", error.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     @Test
     public void testCharlie() {
-        String mcpSessionId = initSession(createMessageEndpoint("/charlie/mcp"));
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setMcpPath("/charlie/mcp")
+                .build()
+                .connect();
 
-        JsonObject m1 = newToolCallMessage("alpha");
-        assertErrorMessage(m1, new JsonObject(
-                send(m1, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: alpha");
-        JsonObject m2 = newToolCallMessage("bravo");
-        assertErrorMessage(m2, new JsonObject(
-                send(m2, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "Invalid tool name: bravo");
-        JsonObject m3 = newToolCallMessage("charlie");
-        assertToolTextContent(m3, new JsonObject(send(m3, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).extract().asString()),
-                "3");
-    }
-
-    private void assertToolTextContent(JsonObject request, JsonObject response, String expectedText) {
-        JsonObject result = assertResultResponse(request, response);
-        assertNotNull(result);
-        assertFalse(result.getBoolean("isError"));
-        JsonArray content = result.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        String text4 = textContent.getString("text");
-        assertEquals(expectedText, text4);
+        client.when()
+                .toolsCall("charlie", response -> {
+                    assertEquals("3", response.content().get(0).asText().text());
+                })
+                .toolsCall("alpha")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: alpha", error.message());
+                })
+                .send()
+                .toolsCall("bravo")
+                .withErrorAssert(error -> {
+                    assertEquals("Invalid tool name: bravo", error.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     @McpServer("charlie")

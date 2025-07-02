@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -62,7 +63,8 @@ class ToolMessageHandler extends MessageHandler {
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
 
-        Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
+        Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap()
+                : new HashMap<>();
         ArgumentProviders argProviders = new ArgumentProviders(args, mcpRequest.connection(), id, null, mcpRequest.sender(),
                 Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
 

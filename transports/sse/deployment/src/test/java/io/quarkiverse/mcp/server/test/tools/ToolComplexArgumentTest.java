@@ -1,19 +1,19 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
+import io.quarkiverse.mcp.server.test.tools.ToolComplexArgumentTest.MyTools.MyArg;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolComplexArgumentTest extends McpServerTest {
 
@@ -23,40 +23,16 @@ public class ToolComplexArgumentTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class));
 
     @Test
-    public void testError() {
-        initClient();
-        assertResult("alpha",
-                new JsonObject().put("myArg",
-                        new JsonObject()
-                                .put("price", 10)
-                                .put("names", new JsonArray().add("foo")
-                                        .add("bar"))),
-                "MyArg[price=10, names=[foo, bar]]");
-
-        assertResult("alphas",
-                new JsonObject().put("myArgs",
-                        new JsonArray().add(new JsonObject()
-                                .put("price", 10)
-                                .put("names", new JsonArray().add("foo")
-                                        .add("bar")))),
-                "[MyArg[price=10, names=[foo, bar]]]");
-    }
-
-    private void assertResult(String toolName, JsonObject arguments, String expectedErrorText) {
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", toolName)
-                        .put("arguments", arguments));
-        send(message);
-        JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResultResponse(message, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedErrorText, textContent.getString("text"));
+    public void testComplexArguments() {
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsCall("alpha", Map.of("myArg", new MyArg(10, List.of("foo", "bar"))), r -> {
+                    assertEquals("MyArg[price=10, names=[foo, bar]]", r.content().get(0).asText().text());
+                })
+                .toolsCall("alphas", Map.of("myArgs", List.of(new MyArg(10, List.of("foo", "bar")))), r -> {
+                    assertEquals("[MyArg[price=10, names=[foo, bar]]]", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     public static class MyTools {

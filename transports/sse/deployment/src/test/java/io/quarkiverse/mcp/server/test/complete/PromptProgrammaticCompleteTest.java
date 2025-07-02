@@ -18,6 +18,8 @@ import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonArray;
@@ -37,7 +39,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
 
     @Test
     public void testCompletion() {
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
 
         manager.newCompletion("foo")
                 .setArgumentName("name")
@@ -56,7 +58,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
                         List.of(), 0, false))
                 .register());
 
-        JsonObject completeMessage = newMessage("completion/complete")
+        JsonObject completeMessage = client.newMessage("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")
@@ -64,17 +66,17 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
                         .put("argument", new JsonObject()
                                 .put("name", "name")
                                 .put("value", "Vo")));
-        send(completeMessage);
+        client.sendAndForget(completeMessage);
 
-        JsonObject completeResponse = waitForLastResponse();
+        JsonObject completeResponse = client.waitForResponse(completeMessage);
 
-        JsonObject completeResult = assertResultResponse(completeMessage, completeResponse);
+        JsonObject completeResult = completeResponse.getJsonObject("result");
         assertNotNull(completeResult);
         JsonArray values = completeResult.getJsonObject("completion").getJsonArray("values");
         assertEquals(1, values.size());
         assertEquals("Vojtik", values.getString(0));
 
-        completeMessage = newMessage("completion/complete")
+        completeMessage = client.newMessage("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")
@@ -82,11 +84,11 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
                         .put("argument", new JsonObject()
                                 .put("name", "suffix")
                                 .put("value", "Vo")));
-        send(completeMessage);
+        client.sendAndForget(completeMessage);
 
-        completeResponse = waitForLastResponse();
+        completeResponse = client.waitForResponse(completeMessage);
 
-        completeResult = assertResultResponse(completeMessage, completeResponse);
+        completeResult = completeResponse.getJsonObject("result");
         assertNotNull(completeResult);
         values = completeResult.getJsonObject("completion").getJsonArray("values");
         assertEquals(1, values.size());

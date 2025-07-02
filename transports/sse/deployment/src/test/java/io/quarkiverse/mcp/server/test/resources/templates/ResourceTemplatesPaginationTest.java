@@ -1,10 +1,9 @@
 package io.quarkiverse.mcp.server.test.resources.templates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -14,10 +13,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ResourceTemplatesPaginationTest extends McpServerTest {
 
@@ -43,56 +42,42 @@ public class ResourceTemplatesPaginationTest extends McpServerTest {
                     .register();
         }
 
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        AtomicReference<String> cursor = new AtomicReference<>();
 
-        JsonObject message = newMessage("resources/templates/list");
-        send(message);
+        client.when()
+                .resourcesTemplatesList(p -> {
+                    cursor.set(p.nextCursor());
+                    assertEquals(3, p.size());
+                    assertEquals("1", p.findByUriTemplate("file:///1").name());
+                    assertEquals("2", p.findByUriTemplate("file:///2").name());
+                    assertEquals("3", p.findByUriTemplate("file:///3").name());
+                })
+                .thenAssertResults();
 
-        JsonObject response = waitForLastResponse();
-        JsonObject result = assertResultResponse(message, response);
-        assertNotNull(result);
-        JsonArray resources = result.getJsonArray("resourceTemplates");
-        assertEquals(3, resources.size());
-        String cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
+        client.when()
+                .resourcesTemplatesList()
+                .withCursor(cursor.get())
+                .withAssert(p -> {
+                    cursor.set(p.nextCursor());
+                    assertEquals(3, p.size());
+                    assertEquals("4", p.findByUriTemplate("file:///4").name());
+                    assertEquals("5", p.findByUriTemplate("file:///5").name());
+                    assertEquals("6", p.findByUriTemplate("file:///6").name());
+                })
+                .send()
+                .thenAssertResults();
 
-        assertResourceTemplate(resources.getJsonObject(0), "1", "file:///1");
-        assertResourceTemplate(resources.getJsonObject(1), "2", "file:///2");
-        assertResourceTemplate(resources.getJsonObject(2), "3", "file:///3");
-
-        message = newMessage("resources/templates/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        resources = result.getJsonArray("resourceTemplates");
-        assertEquals(3, resources.size());
-        cursor = result.getString("nextCursor");
-        assertNotNull(cursor);
-
-        assertResourceTemplate(resources.getJsonObject(0), "4", "file:///4");
-        assertResourceTemplate(resources.getJsonObject(1), "5", "file:///5");
-        assertResourceTemplate(resources.getJsonObject(2), "6", "file:///6");
-
-        message = newMessage("resources/templates/list").put("params", new JsonObject().put("cursor", cursor));
-        send(message);
-
-        response = waitForLastResponse();
-        result = assertResultResponse(message, response);
-        assertNotNull(result);
-        resources = result.getJsonArray("resourceTemplates");
-        assertEquals(2, resources.size());
-        assertNull(result.getString("nextCursor"));
-
-        assertResourceTemplate(resources.getJsonObject(0), "7", "file:///7");
-        assertResourceTemplate(resources.getJsonObject(1), "8", "file:///8");
-    }
-
-    private void assertResourceTemplate(JsonObject resource, String name, String uri) {
-        assertEquals(name, resource.getString("name"));
-        assertEquals(name, resource.getString("description"));
-        assertEquals(uri, resource.getString("uriTemplate"));
+        client.when()
+                .resourcesTemplatesList()
+                .withCursor(cursor.get())
+                .withAssert(p -> {
+                    assertEquals(2, p.size());
+                    assertEquals("7", p.findByUriTemplate("file:///7").name());
+                    assertEquals("8", p.findByUriTemplate("file:///8").name());
+                })
+                .send()
+                .thenAssertResults();
     }
 
 }

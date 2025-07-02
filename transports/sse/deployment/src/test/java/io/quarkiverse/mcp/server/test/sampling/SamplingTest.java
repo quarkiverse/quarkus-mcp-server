@@ -14,10 +14,13 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
@@ -34,8 +37,12 @@ public class SamplingTest extends McpServerTest {
     public void testSampling() throws InterruptedException {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            initClient();
-            JsonObject toolCallMessage = newMessage("tools/call")
+            McpSseTestClient client = McpAssured.newSseClient()
+                    .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                    .build()
+                    .connect();
+
+            JsonObject request = client.newMessage("tools/call")
                     .put("params", new JsonObject()
                             .put("name", "samplingFoo"));
 
@@ -44,25 +51,28 @@ public class SamplingTest extends McpServerTest {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    send(toolCallMessage);
+                    client.sendAndForget(request);
                 }
             });
 
             // The server should send a sampling request
-            List<JsonObject> requests = client().waitForRequests(1);
+            List<JsonObject> requests = client.waitForRequests(1).requests();
             assertEquals("sampling/createMessage", requests.get(0).getString("method"));
             Long id = requests.get(0).getLong("id");
-            JsonObject message = newResult(id, new JsonObject()
-                    .put("role", "assistant")
-                    .put("model", "claude-3-sonnet-20240307")
-                    .put("content", new JsonObject()
-                            .put("type", "text")
-                            .put("text", "It's ok buddy.")));
+            JsonObject response = new JsonObject()
+                    .put("jsonrpc", "2.0")
+                    .put("result", new JsonObject()
+                            .put("role", "assistant")
+                            .put("model", "claude-3-sonnet-20240307")
+                            .put("content", new JsonObject()
+                                    .put("type", "text")
+                                    .put("text", "It's ok buddy.")))
+                    .put("id", id);
             // Send the response back to the server
-            send(message);
+            client.sendAndForget(response);
 
-            JsonObject toolCallResponse = waitForLastResponse();
-            JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
+            JsonObject toolCallResponse = client.waitForResponse(request);
+            JsonObject toolCallResult = toolCallResponse.getJsonObject("result");
             assertNotNull(toolCallResult);
             assertFalse(toolCallResult.getBoolean("isError"));
             JsonArray content = toolCallResult.getJsonArray("content");
@@ -91,11 +101,6 @@ public class SamplingTest extends McpServerTest {
             }
         }
 
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("sampling", Map.of());
     }
 
 }

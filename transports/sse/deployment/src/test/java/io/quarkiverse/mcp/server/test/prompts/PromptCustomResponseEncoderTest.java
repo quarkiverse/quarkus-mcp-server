@@ -1,9 +1,9 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
+import java.util.Map;
 
 import jakarta.annotation.Priority;
 import jakarta.inject.Singleton;
@@ -16,10 +16,10 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.PromptResponseEncoder;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class PromptCustomResponseEncoderTest extends McpServerTest {
 
@@ -30,23 +30,12 @@ public class PromptCustomResponseEncoderTest extends McpServerTest {
 
     @Test
     public void testEncoder() {
-        initClient();
-        JsonObject message = newMessage("prompts/get")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", "10")));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        JsonObject result = assertResultResponse(message, response);
-        assertNotNull(result);
-        JsonArray messages = result.getJsonArray("messages");
-        assertEquals(1, messages.size());
-        JsonObject m = messages.getJsonObject(0);
-        assertEquals("user", m.getString("role"));
-        JsonObject content = m.getJsonObject("content");
-        assertEquals("text", content.getString("type"));
-        assertEquals("MyObject[name=foo, sum=20, valid=true]", content.getString("text"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .promptsGet("bravo", Map.of("price", "10"), r -> {
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.messages().get(0).content().asText().text());
+                })
+                .thenAssertResults();
     }
 
     public record MyObject(String name, int sum, boolean valid) {

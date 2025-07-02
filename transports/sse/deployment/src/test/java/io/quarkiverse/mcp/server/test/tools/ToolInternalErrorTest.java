@@ -2,15 +2,18 @@ package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class ToolInternalErrorTest extends McpServerTest {
 
@@ -21,16 +24,16 @@ public class ToolInternalErrorTest extends McpServerTest {
 
     @Test
     public void testError() {
-        initClient();
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10)));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        assertEquals(JsonRPC.INTERNAL_ERROR, response.getJsonObject("error").getInteger("code"));
-        assertEquals("Internal error", response.getJsonObject("error").getString("message"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsCall("bravo")
+                .withArguments(Map.of("price", 10))
+                .withErrorAssert(e -> {
+                    assertEquals(JsonRPC.INTERNAL_ERROR, e.code());
+                    assertEquals("Internal error", e.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     public static class MyTools {

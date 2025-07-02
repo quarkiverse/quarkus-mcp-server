@@ -1,10 +1,7 @@
 package io.quarkiverse.mcp.server.test.tools.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -14,12 +11,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class SecuredMessageEndpointTest extends McpServerTest {
 
@@ -39,25 +36,24 @@ public class SecuredMessageEndpointTest extends McpServerTest {
 
     @Test
     public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
-        initClient();
+        try {
+            McpAssured.newSseClient()
+                    .build()
+                    .connect();
+        } catch (AssertionError expected) {
+            // 401 status during init
+        }
 
-        JsonObject toolListMessage = newMessage("tools/list");
-        sendAndValidate(toolListMessage, Map.of()).statusCode(401);
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setBasicAuth("bob", "bob")
+                .build()
+                .connect();
 
-        toolListMessage = newMessage("tools/list");
-        sendSecured(toolListMessage, "bob", "bob");
-
-        JsonObject toolListResponse = waitForLastResponse();
-
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(1, tools.size());
-    }
-
-    @Override
-    protected Entry<String, String> initBaseAuth() {
-        return Map.entry("bob", "bob");
+        client.when()
+                .toolsList(page -> {
+                    assertEquals(1, page.tools().size());
+                })
+                .thenAssertResults();
     }
 
     public static class MyTools {

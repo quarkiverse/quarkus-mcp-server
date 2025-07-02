@@ -17,11 +17,14 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
@@ -39,9 +42,13 @@ public class RootsTimeoutTest extends McpServerTest {
 
     @Test
     public void testRoots() throws InterruptedException {
-        initClient();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.ROOTS, Map.of()))
+                .build()
+                .connect();
+
         // The server should list the roots 2x
-        List<JsonObject> requests = client().waitForRequests(2);
+        List<JsonObject> requests = client.waitForRequests(2).requests();
         assertEquals("roots/list", requests.get(0).getString("method"));
         assertEquals("roots/list", requests.get(1).getString("method"));
         Long id1 = requests.get(0).getLong("id");
@@ -84,11 +91,6 @@ public class RootsTimeoutTest extends McpServerTest {
                     .replaceWithVoid();
         }
 
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("roots", Map.of());
     }
 
 }

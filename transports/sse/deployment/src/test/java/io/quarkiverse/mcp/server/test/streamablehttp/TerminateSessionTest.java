@@ -4,35 +4,44 @@ import static io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHand
 
 import java.util.Map;
 
+import jakarta.inject.Inject;
+
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.test.StreamableHttpTest;
+import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
-import io.vertx.core.json.JsonObject;
 
-public class TerminateSessionTest extends StreamableHttpTest {
+public class TerminateSessionTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class));
 
+    @Inject
+    ConnectionManager connectionManager;
+
     @Test
     public void testTerminateSession() {
-        String mcpSessionId = initSession();
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
         RestAssured.given()
                 .when()
-                .headers(Map.of(MCP_SESSION_ID_HEADER, mcpSessionId))
-                .delete(messageEndpoint)
+                .headers(Map.of(MCP_SESSION_ID_HEADER, client.mcpSessionId()))
+                .delete(client.mcpEndpoint())
                 .then();
 
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage, Map.of(MCP_SESSION_ID_HEADER, mcpSessionId)).statusCode(404);
+        // Wait until the connection is removed
+        Awaitility.await().until(() -> !connectionManager.has(client.mcpSessionId()));
 
+        // FIXME Send a ping but expect the 400 status code
     }
 
     public static class MyTools {

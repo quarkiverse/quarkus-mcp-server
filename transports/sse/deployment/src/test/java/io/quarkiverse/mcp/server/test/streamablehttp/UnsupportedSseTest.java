@@ -4,11 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.test.StreamableHttpTest;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 
-public class UnsupportedSseTest extends StreamableHttpTest {
+public class UnsupportedSseTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
@@ -17,9 +19,10 @@ public class UnsupportedSseTest extends StreamableHttpTest {
 
     @Test
     public void testFailure() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         RestAssured.given()
                 .when()
-                .get(messageEndpoint)
+                .get(client.mcpEndpoint())
                 .then()
                 .statusCode(405);
     }

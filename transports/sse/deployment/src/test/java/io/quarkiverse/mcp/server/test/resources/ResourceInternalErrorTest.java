@@ -9,9 +9,10 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class ResourceInternalErrorTest extends McpServerTest {
 
@@ -22,14 +23,15 @@ public class ResourceInternalErrorTest extends McpServerTest {
 
     @Test
     public void testError() {
-        initClient();
-        JsonObject message = newMessage("resources/read")
-                .put("params", new JsonObject()
-                        .put("uri", "file:///project/alpha"));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        assertEquals(JsonRPC.INTERNAL_ERROR, response.getJsonObject("error").getInteger("code"));
-        assertEquals("Internal error", response.getJsonObject("error").getString("message"));
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .resourcesRead("file:///project/alpha")
+                .withErrorAssert(e -> {
+                    assertEquals(JsonRPC.INTERNAL_ERROR, e.code());
+                    assertEquals("Internal error", e.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
     public static class MyResources {
