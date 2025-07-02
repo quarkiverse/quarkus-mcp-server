@@ -5,11 +5,13 @@ import java.lang.invoke.VarHandle;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -22,6 +24,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.impl.ConnectionBase;
@@ -172,6 +175,39 @@ public class SseMcpServerRecorder {
                 handler.handle(ctx);
             }
         };
+    }
+
+    public static void logEndpoints(List<McpServerEndpoints> endpoints, HttpServerOptions httpServerOptions) {
+        Logger log = Logger.getLogger("io.quarkiverse.mcp.server");
+        // base is scheme://host:port
+        String base = new StringBuilder(httpServerOptions.isSsl() ? "https://" : "http://")
+                .append(httpServerOptions.getHost())
+                .append(":")
+                .append(httpServerOptions.getPort())
+                .toString();
+        for (McpServerEndpoints e : endpoints) {
+            String serverInfo = "";
+            if (!McpServer.DEFAULT.equals(e.serverName)) {
+                serverInfo = " [" + e.serverName + "]";
+            }
+            log.infof("MCP%s HTTP transport endpoints [streamable: %s, SSE: %s]", serverInfo, base + e.mcpPath,
+                    base + e.ssePath);
+        }
+
+    }
+
+    public static class McpServerEndpoints {
+
+        public String serverName;
+        public String mcpPath;
+        public String ssePath;
+
+        public McpServerEndpoints(String serverName, String mcpPath, String ssePath) {
+            this.serverName = serverName;
+            this.mcpPath = mcpPath;
+            this.ssePath = ssePath;
+        }
+
     }
 
 }
