@@ -30,6 +30,7 @@ class McpStreamableClient {
                 .header("Accept", "text/event-stream")
                 .header("Accept", "application/json")
                 .POST(BodyPublishers.ofString(body));
+        headers.forEach(builder::header);
         try {
             return httpClient.send(builder.build(), BodyHandlers.ofString());
         } catch (InterruptedException e) {
