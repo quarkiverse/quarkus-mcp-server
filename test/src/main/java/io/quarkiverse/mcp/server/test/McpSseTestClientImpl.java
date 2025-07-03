@@ -59,6 +59,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     }
 
     @Override
+    public URI sseEndpoint() {
+        return sseEndpoint;
+    }
+
+    @Override
     public URI messageEndpoint() {
         return messageEndpoint;
     }

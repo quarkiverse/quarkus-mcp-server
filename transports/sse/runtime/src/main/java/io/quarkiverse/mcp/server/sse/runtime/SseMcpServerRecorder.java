@@ -83,6 +83,15 @@ public class SseMcpServerRecorder {
 
             @Override
             public void handle(RoutingContext ctx) {
+                // The client may attempt to POST an initialize request to the SSE endpoint
+                // to test whether the Streamable transport is supported
+                // (for the case when the server combines the legacy SSE endpoint and the new MCP streamable endpoint)
+                // This is not our case but we should still return 405
+                if (HttpMethod.POST.equals(ctx.request().method())) {
+                    ctx.fail(405);
+                    return;
+                }
+
                 ctx.put(CONTEXT_KEY, serverName);
                 HttpServerResponse response = ctx.response();
                 response.setChunked(true);

@@ -11,6 +11,8 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
@@ -231,6 +233,12 @@ public class McpAssured {
      */
     public interface McpSseTestClient
             extends McpTestClient<McpSseAssert, McpSseTestClient> {
+
+        /**
+         *
+         * @return the SSE endpoint
+         */
+        URI sseEndpoint();
 
         /**
          *
