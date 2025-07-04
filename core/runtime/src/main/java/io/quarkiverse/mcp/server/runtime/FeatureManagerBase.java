@@ -91,8 +91,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         if (count == 0) {
             return Page.empty();
         }
-        if (count <= pageSize) {
-            // Pagination is not needed
+        if (pageSize <= 0 || count <= pageSize) {
+            // Pagination is disabled/not needed
             return new Page<>(infosForRequest(mcpRequest).sorted().toList(), true);
         }
         List<INFO> result = infosForRequest(mcpRequest)
