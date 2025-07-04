@@ -34,11 +34,7 @@ public class ToolsPaginationTest extends McpServerTest {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             String name = i + "";
-            manager.newTool(name)
-                    .setDescription(name)
-                    .setHandler(
-                            args -> ToolResponse.success("Result " + name))
-                    .register();
+            addTool(name);
         }
 
         Instant lastCreatedAt = Instant.EPOCH;
@@ -59,6 +55,11 @@ public class ToolsPaginationTest extends McpServerTest {
                     assertEquals("3", page.tools().get(2).name());
                 })
                 .thenAssertResults();
+
+        // remove tool from the first page
+        manager.removeTool("2");
+        // add tool "0" - this one should not be visible at all
+        addTool("0");
 
         client.when()
                 .toolsList()
@@ -83,6 +84,14 @@ public class ToolsPaginationTest extends McpServerTest {
                 })
                 .send()
                 .thenAssertResults();
+    }
+
+    private void addTool(String name) {
+        manager.newTool(name)
+                .setDescription(name)
+                .setHandler(
+                        args -> ToolResponse.success("Result " + name))
+                .register();
     }
 
 }
