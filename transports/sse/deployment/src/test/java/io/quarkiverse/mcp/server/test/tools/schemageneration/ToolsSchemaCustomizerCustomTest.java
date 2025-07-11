@@ -20,9 +20,11 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.runtime.SchemaGeneratorConfigCustomizer;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaCustomizerCustomTest extends McpServerTest {
@@ -36,18 +38,13 @@ public class ToolsSchemaCustomizerCustomTest extends McpServerTest {
 
     @Test
     public void testSchemaGenerationWithProvidedCustomizer() {
-        initClient();
-        JsonObject toolListMessage = newMessage("tools/list");
-        send(toolListMessage);
-
-        JsonObject toolListResponse = waitForLastResponse();
-
-        JsonObject toolListResult = assertResultResponse(toolListMessage, toolListResponse);
-        assertNotNull(toolListResult);
-        JsonArray tools = toolListResult.getJsonArray("tools");
-        assertEquals(1, tools.size());
-
-        assertTool(tools, "add-products", null, schema -> {
+        McpSseTestClient client = McpAssured.newSseClient()
+                .build()
+                .connect();
+        client.when().toolsList(page -> {
+            assertEquals(1, page.tools().size());
+            ToolInfo addProducts = page.findByName("add-products");
+            JsonObject schema = addProducts.inputSchema();
             assertHasPropertyWithNameType(schema, "products", "array");
             assertHasPropertyCount(schema, 1);
             assertHasRequiredProperties(schema, Set.of("products"));
@@ -58,7 +55,7 @@ public class ToolsSchemaCustomizerCustomTest extends McpServerTest {
             assertEquals("object", productType.getString("type"));
             assertHasPropertyWithNameType(productType, "price", "string");
             assertHasPropertyCount(productType, 1);
-        });
+        }).thenAssertResults();
     }
 
     @ApplicationScoped
@@ -89,6 +86,7 @@ public class ToolsSchemaCustomizerCustomTest extends McpServerTest {
         assertEquals(expectedNumberOfProperties, properties.size());
     }
 
+    @SuppressWarnings("unchecked")
     private void assertHasRequiredProperties(JsonObject typeObject, Set<String> expectedRequireProperties) {
         var requiredProperties = new HashSet<Object>(typeObject.getJsonArray("required").getList());
         assertEquals(expectedRequireProperties, requiredProperties);
@@ -104,6 +102,7 @@ public class ToolsSchemaCustomizerCustomTest extends McpServerTest {
     }
 
     public static class Product {
+        @SuppressWarnings("unused")
         private BigDecimal price;
     }
 }

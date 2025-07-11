@@ -1,8 +1,6 @@
 package io.quarkiverse.mcp.server.test.roots;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -16,6 +14,7 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
@@ -23,6 +22,8 @@ import io.quarkiverse.mcp.server.Root;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonArray;
@@ -36,64 +37,56 @@ public class RootsTest extends McpServerTest {
 
     @Test
     public void testRoots() throws InterruptedException {
-        initClient();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.ROOTS, Map.of()))
+                .build()
+                .connect();
+
         // The server should list the roots
-        List<JsonObject> requests = client().waitForRequests(1);
+        List<JsonObject> requests = client.waitForRequests(1).requests();
         assertEquals("roots/list", requests.get(0).getString("method"));
         Long id = requests.get(0).getLong("id");
-        JsonObject message = newResult(id, new JsonObject()
-                .put("roots", new JsonArray().add(new JsonObject()
-                        .put("uri", "file:///home/file")
-                        .put("name", "important file"))));
+        JsonObject message = new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("id", id)
+                .put("result", new JsonObject()
+                        .put("roots", new JsonArray().add(new JsonObject()
+                                .put("uri", "file:///home/file")
+                                .put("name", "important file"))));
         // Send the response back to the server
-        send(message);
+        client.sendAndForget(message);
 
         assertTrue(MyTools.INIT_LATCH.await(5, TimeUnit.SECONDS));
 
-        JsonObject toolCallMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "firstRoot"));
-        send(toolCallMessage);
-        JsonObject toolCallResponse = waitForLastResponse();
-        JsonObject toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals("file:///home/file", textContent.getString("text"));
+        client.when()
+                .toolsCall("firstRoot", r -> {
+                    assertEquals("file:///home/file", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
 
-        client().clearRequests();
-
-        JsonObject notification = newNotification("notifications/roots/list_changed");
-        send(notification);
+        JsonObject notification = client.newMessage("notifications/roots/list_changed");
+        client.sendAndForget(notification);
 
         // The server should list the roots again
-        requests = client().waitForRequests(1);
-        assertEquals("roots/list", requests.get(0).getString("method"));
-        message = newResult(requests.get(0).getLong("id"), new JsonObject()
-                .put("roots", new JsonArray().add(new JsonObject()
-                        .put("uri", "file:///home/directory")
-                        .put("name", "important directory"))));
+        requests = client.waitForRequests(2).requests();
+        assertEquals("roots/list", requests.get(1).getString("method"));
+        message = new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("id", requests.get(1).getLong("id"))
+                .put("result", new JsonObject()
+                        .put("roots", new JsonArray().add(new JsonObject()
+                                .put("uri", "file:///home/directory")
+                                .put("name", "important directory"))));
         // Send the response back to the server
-        send(message);
+        client.sendAndForget(message);
 
         assertTrue(MyTools.CHANGE_LATCH.await(5, TimeUnit.SECONDS));
 
-        toolCallMessage = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "firstRoot"));
-        send(toolCallMessage);
-        toolCallResponse = waitForLastResponse();
-        toolCallResult = assertResultResponse(toolCallMessage, toolCallResponse);
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals("file:///home/directory", textContent.getString("text"));
+        client.when()
+                .toolsCall("firstRoot", r -> {
+                    assertEquals("file:///home/directory", r.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     @Singleton
@@ -123,11 +116,6 @@ public class RootsTest extends McpServerTest {
             return new TextContent(rootsMap.get(connection.id()).get(0).uri());
         }
 
-    }
-
-    @Override
-    protected JsonObject getClientCapabilities() {
-        return new JsonObject().put("roots", Map.of());
     }
 
 }

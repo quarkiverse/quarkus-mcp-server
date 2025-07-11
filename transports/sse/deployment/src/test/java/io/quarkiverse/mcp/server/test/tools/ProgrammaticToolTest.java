@@ -1,11 +1,10 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Map;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -16,9 +15,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ProgrammaticToolTest extends McpServerTest {
@@ -33,70 +33,44 @@ public class ProgrammaticToolTest extends McpServerTest {
 
     @Test
     public void testTools() {
-        initClient();
-        assertTools(0);
-        assertToolCallResponseError("alpha");
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        client.when()
+                .toolsList(page -> assertEquals(0, page.size()))
+                .toolsCall("alpha")
+                .withErrorAssert(e -> {
+                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals("Invalid tool name: alpha", e.message());
+                }).send()
+                .thenAssertResults();
 
         myTools.register("alpha", "2");
         assertThrows(IllegalArgumentException.class, () -> myTools.register("alpha", "2"));
         assertThrows(NullPointerException.class, () -> myTools.register(null, "2"));
 
-        List<JsonObject> notifications = client().waitForNotifications(1);
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
         assertEquals("notifications/tools/list_changed", notifications.get(0).getString("method"));
 
-        assertTools(1);
-        assertToolCallResponse("alpha", new JsonObject().put("foo", 2), "22");
+        client.when()
+                .toolsList(page -> assertEquals(1, page.size()))
+                .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.content().get(0).asText().text()))
+                .thenAssertResults();
 
         myTools.register("bravo", "3");
 
-        assertTools(2);
-        assertEquals("notifications/tools/list_changed", client().waitForNotifications(1).get(0).getString("method"));
-        assertToolCallResponse("bravo", new JsonObject().put("foo", 3), "33");
+        client.when()
+                .toolsList(page -> assertEquals(2, page.size()))
+                .toolsCall("bravo", Map.of("foo", 3), r -> assertEquals("33", r.content().get(0).asText().text()))
+                .thenAssertResults();
+
+        assertEquals("notifications/tools/list_changed",
+                client.waitForNotifications(2).notifications().get(1).getString("method"));
 
         myTools.remove("alpha");
-        assertTools(1);
-        assertToolCallResponseError("alpha");
-        assertToolCallResponse("bravo", new JsonObject().put("foo", 4), "34");
-    }
 
-    private void assertTools(int expectedSize) {
-        JsonObject toolsListMessage = newMessage("tools/list");
-        send(toolsListMessage);
-
-        JsonObject toolsListResponse = waitForLastResponse();
-
-        JsonObject toolsListResult = assertResultResponse(toolsListMessage, toolsListResponse);
-        assertNotNull(toolsListResult);
-        JsonArray tools = toolsListResult.getJsonArray("tools");
-        assertEquals(expectedSize, tools.size());
-    }
-
-    private void assertToolCallResponseError(String name) {
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", name));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
-        assertEquals("Invalid tool name: " + name, response.getJsonObject("error").getString("message"));
-
-    }
-
-    private void assertToolCallResponse(String name, JsonObject arguments, String expectedText) {
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", arguments));
-        send(message);
-        JsonObject toolResponse = waitForLastResponse();
-        JsonObject toolResult = assertResultResponse(message, toolResponse);
-        assertNotNull(toolResult);
-        assertFalse(toolResult.getBoolean("isError"));
-        JsonArray content = toolResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
+        client.when()
+                .toolsList(page -> assertEquals(1, page.size()))
+                .toolsCall("bravo", Map.of("foo", 4), r -> assertEquals("34", r.content().get(0).asText().text()))
+                .thenAssertResults();
     }
 
     @Singleton

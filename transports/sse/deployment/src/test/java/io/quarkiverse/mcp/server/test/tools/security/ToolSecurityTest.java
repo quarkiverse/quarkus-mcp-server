@@ -1,8 +1,8 @@
 package io.quarkiverse.mcp.server.test.tools.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.util.Map;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -14,14 +14,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ToolSecurityTest extends McpServerTest {
 
@@ -39,70 +39,49 @@ public class ToolSecurityTest extends McpServerTest {
 
     @Test
     public void testSecuredTool() {
-        initClient();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setBasicAuth("bob", "bob")
+                .build()
+                .connect();
 
-        // Test injected SecurityIdentity
-        JsonObject message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo"));
-
-        sendSecured(message, "bob", "bob");
-        assertToolResponse(message, waitForLastResponse(), "bob");
-
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo"));
-        sendSecured(message, "alice", "alice");
-        assertToolResponse(message, waitForLastResponse(), "alice");
-
-        // Test @Authenticated declared on class
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "charlie"));
-        send(message);
-        JsonObject response = waitForLastResponse();
-        assertEquals(JsonRPC.SECURITY_ERROR, response.getJsonObject("error").getInteger("code"));
-        assertEquals("io.quarkus.security.UnauthorizedException", response.getJsonObject("error").getString("message"));
-
-        // Test @RolesAllowed("admin") declared on method
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "alpha")
-                        .put("arguments", new JsonObject()
-                                .put("price", 2)));
-        send(message);
-        response = waitForLastResponse();
-        assertEquals(JsonRPC.SECURITY_ERROR, response.getJsonObject("error").getInteger("code"));
-        assertEquals("io.quarkus.security.UnauthorizedException", response.getJsonObject("error").getString("message"));
-
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "alpha")
-                        .put("arguments", new JsonObject()
-                                .put("price", 2)));
-        sendSecured(message, "bob", "bob");
-        response = waitForLastResponse();
-        assertEquals(JsonRPC.SECURITY_ERROR, response.getJsonObject("error").getInteger("code"));
-        assertEquals("io.quarkus.security.ForbiddenException", response.getJsonObject("error").getString("message"));
-
-        message = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "alpha")
-                        .put("arguments", new JsonObject()
-                                .put("price", 2)));
-        sendSecured(message, "alice", "alice");
-        assertToolResponse(message, waitForLastResponse(), "foofoo");
-    }
-
-    private void assertToolResponse(JsonObject message, JsonObject response, String expectedText) {
-        JsonObject toolResult = assertResultResponse(message, response);
-        assertNotNull(toolResult);
-        assertFalse(toolResult.getBoolean("isError"));
-        JsonArray content = toolResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
+        client.when()
+                // Test injected SecurityIdentity
+                .toolsCall("bravo", toolResponse -> {
+                    assertEquals("bob", toolResponse.content().get(0).asText().text());
+                })
+                .basicAuth("alice", "alice")
+                .toolsCall("bravo", toolResponse -> {
+                    assertEquals("alice", toolResponse.content().get(0).asText().text());
+                })
+                .noBasicAuth()
+                // Test @Authenticated declared on class
+                .toolsCall("charlie")
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals("io.quarkus.security.UnauthorizedException", error.message());
+                })
+                .send()
+                // Test @RolesAllowed("admin") declared on method
+                .toolsCall("alpha")
+                .withArguments(Map.of("price", 2))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals("io.quarkus.security.UnauthorizedException", error.message());
+                })
+                .send()
+                .basicAuth("bob", "bob")
+                .toolsCall("alpha")
+                .withArguments(Map.of("price", 2))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals("io.quarkus.security.ForbiddenException", error.message());
+                })
+                .send()
+                .basicAuth("alice", "alice")
+                .toolsCall("alpha", Map.of("price", 2), toolResponse -> {
+                    assertEquals("foofoo", toolResponse.content().get(0).asText().text());
+                })
+                .thenAssertResults();
     }
 
     @Authenticated

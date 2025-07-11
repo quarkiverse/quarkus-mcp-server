@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -19,8 +21,8 @@ public class InvalidPromptCompleteTest extends McpServerTest {
 
     @Test
     public void testError() {
-        initClient();
-        JsonObject completeMessage = newMessage("completion/complete")
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
+        JsonObject completeMessage = client.newMessage("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")
@@ -28,8 +30,8 @@ public class InvalidPromptCompleteTest extends McpServerTest {
                         .put("argument", new JsonObject()
                                 .put("name", "name")
                                 .put("value", "Vo")));
-        send(completeMessage);
-        JsonObject response = waitForLastResponse();
+        client.sendAndForget(completeMessage);
+        JsonObject response = client.waitForResponse(completeMessage);
         assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Prompt completion does not exist: bar_name", response.getJsonObject("error").getString("message"));
     }

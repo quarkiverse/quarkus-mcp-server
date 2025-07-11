@@ -1,29 +1,22 @@
 package io.quarkiverse.mcp.server.test.streamablehttp;
 
-import static io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.MCP_SESSION_ID_HEADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.net.http.HttpRequest.BodyPublishers;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.test.StreamableHttpTest;
-import io.quarkiverse.mcp.server.test.StreamableMcpSseClient;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class ToolWithProgressStreamableTest extends StreamableHttpTest {
+public class ToolWithProgressStreamableTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
@@ -32,48 +25,21 @@ public class ToolWithProgressStreamableTest extends StreamableHttpTest {
 
     @Test
     public void testToolWithProgress() {
-        String mcpSessionId = initSession();
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         String token = "abcd";
-        JsonObject msg1 = newMessage("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "bravo")
-                        .put("arguments", new JsonObject()
-                                .put("price", 10))
-                        .put("_meta", new JsonObject().put("progressToken", token)));
 
-        Map<String, String> headers = new HashMap<>(
-                defaultHeaders().entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString())));
-        headers.put(MCP_SESSION_ID_HEADER, mcpSessionId);
+        client.when()
+                .toolsCall("bravo")
+                .withArguments(Map.of("price", 10))
+                .withMetadata(Map.of("progressToken", token))
+                .withAssert(r -> {
+                    assertEquals("420", r.content().get(0).asText().text());
+                })
+                .send()
+                .thenAssertResults();
 
-        StreamableMcpSseClient client = new StreamableMcpSseClient(messageEndpoint, BodyPublishers.ofString(msg1.encode()),
-                headers);
-        client.connect();
-        List<JsonObject> notifications = client.waitForNotifications(1);
-        assertEquals(1, notifications.size());
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
         assertProgressNotification(notifications.get(0), token, 1, 1, null);
-
-        List<JsonObject> responses = client.waitForResponses(1);
-        assertResponse(responses, msg1, "420");
-    }
-
-    private void assertResponse(List<JsonObject> responses, JsonObject msg, String expectedText) {
-        JsonObject response = null;
-        for (JsonObject r : responses) {
-            if (r.getInteger("id") == msg.getInteger("id")) {
-                response = r;
-                break;
-            }
-        }
-        assertNotNull(response);
-
-        JsonObject result = assertResultResponse(msg, response);
-        assertNotNull(result);
-        assertFalse(result.getBoolean("isError"));
-        JsonArray content = result.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        assertEquals(expectedText, textContent.getString("text"));
     }
 
     protected void assertProgressNotification(JsonObject notification, String token, int progress, double total,

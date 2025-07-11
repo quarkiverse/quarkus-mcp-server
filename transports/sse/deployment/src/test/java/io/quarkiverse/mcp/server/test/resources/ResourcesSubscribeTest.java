@@ -15,6 +15,8 @@ import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -41,29 +43,29 @@ public class ResourcesSubscribeTest extends McpServerTest {
                                 List.of(TextResourceContents.create(args.requestUri().value(), "File 2"))))
                 .register();
 
-        initClient();
+        McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        send(newMessage("resources/subscribe")
+        client.sendAndForget(client.newMessage("resources/subscribe")
                 .put("params", new JsonObject().put("uri", uri1)));
-        send(newMessage("resources/subscribe")
+        client.sendAndForget(client.newMessage("resources/subscribe")
                 .put("params", new JsonObject().put("uri", uri2)));
 
         manager.getResource(uri1).sendUpdateAndForget();
         manager.getResource(uri2).sendUpdateAndForget();
 
-        List<JsonObject> notifications = client().waitForNotifications(2);
+        List<JsonObject> notifications = client.waitForNotifications(2).notifications();
         for (JsonObject n : notifications) {
             assertEquals("notifications/resources/updated", n.getString("method"));
             assertThat(n.getJsonObject("params").getString("uri")).isIn(List.of(uri1, uri2));
         }
 
-        send(newMessage("resources/unsubscribe")
+        client.sendAndForget(client.newMessage("resources/unsubscribe")
                 .put("params", new JsonObject().put("uri", uri1)));
 
         manager.getResource(uri1).sendUpdateAndForget();
         manager.getResource(uri2).sendUpdateAndForget();
 
-        notifications = client().waitForNotifications(3);
+        notifications = client.waitForNotifications(3).notifications();
         assertEquals("notifications/resources/updated", notifications.get(2).getString("method"));
         assertEquals(uri2, notifications.get(2).getJsonObject("params").getString("uri"));
     }

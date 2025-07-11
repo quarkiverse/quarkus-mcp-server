@@ -143,7 +143,8 @@ public interface McpServerRuntimeConfig {
     public interface Resources {
 
         /**
-         * If the number of resources exceeds the page size then pagination is enabled and the given page size is used.
+         * If the number of resources exceeds the page size then pagination is enabled and the given page size is used. The
+         * pagination is disabled if set to a value less or equal to zero.
          */
         @WithDefault("50")
         int pageSize();
@@ -154,6 +155,8 @@ public interface McpServerRuntimeConfig {
 
         /**
          * If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used.
+         * The
+         * pagination is disabled if set to a value less or equal to zero.
          */
         @WithDefault("50")
         int pageSize();
@@ -163,7 +166,8 @@ public interface McpServerRuntimeConfig {
     public interface Prompts {
 
         /**
-         * If the number of prompts exceeds the page size then pagination is enabled and the given page size is used.
+         * If the number of prompts exceeds the page size then pagination is enabled and the given page size is used. The
+         * pagination is disabled if set to a value less or equal to zero.
          */
         @WithDefault("50")
         int pageSize();
@@ -173,7 +177,8 @@ public interface McpServerRuntimeConfig {
     public interface Tools {
 
         /**
-         * If the number of tools exceeds the page size then pagination is enabled and the given page size is used.
+         * If the number of tools exceeds the page size then pagination is enabled and the given page size is used. The
+         * pagination is disabled if set to a value less or equal to zero.
          */
         @WithDefault("50")
         int pageSize();

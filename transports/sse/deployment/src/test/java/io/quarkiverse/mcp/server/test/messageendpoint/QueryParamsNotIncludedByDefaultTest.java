@@ -1,8 +1,6 @@
 package io.quarkiverse.mcp.server.test.messageendpoint;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,11 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class QueryParamsNotIncludedByDefaultTest extends McpServerTest {
 
@@ -26,37 +24,27 @@ public class QueryParamsNotIncludedByDefaultTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
-    @Override
-    protected String ssePath() {
-        return new StringBuilder().append("sse?")
-                .append("foo=1")
-                .append("&bar=2")
-                .toString();
-    }
-
     @Test
     public void testQueryParams() {
-        initClient();
-        assertNull(messageEndpoint.getQuery());
-        JsonObject msg = newToolCallMessage("queryParams");
-        send(msg);
-        assertToolTextContent(msg);
-    }
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setSsePath(new StringBuilder().append("/mcp/sse?")
+                        .append("foo=1")
+                        .append("&bar=2")
+                        .toString())
+                .build()
+                .connect();
 
-    private void assertToolTextContent(JsonObject msg) {
-        JsonObject response = client().waitForResponse(msg);
-        JsonObject result = assertResultResponse(msg, response);
-        assertNotNull(result);
-        assertFalse(result.getBoolean("isError"));
-        JsonArray content = result.getJsonArray("content");
-        assertEquals(1, content.size());
-        JsonObject textContent = content.getJsonObject(0);
-        assertEquals("text", textContent.getString("type"));
-        String text4 = textContent.getString("text");
-        assertFalse(text4.contains("foo=1"));
-        assertFalse(text4.contains("bar=2"));
-        // HttpServerRequest#params() also contains path params
-        assertTrue(text4.contains("id="));
+        client.when()
+                .toolsCall("queryParams", r -> {
+                    String text4 = r.content().get(0).asText().text();
+                    assertFalse(text4.contains("foo=1"));
+                    assertFalse(text4.contains("bar=2"));
+                    // HttpServerRequest#params() also contains path params
+                    assertTrue(text4.contains("id="));
+                })
+                .thenAssertResults();
+
+        assertNull(client.messageEndpoint().getQuery());
     }
 
     public static class MyTools {

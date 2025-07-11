@@ -1050,6 +1050,61 @@ quarkus.mcp.server.traffic-logging.text-limit=500 <2>
 <1> Enables traffic logging.
 <2> Set the number of characters of a JSON message which will be logged.
 
+== Testing
+
+The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient test utils for MCP servers.
+The starting point is the `io.quarkiverse.mcp.server.test.McpAssured` class.
+First, you create a new test client; the SSE and Streamable HTTP transports are supported at the moment.
+Then you create a group of MCP requests and corresponding assert functions.
+The MCP requests are sent immediately but the responses are not processed and the assert functions are not used until the `McpAssert#thenAssertResults()` method is called.
+A typical test for a tool looks like:
+
+.`McpAssured` Example
+[source,java]
+----
+package org.acme;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.net.URI;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
+
+@QuarkusTest
+public class ToolsAnswerTest {
+
+    @TestHTTPResource
+    URI testUri;
+
+    @Test
+    public void testAnswer() {
+        McpStreamableTestClient client = McpAssured <1>
+                .newStreamableClient()
+                .setBaseUri(testUri)
+                .build()
+                .connect();
+
+        client.when()
+                .toolsCall("theAnswer", Map.of("lang", "Java"), r -> { <2>
+                    assertEquals("Spaces are better for indentation.", r.content().get(0).asText().text());
+                })
+                .toolsCall("theAnswer", Map.of("lang", "python"), r -> {
+                    assertEquals("Tabs are better for indentation.", r.content().get(0).asText().text());
+                })
+                .thenAssertResults(); <3>
+    }
+}
+----
+<1> Create and connect a client.
+<2> Send an MCP request and register an assert function.
+<3> Wait for all responses and assert the results.
+
 == Dev UI
 
 The `quarkus-mcp-server-sse` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
