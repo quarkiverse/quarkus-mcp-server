@@ -6,28 +6,24 @@ import java.util.concurrent.ConcurrentMap;
 
 import jakarta.inject.Singleton;
 
+import io.quarkiverse.mcp.server.Cancellations;
+import io.quarkiverse.mcp.server.RequestId;
+
 @Singleton
-public class Cancellations {
+class CancellationsImpl implements Cancellations {
 
     // Map of connection ID -> set of cancelled request IDs
-    private final ConcurrentMap<String, Set<Object>> cancellationsByConnection = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Set<RequestId>> cancellationsByConnection = new ConcurrentHashMap<>();
 
-    /**
-     * Check if a request has been cancelled (MCP compliant)
-     *
-     * @param requestId the request identifier from MCP protocol
-     * @return true if the request has been cancelled, false otherwise
-     */
-    public boolean isCancelled(Object requestId) {
+    @Override
+    public boolean isCancelled(RequestId requestId) {
         return cancellationsByConnection.values().stream()
                 .anyMatch(cancelledRequests -> cancelledRequests.contains(requestId));
     }
 
-    /**
-     * Check if a request has been cancelled for a specific connection
-     */
-    public boolean isCancelled(String connectionId, Object requestId) {
-        Set<Object> cancelledRequests = cancellationsByConnection.get(connectionId);
+    @Override
+    public boolean isCancelled(String connectionId, RequestId requestId) {
+        Set<RequestId> cancelledRequests = cancellationsByConnection.get(connectionId);
         return cancelledRequests != null && cancelledRequests.contains(requestId);
     }
 
@@ -35,7 +31,7 @@ public class Cancellations {
      * Mark a request as cancelled (called by MCP notification handler)
      * This should be triggered by "notifications/cancelled" messages
      */
-    public void cancelRequest(String connectionId, Object requestId) {
+    void cancelRequest(String connectionId, RequestId requestId) {
         cancellationsByConnection.computeIfAbsent(connectionId, k -> ConcurrentHashMap.newKeySet())
                 .add(requestId);
     }
@@ -43,8 +39,8 @@ public class Cancellations {
     /**
      * Remove a request from tracking (when request completes)
      */
-    public void removeRequest(String connectionId, Object requestId) {
-        Set<Object> cancelledRequests = cancellationsByConnection.get(connectionId);
+    void removeRequest(String connectionId, RequestId requestId) {
+        Set<RequestId> cancelledRequests = cancellationsByConnection.get(connectionId);
         if (cancelledRequests != null) {
             cancelledRequests.remove(requestId);
             if (cancelledRequests.isEmpty()) {
@@ -56,7 +52,7 @@ public class Cancellations {
     /**
      * Clean up all cancellations for a connection (when MCP connection closes)
      */
-    public void cleanupConnection(String connectionId) {
+    void cleanupConnection(String connectionId) {
         cancellationsByConnection.remove(connectionId);
     }
 }
