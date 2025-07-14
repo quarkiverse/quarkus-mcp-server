@@ -11,8 +11,6 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
-import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
@@ -324,6 +322,8 @@ public class McpAssured {
             Builder setBasicAuth(String username, String password);
 
             /**
+             * Set a function that is used to produce additional HTTP headers for a specific message. The message input may be
+             * {@code null}.
              *
              * @param additionalHeaders
              * @return self
@@ -344,6 +344,13 @@ public class McpAssured {
              * @return self
              */
             Builder setMcpPath(String mcpPath);
+
+            /**
+             * If set to {@code true} then an subsidiary SSE stream is open to receive messages from the server.
+             *
+             * @return self
+             */
+            Builder setOpenSubsidiarySse(boolean value);
 
             /**
              *
