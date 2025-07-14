@@ -17,6 +17,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
+import io.vertx.core.http.HttpHeaders;
 
 public class TerminateSessionTest extends McpServerTest {
 
@@ -41,7 +42,16 @@ public class TerminateSessionTest extends McpServerTest {
         // Wait until the connection is removed
         Awaitility.await().until(() -> !connectionManager.has(client.mcpSessionId()));
 
-        // FIXME Send a ping but expect the 400 status code
+        // Send a ping but expect the 404 status code
+        RestAssured.given()
+                .when()
+                .headers(Map.of(MCP_SESSION_ID_HEADER, client.mcpSessionId(), HttpHeaders.ACCEPT + "",
+                        "application/json, text/event-stream"))
+                .body(client.newMessage(McpAssured.PING))
+                .post(client.mcpEndpoint())
+                .then()
+                .statusCode(404);
+
     }
 
     public static class MyTools {

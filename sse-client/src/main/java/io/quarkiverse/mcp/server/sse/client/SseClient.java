@@ -19,6 +19,8 @@ import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
+import io.vertx.core.MultiMap;
+
 public abstract class SseClient {
 
     private static final Logger LOG = Logger.getLogger(SseClient.class);
@@ -43,7 +45,7 @@ public abstract class SseClient {
         return connect(null, headers);
     }
 
-    protected HttpRequest buildConnectRequest(Map<String, String> headers) {
+    protected HttpRequest buildConnectRequest(MultiMap headers) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(connectUri)
                 .version(Version.HTTP_1_1)
@@ -54,6 +56,12 @@ public abstract class SseClient {
     }
 
     public CompletableFuture<HttpResponse<Void>> connect(HttpClient client, Map<String, String> headers) {
+        MultiMap h = MultiMap.caseInsensitiveMultiMap();
+        headers.forEach(h::add);
+        return connect(client, h);
+    }
+
+    public CompletableFuture<HttpResponse<Void>> connect(HttpClient client, MultiMap headers) {
         if (client == null) {
             client = HttpClient.newHttpClient();
         }

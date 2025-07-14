@@ -31,7 +31,7 @@ class McpLogImpl implements McpLog {
     public void send(LogLevel level, Object data) {
         if (isEnabled(Objects.requireNonNull(level))) {
             sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
-                    newLog(level, mcpLoggerName, encode(data))));
+                    Messages.newLog(level, mcpLoggerName, encode(data))));
         }
     }
 
@@ -39,7 +39,7 @@ class McpLogImpl implements McpLog {
     public void send(LogLevel level, String format, Object... params) {
         if (isEnabled(Objects.requireNonNull(level))) {
             sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
-                    newLog(level, mcpLoggerName, format.formatted(params))));
+                    Messages.newLog(level, mcpLoggerName, format.formatted(params))));
         }
     }
 
@@ -81,13 +81,6 @@ class McpLogImpl implements McpLog {
             return data;
         }
         return Json.encode(data);
-    }
-
-    private JsonObject newLog(LogLevel level, String loggerName, Object data) {
-        return new JsonObject()
-                .put("level", level.toString().toLowerCase())
-                .put("logger", loggerName)
-                .put("data", data);
     }
 
 }

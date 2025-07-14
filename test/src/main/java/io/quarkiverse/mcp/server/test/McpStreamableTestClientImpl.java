@@ -31,6 +31,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     private static final Logger LOG = Logger.getLogger(McpStreamableTestClientImpl.class);
 
     private final URI mcpEndpoint;
+    private final boolean openSubsidiarySse;
 
     private volatile McpStreamableClient client;
     private volatile String mcpSessionId;
@@ -40,6 +41,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 builder.autoPong, builder.basicAuth);
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
+        this.openSubsidiarySse = builder.openSubsidiarySse;
     }
 
     @Override
@@ -93,6 +95,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (response.statusCode() != 200) {
             throw new IllegalStateException(
                     "Initialization not finished successfully; HTTP response status: " + response.statusCode());
+        }
+
+        if (openSubsidiarySse) {
+            client.connectSubsidiarySse(additionalHeaders(null));
         }
 
         connected.set(true);
@@ -240,6 +246,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
         private boolean autoPong = true;
         private BasicAuth basicAuth;
+        private boolean openSubsidiarySse = false;
 
         @Override
         public McpStreamableTestClient.Builder setName(String clientName) {
@@ -316,6 +323,12 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 throw mustNotBeNull("password");
             }
             this.basicAuth = new BasicAuth(username, password);
+            return this;
+        }
+
+        @Override
+        public McpStreamableTestClient.Builder setOpenSubsidiarySse(boolean value) {
+            this.openSubsidiarySse = value;
             return this;
         }
 
