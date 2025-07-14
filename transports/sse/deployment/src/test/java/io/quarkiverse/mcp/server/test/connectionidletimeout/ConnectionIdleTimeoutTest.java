@@ -39,10 +39,10 @@ public class ConnectionIdleTimeoutTest extends McpServerTest {
         // Wait until the connection is removed
         Awaitility.await().until(() -> !connectionManager.has(id));
 
-        // Send a ping but expect the 400 status code
+        // Send a ping but expect the 404 status code
         client.when()
                 .validateHttpResponse(response -> {
-                    assertEquals(400, response.statusCode());
+                    assertEquals(404, response.statusCode());
                 })
                 .ping()
                 .send()

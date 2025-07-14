@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.vertx.core.json.JsonObject;
 
 public class Messages {
@@ -99,6 +100,13 @@ public class Messages {
             }
         }
         return null;
+    }
+
+    public static JsonObject newLog(LogLevel level, String loggerName, Object data) {
+        return new JsonObject()
+                .put("level", level.toString().toLowerCase())
+                .put("logger", loggerName)
+                .put("data", data);
     }
 
 }

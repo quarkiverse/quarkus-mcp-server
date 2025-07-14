@@ -93,7 +93,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
         McpConnectionBase connection = connectionManager.get(connectionId);
         if (connection == null) {
             LOG.errorf("Connection not found: %s", connectionId);
-            ctx.fail(400);
+            ctx.fail(404);
             return;
         }
 
