@@ -99,6 +99,11 @@ public class ToolAnnotationsTest extends McpServerTest {
             return "ok";
         }
 
+        @Tool(annotations = @Annotations(readOnlyHint = true, destructiveHint = false))
+        String withoutTitle() {
+            return "ok";
+        }
+
         @Tool
         String charlie() {
             return "nok";

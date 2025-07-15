@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -44,38 +42,24 @@ public class SamplingDefaultTimeoutTest extends McpServerTest {
 
     @Test
     public void testSampling() throws InterruptedException {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        try {
-            McpSseTestClient client = McpAssured.newSseClient()
-                    .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
-                    .build()
-                    .connect();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                .build()
+                .connect();
 
-            JsonObject request = client.newMessage("tools/call")
-                    .put("params", new JsonObject()
-                            .put("name", "samplingDefaultTimeout"));
+        JsonObject request = client.newMessage("tools/call")
+                .put("params", new JsonObject()
+                        .put("name", "samplingDefaultTimeout"));
+        client.sendAndForget(request);
 
-            // We need to send the request on a separate thread
-            // because the response is not completed until the sampling response is sent
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    client.sendAndForget(request);
-                }
-            });
-
-            // The server should send a sampling request
-            List<JsonObject> requests = client.waitForRequests(1).requests();
-            assertEquals("sampling/createMessage", requests.get(0).getString("method"));
-            Long id = requests.get(0).getLong("id");
-            // But the client does not respond...
-            assertTrue(MyTools.INIT_LATCH1.await(5, TimeUnit.SECONDS));
-            assertNotNull(MyTools.ERROR1.get());
-            assertFalse(responseHandlers.hasHandler(id));
-
-        } finally {
-            executor.shutdownNow();
-        }
+        // The server should send a sampling request
+        List<JsonObject> requests = client.waitForRequests(1).requests();
+        assertEquals("sampling/createMessage", requests.get(0).getString("method"));
+        Long id = requests.get(0).getLong("id");
+        // But the client does not respond...
+        assertTrue(MyTools.INIT_LATCH1.await(5, TimeUnit.SECONDS));
+        assertNotNull(MyTools.ERROR1.get());
+        assertFalse(responseHandlers.hasHandler(id));
     }
 
     @Singleton

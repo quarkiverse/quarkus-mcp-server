@@ -158,7 +158,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             throw new IllegalStateException("Client is not connected");
         }
         if (basicAuth != null) {
-            additionalHeaders.add("Authorization",
+            additionalHeaders.add(HEADER_AUTHORIZATION,
                     McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
         }
         client.send(data, additionalHeaders);
