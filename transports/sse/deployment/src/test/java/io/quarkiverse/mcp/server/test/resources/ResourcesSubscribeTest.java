@@ -45,11 +45,11 @@ public class ResourcesSubscribeTest extends McpServerTest {
 
         McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        JsonObject sub1 = client.newMessage("resources/subscribe")
+        JsonObject sub1 = client.newRequest("resources/subscribe")
                 .put("params", new JsonObject().put("uri", uri1));
         client.sendAndForget(sub1);
         client.waitForResponse(sub1);
-        JsonObject sub2 = client.newMessage("resources/subscribe")
+        JsonObject sub2 = client.newRequest("resources/subscribe")
                 .put("params", new JsonObject().put("uri", uri2));
         client.sendAndForget(sub2);
         client.waitForResponse(sub2);
@@ -63,7 +63,7 @@ public class ResourcesSubscribeTest extends McpServerTest {
             assertThat(n.getJsonObject("params").getString("uri")).isIn(List.of(uri1, uri2));
         }
 
-        JsonObject un1 = client.newMessage("resources/unsubscribe")
+        JsonObject un1 = client.newRequest("resources/unsubscribe")
                 .put("params", new JsonObject().put("uri", uri1));
         client.sendAndForget(un1);
         client.waitForResponse(un1);

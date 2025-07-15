@@ -30,7 +30,7 @@ public class PromptCompleteTest extends McpServerTest {
     @Test
     public void testCompletion() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
-        JsonObject completeMessage = client.newMessage("completion/complete")
+        JsonObject completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")
@@ -47,7 +47,7 @@ public class PromptCompleteTest extends McpServerTest {
         assertEquals(1, values.size());
         assertEquals("Vojtik", values.getString(0));
 
-        completeMessage = client.newMessage("completion/complete")
+        completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")

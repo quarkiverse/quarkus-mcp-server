@@ -27,6 +27,7 @@ class McpStreamableClient extends SseClient {
         this.state = new McpClientState();
     }
 
+    // impl. note: the response is not reflected in the client state object
     HttpResponse<String> sendSync(String body, MultiMap headers) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(mcpEndpoint)

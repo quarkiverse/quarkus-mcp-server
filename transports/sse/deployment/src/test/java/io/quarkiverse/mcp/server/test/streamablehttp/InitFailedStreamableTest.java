@@ -40,7 +40,7 @@ public class InitFailedStreamableTest extends McpServerTest {
     public void testFailures() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         URI mcpEndpoint = client.mcpEndpoint();
-        JsonObject initMessage = client.newMessage("initialize");
+        JsonObject initMessage = client.newRequest("initialize");
         JsonObject params = new JsonObject()
                 .put("clientInfo", new JsonObject()
                         .put("name", "test")

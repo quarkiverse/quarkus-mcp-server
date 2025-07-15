@@ -9,7 +9,10 @@ public record RequestId(Object value) {
 
     public RequestId {
         if (value == null) {
-            throw new IllegalArgumentException("messages must not be null");
+            throw new IllegalArgumentException("value must not be null");
+        }
+        if (!(value instanceof Number) && !(value instanceof String)) {
+            throw new IllegalArgumentException("value must be string or number");
         }
     }
 

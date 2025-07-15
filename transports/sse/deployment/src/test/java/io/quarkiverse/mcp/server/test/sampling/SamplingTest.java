@@ -38,7 +38,7 @@ public class SamplingTest extends McpServerTest {
                 .build()
                 .connect();
 
-        JsonObject request = client.newMessage("tools/call")
+        JsonObject request = client.newRequest("tools/call")
                 .put("params", new JsonObject()
                         .put("name", "samplingFoo"));
         client.sendAndForget(request);

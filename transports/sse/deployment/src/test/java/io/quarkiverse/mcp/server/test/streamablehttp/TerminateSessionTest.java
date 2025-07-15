@@ -47,7 +47,7 @@ public class TerminateSessionTest extends McpServerTest {
                 .when()
                 .headers(Map.of(MCP_SESSION_ID_HEADER, client.mcpSessionId(), HttpHeaders.ACCEPT + "",
                         "application/json, text/event-stream"))
-                .body(client.newMessage(McpAssured.PING))
+                .body(client.newRequest(McpAssured.PING))
                 .post(client.mcpEndpoint())
                 .then()
                 .statusCode(404);

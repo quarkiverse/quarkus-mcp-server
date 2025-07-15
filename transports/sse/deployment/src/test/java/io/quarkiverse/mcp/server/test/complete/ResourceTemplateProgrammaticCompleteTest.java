@@ -55,7 +55,7 @@ public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
                 .setHandler(args -> CompletionResponse.create(List.of()))
                 .register());
 
-        JsonObject completeMessage = client.newMessage("completion/complete")
+        JsonObject completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/resource")
@@ -73,7 +73,7 @@ public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
         assertEquals(1, values.size());
         assertEquals("Jachym", values.getString(0));
 
-        completeMessage = client.newMessage("completion/complete")
+        completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/resource")

@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -20,6 +21,7 @@ import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -68,6 +70,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     protected final Vertx vertx;
 
+    private final Set<String> ongoingRequests;
+
     private final McpMetadata metadata;
 
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
@@ -98,6 +102,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.config = config;
         this.metadata = metadata;
         this.vertx = vertx;
+        this.ongoingRequests = ConcurrentHashMap.newKeySet();
 
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
             validateServerConfigs();
@@ -298,6 +303,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     public static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     public static final String NOTIFICATIONS_MESSAGE = "notifications/message";
     public static final String NOTIFICATIONS_PROGRESS = "notifications/progress";
+    public static final String NOTIFICATIONS_CANCELLED = "notifications/cancelled";
     public static final String NOTIFICATIONS_TOOLS_LIST_CHANGED = "notifications/tools/list_changed";
     public static final String NOTIFICATIONS_RESOURCES_LIST_CHANGED = "notifications/resources/list_changed";
     public static final String NOTIFICATIONS_PROMPTS_LIST_CHANGED = "notifications/prompts/list_changed";
@@ -324,6 +330,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
         VertxContextSafetyToggle.setContextSafe(context, true);
         Promise<Void> ret = Promise.promise();
+        String ongoingId = ongoingId(message, mcpRequest);
+        if (ongoingId != null) {
+            ongoingRequests.add(ongoingId);
+        }
 
         context.runOnContext(v -> {
             mcpRequest.contextStart();
@@ -343,11 +353,16 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case LOGGING_SET_LEVEL -> setLogLevel(message, mcpRequest);
                 case Q_CLOSE -> close(message, mcpRequest);
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(mcpRequest);
+                case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 default -> mcpRequest.sender().send(
                         Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
             };
             future.onComplete(r -> {
                 mcpRequest.contextEnd();
+                if (ongoingId != null) {
+                    ongoingRequests.remove(ongoingId);
+                    mcpRequest.connection().removeCancellationRequest(message);
+                }
                 if (r.failed()) {
                     ret.fail(r.cause());
                 } else {
@@ -384,6 +399,33 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             }
         }
         return Future.succeededFuture();
+    }
+
+    private Future<Void> cancelRequest(JsonObject message, McpRequest mcpRequest) {
+        JsonObject params = message.getJsonObject("params");
+        if (params != null) {
+            Object requestId = params.getValue("requestId");
+            if (requestId != null && ongoingRequests.contains(ongoingId(requestId, mcpRequest))) {
+                String reason = params.getString("reason");
+                LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
+                        mcpRequest.connection().id());
+                mcpRequest.connection().addCancellationRequest(new RequestId(requestId), reason);
+            }
+        }
+        // Unknown, completed and invalid requests should be just ignored
+        return Future.succeededFuture();
+    }
+
+    private String ongoingId(JsonObject message, McpRequest mcpRequest) {
+        return ongoingId(Messages.isRequest(message) ? message.getValue("id") : null, mcpRequest);
+    }
+
+    private String ongoingId(Object requestId, McpRequest mcpRequest) {
+        if (requestId != null) {
+            return requestId + "::" + mcpRequest.connection().id();
+        } else {
+            return null;
+        }
     }
 
     private Future<Void> setLogLevel(JsonObject message, McpRequest mcpRequest) {

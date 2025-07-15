@@ -141,6 +141,13 @@ public class McpAssured {
 
         /**
          *
+         * @param method
+         * @return a new request message
+         */
+        JsonObject newRequest(String method);
+
+        /**
+         *
          * @return a new {@code initialize} message
          */
         JsonObject newInitMessage();
@@ -622,7 +629,7 @@ public class McpAssured {
             GenericMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
 
             /**
-             * Send a {@code ping} message to the server.
+             * Send the message to the server.
              *
              * @return the assert group
              */

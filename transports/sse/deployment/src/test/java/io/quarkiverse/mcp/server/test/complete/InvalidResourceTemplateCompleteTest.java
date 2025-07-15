@@ -22,7 +22,7 @@ public class InvalidResourceTemplateCompleteTest extends McpServerTest {
     @Test
     public void testError() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
-        JsonObject completeMessage = client.newMessage("completion/complete")
+        JsonObject completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")

@@ -92,8 +92,12 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     public JsonObject newMessage(String method) {
         return new JsonObject()
                 .put("jsonrpc", "2.0")
-                .put("method", method)
-                .put("id", nextRequestId());
+                .put("method", method);
+    }
+
+    @Override
+    public JsonObject newRequest(String method) {
+        return newMessage(method).put("id", nextRequestId());
     }
 
     @Override
@@ -148,15 +152,15 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         return error;
     }
 
-    protected JsonObject newMessage(String method, Consumer<JsonObject> paramsConsumer) {
+    protected JsonObject newRequest(String method, Consumer<JsonObject> paramsConsumer) {
         JsonObject params = new JsonObject();
         paramsConsumer.accept(params);
-        return newMessage(method)
+        return newRequest(method)
                 .put("params", params);
     }
 
     protected JsonObject newToolsCallMessage(String toolName, Map<String, Object> arguments, Map<String, Object> meta) {
-        return newMessage(McpAssured.TOOLS_CALL, p -> {
+        return newRequest(McpAssured.TOOLS_CALL, p -> {
             p.put("name", toolName);
             addMeta(p, meta);
             if (!arguments.isEmpty()) {
@@ -166,7 +170,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected JsonObject newListMessage(String method, Map<String, Object> meta, String cursor) {
-        return newMessage(method, p -> {
+        return newRequest(method, p -> {
             addMeta(p, meta);
             if (cursor != null) {
                 p.put("cursor", cursor);
@@ -181,7 +185,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected JsonObject newPromptsGetMessage(String promptName, Map<String, String> args, Map<String, Object> meta) {
-        return newMessage(McpAssured.PROMPTS_GET, p -> {
+        return newRequest(McpAssured.PROMPTS_GET, p -> {
             p.put("name", promptName);
             addMeta(p, meta);
             if (!args.isEmpty()) {
@@ -191,7 +195,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected JsonObject newResourcesReadMessage(String uri, Map<String, Object> meta) {
-        return newMessage(McpAssured.RESOURCES_READ, p -> {
+        return newRequest(McpAssured.RESOURCES_READ, p -> {
             p.put("uri", uri);
             addMeta(p, meta);
         });
@@ -199,7 +203,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
     @Override
     public JsonObject newInitMessage() {
-        JsonObject initMessage = newMessage("initialize");
+        JsonObject initMessage = newRequest("initialize");
         JsonObject params = new JsonObject()
                 .put("clientInfo", new JsonObject()
                         .put("name", name)
@@ -380,7 +384,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
             @Override
             public ASSERT send() {
-                JsonObject message = newMessage(McpAssured.PING);
+                JsonObject message = newRequest(McpAssured.PING);
                 doSend(message);
                 if (pongAssert) {
                     asserts.add(new PongAssert(message));

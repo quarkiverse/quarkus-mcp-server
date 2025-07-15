@@ -29,5 +29,6 @@ public record FeatureArgument(String name,
         PROGRESS,
         ROOTS,
         SAMPLING,
+        CANCELLATION,
     }
 }

@@ -24,7 +24,7 @@ public class InitPostAttemptTest extends McpServerTest {
     public void testFailures() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         URI sseEndpoint = client.sseEndpoint();
-        JsonObject initMessage = client.newMessage("initialize");
+        JsonObject initMessage = client.newRequest("initialize");
         JsonObject params = new JsonObject()
                 .put("clientInfo", new JsonObject()
                         .put("name", "test")
