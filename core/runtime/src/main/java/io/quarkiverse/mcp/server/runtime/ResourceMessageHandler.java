@@ -36,7 +36,8 @@ class ResourceMessageHandler extends MessageHandler {
         }
         LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
         manager.subscribe(resourceUri, mcpRequest);
-        return Future.succeededFuture();
+        // Send empty result
+        return mcpRequest.sender().sendResult(id, new JsonObject());
     }
 
     Future<Void> resourcesUnsubscribe(JsonObject message, McpRequest mcpRequest) {
@@ -48,7 +49,8 @@ class ResourceMessageHandler extends MessageHandler {
         }
         LOG.debugf("Unsubscribe to resource %s [id: %s]", resourceUri, id);
         manager.unsubscribe(resourceUri, mcpRequest.connection().id());
-        return Future.succeededFuture();
+        // Send empty result
+        return mcpRequest.sender().sendResult(id, new JsonObject());
     }
 
     Future<Void> resourcesList(JsonObject message, McpRequest mcpRequest) {

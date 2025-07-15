@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import jakarta.inject.Singleton;
 
@@ -35,54 +33,41 @@ public class SamplingTest extends McpServerTest {
 
     @Test
     public void testSampling() throws InterruptedException {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        try {
-            McpSseTestClient client = McpAssured.newSseClient()
-                    .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
-                    .build()
-                    .connect();
+        McpSseTestClient client = McpAssured.newSseClient()
+                .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
+                .build()
+                .connect();
 
-            JsonObject request = client.newMessage("tools/call")
-                    .put("params", new JsonObject()
-                            .put("name", "samplingFoo"));
+        JsonObject request = client.newMessage("tools/call")
+                .put("params", new JsonObject()
+                        .put("name", "samplingFoo"));
+        client.sendAndForget(request);
 
-            // We need to send the request on a separate thread
-            // because the response is not completed until the sampling response is sent
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    client.sendAndForget(request);
-                }
-            });
+        // The server should send a sampling request
+        List<JsonObject> requests = client.waitForRequests(1).requests();
+        assertEquals("sampling/createMessage", requests.get(0).getString("method"));
+        Long id = requests.get(0).getLong("id");
+        JsonObject response = new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("result", new JsonObject()
+                        .put("role", "assistant")
+                        .put("model", "claude-3-sonnet-20240307")
+                        .put("content", new JsonObject()
+                                .put("type", "text")
+                                .put("text", "It's ok buddy.")))
+                .put("id", id);
+        // Send the response back to the server
+        client.sendAndForget(response);
 
-            // The server should send a sampling request
-            List<JsonObject> requests = client.waitForRequests(1).requests();
-            assertEquals("sampling/createMessage", requests.get(0).getString("method"));
-            Long id = requests.get(0).getLong("id");
-            JsonObject response = new JsonObject()
-                    .put("jsonrpc", "2.0")
-                    .put("result", new JsonObject()
-                            .put("role", "assistant")
-                            .put("model", "claude-3-sonnet-20240307")
-                            .put("content", new JsonObject()
-                                    .put("type", "text")
-                                    .put("text", "It's ok buddy.")))
-                    .put("id", id);
-            // Send the response back to the server
-            client.sendAndForget(response);
-
-            JsonObject toolCallResponse = client.waitForResponse(request);
-            JsonObject toolCallResult = toolCallResponse.getJsonObject("result");
-            assertNotNull(toolCallResult);
-            assertFalse(toolCallResult.getBoolean("isError"));
-            JsonArray content = toolCallResult.getJsonArray("content");
-            assertEquals(1, content.size());
-            JsonObject textContent = content.getJsonObject(0);
-            assertEquals("text", textContent.getString("type"));
-            assertEquals("It's ok buddy.", textContent.getString("text"));
-        } finally {
-            executor.shutdownNow();
-        }
+        JsonObject toolCallResponse = client.waitForResponse(request);
+        JsonObject toolCallResult = toolCallResponse.getJsonObject("result");
+        assertNotNull(toolCallResult);
+        assertFalse(toolCallResult.getBoolean("isError"));
+        JsonArray content = toolCallResult.getJsonArray("content");
+        assertEquals(1, content.size());
+        JsonObject textContent = content.getJsonObject(0);
+        assertEquals("text", textContent.getString("type"));
+        assertEquals("It's ok buddy.", textContent.getString("text"));
     }
 
     @Singleton

@@ -52,6 +52,8 @@ import io.vertx.core.json.JsonObject;
 abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>>
         implements McpTestClient<ASSERT, CLIENT> {
 
+    protected static final String HEADER_AUTHORIZATION = "Authorization";
+
     protected final String name;
     protected final String version;
     protected final String protocolVersion;
