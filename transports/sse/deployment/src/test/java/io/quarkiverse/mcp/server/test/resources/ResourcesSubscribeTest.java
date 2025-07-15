@@ -45,10 +45,14 @@ public class ResourcesSubscribeTest extends McpServerTest {
 
         McpSseTestClient client = McpAssured.newConnectedSseClient();
 
-        client.sendAndForget(client.newMessage("resources/subscribe")
-                .put("params", new JsonObject().put("uri", uri1)));
-        client.sendAndForget(client.newMessage("resources/subscribe")
-                .put("params", new JsonObject().put("uri", uri2)));
+        JsonObject sub1 = client.newMessage("resources/subscribe")
+                .put("params", new JsonObject().put("uri", uri1));
+        client.sendAndForget(sub1);
+        client.waitForResponse(sub1);
+        JsonObject sub2 = client.newMessage("resources/subscribe")
+                .put("params", new JsonObject().put("uri", uri2));
+        client.sendAndForget(sub2);
+        client.waitForResponse(sub2);
 
         manager.getResource(uri1).sendUpdateAndForget();
         manager.getResource(uri2).sendUpdateAndForget();
@@ -59,8 +63,10 @@ public class ResourcesSubscribeTest extends McpServerTest {
             assertThat(n.getJsonObject("params").getString("uri")).isIn(List.of(uri1, uri2));
         }
 
-        client.sendAndForget(client.newMessage("resources/unsubscribe")
-                .put("params", new JsonObject().put("uri", uri1)));
+        JsonObject un1 = client.newMessage("resources/unsubscribe")
+                .put("params", new JsonObject().put("uri", uri1));
+        client.sendAndForget(un1);
+        client.waitForResponse(un1);
 
         manager.getResource(uri1).sendUpdateAndForget();
         manager.getResource(uri2).sendUpdateAndForget();

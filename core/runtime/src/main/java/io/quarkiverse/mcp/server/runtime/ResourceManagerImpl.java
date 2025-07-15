@@ -110,12 +110,14 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     private void sendUpdateNotifications(String uri) {
         JsonObject updated = Messages.newNotification("notifications/resources/updated", new JsonObject().put("uri", uri));
         List<String> ids = subscribers.get(uri);
-        for (String connectionId : ids) {
-            McpConnectionBase connection = connectionManager.get(connectionId);
-            if (connection != null) {
-                connection.send(updated);
-            } else {
-                unsubscribe(uri, connectionId);
+        if (ids != null) {
+            for (String connectionId : ids) {
+                McpConnectionBase connection = connectionManager.get(connectionId);
+                if (connection != null) {
+                    connection.send(updated);
+                } else {
+                    unsubscribe(uri, connectionId);
+                }
             }
         }
     }

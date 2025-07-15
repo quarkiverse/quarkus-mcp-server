@@ -4,8 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Version;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,10 +39,6 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpSseAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
 import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
-import io.restassured.RestAssured;
-import io.restassured.http.Header;
-import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -45,6 +48,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     private static final Logger LOG = Logger.getLogger(McpSseTestClientImpl.class);
 
     private final URI sseEndpoint;
+    private final HttpClient httpClient;
     private final boolean expectSseConnectionFailure;
 
     private volatile McpSseClient client;
@@ -55,6 +59,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 builder.autoPong, builder.basicAuth);
         this.sseEndpoint = createEndpointUri(builder.baseUri, builder.ssePath);
         this.expectSseConnectionFailure = builder.expectSseConnectionFailure;
+        this.httpClient = HttpClient.newHttpClient();
         LOG.debugf("McpSseTestClient created with SSE endpoint: %s", sseEndpoint);
     }
 
@@ -77,7 +82,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 String method = m.getString("method");
                 if (method != null && "ping".equals(method)) {
                     JsonObject pong = Messages.newResult(m.getValue("id"), new JsonObject());
-                    send(pong, MultiMap.caseInsensitiveMultiMap(), clientBasicAuth);
+                    sendAndForget(pong);
                 }
             });
         }
@@ -118,7 +123,8 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         connected.set(true);
 
         JsonObject initMessage = newInitMessage();
-        send(initMessage, additionalHeaders.apply(initMessage), clientBasicAuth).then().statusCode(200);
+        HttpResponse response = sendSync(initMessage, additionalHeaders.apply(initMessage), clientBasicAuth);
+        assertEquals(200, response.statusCode());
 
         JsonObject initResponse = client.state.waitForResponse(initMessage);
         JsonObject initResult = assertResultResponse(initMessage, initResponse);
@@ -141,14 +147,16 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
-        send(nofitication, additionalHeaders.apply(nofitication), clientBasicAuth).then().statusCode(200);
+        response = sendSync(nofitication, additionalHeaders.apply(nofitication), clientBasicAuth);
+        assertEquals(200, response.statusCode());
         return this;
     }
 
     @Override
     public void disconnect() {
         JsonObject message = newMessage("q/close");
-        send(message, additionalHeaders.apply(message), clientBasicAuth).then().statusCode(200);
+        HttpResponse response = sendSync(message, additionalHeaders.apply(message), clientBasicAuth);
+        assertEquals(200, response.statusCode());
         messageEndpoint = null;
         connected.set(false);
         client = null;
@@ -177,7 +185,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     @Override
     public void sendAndForget(JsonObject message) {
-        send(message, additionalHeaders.apply(message), clientBasicAuth);
+        sendAsync(message.encode(), additionalHeaders.apply(message), clientBasicAuth);
     }
 
     class McpSseAssertImpl extends McpAssertBase implements McpSseAssert {
@@ -226,14 +234,10 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
 
         protected void doSend(JsonObject message) {
-            Response response = send(message, additionalHeaders(message), basicAuth.get());
+            HttpResponse response = sendSync(message, additionalHeaders(message), basicAuth.get());
             Consumer<HttpResponse> validator = httpResponseValidator.get();
             if (validator != null) {
-                MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
-                for (Header header : response.headers()) {
-                    responseHeaders.add(header.getName(), header.getValue());
-                }
-                validator.accept(new HttpResponse(response.statusCode(), responseHeaders, response.body().asString()));
+                validator.accept(response);
             }
         }
 
@@ -274,14 +278,10 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             if (additionalHeaders != null) {
                 headers.addAll(additionalHeaders);
             }
-            Response response = send(batch, headers, basicAuth.get());
+            HttpResponse response = sendSync(batch, headers, basicAuth.get());
             Consumer<HttpResponse> validator = httpResponseValidator.get();
             if (validator != null) {
-                MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
-                for (Header header : response.headers()) {
-                    responseHeaders.add(header.getName(), header.getValue());
-                }
-                validator.accept(new HttpResponse(response.statusCode(), responseHeaders, response.body().asString()));
+                validator.accept(response);
             }
             return super.thenAssertResults();
         }
@@ -395,36 +395,62 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     }
 
-    private Response send(JsonObject message, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        return send(message.encode(), additionalHeaders, basicAuth);
+    private HttpResponse sendSync(JsonObject message, MultiMap additionalHeaders, BasicAuth basicAuth) {
+        return sendSync(message.encode(), additionalHeaders, basicAuth);
     }
 
-    private Response send(JsonArray batch, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        return send(batch.encode(), additionalHeaders, basicAuth);
+    private HttpResponse sendSync(JsonArray batch, MultiMap additionalHeaders, BasicAuth basicAuth) {
+        return sendSync(batch.encode(), additionalHeaders, basicAuth);
     }
 
-    private Response send(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+    private CompletableFuture<java.net.http.HttpResponse<String>> sendAsync(String data, MultiMap additionalHeaders,
+            BasicAuth basicAuth) {
         if (!connected.get()) {
             throw new IllegalStateException("Client is not connected");
         }
-        RequestSpecification request = RestAssured.given()
-                .urlEncodingEnabled(false);
+        return httpClient.sendAsync(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+    }
+
+    private HttpResponse sendSync(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+        if (!connected.get()) {
+            throw new IllegalStateException("Client is not connected");
+        }
+        java.net.http.HttpResponse<String> r;
+        try {
+            r = httpClient.send(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+            MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
+            for (Entry<String, List<String>> e : r.headers().map().entrySet()) {
+                for (String val : e.getValue()) {
+                    responseHeaders.add(e.getKey(), val);
+                }
+            }
+            return new HttpResponse(r.statusCode(), responseHeaders, r.body());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private HttpRequest buildRequest(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(messageEndpoint)
+                .version(Version.HTTP_1_1)
+                .header("Accept", "application/json")
+                .POST(BodyPublishers.ofString(data));
+        additionalHeaders.forEach(builder::header);
+
         if (basicAuth != null) {
             if (!basicAuth.isEmpty()) {
-                request.auth()
-                        .preemptive()
-                        .basic(basicAuth.username(), basicAuth.password());
+                builder.header(HEADER_AUTHORIZATION,
+                        McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
             }
         } else if (clientBasicAuth != null) {
-            request.auth()
-                    .preemptive()
-                    .basic(clientBasicAuth.username(), clientBasicAuth.password());
+            builder.header(HEADER_AUTHORIZATION,
+                    McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
         }
-        for (Entry<String, String> e : additionalHeaders) {
-            request.header(new Header(e.getKey(), e.getValue()));
-        }
-        return request.body(data)
-                .post(messageEndpoint);
+        return builder.build();
     }
 
     @Override
