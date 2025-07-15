@@ -971,7 +971,7 @@ class McpServerProcessor {
             toolAnnotations = metaMethod.newInstance(
                     MethodDescriptor.ofConstructor(ToolManager.ToolAnnotations.class, String.class, boolean.class,
                             boolean.class, boolean.class, boolean.class),
-                    metaMethod.load(annotations.title()),
+                    annotations.title() == null ? metaMethod.loadNull() : metaMethod.load(annotations.title()),
                     metaMethod.load(annotations.readOnlyHint()),
                     metaMethod.load(annotations.destructiveHint()),
                     metaMethod.load(annotations.idempotentHint()),
