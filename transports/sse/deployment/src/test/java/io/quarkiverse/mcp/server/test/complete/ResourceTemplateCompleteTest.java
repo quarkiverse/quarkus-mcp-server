@@ -23,7 +23,7 @@ public class ResourceTemplateCompleteTest extends McpServerTest {
     @Test
     public void testCompletion() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
-        JsonObject completeMessage = client.newMessage("completion/complete")
+        JsonObject completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/resource")
@@ -41,7 +41,7 @@ public class ResourceTemplateCompleteTest extends McpServerTest {
         assertEquals(1, values.size());
         assertEquals("Jachym", values.getString(0));
 
-        completeMessage = client.newMessage("completion/complete")
+        completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/resource")

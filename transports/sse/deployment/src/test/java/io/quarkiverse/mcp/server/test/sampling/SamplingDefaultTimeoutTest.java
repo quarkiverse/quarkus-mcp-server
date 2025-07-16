@@ -47,7 +47,7 @@ public class SamplingDefaultTimeoutTest extends McpServerTest {
                 .build()
                 .connect();
 
-        JsonObject request = client.newMessage("tools/call")
+        JsonObject request = client.newRequest("tools/call")
                 .put("params", new JsonObject()
                         .put("name", "samplingDefaultTimeout"));
         client.sendAndForget(request);

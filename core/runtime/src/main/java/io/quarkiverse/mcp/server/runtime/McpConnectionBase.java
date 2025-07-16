@@ -3,13 +3,17 @@ package io.quarkiverse.mcp.server.runtime;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.vertx.core.json.JsonObject;
 
 public abstract class McpConnectionBase implements McpConnection, Sender {
 
@@ -29,6 +33,8 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final long idleTimeout;
 
+    protected final ConcurrentMap<RequestId, Optional<String>> cancellationRequests;
+
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
@@ -40,6 +46,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.autoPingInterval = serverConfig.autoPingInterval();
         this.lastUsed = new AtomicLong(Instant.now().toEpochMilli());
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
+        this.cancellationRequests = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -100,6 +107,20 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
             return false;
         }
         return Instant.now().minusMillis(lastUsed.get()).toEpochMilli() > idleTimeout;
+    }
+
+    Optional<String> getCancellationRequest(RequestId requestId) {
+        return cancellationRequests.get(requestId);
+    }
+
+    void addCancellationRequest(RequestId requestId, String reason) {
+        cancellationRequests.put(requestId, Optional.ofNullable(reason));
+    }
+
+    void removeCancellationRequest(JsonObject request) {
+        if (!cancellationRequests.isEmpty()) {
+            cancellationRequests.remove(new RequestId(request.getValue("id")));
+        }
     }
 
 }

@@ -157,6 +157,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = RootsImpl.from(argProviders);
             } else if (arg.provider() == Provider.SAMPLING) {
                 ret[idx] = SamplingImpl.from(argProviders);
+            } else if (arg.provider() == Provider.CANCELLATION) {
+                ret[idx] = CancellationImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.defaultValue() != null) {

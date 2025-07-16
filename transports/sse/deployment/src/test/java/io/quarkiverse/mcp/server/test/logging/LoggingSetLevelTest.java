@@ -36,7 +36,7 @@ public class LoggingSetLevelTest extends McpServerTest {
 
         assertLog(notifications.get(0), LogLevel.INFO, "tool:charlie", "Charlie does not work on MONDAY");
 
-        JsonObject setLogLevelMessage = client.newMessage("logging/setLevel")
+        JsonObject setLogLevelMessage = client.newRequest("logging/setLevel")
                 .put("params", new JsonObject()
                         .put("level", LogLevel.CRITICAL.toString().toLowerCase()));
         client.when()

@@ -58,7 +58,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
                         List.of(), 0, false))
                 .register());
 
-        JsonObject completeMessage = client.newMessage("completion/complete")
+        JsonObject completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")
@@ -76,7 +76,7 @@ public class PromptProgrammaticCompleteTest extends McpServerTest {
         assertEquals(1, values.size());
         assertEquals("Vojtik", values.getString(0));
 
-        completeMessage = client.newMessage("completion/complete")
+        completeMessage = client.newRequest("completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
                                 .put("type", "ref/prompt")

@@ -136,6 +136,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Completion API
 
@@ -185,6 +186,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Programmatic API
 
@@ -271,6 +273,7 @@ A `@Resource` method may accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Programmatic API
 
@@ -376,6 +379,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Completion API
 
@@ -425,6 +429,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Programmatic API
 
@@ -522,6 +527,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
 
 === Programmatic API
 
@@ -866,6 +872,38 @@ public class MyTools {
 <2> If sampling is supported a convenient builder can be used to construct a `SamplingRequest`.
 <3> The server sends a sampling request and when a sampling response returns the tool method completes.
 
+
+== Cancellation
+
+MCP supports optional cancellation of in-progress requests.
+The `io.quarkiverse.mcp.server.Cancellation` interface can be used to determine if an MCP client requested a cancellation of the current request.
+Feature methods can accept this class as a parameter.
+It will be automatically injected before the method is invoked.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+   @Tool(description = "A tool that may be cancelled")
+   String myTool(Cancellation cancellation) { <1>
+       while (someCondition) {
+          if (cancellation.check().isRequested()) { <2> <3>
+            throw new OperationCancellationException();
+          }
+          // do something...
+          TimeUnit.MILLISECONDS.sleep(500);
+       }
+       return "OK";
+   }
+}
+----
+<1> The `Cancellation` parameter is injected automatically.
+<2> Perform the check and if cancellation is requested then skip the processing, i.e. throw an `OperationCancellationException`.
+<3> The convenient method `Cancellation#skipProcessingIfCancelled()` can be used instead.
+ 
 == Security
 
 In case of using the HTTP/SSE transport, you can secure the MCP SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].

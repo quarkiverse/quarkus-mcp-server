@@ -616,7 +616,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.REQUEST_URI)
                         || paramType.name().equals(DotNames.PROGRESS)
                         || paramType.name().equals(DotNames.ROOTS)
-                        || paramType.name().equals(DotNames.SAMPLING)) {
+                        || paramType.name().equals(DotNames.SAMPLING)
+                        || paramType.name().equals(DotNames.CANCELLATION)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -876,7 +877,7 @@ class McpServerProcessor {
                     && !param.type().name().equals(DotNames.ROOTS)
                     && !param.type().name().equals(DotNames.SAMPLING)) {
                 throw new IllegalStateException(
-                        "Notification methods must only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling]: "
+                        "Notification methods may only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling]: "
                                 + methodDesc(method));
             }
         }
@@ -1025,6 +1026,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.ROOTS;
         } else if (type.name().equals(DotNames.SAMPLING)) {
             return FeatureArgument.Provider.SAMPLING;
+        } else if (type.name().equals(DotNames.CANCELLATION)) {
+            return FeatureArgument.Provider.CANCELLATION;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.jboss.jandex.DotName;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.CompletePrompt;
 import io.quarkiverse.mcp.server.CompleteResourceTemplate;
@@ -91,6 +92,7 @@ class DotNames {
     static final DotName ROOTS = DotName.createSimple(Roots.class);
     static final DotName RUN_ON_VIRTUAL_THREAD = DotName.createSimple(RunOnVirtualThread.class);
     static final DotName SAMPLING = DotName.createSimple(Sampling.class);
+    static final DotName CANCELLATION = DotName.createSimple(Cancellation.class);
     static final DotName STRING = DotName.createSimple(String.class);
     static final DotName TEXT_CONTENT = DotName.createSimple(TextContent.class);
     static final DotName TEXT_RESOURCE_CONTENTS = DotName.createSimple(TextResourceContents.class);

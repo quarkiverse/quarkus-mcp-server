@@ -71,6 +71,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         LOG.infof("Mcp-Session-Id received: %s", mcpSessionId);
 
         JsonObject initResponse = new JsonObject(response.body());
+        client.state.responses.add(initResponse);
         JsonObject initResult = assertResultResponse(initMessage, initResponse);
         assertNotNull(initResult);
 
@@ -92,7 +93,8 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
         response = client.sendSync(nofitication.encode(), additionalHeaders(nofitication));
-        if (response.statusCode() != 200) {
+        // The server must respond with 202 for response or notification
+        if (response.statusCode() != 202) {
             throw new IllegalStateException(
                     "Initialization not finished successfully; HTTP response status: " + response.statusCode());
         }

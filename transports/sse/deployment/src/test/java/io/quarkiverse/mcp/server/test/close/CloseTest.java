@@ -35,7 +35,7 @@ public class CloseTest extends McpServerTest {
 
         // Send "q/close"
         client.when()
-                .message(client.newMessage("q/close"))
+                .message(client.newRequest("q/close"))
                 .send()
                 .thenAssertResults();
 
