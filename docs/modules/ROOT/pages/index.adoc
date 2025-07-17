@@ -1090,12 +1090,16 @@ quarkus.mcp.server.traffic-logging.text-limit=500 <2>
 
 == Testing
 
-The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient test utils for MCP servers.
+The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient utils to test your MCP server.
 The starting point is the `io.quarkiverse.mcp.server.test.McpAssured` class.
-First, you create a new test client; the SSE and Streamable HTTP transports are supported at the moment.
-Then you create a group of MCP requests and corresponding assert functions.
+First, you need to create a new test client. 
+Currently, the clients for SSE and Streamable HTTP transports are supported.
+The workflow continues as follows.
+You create a group of MCP requests and corresponding assert functions.
 The MCP requests are sent immediately but the responses are not processed and the assert functions are not used until the `McpAssert#thenAssertResults()` method is called.
-A typical test for a tool looks like:
+In other words, the `McpAssert#thenAssertResults()` blocks and waits for all results; then all assert functions are applied. 
+You can create as many groups as you need.
+A typical test for a `@Tool` may look like:
 
 .`McpAssured` Example
 [source,java]
@@ -1104,29 +1108,20 @@ package org.acme;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URI;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 public class ToolsAnswerTest {
 
-    @TestHTTPResource
-    URI testUri;
-
     @Test
     public void testAnswer() {
-        McpStreamableTestClient client = McpAssured <1>
-                .newStreamableClient()
-                .setBaseUri(testUri)
-                .build()
-                .connect();
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient(); <1>
 
         client.when()
                 .toolsCall("theAnswer", Map.of("lang", "Java"), r -> { <2>
@@ -1139,7 +1134,7 @@ public class ToolsAnswerTest {
     }
 }
 ----
-<1> Create and connect a client.
+<1> Create and connect a client. If you need to configure the client use the builder returned by `McpAssured#newStreamableClient()` instead.
 <2> Send an MCP request and register an assert function.
 <3> Wait for all responses and assert the results.
 
