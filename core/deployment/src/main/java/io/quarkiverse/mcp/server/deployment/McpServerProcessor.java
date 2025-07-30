@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -568,7 +569,7 @@ class McpServerProcessor {
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
                     transformedAnnotations,
-                    DotNames.NOTIFICATION);
+                    null);
         }
         notificationsMethod.returnValue(retNotifications);
 
@@ -697,6 +698,9 @@ class McpServerProcessor {
         }
     }
 
+    private static final Set<DotName> ARG_ANNOTATIONS = Set.of(DotNames.TOOL_ARG, DotNames.PROMPT_ARG, DotNames.COMPLETE_ARG,
+            DotNames.RESOURCE_TEMPLATE_ARG);
+
     private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation,
             List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index) {
         if (Modifier.isStatic(method.flags())) {
@@ -707,6 +711,25 @@ class McpServerProcessor {
         }
         if (method.returnType().kind() == Kind.VOID && feature != NOTIFICATION) {
             throw new IllegalStateException(feature + " method may not return void: " + methodDesc(method));
+        }
+        for (MethodParameterInfo param : method.parameters()) {
+            DotName argAnnotation = switch (feature) {
+                case TOOL -> DotNames.TOOL_ARG;
+                case PROMPT -> DotNames.PROMPT_ARG;
+                case RESOURCE_TEMPLATE -> DotNames.RESOURCE_TEMPLATE_ARG;
+                case PROMPT_COMPLETE, RESOURCE_TEMPLATE_COMPLETE -> DotNames.COMPLETE_ARG;
+                default -> null;
+            };
+            Set<DotName> invalidAnnotations = new HashSet<>(ARG_ANNOTATIONS);
+            if (argAnnotation != null) {
+                invalidAnnotations.remove(argAnnotation);
+            }
+            for (DotName invalidAnnotation : invalidAnnotations) {
+                if (param.hasDeclaredAnnotation(invalidAnnotation)) {
+                    throw new IllegalStateException("Parameter of a %s method may not be annotated with @%s: %s"
+                            .formatted(feature, invalidAnnotation.withoutPackagePrefix(), methodDesc(method)));
+                }
+            }
         }
         switch (feature) {
             case PROMPT -> validatePromptMethod(method);
@@ -956,6 +979,15 @@ class McpServerProcessor {
                     required = false;
                 }
             }
+
+            // Fail the build if argument name is not available
+            if (name == null) {
+                throw new IllegalStateException(
+                        "Missing argument name - compile the class %s with -parameters or define the name explicitly with @%s"
+                                .formatted(featureMethod.getMethod().declaringClass().name(),
+                                        argAnnotationName.withoutPackagePrefix()));
+            }
+
             ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
             ResultHandle provider = metaMethod.load(providerFrom(param.type()));
             ResultHandle arg = metaMethod.newInstance(
