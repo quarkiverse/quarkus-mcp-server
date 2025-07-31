@@ -172,7 +172,8 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),
                     RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders));
+                    SamplingImpl.from(argumentProviders),
+                    CancellationImpl.from(argumentProviders));
         }
 
     }

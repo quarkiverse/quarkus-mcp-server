@@ -1,10 +1,12 @@
 package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.ToolArguments;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -55,6 +58,15 @@ public class ProgrammaticToolTest extends McpServerTest {
                 .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.content().get(0).asText().text()))
                 .thenAssertResults();
 
+        ToolArguments lastArgs = MyTools.lastArgs.get();
+        assertNotNull(lastArgs.connection());
+        assertNotNull(lastArgs.progress());
+        assertNotNull(lastArgs.requestId());
+        assertNotNull(lastArgs.log());
+        assertNotNull(lastArgs.roots());
+        assertNotNull(lastArgs.sampling());
+        assertNotNull(lastArgs.cancellation());
+
         myTools.register("bravo", "3");
 
         client.when()
@@ -76,6 +88,8 @@ public class ProgrammaticToolTest extends McpServerTest {
     @Singleton
     public static class MyTools {
 
+        static final AtomicReference<ToolArguments> lastArgs = new AtomicReference<>();
+
         @Inject
         ToolManager manager;
 
@@ -84,7 +98,10 @@ public class ProgrammaticToolTest extends McpServerTest {
                     .setDescription(name + " description!")
                     .addArgument("foo", "Foo arg", true, int.class)
                     .setHandler(
-                            args -> ToolResponse.success(result + args.args().get("foo")))
+                            toolArgs -> {
+                                lastArgs.set(toolArgs);
+                                return ToolResponse.success(result + toolArgs.args().get("foo"));
+                            })
                     .register();
         }
 

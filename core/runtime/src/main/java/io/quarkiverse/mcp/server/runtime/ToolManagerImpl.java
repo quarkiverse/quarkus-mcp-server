@@ -361,7 +361,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),
                     RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders));
+                    SamplingImpl.from(argumentProviders),
+                    CancellationImpl.from(argumentProviders));
         }
 
     }

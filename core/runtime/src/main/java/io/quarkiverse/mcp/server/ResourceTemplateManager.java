@@ -69,8 +69,9 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
 
     }
 
+    // TODO: replace this record with an interface that extends a common ancestor
     record ResourceTemplateArguments(Map<String, String> args, McpConnection connection, McpLog log, RequestId requestId,
-            RequestUri requestUri, Progress progress, Roots roots, Sampling sampling) {
+            RequestUri requestUri, Progress progress, Roots roots, Sampling sampling, Cancellation cancellation) {
 
     }
 

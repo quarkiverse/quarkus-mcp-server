@@ -113,8 +113,8 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         return cancellationRequests.get(requestId);
     }
 
-    void addCancellationRequest(RequestId requestId, String reason) {
-        cancellationRequests.put(requestId, Optional.ofNullable(reason));
+    boolean addCancellationRequest(RequestId requestId, String reason) {
+        return cancellationRequests.putIfAbsent(requestId, Optional.ofNullable(reason)) == null;
     }
 
     void removeCancellationRequest(JsonObject request) {
