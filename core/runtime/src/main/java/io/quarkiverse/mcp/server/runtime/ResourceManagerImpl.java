@@ -294,7 +294,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     new RequestUri(argumentProviders.uri()),
                     ProgressImpl.from(argumentProviders),
                     RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders));
+                    SamplingImpl.from(argumentProviders),
+                    CancellationImpl.from(argumentProviders));
         }
 
         @Override

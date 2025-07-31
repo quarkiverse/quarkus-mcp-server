@@ -405,14 +405,18 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         JsonObject params = message.getJsonObject("params");
         if (params != null) {
             Object requestId = params.getValue("requestId");
-            if (requestId != null && ongoingRequests.contains(ongoingId(requestId, mcpRequest))) {
+            // Unknown, completed and invalid requests should be just ignored
+            if (requestId != null
+                    && ongoingRequests.contains(ongoingId(requestId, mcpRequest))
+                    && mcpRequest.connection().addCancellationRequest(new RequestId(requestId), params.getString("reason"))) {
                 String reason = params.getString("reason");
                 LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
                         mcpRequest.connection().id());
-                mcpRequest.connection().addCancellationRequest(new RequestId(requestId), reason);
+            } else {
+                LOG.warnf("Ignored unknown/completed/invalid cancel request with id %s [%s]", requestId,
+                        mcpRequest.connection().id());
             }
         }
-        // Unknown, completed and invalid requests should be just ignored
         return Future.succeededFuture();
     }
 

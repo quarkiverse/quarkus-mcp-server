@@ -235,7 +235,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                     new RequestId(argumentProviders.requestId()),
                     ProgressImpl.from(argumentProviders),
                     RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders));
+                    SamplingImpl.from(argumentProviders),
+                    CancellationImpl.from(argumentProviders));
         }
 
         @Override

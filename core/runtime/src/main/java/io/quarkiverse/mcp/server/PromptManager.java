@@ -72,8 +72,9 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
 
     }
 
+    // TODO: replace this record with an interface that extends a common ancestor
     record PromptArguments(Map<String, String> args, McpConnection connection, McpLog log, RequestId requestId,
-            Progress progress, Roots roots, Sampling sampling) {
+            Progress progress, Roots roots, Sampling sampling, Cancellation cancellation) {
     }
 
     record PromptArgument(String name, String description, boolean required, String defaultValue) {

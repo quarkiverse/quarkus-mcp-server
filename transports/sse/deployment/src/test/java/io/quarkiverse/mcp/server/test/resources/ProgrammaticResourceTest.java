@@ -1,9 +1,11 @@
 package io.quarkiverse.mcp.server.test.resources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.ResourceManager.ResourceArguments;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
@@ -56,6 +59,15 @@ public class ProgrammaticResourceTest extends McpServerTest {
                 .resourcesRead("file:///alpha", r -> assertEquals("2", r.contents().get(0).asText().text()))
                 .thenAssertResults();
 
+        ResourceArguments lastArgs = MyResources.lastArgs.get();
+        assertNotNull(lastArgs.connection());
+        assertNotNull(lastArgs.progress());
+        assertNotNull(lastArgs.requestId());
+        assertNotNull(lastArgs.log());
+        assertNotNull(lastArgs.roots());
+        assertNotNull(lastArgs.sampling());
+        assertNotNull(lastArgs.cancellation());
+
         myResources.register("bravo", "3");
 
         client.when()
@@ -83,6 +95,8 @@ public class ProgrammaticResourceTest extends McpServerTest {
     @Singleton
     public static class MyResources {
 
+        static final AtomicReference<ResourceArguments> lastArgs = new AtomicReference<>();
+
         @Inject
         ResourceManager manager;
 
@@ -91,8 +105,11 @@ public class ProgrammaticResourceTest extends McpServerTest {
                     .setUri("file:///" + name)
                     .setDescription(name + " description!")
                     .setHandler(
-                            args -> new ResourceResponse(
-                                    List.of(TextResourceContents.create(args.requestUri().value(), result))))
+                            resourceArgs -> {
+                                lastArgs.set(resourceArgs);
+                                return new ResourceResponse(
+                                        List.of(TextResourceContents.create(resourceArgs.requestUri().value(), result)));
+                            })
                     .register();
         }
 
