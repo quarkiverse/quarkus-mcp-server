@@ -1,10 +1,12 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.PromptManager.PromptArguments;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.TextContent;
@@ -60,6 +63,15 @@ public class ProgrammaticPromptTest extends McpServerTest {
                 })
                 .thenAssertResults();
 
+        PromptArguments lastArgs = MyPrompts.lastArgs.get();
+        assertNotNull(lastArgs.connection());
+        assertNotNull(lastArgs.progress());
+        assertNotNull(lastArgs.requestId());
+        assertNotNull(lastArgs.log());
+        assertNotNull(lastArgs.roots());
+        assertNotNull(lastArgs.sampling());
+        assertNotNull(lastArgs.cancellation());
+
         myPrompts.register("bravo", "3");
 
         notifications = client.waitForNotifications(2).notifications();
@@ -92,6 +104,8 @@ public class ProgrammaticPromptTest extends McpServerTest {
     @Singleton
     public static class MyPrompts {
 
+        static final AtomicReference<PromptArguments> lastArgs = new AtomicReference<>();
+
         @Inject
         PromptManager manager;
 
@@ -100,8 +114,11 @@ public class ProgrammaticPromptTest extends McpServerTest {
                     .setDescription(name + " description!")
                     .addArgument("foo", "Foo", true)
                     .setHandler(
-                            args -> PromptResponse.withMessages(
-                                    List.of(PromptMessage.withUserRole(new TextContent(result + args.args().get("foo"))))))
+                            promptArgs -> {
+                                lastArgs.set(promptArgs);
+                                return PromptResponse.withMessages(List.of(
+                                        PromptMessage.withUserRole(new TextContent(result + promptArgs.args().get("foo")))));
+                            })
                     .register();
         }
 

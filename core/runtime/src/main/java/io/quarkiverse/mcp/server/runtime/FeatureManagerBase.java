@@ -229,7 +229,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 }
             });
         } else if (executionModel == ExecutionModel.WORKER_THREAD) {
-            Vertx.currentContext().executeBlocking(new Callable<Void>() {
+            vertx.executeBlocking(new Callable<Void>() {
                 @Override
                 public Void call() {
                     try {
@@ -241,7 +241,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 }
             }, false);
         } else {
-            // Event loop
+            // Event loop - operation is always executed on a new duplicated context
             try {
                 action.call().subscribe().with(ret::complete, ret::fail);
             } catch (Throwable e) {
