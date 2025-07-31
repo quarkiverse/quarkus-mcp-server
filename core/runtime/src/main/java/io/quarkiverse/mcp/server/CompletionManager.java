@@ -68,8 +68,9 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
 
     }
 
+    // TODO: replace this record with an interface that extends a common ancestor
     record CompletionArguments(String argumentValue, McpConnection connection, McpLog log, RequestId requestId,
-            Progress progress, Roots roots, Sampling sampling) {
+            Progress progress, Roots roots, Sampling sampling, Cancellation cancellation) {
 
     }
 }
