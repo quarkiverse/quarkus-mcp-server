@@ -37,7 +37,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>3.20.2</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
-        <swagger-annotations.version>2.2.34</swagger-annotations.version>
+        <swagger-annotations.version>2.2.35</swagger-annotations.version>
     </properties>
 
     <dependencyManagement>
