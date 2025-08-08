@@ -19,9 +19,6 @@ import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
-import io.quarkiverse.mcp.server.Notification;
-import io.quarkiverse.mcp.server.Notification.Type;
-import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
@@ -119,7 +116,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             return;
         }
 
-        McpConnectionBase connection;
+        StreamableHttpMcpConnection connection;
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
             String id = ConnectionManager.connectionId();
@@ -128,13 +125,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             connection = new StreamableHttpMcpConnection(id, serverConfig);
             connectionManager.add(connection);
         } else {
-            connection = connectionManager.get(mcpSessionId);
-        }
-
-        if (connection == null) {
-            LOG.errorf("Mcp session not found: %s", mcpSessionId);
-            ctx.fail(404);
-            return;
+            McpConnectionBase conn = connectionManager.get(mcpSessionId);
+            if (conn == null) {
+                LOG.errorf("Mcp session not found: %s", mcpSessionId);
+                ctx.fail(404);
+                return;
+            }
+            if (conn instanceof StreamableHttpMcpConnection streamable) {
+                connection = streamable;
+            } else {
+                throw new IllegalStateException("Invalid connection type: " + conn.getClass().getName());
+            }
         }
 
         Object json;
@@ -255,10 +256,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             RESOURCES_READ,
             COMPLETION_COMPLETE);
 
-    private static final Set<String> FORCE_SSE_NOTIFICATIONS = Set.of(
-            NOTIFICATIONS_INITIALIZED,
-            NOTIFICATIONS_ROOTS_LIST_CHANGED);
-
     private static final Set<FeatureArgument.Provider> FORCE_SSE_PROVIDERS = Set.of(
             PROGRESS,
             MCP_LOG,
@@ -294,31 +291,26 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message) {
         String method = message.getString("method");
-        if (method != null) {
-            if (Messages.isRequest(message) && FORCE_SSE_REQUESTS.contains(method)) {
-                JsonObject params = message.getJsonObject("params");
-                if (params != null) {
-                    return switch (method) {
-                        case TOOLS_CALL -> forceSseTool(params);
-                        case PROMPTS_GET -> forceSsePrompt(params);
-                        case RESOURCES_READ -> forceSseResource(params);
-                        case COMPLETION_COMPLETE -> forceSseCompletion(params);
-                        default -> throw new IllegalArgumentException("Unexpected value: " + method);
-                    };
-                }
-            } else if (Messages.isNotification(message)
-                    && FORCE_SSE_NOTIFICATIONS.contains(method)
-                    && forceSseNotification(method)) {
-                return true;
+        if (method != null
+                && Messages.isRequest(message)
+                && FORCE_SSE_REQUESTS.contains(method)) {
+            JsonObject params = message.getJsonObject("params");
+            if (params != null) {
+                return switch (method) {
+                    case TOOLS_CALL -> forceSseTool(params);
+                    case PROMPTS_GET -> forceSsePrompt(params);
+                    case RESOURCES_READ -> forceSseResource(params);
+                    case COMPLETION_COMPLETE -> forceSseCompletion(params);
+                    default -> throw new IllegalArgumentException("Unexpected value: " + method);
+                };
             }
         }
         return false;
     }
 
     private boolean forceSseTool(JsonObject params) {
-        String toolName = params.getString("name");
-        FeatureMetadata<?> fm = metadata.tools().stream().filter(m -> m.info().name().equals(toolName))
-                .findFirst().orElse(null);
+        String name = params.getString("name");
+        var fm = McpMetadata.findFeatureByName(metadata.tools(), name);
         if (fm != null) {
             for (FeatureArgument a : fm.info().arguments()) {
                 if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
@@ -326,7 +318,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         } else {
-            ToolInfo info = toolManager.getTool(toolName);
+            ToolInfo info = toolManager.getTool(name);
             if (info != null && !info.isMethod()) {
                 // Always force SSE init for a tool added programatically
                 return true;
@@ -336,9 +328,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private boolean forceSsePrompt(JsonObject params) {
-        String promptName = params.getString("name");
-        FeatureMetadata<?> fm = metadata.prompts().stream().filter(m -> m.info().name().equals(promptName))
-                .findFirst().orElse(null);
+        String name = params.getString("name");
+        var fm = McpMetadata.findFeatureByName(metadata.prompts(), name);
         if (fm != null) {
             for (FeatureArgument a : fm.info().arguments()) {
                 if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
@@ -346,7 +337,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         } else {
-            PromptInfo info = promptManager.getPrompt(promptName);
+            PromptInfo info = promptManager.getPrompt(name);
             if (info != null && !info.isMethod()) {
                 // Always force SSE init for a prompt added programatically
                 return true;
@@ -428,28 +419,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private boolean forceSseNotification(String method) {
-        List<FeatureMetadata<Void>> fm = metadata.notifications()
-                .stream()
-                .filter(m -> Notification.Type.valueOf(m.info().description()) == Notification.Type.from(method))
-                .toList();
-        for (FeatureMetadata<?> m : fm) {
-            for (FeatureArgument a : m.info().arguments()) {
-                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                    return true;
-                }
-            }
-        }
-        for (NotificationManager.NotificationInfo info : notificationManager) {
-            if (!info.isMethod() && info.type() == Type.from(method)) {
-                // Always force SSE init for a notification added programatically
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static class HttpMcpRequest extends McpRequestImpl implements Sender {
+    static class HttpMcpRequest extends McpRequestImpl<StreamableHttpMcpConnection> implements Sender {
 
         final boolean newSession;
 
@@ -457,7 +427,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final HttpServerResponse response;
 
-        public HttpMcpRequest(String serverName, Object json, McpConnectionBase connection, SecuritySupport securitySupport,
+        public HttpMcpRequest(String serverName, Object json, StreamableHttpMcpConnection connection,
+                SecuritySupport securitySupport,
                 HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation) {
             super(serverName, json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
@@ -490,8 +461,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 // "write" is async and synchronized over http connection, and should be thread-safe
                 return response.write("event: message\ndata: " + message.encode() + "\n\n");
             } else {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-                return response.end(message.toBuffer());
+                if (response.ended()) {
+                    // Try to use a subsidiary SSE
+                    LOG.debugf("HTTP responsed ended, try to use a subsidiary SSE channel instead");
+                    return connection().send(message);
+                } else {
+                    response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                    return response.end(message.toBuffer());
+                }
             }
         }
 
