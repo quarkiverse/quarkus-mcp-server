@@ -21,6 +21,7 @@ import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -32,11 +33,15 @@ import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.runtime.SecuritySupport;
+import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler.StdioMcpRequest;
 import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
 import io.vertx.core.Context;
@@ -44,7 +49,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 
 @Singleton
-public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
+public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
 
     private static final Logger LOG = Logger.getLogger(StdioMcpMessageHandler.class);
 
@@ -106,7 +111,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
                             context.executeBlocking(new Callable<>() {
                                 @Override
                                 public Object call() throws Exception {
-                                    McpRequestImpl mcpRequest = new McpRequestImpl(McpServer.DEFAULT, json, connection,
+                                    StdioMcpRequest mcpRequest = new StdioMcpRequest(McpServer.DEFAULT, json, connection,
                                             connection, null, null,
                                             null);
                                     handle(mcpRequest);
@@ -125,6 +130,16 @@ public class StdioMcpMessageHandler extends McpMessageHandler<McpRequestImpl> {
     @Override
     protected Transport transport() {
         return Transport.STDIO;
+    }
+
+    static class StdioMcpRequest extends McpRequestImpl<StdioMcpConnection> {
+
+        StdioMcpRequest(String serverName, Object json, StdioMcpConnection connection, Sender sender,
+                SecuritySupport securitySupport, ContextSupport requestContextSupport,
+                CurrentIdentityAssociation currentIdentityAssociation) {
+            super(serverName, json, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
+        }
+
     }
 
 }

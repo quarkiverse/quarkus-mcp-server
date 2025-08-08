@@ -39,4 +39,8 @@ public interface McpMetadata {
 
     Map<Type, DefaultValueConverter<?>> defaultValueConverters();
 
+    static <T> FeatureMetadata<T> findFeatureByName(List<FeatureMetadata<T>> features, String name) {
+        return features.stream().filter(fm -> fm.info().name().equals(name)).findFirst().orElse(null);
+    }
+
 }

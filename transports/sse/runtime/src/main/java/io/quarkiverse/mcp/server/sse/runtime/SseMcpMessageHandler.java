@@ -24,8 +24,10 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
+import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.sse.runtime.SseMcpMessageHandler.SseMcpRequest;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -40,7 +42,7 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
 
 @Singleton
-public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> implements Handler<RoutingContext> {
+public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> implements Handler<RoutingContext> {
 
     private static final Logger LOG = Logger.getLogger(SseMcpMessageHandler.class);
 
@@ -90,11 +92,17 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             ctx.fail(405);
             return;
         }
-        McpConnectionBase connection = connectionManager.get(connectionId);
-        if (connection == null) {
+        McpConnectionBase conn = connectionManager.get(connectionId);
+        if (conn == null) {
             LOG.errorf("Connection not found: %s", connectionId);
             ctx.fail(404);
             return;
+        }
+        SseMcpConnection connection;
+        if (conn instanceof SseMcpConnection sse) {
+            connection = sse;
+        } else {
+            throw new IllegalStateException("Invalid connection type: " + conn.getClass().getName());
         }
 
         Object json;
@@ -128,7 +136,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
             }
         };
 
-        McpRequestImpl mcpRequest = new McpRequestImpl(serverName, json, connection, connection, securitySupport,
+        SseMcpRequest mcpRequest = new SseMcpRequest(serverName, json, connection, connection, securitySupport,
                 contextSupport,
                 currentIdentityAssociation);
         handle(mcpRequest).onComplete(ar -> {
@@ -143,6 +151,16 @@ public class SseMcpMessageHandler extends McpMessageHandler<McpRequestImpl> impl
     @Override
     protected Transport transport() {
         return Transport.SSE;
+    }
+
+    static class SseMcpRequest extends McpRequestImpl<SseMcpConnection> {
+
+        SseMcpRequest(String serverName, Object json, SseMcpConnection connection, Sender sender,
+                SecuritySupport securitySupport, ContextSupport requestContextSupport,
+                CurrentIdentityAssociation currentIdentityAssociation) {
+            super(serverName, json, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
+        }
+
     }
 
 }

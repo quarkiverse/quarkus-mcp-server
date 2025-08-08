@@ -90,6 +90,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         }
         this.initResult = r;
 
+        if (openSubsidiarySse) {
+            client.connectSubsidiarySse(additionalHeaders(null));
+        }
+
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
         response = client.sendSync(nofitication.encode(), additionalHeaders(nofitication));
@@ -98,11 +102,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             throw new IllegalStateException(
                     "Initialization not finished successfully; HTTP response status: " + response.statusCode());
         }
-
-        if (openSubsidiarySse) {
-            client.connectSubsidiarySse(additionalHeaders(null));
-        }
-
         connected.set(true);
         return this;
     }
