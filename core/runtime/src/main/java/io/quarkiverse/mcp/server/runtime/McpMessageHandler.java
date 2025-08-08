@@ -147,7 +147,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                         }
                     }
                 }
-                return Future.all(all);
+                return Future.join(all);
             }
         }
         return Future.failedFuture("Invalid jsonrpc message");
@@ -265,7 +265,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (NOTIFICATIONS_INITIALIZED.equals(method)) {
             if (mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
-                // Call init methods
+                // Call init methods asynchronously
                 List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                         .filter(n -> n.type() == Type.INITIALIZED).toList();
                 if (!infos.isEmpty()) {
@@ -273,20 +273,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                             mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
                     FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
-                        try {
-                            Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
-                                    featureExecutionContext);
-                            fu.onComplete(new Handler<AsyncResult<Void>>() {
-                                @Override
-                                public void handle(AsyncResult<Void> ar) {
-                                    if (ar.failed()) {
-                                        LOG.errorf(ar.cause(), "Unable to call notification method: %s", notification);
-                                    }
-                                }
-                            });
-                        } catch (McpException e) {
-                            LOG.errorf(e, "Unable to call notification method: %s", notification);
-                        }
+                        callNotification(notification, featureExecutionContext);
                     }
                 }
             }
@@ -296,6 +283,25 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         } else {
             return mcpRequest.sender().send(Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
                     "Client not initialized yet [" + mcpRequest.connection().id() + "]"));
+        }
+    }
+
+    private Future<Void> callNotification(NotificationManager.NotificationInfo notification,
+            FeatureExecutionContext featureExecutionContext) {
+        try {
+            Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
+                    featureExecutionContext);
+            return fu.onComplete(new Handler<AsyncResult<Void>>() {
+                @Override
+                public void handle(AsyncResult<Void> ar) {
+                    if (ar.failed()) {
+                        LOG.errorf(ar.cause(), "Unable to call notification method: %s", notification);
+                    }
+                }
+            });
+        } catch (McpException e) {
+            LOG.errorf(e, "Unable to call notification method: %s", notification);
+            throw e;
         }
     }
 
@@ -338,7 +344,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         context.runOnContext(v -> {
             mcpRequest.contextStart();
             String method = message.getString("method");
-            Future<Void> future = switch (method) {
+            Future<?> future = switch (method) {
                 case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
                 case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest);
                 case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest);
@@ -374,7 +380,6 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> rootsListChanged(McpRequest mcpRequest) {
-        // Call init methods
         List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
         if (!infos.isEmpty()) {
@@ -382,23 +387,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
             FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
             for (NotificationManager.NotificationInfo notification : infos) {
-                try {
-                    Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
-                            featureExecutionContext);
-                    fu.onComplete(new Handler<AsyncResult<Void>>() {
-                        @Override
-                        public void handle(AsyncResult<Void> ar) {
-                            if (ar.failed()) {
-                                LOG.errorf(ar.cause(), "Unable to call notification method: %s", notification);
-                            }
-                        }
-                    });
-                } catch (McpException e) {
-                    LOG.errorf(e, "Unable to call notification method: %s", notification);
-                }
+                callNotification(notification, featureExecutionContext);
             }
         }
         return Future.succeededFuture();
+
     }
 
     private Future<Void> cancelRequest(JsonObject message, McpRequest mcpRequest) {

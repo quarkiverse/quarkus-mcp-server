@@ -4,11 +4,11 @@ import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 
-public class McpRequestImpl implements McpRequest {
+public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> implements McpRequest {
 
     private final String serverName;
     private final Object json;
-    private final McpConnectionBase connection;
+    private final CONNECTION connection;
     private final Sender sender;
     private final SecuritySupport securitySupport;
     private final ContextSupport requestContextSupport;
@@ -16,7 +16,7 @@ public class McpRequestImpl implements McpRequest {
     private final ManagedContext requestContext;
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
-    public McpRequestImpl(String serverName, Object json, McpConnectionBase connection, Sender sender,
+    public McpRequestImpl(String serverName, Object json, CONNECTION connection, Sender sender,
             SecuritySupport securitySupport,
             ContextSupport requestContextSupport, CurrentIdentityAssociation currentIdentityAssociation) {
         this.serverName = serverName;
@@ -40,7 +40,7 @@ public class McpRequestImpl implements McpRequest {
     }
 
     @Override
-    public McpConnectionBase connection() {
+    public CONNECTION connection() {
         return connection;
     }
 
