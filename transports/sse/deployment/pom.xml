@@ -13,7 +13,7 @@
     
     <properties>
         <version.langchain4j>1.0.1</version.langchain4j>
-        <version.assertj>3.27.3</version.assertj>
+        <version.assertj>3.27.4</version.assertj>
     </properties>
 
     <dependencies>
