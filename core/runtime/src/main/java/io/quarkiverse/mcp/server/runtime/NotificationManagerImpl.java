@@ -12,6 +12,7 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -178,10 +179,24 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
         @Override
         protected NotificationArguments createArguments(ArgumentProviders argumentProviders) {
-            return new NotificationArguments(argumentProviders.connection(),
-                    log(Feature.NOTIFICATION.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders));
+            return new NotificationArgumentsImpl(argumentProviders,
+                    log(Feature.NOTIFICATION.toString().toLowerCase() + ":" + name, name, argumentProviders));
+        }
+
+    }
+
+    static class NotificationArgumentsImpl extends AbstractFeatureArguments implements NotificationArguments {
+
+        private final McpLog log;
+
+        NotificationArgumentsImpl(ArgumentProviders argProviders, McpLog log) {
+            super(argProviders);
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
         }
 
     }

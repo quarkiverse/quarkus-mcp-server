@@ -23,7 +23,7 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceResponse;
@@ -305,16 +305,41 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             // Use variable matching to extract method arguments
             Map<String, String> matchedVariables = getVariableMatcher(name)
                     .matchVariables(argumentProviders.uri());
-            return new ResourceTemplateArguments(
+            return new ResourceTemplateArgumentsImpl(argumentProviders,
                     matchedVariables,
-                    argumentProviders.connection(),
-                    log(Feature.RESOURCE_TEMPLATE.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()),
                     new RequestUri(argumentProviders.uri()),
-                    ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders),
-                    CancellationImpl.from(argumentProviders));
+                    log(Feature.RESOURCE_TEMPLATE.toString().toLowerCase() + ":" + name, name, argumentProviders));
+        }
+
+    }
+
+    static class ResourceTemplateArgumentsImpl extends AbstractRequestFeatureArguments implements ResourceTemplateArguments {
+
+        private final Map<String, String> args;
+        private final RequestUri requestUri;
+        private final McpLog log;
+
+        ResourceTemplateArgumentsImpl(ArgumentProviders argProviders, Map<String, String> args, RequestUri requestUri,
+                McpLog log) {
+            super(argProviders);
+            this.args = Map.copyOf(args);
+            this.requestUri = requestUri;
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
+        }
+
+        @Override
+        public Map<String, String> args() {
+            return args;
+        }
+
+        @Override
+        public RequestUri requestUri() {
+            return requestUri;
         }
 
     }

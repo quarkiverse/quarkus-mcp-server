@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
-import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -166,14 +166,31 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
 
         @Override
         protected CompletionArguments createArguments(ArgumentProviders argumentProviders) {
-            return new CompletionArguments(argumentProviders.args().get(argumentName).toString(),
-                    argumentProviders.connection(),
-                    log(feature().toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()),
-                    ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders),
-                    CancellationImpl.from(argumentProviders));
+            return new CompletionArgumentsImpl(argumentProviders, argumentProviders.args().get(argumentName).toString(),
+                    log(feature().toString().toLowerCase() + ":" + name, name, argumentProviders));
+        }
+
+    }
+
+    static class CompletionArgumentsImpl extends AbstractRequestFeatureArguments implements CompletionArguments {
+
+        private final String argumentValue;
+        private final McpLog log;
+
+        CompletionArgumentsImpl(ArgumentProviders argProviders, String argumentValue, McpLog log) {
+            super(argProviders);
+            this.argumentValue = argumentValue;
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
+        }
+
+        @Override
+        public String argumentValue() {
+            return argumentValue;
         }
 
     }
