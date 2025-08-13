@@ -26,6 +26,7 @@ import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.RawMessage;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
@@ -102,5 +103,6 @@ class DotNames {
     static final DotName TOOL_RESPONSE = DotName.createSimple(ToolResponse.class);
     static final DotName TRANSACTIONAL = DotName.createSimple("jakarta.transaction.Transactional");
     static final DotName UNI = DotName.createSimple(Uni.class);
+    static final DotName RAW_MESSAGE = DotName.createSimple(RawMessage.class);
 
 }

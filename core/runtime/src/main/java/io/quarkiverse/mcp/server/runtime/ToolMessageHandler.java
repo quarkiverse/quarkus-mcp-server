@@ -65,8 +65,8 @@ class ToolMessageHandler extends MessageHandler {
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap()
                 : new HashMap<>();
-        ArgumentProviders argProviders = new ArgumentProviders(args, mcpRequest.connection(), id, null, mcpRequest.sender(),
-                Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
+        ArgumentProviders argProviders = new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
+                mcpRequest.sender(), Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
 
         try {
             Future<ToolResponse> fu = manager.execute(toolName,

@@ -30,7 +30,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
         String key = referenceName + "_" + argumentName;
 
-        ArgumentProviders argProviders = new ArgumentProviders(
+        ArgumentProviders argProviders = new ArgumentProviders(message,
                 Map.of(argumentName, argument.getString("value")), mcpRequest.connection(), id, null, sender,
                 Messages.getProgressToken(message), responseHandlers, mcpRequest.serverName());
 

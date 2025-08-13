@@ -2,10 +2,13 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  * Holds all information needed to supply arguments for a feature method.
  */
-public record ArgumentProviders(
+record ArgumentProviders(
+        JsonObject rawMessage,
         Map<String, Object> args,
         McpConnectionBase connection,
         Object requestId,

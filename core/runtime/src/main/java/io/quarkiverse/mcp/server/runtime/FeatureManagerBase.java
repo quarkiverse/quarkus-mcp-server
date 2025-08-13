@@ -30,6 +30,7 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.RawMessage;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Roots;
@@ -163,6 +164,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = SamplingImpl.from(argProviders);
             } else if (arg.provider() == Provider.CANCELLATION) {
                 ret[idx] = CancellationImpl.from(argProviders);
+            } else if (arg.provider() == Provider.RAW_MESSAGE) {
+                ret[idx] = RawMessageImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.defaultValue() != null) {
@@ -531,6 +534,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         @Override
         public Sampling sampling() {
             return SamplingImpl.from(argProviders);
+        }
+
+        @Override
+        public RawMessage rawMessage() {
+            return RawMessageImpl.from(argProviders);
         }
 
     }
