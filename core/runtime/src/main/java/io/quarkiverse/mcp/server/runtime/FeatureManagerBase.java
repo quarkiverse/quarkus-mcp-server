@@ -22,14 +22,18 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
@@ -504,6 +508,55 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         ts = lastTimestamp.plus(1, ChronoUnit.MILLIS);
         lastTimestamp = ts;
         return ts;
+    }
+
+    static abstract class AbstractFeatureArguments implements FeatureManager.FeatureArguments {
+
+        protected final ArgumentProviders argProviders;
+
+        AbstractFeatureArguments(ArgumentProviders argProviders) {
+            this.argProviders = argProviders;
+        }
+
+        @Override
+        public McpConnection connection() {
+            return argProviders.connection();
+        }
+
+        @Override
+        public Roots roots() {
+            return RootsImpl.from(argProviders);
+        }
+
+        @Override
+        public Sampling sampling() {
+            return SamplingImpl.from(argProviders);
+        }
+
+    }
+
+    static abstract class AbstractRequestFeatureArguments extends AbstractFeatureArguments
+            implements FeatureManager.RequestFeatureArguments {
+
+        AbstractRequestFeatureArguments(ArgumentProviders argProviders) {
+            super(argProviders);
+        }
+
+        @Override
+        public RequestId requestId() {
+            return new RequestId(argProviders.requestId());
+        }
+
+        @Override
+        public Progress progress() {
+            return ProgressImpl.from(argProviders);
+        }
+
+        @Override
+        public Cancellation cancellation() {
+            return CancellationImpl.from(argProviders);
+        }
+
     }
 
 }

@@ -55,7 +55,7 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
 
     }
 
-    interface FeatureDefinition<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinition<INFO, ARGUMENTS, RESPONSE, THIS>> {
+    interface FeatureDefinition<INFO extends FeatureInfo, ARGUMENTS extends FeatureArguments, RESPONSE, THIS extends FeatureDefinition<INFO, ARGUMENTS, RESPONSE, THIS>> {
 
         /**
          *
@@ -106,6 +106,28 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          * @return the info
          */
         INFO register();
+    }
+
+    interface RequestFeatureArguments extends FeatureArguments {
+
+        RequestId requestId();
+
+        Progress progress();
+
+        Cancellation cancellation();
+
+    }
+
+    interface FeatureArguments {
+
+        McpConnection connection();
+
+        McpLog log();
+
+        Roots roots();
+
+        Sampling sampling();
+
     }
 
 }

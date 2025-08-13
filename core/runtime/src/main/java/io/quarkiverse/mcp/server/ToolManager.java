@@ -84,9 +84,10 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
     }
 
-    // TODO: replace this record with an interface that extends a common ancestor
-    record ToolArguments(Map<String, Object> args, McpConnection connection, McpLog log, RequestId requestId, Progress progress,
-            Roots roots, Sampling sampling, Cancellation cancellation) {
+    public interface ToolArguments extends RequestFeatureArguments {
+
+        Map<String, Object> args();
+
     }
 
     record ToolArgument(String name, String description, boolean required, java.lang.reflect.Type type, String defaultValue) {

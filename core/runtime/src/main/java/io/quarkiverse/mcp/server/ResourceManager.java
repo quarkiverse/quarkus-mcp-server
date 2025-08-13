@@ -81,9 +81,9 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
     }
 
-    // TODO: replace this record with an interface that extends a common ancestor
-    record ResourceArguments(McpConnection connection, McpLog log, RequestId requestId, RequestUri requestUri,
-            Progress progress, Roots roots, Sampling sampling, Cancellation cancellation) {
+    interface ResourceArguments extends RequestFeatureArguments {
+
+        RequestUri requestUri();
 
     }
 

@@ -20,11 +20,11 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.PromptResponse;
-import io.quarkiverse.mcp.server.RequestId;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -230,13 +230,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                     args.put(a.name(), a.defaultValue());
                 }
             }
-            return new PromptArguments(args, argumentProviders.connection(),
-                    log(Feature.PROMPT.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()),
-                    ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders),
-                    CancellationImpl.from(argumentProviders));
+            return new PromptArgumentsImpl(argumentProviders, args,
+                    log(Feature.PROMPT.toString().toLowerCase() + ":" + name, name, argumentProviders));
         }
 
         @Override
@@ -253,6 +248,29 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             }
             prompt.put("arguments", arguments);
             return prompt;
+        }
+
+    }
+
+    static class PromptArgumentsImpl extends AbstractRequestFeatureArguments implements PromptArguments {
+
+        private final Map<String, String> args;
+        private final McpLog log;
+
+        PromptArgumentsImpl(ArgumentProviders argProviders, Map<String, String> args, McpLog log) {
+            super(argProviders);
+            this.args = Map.copyOf(args);
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
+        }
+
+        @Override
+        public Map<String, String> args() {
+            return args;
         }
 
     }

@@ -28,7 +28,7 @@ import com.github.victools.jsonschema.generator.SchemaVersion;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
@@ -355,14 +355,32 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     args.put(a.name(), convert(a.defaultValue(), a.type()));
                 }
             }
-            return new ToolArguments(args,
-                    argumentProviders.connection(),
-                    log(Feature.TOOL.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()),
-                    ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders),
-                    CancellationImpl.from(argumentProviders));
+            return new ToolArgumentsImpl(argumentProviders, args,
+                    log(Feature.TOOL.toString().toLowerCase() + ":" + name, name, argumentProviders));
+        }
+
+    }
+
+    static class ToolArgumentsImpl extends AbstractRequestFeatureArguments implements ToolArguments {
+
+        private final Map<String, Object> args;
+
+        private final McpLog log;
+
+        ToolArgumentsImpl(ArgumentProviders argProviders, Map<String, Object> args, McpLog log) {
+            super(argProviders);
+            this.args = Map.copyOf(args);
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
+        }
+
+        @Override
+        public Map<String, Object> args() {
+            return args;
         }
 
     }

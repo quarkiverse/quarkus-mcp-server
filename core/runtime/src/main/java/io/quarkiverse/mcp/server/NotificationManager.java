@@ -62,7 +62,8 @@ public interface NotificationManager extends FeatureManager<NotificationInfo> {
 
     }
 
-    record NotificationArguments(McpConnection connection, McpLog log, Roots roots, Sampling sampling) {
+    interface NotificationArguments extends FeatureArguments {
+
     }
 
 }

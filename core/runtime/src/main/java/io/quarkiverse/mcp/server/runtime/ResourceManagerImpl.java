@@ -18,7 +18,7 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceFilter;
@@ -287,21 +287,39 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
         @Override
         protected ResourceArguments createArguments(ArgumentProviders argumentProviders) {
-            return new ResourceArguments(
-                    argumentProviders.connection(),
-                    log(Feature.RESOURCE.toString().toLowerCase() + ":" + name, name, argumentProviders),
-                    new RequestId(argumentProviders.requestId()),
+            return new ResourceArgumentsImpl(
+                    argumentProviders,
                     new RequestUri(argumentProviders.uri()),
-                    ProgressImpl.from(argumentProviders),
-                    RootsImpl.from(argumentProviders),
-                    SamplingImpl.from(argumentProviders),
-                    CancellationImpl.from(argumentProviders));
+                    log(Feature.RESOURCE.toString().toLowerCase() + ":" + name, name, argumentProviders));
         }
 
         @Override
         public void sendUpdateAndForget() {
             ResourceManagerImpl.this.sendUpdateNotifications(uri());
         }
+    }
+
+    static class ResourceArgumentsImpl extends AbstractRequestFeatureArguments implements ResourceArguments {
+
+        private final RequestUri requestUri;
+        private final McpLog log;
+
+        ResourceArgumentsImpl(ArgumentProviders argProviders, RequestUri requestUri, McpLog log) {
+            super(argProviders);
+            this.requestUri = requestUri;
+            this.log = log;
+        }
+
+        @Override
+        public McpLog log() {
+            return log;
+        }
+
+        @Override
+        public RequestUri requestUri() {
+            return requestUri;
+        }
+
     }
 
     class ResourceDefinitionImpl extends
