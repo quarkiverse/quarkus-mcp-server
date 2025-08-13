@@ -30,5 +30,6 @@ public record FeatureArgument(String name,
         ROOTS,
         SAMPLING,
         CANCELLATION,
+        RAW_MESSAGE,
     }
 }

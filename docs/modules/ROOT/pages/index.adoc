@@ -137,6 +137,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Completion API
 
@@ -187,6 +188,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Programmatic API
 
@@ -274,6 +276,7 @@ A `@Resource` method may accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Programmatic API
 
@@ -380,6 +383,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Completion API
 
@@ -430,6 +434,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Programmatic API
 
@@ -528,6 +533,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
 * `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
 
 === Programmatic API
 
@@ -903,6 +909,44 @@ public class MyTools {
 <1> The `Cancellation` parameter is injected automatically.
 <2> Perform the check and if cancellation is requested then skip the processing, i.e. throw an `OperationCancellationException`.
 <3> The convenient method `Cancellation#skipProcessingIfCancelled()` can be used instead.
+ 
+== Raw messages
+
+Any server feature method can accept the `io.quarkiverse.mcp.server.RawMessage` parameter.
+A raw message represents an unprocessed MCP request or notification from an MCP client.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.RawMessage;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+   @Tool(description = "A tool that can access the raw message")
+   String myTool(RawMessage message, int count) { <1>
+       // A raw message may look like:
+       // {
+       //  "jsonrpc" : "2.0",
+       //  "method" : "tools/call",
+       //  "id" : 2,
+       //  "params" : {
+       //    "name" : "foo",
+       //    "arguments" : {
+       //      "count" : 2
+       //    }
+       //   }
+       // }
+       // rawCount == count
+       int rawCount = message.asJsonObject()
+                    .getJsonObject("params")
+                    .getJsonObject("arguments")
+                    .getInteger("count"); <2>
+       return "OK".repeat(rawCount);
+   }
+}
+----
+<1> The `RawMessage` parameter is injected automatically.
+<2> We can use the `JsonObject` API to inspect the raw message from the client.
  
 == Security
 

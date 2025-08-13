@@ -62,7 +62,8 @@ class PromptMessageHandler extends MessageHandler {
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
 
         Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
-        ArgumentProviders argProviders = new ArgumentProviders(args, mcpRequest.connection(), id, null, mcpRequest.sender(),
+        ArgumentProviders argProviders = new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
+                mcpRequest.sender(),
                 Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
 
         try {

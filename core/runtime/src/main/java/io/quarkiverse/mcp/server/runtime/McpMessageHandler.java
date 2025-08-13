@@ -269,7 +269,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                         .filter(n -> n.type() == Type.INITIALIZED).toList();
                 if (!infos.isEmpty()) {
-                    ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
+                    ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null,
+                            null,
                             mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
                     FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
@@ -358,7 +359,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case COMPLETION_COMPLETE -> complete(message, mcpRequest);
                 case LOGGING_SET_LEVEL -> setLogLevel(message, mcpRequest);
                 case Q_CLOSE -> close(message, mcpRequest);
-                case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(mcpRequest);
+                case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 default -> mcpRequest.sender().send(
                         Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
@@ -379,11 +380,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return ret.future();
     }
 
-    private Future<Void> rootsListChanged(McpRequest mcpRequest) {
+    private Future<Void> rootsListChanged(JsonObject message, McpRequest mcpRequest) {
         List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
         if (!infos.isEmpty()) {
-            ArgumentProviders argProviders = new ArgumentProviders(Map.of(), mcpRequest.connection(), null, null,
+            ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null, null,
                     mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
             FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
             for (NotificationManager.NotificationInfo notification : infos) {

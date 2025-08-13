@@ -160,7 +160,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         Map<String, Object> matchedVariables = getVariableMatcher(metadata.info().name())
                 .matchVariables(argProviders.uri()).entrySet().stream()
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString()));
-        argProviders = new ArgumentProviders(
+        argProviders = new ArgumentProviders(argProviders.rawMessage(),
                 matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
                 argProviders.sender(), argProviders.progressToken(), responseHandlers, argProviders.serverName());
         return super.prepareArguments(metadata, argProviders);
