@@ -12,6 +12,8 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
@@ -1198,7 +1200,7 @@ public class McpAssured {
 
     }
 
-    public record InitResult(String protocolVersion, String serverName, String serverVersion,
+    public record InitResult(String protocolVersion, String serverName, String serverTitle, String serverVersion,
             List<ServerCapability> capabilities) {
 
     }
@@ -1253,19 +1255,20 @@ public class McpAssured {
         }
     }
 
-    public record ToolInfo(String name, String description, JsonObject inputSchema, Optional<ToolAnnotations> annotations) {
+    public record ToolInfo(String name, String title, String description, JsonObject inputSchema,
+            Optional<ToolAnnotations> annotations) {
     }
 
-    public record PromptInfo(String name, String description, List<PromptArgument> arguments) {
+    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments) {
     }
 
-    public record ResourceInfo(String uri, String mimeType, String name, String description) {
+    public record ResourceInfo(String uri, String mimeType, String name, String title, String description) {
     }
 
-    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String description) {
+    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description) {
     }
 
-    public record PromptArgument(String name, String description, boolean required) {
+    public record PromptArgument(String name, String title, String description, boolean required) {
     }
 
     public record ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint,

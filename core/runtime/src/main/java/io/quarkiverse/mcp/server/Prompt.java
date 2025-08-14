@@ -38,9 +38,18 @@ public @interface Prompt {
     String ELEMENT_NAME = "<<element name>>";
 
     /**
-     * Each prompt must have a unique name. By default, the name is derived from the name of the annotated method.
+     * Each prompt must have a unique name.
+     * <p>
+     * Intended for programmatic or logical use, but used for UI in past specs or as fallback if title isn't present.
+     * <p>
+     * By default, the name is derived from the name of the annotated method.
      */
     String name() default ELEMENT_NAME;
+
+    /**
+     * A human-readable name for this prompt.
+     */
+    String title() default "";
 
     /**
      * An optional description.

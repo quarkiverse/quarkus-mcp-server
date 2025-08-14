@@ -37,6 +37,8 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
      */
     interface PromptInfo extends FeatureManager.FeatureInfo {
 
+        String title();
+
         List<PromptArgument> arguments();
 
     }
@@ -48,6 +50,13 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
      */
     interface PromptDefinition
             extends FeatureManager.FeatureDefinition<PromptInfo, PromptArguments, PromptResponse, PromptDefinition> {
+
+        /**
+         *
+         * @param title
+         * @return self
+         */
+        PromptDefinition setTitle(String title);
 
         /**
          *
@@ -68,11 +77,24 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
          * @param defaultValue
          * @return self
          */
-        PromptDefinition addArgument(String name, String description, boolean required, String defaultValue);
+        default PromptDefinition addArgument(String name, String description, boolean required, String defaultValue) {
+            return addArgument(name, null, description, required, defaultValue);
+        }
+
+        /**
+         *
+         * @param name
+         * @param title
+         * @param description
+         * @param required
+         * @param defaultValue
+         * @return self
+         */
+        PromptDefinition addArgument(String name, String title, String description, boolean required, String defaultValue);
 
     }
 
-    record PromptArgument(String name, String description, boolean required, String defaultValue) {
+    record PromptArgument(String name, String title, String description, boolean required, String defaultValue) {
 
     }
 

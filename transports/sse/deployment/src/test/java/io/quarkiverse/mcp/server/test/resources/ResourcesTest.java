@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -25,7 +26,9 @@ public class ResourcesTest extends McpServerTest {
         client.when()
                 .resourcesList(p -> {
                     assertEquals(4, p.size());
-                    assertEquals("alpha", p.findByUri("file:///project/alpha").name());
+                    ResourceInfo alpha = p.findByUri("file:///project/alpha");
+                    assertEquals("alpha", alpha.name());
+                    assertEquals("Alpha...", alpha.title());
                     assertEquals("bravo", p.findByUri("file:///project/bravo").name());
                     assertEquals("uni_alpha", p.findByUri("file:///project/uni_alpha").name());
                     assertEquals("uni_bravo", p.findByUri("file:///project/uni_bravo").name());

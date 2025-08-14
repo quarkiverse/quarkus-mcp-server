@@ -35,7 +35,7 @@ public class MyTools {
                 new TextContent(fooService.ping(price.get() + "", 1, new Options(true))));
     }
 
-    @Tool
+    @Tool(title = "Uni Alpha!")
     Uni<ToolResponse> uni_alpha(@ToolArg(name = "uni_price") double price) {
         checkExecutionModel(false);
         checkDuplicatedContext();

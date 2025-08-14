@@ -1014,6 +1014,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
         private ResourceInfo parseResource(JsonObject resource) {
             return new ResourceInfo(resource.getString("uri"), resource.getString("mimeType"), resource.getString("name"),
+                    resource.getString("title"),
                     resource.getString("description"));
         }
     }
@@ -1038,6 +1039,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         private ResourceTemplateInfo parseResourceTemplate(JsonObject resource) {
             return new ResourceTemplateInfo(resource.getString("uriTemplate"), resource.getString("mimeType"),
                     resource.getString("name"),
+                    resource.getString("title"),
                     resource.getString("description"));
         }
     }
@@ -1066,11 +1068,12 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 promptArgs = new ArrayList<>();
                 for (int i = 0; i < args.size(); i++) {
                     JsonObject arg = args.getJsonObject(i);
-                    promptArgs.add(new PromptArgument(arg.getString("name"), arg.getString("description"),
-                            arg.getBoolean("required", false)));
+                    promptArgs
+                            .add(new PromptArgument(arg.getString("name"), arg.getString("title"), arg.getString("description"),
+                                    arg.getBoolean("required", false)));
                 }
             }
-            return new PromptInfo(prompt.getString("name"),
+            return new PromptInfo(prompt.getString("name"), prompt.getString("title"),
                     prompt.getString("description"), promptArgs);
         }
     }
@@ -1150,6 +1153,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                         annotations.getBoolean("openWorldHint", true)));
             }
             return new ToolInfo(tool.getString("name"),
+                    tool.getString("title"),
                     tool.getString("description"),
                     tool.getJsonObject("inputSchema"),
                     toolAnnotations);

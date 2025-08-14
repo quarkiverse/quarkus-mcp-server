@@ -38,6 +38,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
      */
     interface ToolInfo extends FeatureManager.FeatureInfo {
 
+        String title();
+
         List<ToolArgument> arguments();
 
         Optional<ToolAnnotations> annotations();
@@ -81,6 +83,13 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
          * @return self
          */
         ToolDefinition setAnnotations(ToolAnnotations annotations);
+
+        /**
+         *
+         * @param title
+         * @return self
+         */
+        ToolDefinition setTitle(String title);
 
     }
 

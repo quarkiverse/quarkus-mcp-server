@@ -142,6 +142,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
+        public String title() {
+            return metadata.info().title();
+        }
+
+        @Override
         public String description() {
             return metadata.info().description();
         }
@@ -159,7 +164,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public List<PromptArgument> arguments() {
             return metadata.info().serializedArguments().stream()
-                    .map(a -> new PromptArgument(a.name(), a.description(), a.required(), a.defaultValue())).toList();
+                    .map(a -> new PromptArgument(a.name(), a.title(), a.description(), a.required(), a.defaultValue()))
+                    .toList();
         }
 
         @Override
@@ -173,6 +179,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             extends FeatureManagerBase.FeatureDefinitionBase<PromptInfo, PromptArguments, PromptResponse, PromptDefinitionImpl>
             implements PromptManager.PromptDefinition {
 
+        private String title;
         private final List<PromptArgument> arguments;
 
         PromptDefinitionImpl(String name) {
@@ -181,15 +188,22 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
-        public PromptDefinition addArgument(String name, String description, boolean required, String defaultValue) {
-            arguments.add(new PromptArgument(name, description, required, defaultValue));
+        public PromptDefinition setTitle(String title) {
+            this.title = title;
+            return this;
+        }
+
+        @Override
+        public PromptDefinition addArgument(String name, String title, String description, boolean required,
+                String defaultValue) {
+            arguments.add(new PromptArgument(name, title, description, required, defaultValue));
             return this;
         }
 
         @Override
         public PromptInfo register() {
             validate();
-            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, description, serverName, fun, asyncFun,
+            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments);
             PromptInfo existing = prompts.putIfAbsent(name, ret);
             if (existing != null) {
@@ -204,14 +218,21 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     class PromptDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<PromptArguments, PromptResponse>
             implements PromptManager.PromptInfo {
 
+        private final String title;
         private final List<PromptArgument> arguments;
 
-        private PromptDefinitionInfo(String name, String description, String serverName,
+        private PromptDefinitionInfo(String name, String title, String description, String serverName,
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
                 List<PromptArgument> arguments) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            this.title = title;
             this.arguments = List.copyOf(arguments);
+        }
+
+        @Override
+        public String title() {
+            return title;
         }
 
         @Override
@@ -239,12 +260,19 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             JsonObject prompt = new JsonObject()
                     .put("name", name())
                     .put("description", description());
+            if (title != null) {
+                prompt.put("title", title);
+            }
             JsonArray arguments = new JsonArray();
             for (PromptArgument a : this.arguments) {
-                arguments.add(new JsonObject()
+                JsonObject arg = new JsonObject()
                         .put("name", a.name())
                         .put("description", a.description())
-                        .put("required", a.required()));
+                        .put("required", a.required());
+                if (a.title() != null) {
+                    arg.put("title", a.title());
+                }
+                arguments.add(arg);
             }
             prompt.put("arguments", arguments);
             return prompt;

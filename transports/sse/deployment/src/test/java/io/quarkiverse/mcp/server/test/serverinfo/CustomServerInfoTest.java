@@ -19,12 +19,14 @@ public class CustomServerInfoTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withEmptyApplication()
             .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
+            .overrideConfigKey("quarkus.mcp.server.server-info.title", NAME.toUpperCase())
             .overrideConfigKey("quarkus.mcp.server.server-info.version", VERSION);
 
     @Test
     public void testServerInfo() {
         McpAssured.newSseClient().build().connect(initResult -> {
             assertEquals(NAME, initResult.serverName());
+            assertEquals(NAME.toUpperCase(), initResult.serverTitle());
             assertEquals(VERSION, initResult.serverVersion());
             assertTrue(initResult.capabilities().stream().anyMatch(c -> c.name().equals("logging")));
         });

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceTemplateInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -24,6 +25,8 @@ public class ResourceTemplatesTest extends McpServerTest {
         client.when()
                 .resourcesTemplatesList(p -> {
                     assertEquals(2, p.size());
+                    ResourceTemplateInfo alpha = p.findByUriTemplate("file:///{path}");
+                    assertEquals("Alpha...", alpha.title());
                 })
                 .resourcesRead("file:///bar", r -> assertEquals("foo:bar", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///bar/baz", r -> assertEquals("bar:baz", r.contents().get(0).asText().text()))

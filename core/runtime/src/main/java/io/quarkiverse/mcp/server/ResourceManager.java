@@ -34,6 +34,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      */
     interface ResourceInfo extends FeatureManager.FeatureInfo {
 
+        String title();
+
         String uri();
 
         String mimeType();
@@ -62,6 +64,13 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      */
     interface ResourceDefinition
             extends FeatureDefinition<ResourceInfo, ResourceArguments, ResourceResponse, ResourceDefinition> {
+
+        /**
+         *
+         * @param title
+         * @return self
+         */
+        ResourceDefinition setTitle(String title);
 
         /**
          *

@@ -243,6 +243,11 @@ class McpServerProcessor {
                         AnnotationValue nameValue = featureAnnotation.value("name");
                         name = nameValue != null ? nameValue.asString() : method.name();
                     }
+                    String title = null;
+                    AnnotationValue titleValue = featureAnnotation.value("title");
+                    if (titleValue != null) {
+                        title = titleValue.asString();
+                    }
 
                     String description;
                     if (feature == TOOL && method.hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)) {
@@ -278,12 +283,12 @@ class McpServerProcessor {
                         AnnotationValue annotations = featureAnnotation.value("annotations");
                         if (annotations != null) {
                             AnnotationInstance annotationsAnnotation = annotations.asNested();
-                            AnnotationValue titleValue = annotationsAnnotation.value("title");
+                            AnnotationValue annoTitleValue = annotationsAnnotation.value("title");
                             AnnotationValue readOnlyHintValue = annotationsAnnotation.value("readOnlyHint");
                             AnnotationValue destructiveHintValue = annotationsAnnotation.value("destructiveHint");
                             AnnotationValue idempotentHintValue = annotationsAnnotation.value("idempotentHint");
                             AnnotationValue openWorldHintValue = annotationsAnnotation.value("openWorldHint");
-                            toolAnnotations = new ToolAnnotations(titleValue != null ? titleValue.asString() : null,
+                            toolAnnotations = new ToolAnnotations(annoTitleValue != null ? annoTitleValue.asString() : null,
                                     readOnlyHintValue != null ? readOnlyHintValue.asBoolean() : false,
                                     destructiveHintValue != null ? destructiveHintValue.asBoolean() : true,
                                     idempotentHintValue != null ? idempotentHintValue.asBoolean() : false,
@@ -301,7 +306,7 @@ class McpServerProcessor {
                         server = serverAnotation.value().asString();
                     }
 
-                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
                             description, uri, mimeType, feature, toolAnnotations, server);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
@@ -954,6 +959,7 @@ class McpServerProcessor {
         ResultHandle args = Gizmo.newArrayList(metaMethod);
         for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
             String name = param.name();
+            String title = null;
             String description = "";
             // Argument is required by default
             boolean required = true;
@@ -969,6 +975,10 @@ class McpServerProcessor {
                     }
                     if (nameValue != null) {
                         name = nameValue.asString();
+                    }
+                    AnnotationValue titleValue = argAnnotation.value("title");
+                    if (titleValue != null) {
+                        title = titleValue.asString();
                     }
                     AnnotationValue descriptionValue = argAnnotation.value("description");
                     if (descriptionValue != null) {
@@ -1004,9 +1014,11 @@ class McpServerProcessor {
             ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
             ResultHandle provider = metaMethod.load(providerFrom(param.type()));
             ResultHandle arg = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
+                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, String.class,
+                            boolean.class,
                             Type.class, String.class, FeatureArgument.Provider.class),
-                    metaMethod.load(name), metaMethod.load(description), metaMethod.load(required), type,
+                    metaMethod.load(name), title != null ? metaMethod.load(title) : metaMethod.loadNull(),
+                    metaMethod.load(description), metaMethod.load(required), type,
                     defaultValue != null ? metaMethod.load(defaultValue) : metaMethod.loadNull(),
                     provider);
             Gizmo.listOperations(metaMethod).on(args).add(arg);
@@ -1028,8 +1040,11 @@ class McpServerProcessor {
 
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
+                        String.class,
                         List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
-                metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
+                metaMethod.load(featureMethod.getName()),
+                featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
+                metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),

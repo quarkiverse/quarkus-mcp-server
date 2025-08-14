@@ -98,20 +98,27 @@ public interface McpServerRuntimeConfig {
     public interface ServerInfo {
 
         /**
-         * The name of the server is included in the response to an `initialize` request. By default, the value of the
-         * `quarkus.application.name` config property is used.
+         * The name of the server is included in the response to an `initialize` request.
+         *
+         * By default, the value of the `quarkus.application.name` config property is used.
          *
          * @asciidoclet
          */
         Optional<String> name();
 
         /**
-         * The version of the server is included in the response to an `initialize` request. By default, the value of the
-         * `quarkus.application.version` config property is used.
+         * The version of the server is included in the response to an `initialize` request.
+         *
+         * By default, the value of the `quarkus.application.version` config property is used.
          *
          * @asciidoclet
          */
         Optional<String> version();
+
+        /**
+         * The human-readable name of the server is included in the response to an `initialize` request.
+         */
+        Optional<String> title();
 
     }
 

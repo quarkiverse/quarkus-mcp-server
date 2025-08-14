@@ -139,6 +139,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             }
         }
         InitResult r = new InitResult(initResult.getString("protocolVersion"), serverInfo.getString("name"),
+                serverInfo.getString("title"),
                 serverInfo.getString("version"), capabilities);
         if (assertFunction != null) {
             assertFunction.accept(r);

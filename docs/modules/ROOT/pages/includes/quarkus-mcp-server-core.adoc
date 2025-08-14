@@ -449,8 +449,9 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The name of the server is included in the response to an `initialize` request. By default, the value of the
-`quarkus.application.name` config property is used.
+The name of the server is included in the response to an `initialize` request.
+
+By default, the value of the `quarkus.application.name` config property is used.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -476,8 +477,9 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The version of the server is included in the response to an `initialize` request. By default, the value of the
-`quarkus.application.version` config property is used.
+The version of the server is included in the response to an `initialize` request.
+
+By default, the value of the `quarkus.application.version` config property is used.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -485,6 +487,32 @@ Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_VERSION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-title]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-title[`quarkus.mcp.server.server-info.title`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.title+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.title`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.title+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The human-readable name of the server is included in the response to an `initialize` request.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_TITLE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_TITLE+++`
 endif::add-copy-button-to-env-var[]
 --
 |string

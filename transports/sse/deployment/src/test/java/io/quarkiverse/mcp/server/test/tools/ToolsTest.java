@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.test.tools;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.DayOfWeek;
@@ -14,6 +15,7 @@ import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkus.test.QuarkusUnitTest;
@@ -34,7 +36,9 @@ public class ToolsTest extends McpServerTest {
                 .toolsList(page -> {
                     assertEquals(8, page.size());
 
-                    JsonObject schema = page.findByName("alpha").inputSchema();
+                    ToolInfo alpha = page.findByName("alpha");
+                    assertNull(alpha.title());
+                    JsonObject schema = alpha.inputSchema();
                     JsonObject properties = schema.getJsonObject("properties");
                     assertEquals(1, properties.size());
                     JsonObject priceProperty = properties.getJsonObject("price");
@@ -43,7 +47,9 @@ public class ToolsTest extends McpServerTest {
                     assertEquals("Define the price...", priceProperty.getString("description"));
                     assertTrue(schema.getJsonArray("required").isEmpty());
 
-                    schema = page.findByName("uni_alpha").inputSchema();
+                    ToolInfo uniAlpha = page.findByName("uni_alpha");
+                    assertEquals("Uni Alpha!", uniAlpha.title());
+                    schema = uniAlpha.inputSchema();
                     properties = schema.getJsonObject("properties");
                     assertEquals(1, properties.size());
                     priceProperty = properties.getJsonObject("uni_price");

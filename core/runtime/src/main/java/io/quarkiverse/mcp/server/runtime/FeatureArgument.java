@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import io.vertx.core.json.JsonObject;
 
 public record FeatureArgument(String name,
+        String title,
         String description,
         boolean required,
         java.lang.reflect.Type type,
@@ -10,10 +11,13 @@ public record FeatureArgument(String name,
         Provider provider) {
 
     public JsonObject asJson() {
-        return new JsonObject()
-                .put("name", name)
+        JsonObject ret = new JsonObject().put("name", name)
                 .put("description", description)
                 .put("required", required);
+        if (title != null) {
+            ret.put("title", title);
+        }
+        return ret;
     }
 
     public boolean isParam() {
