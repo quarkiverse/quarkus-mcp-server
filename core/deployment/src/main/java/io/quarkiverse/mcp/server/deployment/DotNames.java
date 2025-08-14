@@ -8,6 +8,7 @@ import org.jboss.jandex.DotName;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.CompleteArg;
+import io.quarkiverse.mcp.server.CompleteContext;
 import io.quarkiverse.mcp.server.CompletePrompt;
 import io.quarkiverse.mcp.server.CompleteResourceTemplate;
 import io.quarkiverse.mcp.server.CompletionResponse;
@@ -59,6 +60,7 @@ class DotNames {
     static final DotName COMPLETE_PROMPT = DotName.createSimple(CompletePrompt.class);
     static final DotName COMPLETE_RESOURCE_TEMPLATE = DotName.createSimple(CompleteResourceTemplate.class);
     static final DotName COMPLETE_RESPONSE = DotName.createSimple(CompletionResponse.class);
+    static final DotName COMPLETE_CONTEXT = DotName.createSimple(CompleteContext.class);
     static final DotName CONTENT = DotName.createSimple(Content.class);
     static final DotName DEFAULT_VALUE_CONVERTER = DotName.createSimple(DefaultValueConverter.class);
     static final DotName EMBEDDED_RESOURCE = DotName.createSimple(EmbeddedResource.class);

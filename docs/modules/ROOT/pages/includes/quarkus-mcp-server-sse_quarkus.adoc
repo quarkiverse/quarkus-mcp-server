@@ -20,6 +20,11 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
+The MCP endpoint (as defined in the specification `2025-03-26`) is exposed at `\{rootPath}`. By default, it's `/mcp`.
+
+The SSE endpoint (as defined in the specification `2024-11-05`) is exposed at `\{rootPath}/sse`. By default, it's
+`/mcp/sse`.
+
 
 ifdef::add-copy-button-to-env-var[]
 Environment variable: env_var_with_copy_button:+++QUARKUS_SSE_ROOT_PATH+++[]
@@ -30,6 +35,32 @@ endif::add-copy-button-to-env-var[]
 --
 |string
 |`/mcp`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-sse_quarkus-sse-message-endpoint-include-query-params]] [.property-path]##link:#quarkus-mcp-server-sse_quarkus-sse-message-endpoint-include-query-params[`quarkus.sse.message-endpoint.include-query-params`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.sse.message-endpoint.include-query-params+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".sse.message-endpoint.include-query-params`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".sse.message-endpoint.include-query-params+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to true then the query params from the initial HTTP request should be included in the message endpoint.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SSE_MESSAGE_ENDPOINT_INCLUDE_QUERY_PARAMS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SSE_MESSAGE_ENDPOINT_INCLUDE_QUERY_PARAMS+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`false`
 
 |===
 

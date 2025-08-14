@@ -71,5 +71,7 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
     interface CompletionArguments extends RequestFeatureArguments {
 
         String argumentValue();
+
+        CompleteContext completeContext();
     }
 }

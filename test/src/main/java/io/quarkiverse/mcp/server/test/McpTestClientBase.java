@@ -18,6 +18,7 @@ import java.util.function.Function;
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Type;
 import io.quarkiverse.mcp.server.EmbeddedResource;
@@ -30,6 +31,7 @@ import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpError;
@@ -194,6 +196,21 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         });
     }
 
+    protected JsonObject newCompleteMessage(String refType, String refName, String argumentName, String argumentValue,
+            Map<String, String> contextArgs) {
+        return newRequest(McpAssured.COMPLETION_COMPLETE, p -> {
+            p.put("ref", new JsonObject()
+                    .put("type", refType)
+                    .put("name", refName));
+            p.put("argument", new JsonObject()
+                    .put("name", argumentName)
+                    .put("value", argumentValue));
+            if (contextArgs != null) {
+                p.put("context", new JsonObject().put("arguments", contextArgs));
+            }
+        });
+    }
+
     protected JsonObject newResourcesReadMessage(String uri, Map<String, Object> meta) {
         return newRequest(McpAssured.RESOURCES_READ, p -> {
             p.put("uri", uri);
@@ -337,6 +354,14 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         }
 
         @Override
+        public PromptsCompleteMessage<ASSERT> promptComplete(String promptName) {
+            if (promptName == null) {
+                throw mustNotBeNull("promptName");
+            }
+            return new PromptsCompleteMessageImpl(promptName);
+        }
+
+        @Override
         public ResourcesReadMessage<ASSERT> resourcesRead(String uri) {
             if (uri == null) {
                 throw mustNotBeNull("uri");
@@ -352,6 +377,11 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         @Override
         public ResourcesTemplatesListMessage<ASSERT> resourcesTemplatesList() {
             return new ResourcesTemplatesListMessageImpl();
+        }
+
+        @Override
+        public ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String resourceTemplateName) {
+            return new ResourceTemplateCompleteMessageImpl(resourceTemplateName);
         }
 
         @Override
@@ -550,6 +580,137 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 doSend(message);
                 if (assertFunction != null) {
                     asserts.add(new PromptsGetAssert(message, assertFunction));
+                } else if (errorAssertFunction != null) {
+                    asserts.add(new ErrorAssert(message, errorAssertFunction));
+                }
+                return self();
+            }
+
+        }
+
+        class PromptsCompleteMessageImpl extends CompleteMessageImpl implements PromptsCompleteMessage<ASSERT> {
+
+            PromptsCompleteMessageImpl(String promptName) {
+                super(promptName);
+            }
+
+            @Override
+            public PromptsCompleteMessage<ASSERT> withArgument(String name, String value) {
+                if (name == null) {
+                    throw mustNotBeNull("name");
+                }
+                if (value == null) {
+                    throw mustNotBeNull("value");
+                }
+                this.argumentName = name;
+                this.argumentValue = value;
+                return this;
+            }
+
+            @Override
+            public PromptsCompleteMessage<ASSERT> withContext(Map<String, String> arguments) {
+                this.contextArguments = arguments;
+                return this;
+            }
+
+            @Override
+            public PromptsCompleteMessage<ASSERT> withAssert(Consumer<CompletionResponse> assertFunction) {
+                if (assertFunction == null) {
+                    throw mustNotBeNull("assertFunction");
+                }
+                this.assertFunction = assertFunction;
+                return this;
+            }
+
+            @Override
+            public PromptsCompleteMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction) {
+                if (errorAssertFunction == null) {
+                    throw mustNotBeNull("errorAssertFunction");
+                }
+                this.errorAssertFunction = errorAssertFunction;
+                return this;
+            }
+
+            @Override
+            public ASSERT send() {
+                JsonObject message = newCompleteMessage(Messages.PROMPT_REF, name, argumentName, argumentValue,
+                        contextArguments);
+                doSend(message);
+                if (assertFunction != null) {
+                    asserts.add(new PromptsCompleteAssert(message, assertFunction));
+                } else if (errorAssertFunction != null) {
+                    asserts.add(new ErrorAssert(message, errorAssertFunction));
+                }
+                return self();
+            }
+
+        }
+
+        abstract class CompleteMessageImpl {
+
+            protected final String name;
+            protected String argumentName;
+            protected String argumentValue;
+            protected Map<String, String> contextArguments;
+            protected Consumer<CompletionResponse> assertFunction;
+            protected Consumer<McpError> errorAssertFunction;
+
+            CompleteMessageImpl(String name) {
+                this.name = name;
+            }
+        }
+
+        class ResourceTemplateCompleteMessageImpl extends CompleteMessageImpl
+                implements ResourceTemplateCompleteMessage<ASSERT> {
+
+            ResourceTemplateCompleteMessageImpl(String resourceTemplateName) {
+                super(resourceTemplateName);
+            }
+
+            @Override
+            public ResourceTemplateCompleteMessage<ASSERT> withArgument(String name, String value) {
+                if (name == null) {
+                    throw mustNotBeNull("name");
+                }
+                if (value == null) {
+                    throw mustNotBeNull("value");
+                }
+                this.argumentName = name;
+                this.argumentValue = value;
+                return this;
+            }
+
+            @Override
+            public ResourceTemplateCompleteMessage<ASSERT> withContext(Map<String, String> arguments) {
+                this.contextArguments = arguments;
+                return this;
+            }
+
+            @Override
+            public ResourceTemplateCompleteMessage<ASSERT> withAssert(Consumer<CompletionResponse> assertFunction) {
+                if (assertFunction == null) {
+                    throw mustNotBeNull("assertFunction");
+                }
+                this.assertFunction = assertFunction;
+                return this;
+            }
+
+            @Override
+            public ResourceTemplateCompleteMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction) {
+                if (errorAssertFunction == null) {
+                    throw mustNotBeNull("errorAssertFunction");
+                }
+                this.errorAssertFunction = errorAssertFunction;
+                return this;
+            }
+
+            @Override
+            public ASSERT send() {
+                JsonObject message = newCompleteMessage(Messages.RESOURCE_REF, name, argumentName, argumentValue,
+                        contextArguments);
+                doSend(message);
+                if (assertFunction != null) {
+                    asserts.add(new PromptsCompleteAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
                     asserts.add(new ErrorAssert(message, errorAssertFunction));
                 }
@@ -937,6 +1098,27 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 }
             }
             assertFunction.accept(new PromptResponse(description, promptMessages));
+        }
+    }
+
+    record PromptsCompleteAssert(JsonObject request, Consumer<CompletionResponse> assertFunction)
+            implements
+                McpTestClientBase.ResponseAssert {
+
+        @Override
+        public void doAssert(JsonObject response) {
+            if (assertFunction == null) {
+                return;
+            }
+            JsonObject result = assertResultResponse(request, response);
+            JsonObject completion = result.getJsonObject("completion");
+            List<String> values = new ArrayList<>();
+            for (Object val : completion.getJsonArray("values")) {
+                values.add(val.toString());
+            }
+            Integer total = completion.getInteger("total");
+            Boolean hasMore = completion.getBoolean("hasMore");
+            assertFunction.accept(new CompletionResponse(values, total, hasMore));
         }
     }
 

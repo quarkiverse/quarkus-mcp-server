@@ -166,6 +166,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 ret[idx] = CancellationImpl.from(argProviders);
             } else if (arg.provider() == Provider.RAW_MESSAGE) {
                 ret[idx] = RawMessageImpl.from(argProviders);
+            } else if (arg.provider() == Provider.COMPLETE_CONTEXT) {
+                ret[idx] = CompleteContextImpl.from(argProviders);
             } else {
                 Object val = argProviders.getArg(arg.name());
                 if (val == null && arg.defaultValue() != null) {

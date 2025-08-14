@@ -1,7 +1,6 @@
 package io.quarkiverse.mcp.server.test.complete;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
@@ -20,8 +19,6 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
 
@@ -55,41 +52,17 @@ public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
                 .setHandler(args -> CompletionResponse.create(List.of()))
                 .register());
 
-        JsonObject completeMessage = client.newRequest("completion/complete")
-                .put("params", new JsonObject()
-                        .put("ref", new JsonObject()
-                                .put("type", "ref/resource")
-                                .put("name", "foo_template"))
-                        .put("argument", new JsonObject()
-                                .put("name", "foo")
-                                .put("value", "Ja")));
-        client.sendAndForget(completeMessage);
-
-        JsonObject completeResponse = client.waitForResponse(completeMessage);
-
-        JsonObject completeResult = completeResponse.getJsonObject("result");
-        assertNotNull(completeResult);
-        JsonArray values = completeResult.getJsonObject("completion").getJsonArray("values");
-        assertEquals(1, values.size());
-        assertEquals("Jachym", values.getString(0));
-
-        completeMessage = client.newRequest("completion/complete")
-                .put("params", new JsonObject()
-                        .put("ref", new JsonObject()
-                                .put("type", "ref/resource")
-                                .put("name", "foo_template"))
-                        .put("argument", new JsonObject()
-                                .put("name", "bar")
-                                .put("value", "Ja")));
-        client.sendAndForget(completeMessage);
-
-        completeResponse = client.waitForResponse(completeMessage);
-
-        completeResult = completeResponse.getJsonObject("result");
-        assertNotNull(completeResult);
-        values = completeResult.getJsonObject("completion").getJsonArray("values");
-        assertEquals(1, values.size());
-        assertEquals("_bar", values.getString(0));
+        client
+                .when()
+                .resourceTemplateComplete("foo_template", "foo", "Ja", completionResponse -> {
+                    assertEquals(1, completionResponse.values().size());
+                    assertEquals("Jachym", completionResponse.values().get(0));
+                })
+                .resourceTemplateComplete("foo_template", "bar", "Ja", completionResponse -> {
+                    assertEquals(1, completionResponse.values().size());
+                    assertEquals("_bar", completionResponse.values().get(0));
+                })
+                .thenAssertResults();
     }
 
     public static class MyResourceTemplates {

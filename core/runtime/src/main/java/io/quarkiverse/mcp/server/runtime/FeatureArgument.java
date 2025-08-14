@@ -31,5 +31,15 @@ public record FeatureArgument(String name,
         SAMPLING,
         CANCELLATION,
         RAW_MESSAGE,
+        COMPLETE_CONTEXT;
+
+        public boolean isValidFor(Feature feature) {
+            return switch (this) {
+                case REQUEST_ID -> feature != Feature.NOTIFICATION;
+                case REQUEST_URI -> feature == Feature.RESOURCE || feature == Feature.RESOURCE_TEMPLATE;
+                case COMPLETE_CONTEXT -> feature == Feature.PROMPT_COMPLETE || feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
+                default -> true;
+            };
+        }
     }
 }

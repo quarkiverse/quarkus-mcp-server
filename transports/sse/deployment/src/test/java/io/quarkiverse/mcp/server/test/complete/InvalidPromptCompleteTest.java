@@ -10,7 +10,6 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.json.JsonObject;
 
 public class InvalidPromptCompleteTest extends McpServerTest {
 
@@ -22,19 +21,15 @@ public class InvalidPromptCompleteTest extends McpServerTest {
     @Test
     public void testError() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
-        JsonObject completeMessage = client
-                .newRequest("completion/complete")
-                .put("params", new JsonObject()
-                        .put("ref", new JsonObject()
-                                .put("type", "ref/prompt")
-                                .put("name", "bar"))
-                        .put("argument", new JsonObject()
-                                .put("name", "name")
-                                .put("value", "Vo")));
-        client.sendAndForget(completeMessage);
-        JsonObject response = client.waitForResponse(completeMessage);
-        assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
-        assertEquals("Prompt completion does not exist: bar_name", response.getJsonObject("error").getString("message"));
+        client.when()
+                .promptComplete("bar")
+                .withArgument("name", "Vo")
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRPC.INVALID_PARAMS, error.code());
+                    assertEquals("Prompt completion does not exist: bar_name", error.message());
+                })
+                .send()
+                .thenAssertResults();
     }
 
 }

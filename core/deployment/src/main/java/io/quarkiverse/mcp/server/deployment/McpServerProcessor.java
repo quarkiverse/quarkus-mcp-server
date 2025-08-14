@@ -750,7 +750,7 @@ class McpServerProcessor {
     private void validatePromptMethod(MethodInfo method) {
         // No need to validate return type
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
@@ -774,7 +774,7 @@ class McpServerProcessor {
             throw new IllegalStateException("Unsupported Prompt complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT_COMPLETE);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Prompt complete must consume exactly one String argument: " + methodDesc(method));
@@ -794,7 +794,7 @@ class McpServerProcessor {
                     "Unsupported Resource template complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE_COMPLETE);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Resource template complete must consume exactly one String argument: " + methodDesc(method));
@@ -808,6 +808,7 @@ class McpServerProcessor {
 
     private void validateToolMethod(MethodInfo method, List<DefaultValueConverterBuildItem> defaultValueConverters,
             IndexView index) {
+        parameters(method, TOOL);
         for (MethodParameterInfo p : method.parameters()) {
             AnnotationInstance toolArg = p.annotation(DotNames.TOOL_ARG);
             if (toolArg != null) {
@@ -857,7 +858,7 @@ class McpServerProcessor {
     private void validateResourceMethod(MethodInfo method) {
         // No need to validate return type
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE);
         if (!parameters.isEmpty()) {
             throw new IllegalStateException(
                     "Resource method may only accept built-in parameter types" + methodDesc(method));
@@ -873,7 +874,7 @@ class McpServerProcessor {
         }
         VariableMatcher variableMatcher = ResourceTemplateManagerImpl.createMatcherFromUriTemplate(uriTemplateValue.asString());
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
@@ -908,9 +909,19 @@ class McpServerProcessor {
         }
     }
 
-    private List<MethodParameterInfo> parameters(MethodInfo method) {
-        return method.parameters().stream()
-                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
+    private List<MethodParameterInfo> parameters(MethodInfo method, Feature feature) {
+        List<MethodParameterInfo> ret = new ArrayList<>();
+        for (MethodParameterInfo param : method.parameters()) {
+            Provider provider = providerFrom(param.type());
+            if (!provider.isValidFor(feature)) {
+                throw new IllegalStateException("%s feature method %s may not accept parameter of type %s".formatted(feature,
+                        methodDesc(method), param.type()));
+            }
+            if (provider == Provider.PARAMS) {
+                ret.add(param);
+            }
+        }
+        return ret;
     }
 
     private boolean hasFeatureMethod(BeanInfo bean) {
@@ -1064,6 +1075,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.CANCELLATION;
         } else if (type.name().equals(DotNames.RAW_MESSAGE)) {
             return FeatureArgument.Provider.RAW_MESSAGE;
+        } else if (type.name().equals(DotNames.COMPLETE_CONTEXT)) {
+            return FeatureArgument.Provider.COMPLETE_CONTEXT;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

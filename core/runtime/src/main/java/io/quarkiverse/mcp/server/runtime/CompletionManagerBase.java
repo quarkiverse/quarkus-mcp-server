@@ -10,6 +10,7 @@ import jakarta.enterprise.inject.Instance;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.CompleteContext;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
@@ -191,6 +192,11 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         @Override
         public String argumentValue() {
             return argumentValue;
+        }
+
+        @Override
+        public CompleteContext completeContext() {
+            return CompleteContextImpl.from(argProviders);
         }
 
     }
