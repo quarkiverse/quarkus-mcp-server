@@ -21,6 +21,11 @@ public @interface PromptArg {
 
     String name() default ELEMENT_NAME;
 
+    /**
+     * A human-readable name.
+     */
+    String title() default "";
+
     String description() default "";
 
     /**

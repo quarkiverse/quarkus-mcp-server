@@ -26,8 +26,8 @@ public class MyPrompts {
     @Inject
     FooService fooService;
 
-    @Prompt(description = "Not much we can say here.")
-    PromptMessage foo(@PromptArg(description = "The name") String name, String repeat) {
+    @Prompt(description = "Not much we can say here.", title = "Foo...")
+    PromptMessage foo(@PromptArg(description = "The name", title = "Name...") String name, String repeat) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();

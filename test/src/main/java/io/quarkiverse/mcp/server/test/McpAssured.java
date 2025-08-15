@@ -8,9 +8,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
@@ -31,6 +34,7 @@ public class McpAssured {
     public static final String RESOURCES_LIST = "resources/list";
     public static final String RESOURCES_TEMPLATES_LIST = "resources/templates/list";
     public static final String RESOURCES_READ = "resources/read";
+    public static final String COMPLETION_COMPLETE = "completion/complete";
 
     /**
      * The base URI is used by HTTP-based client implementations.
@@ -386,7 +390,7 @@ public class McpAssured {
         /**
          * Build a {@value McpAssured#PING} message.
          *
-         * @return self
+         * @return a new builder
          */
         @CheckReturnValue
         PingMessage<ASSERT> ping();
@@ -503,7 +507,7 @@ public class McpAssured {
          * @param promptName
          * @param args
          * @param assertFunction
-         * @return a new builder
+         * @return self
          */
         default ASSERT promptsGet(String promptName, Map<String, String> args, Consumer<PromptResponse> assertFunction) {
             return promptsGet(promptName)
@@ -519,7 +523,7 @@ public class McpAssured {
          *
          * @param uri
          * @param assertFunction
-         * @return a new builder
+         * @return self
          */
         default ASSERT resourcesRead(String uri, Consumer<ResourceResponse> assertFunction) {
             return resourcesRead(uri)
@@ -542,7 +546,7 @@ public class McpAssured {
          *
          * @param uri
          * @param assertFunction
-         * @return a new builder
+         * @return self
          */
         default ASSERT resourcesList(Consumer<ResourcesPage> assertFunction) {
             return resourcesList()
@@ -564,7 +568,7 @@ public class McpAssured {
          *
          * @param uri
          * @param assertFunction
-         * @return a new builder
+         * @return self
          */
         default ASSERT resourcesTemplatesList(Consumer<ResourcesTemplatesPage> assertFunction) {
             return resourcesTemplatesList()
@@ -580,7 +584,34 @@ public class McpAssured {
         ResourcesTemplatesListMessage<ASSERT> resourcesTemplatesList();
 
         /**
-         * Build a {@code prompts/get} message.
+         * Build a {@value McpAssured#COMPLETION_COMPLETE} message.
+         *
+         * @param promptName
+         * @return a new builder
+         */
+        ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String resourceTemplateName);
+
+        /**
+         * Send a {@value McpAssured#COMPLETION_COMPLETE} message to the server.
+         * <p>
+         * The assert function is not used until the {@link #thenAssertResults()} method is called.
+         *
+         * @param promptName
+         * @param argumentName
+         * @param argumentValue
+         * @param assertFunction
+         * @return self
+         */
+        default ASSERT resourceTemplateComplete(String resourceTemplateName, String argumentName, String argumentValue,
+                Consumer<CompletionResponse> assertFunction) {
+            return resourceTemplateComplete(resourceTemplateName)
+                    .withArgument(argumentName, argumentValue)
+                    .withAssert(assertFunction)
+                    .send();
+        }
+
+        /**
+         * Build a {@value McpAssured#PROMPTS_GET} message.
          * <p>
          * The message is not sent until the {@link PromptsGetMessage#send()} is called.
          *
@@ -588,6 +619,33 @@ public class McpAssured {
          * @return a new builder
          */
         PromptsGetMessage<ASSERT> promptsGet(String promptName);
+
+        /**
+         * Build a {@value McpAssured#COMPLETION_COMPLETE} message.
+         *
+         * @param promptName
+         * @return a new builder
+         */
+        PromptsCompleteMessage<ASSERT> promptComplete(String promptName);
+
+        /**
+         * Send a {@value McpAssured#COMPLETION_COMPLETE} message to the server.
+         * <p>
+         * The assert function is not used until the {@link #thenAssertResults()} method is called.
+         *
+         * @param promptName
+         * @param argumentName
+         * @param argumentValue
+         * @param assertFunction
+         * @return self
+         */
+        default ASSERT promptComplete(String promptName, String argumentName, String argumentValue,
+                Consumer<CompletionResponse> assertFunction) {
+            return promptComplete(promptName)
+                    .withArgument(argumentName, argumentValue)
+                    .withAssert(assertFunction)
+                    .send();
+        }
 
         /**
          * Build a generic message.
@@ -849,6 +907,92 @@ public class McpAssured {
         }
 
         /**
+         * A {@value McpAssured#COMPLETION_COMPLETE} message for prompts.
+         *
+         * @param <ASSERT>
+         */
+        interface PromptsCompleteMessage<ASSERT extends McpAssert<ASSERT>> {
+
+            /**
+             * @param name
+             * @param value
+             * @return self
+             */
+            PromptsCompleteMessage<ASSERT> withArgument(String name, String value);
+
+            /**
+             * @param arguments
+             * @return self
+             */
+            PromptsCompleteMessage<ASSERT> withContext(Map<String, String> arguments);
+
+            /**
+             * @param assertFunction
+             * @return self
+             */
+            PromptsCompleteMessage<ASSERT> withAssert(Consumer<CompletionResponse> assertFunction);
+
+            /**
+             * @param errorAssertFunction
+             * @return self
+             */
+            PromptsCompleteMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Send the message.
+             * <p>
+             * The assert function is not used until the {@link #thenAssertResults()} method is called.
+             *
+             * @return the assert group
+             */
+            ASSERT send();
+
+        }
+
+        /**
+         * A {@value McpAssured#COMPLETION_COMPLETE} message for resource templates.
+         *
+         * @param <ASSERT>
+         */
+        interface ResourceTemplateCompleteMessage<ASSERT extends McpAssert<ASSERT>> {
+
+            /**
+             * @param name
+             * @param value
+             * @return self
+             */
+            ResourceTemplateCompleteMessage<ASSERT> withArgument(String name, String value);
+
+            /**
+             * @param arguments
+             * @return self
+             */
+            ResourceTemplateCompleteMessage<ASSERT> withContext(Map<String, String> arguments);
+
+            /**
+             * @param assertFunction
+             * @return self
+             */
+            ResourceTemplateCompleteMessage<ASSERT> withAssert(Consumer<CompletionResponse> assertFunction);
+
+            /**
+             * @param errorAssertFunction
+             * @return self
+             */
+            ResourceTemplateCompleteMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Send the message.
+             * <p>
+             * The assert function is not used until the {@link #thenAssertResults()} method is called.
+             *
+             * @return the assert group
+             */
+            ASSERT send();
+
+        }
+
+        /**
          * A {@value McpAssured#RESOURCES_LIST} message.
          *
          * @param <ASSERT>
@@ -1056,7 +1200,7 @@ public class McpAssured {
 
     }
 
-    public record InitResult(String protocolVersion, String serverName, String serverVersion,
+    public record InitResult(String protocolVersion, String serverName, String serverTitle, String serverVersion,
             List<ServerCapability> capabilities) {
 
     }
@@ -1111,19 +1255,20 @@ public class McpAssured {
         }
     }
 
-    public record ToolInfo(String name, String description, JsonObject inputSchema, Optional<ToolAnnotations> annotations) {
+    public record ToolInfo(String name, String title, String description, JsonObject inputSchema,
+            Optional<ToolAnnotations> annotations) {
     }
 
-    public record PromptInfo(String name, String description, List<PromptArgument> arguments) {
+    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments) {
     }
 
-    public record ResourceInfo(String uri, String mimeType, String name, String description) {
+    public record ResourceInfo(String uri, String mimeType, String name, String title, String description) {
     }
 
-    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String description) {
+    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description) {
     }
 
-    public record PromptArgument(String name, String description, boolean required) {
+    public record PromptArgument(String name, String title, String description, boolean required) {
     }
 
     public record ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint,

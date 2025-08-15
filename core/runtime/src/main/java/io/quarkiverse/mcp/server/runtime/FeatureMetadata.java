@@ -27,6 +27,9 @@ public record FeatureMetadata<M>(Feature feature,
         JsonObject ret = new JsonObject()
                 .put("name", info.name())
                 .put("description", info.description());
+        if (info.title() != null) {
+            ret.put("title", info.title());
+        }
         if (feature == Feature.PROMPT) {
             JsonArray arguments = new JsonArray();
             for (FeatureArgument arg : info.serializedArguments()) {

@@ -13,7 +13,7 @@ import io.quarkiverse.mcp.server.TextResourceContents;
 
 public class MyTemplates {
 
-    @ResourceTemplate(uriTemplate = "file:///{path}")
+    @ResourceTemplate(uriTemplate = "file:///{path}", title = "Alpha...")
     ResourceResponse alpha(String path) {
         String uri = "file:///" + path;
         checkExecutionModel(true);

@@ -130,6 +130,8 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
 
         RawMessage rawMessage();
 
+        Meta meta();
+
     }
 
 }

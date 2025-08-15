@@ -21,6 +21,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     // The name of the feature
     private final String name;
+    private final String title;
 
     // Optional description
     private final String description;
@@ -35,13 +36,15 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     // Server config name
     private final String server;
 
-    FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String description, String uri,
+    FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
+            String uri,
             String mimeType, Feature feature, ToolManager.ToolAnnotations toolAnnotations, String server) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
         this.feature = Objects.requireNonNull(feature);
         this.name = Objects.requireNonNull(name);
+        this.title = title;
         this.description = description;
         this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
@@ -63,6 +66,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     String getName() {
         return name;
+    }
+
+    String getTitle() {
+        return title;
     }
 
     String getDescription() {

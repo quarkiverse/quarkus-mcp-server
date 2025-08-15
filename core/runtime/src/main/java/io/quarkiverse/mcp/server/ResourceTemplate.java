@@ -42,9 +42,18 @@ public @interface ResourceTemplate {
     String ELEMENT_NAME = "<<element name>>";
 
     /**
-     * The human-readable name for this resource template.
+     * Each resource template must have a unique name.
+     * <p>
+     * Intended for programmatic or logical use, but used for UI in past specs or as fallback if title isn't present.
+     * <p>
+     * By default, the name is derived from the name of the annotated method.
      */
     String name() default ELEMENT_NAME;
+
+    /**
+     * A human-readable name for this resource template.
+     */
+    String title() default "";
 
     /**
      * The description of what this resource template represents.

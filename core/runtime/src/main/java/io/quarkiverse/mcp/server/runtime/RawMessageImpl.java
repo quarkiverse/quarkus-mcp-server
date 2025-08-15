@@ -3,7 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import io.quarkiverse.mcp.server.RawMessage;
 import io.vertx.core.json.JsonObject;
 
-public class RawMessageImpl implements RawMessage {
+class RawMessageImpl implements RawMessage {
 
     static RawMessageImpl from(ArgumentProviders argProviders) {
         return new RawMessageImpl(argProviders.rawMessage());

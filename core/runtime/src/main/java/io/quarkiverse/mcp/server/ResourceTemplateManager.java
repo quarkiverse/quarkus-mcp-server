@@ -36,6 +36,8 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
      */
     interface ResourceTemplateInfo extends FeatureManager.FeatureInfo {
 
+        String title();
+
         String uriTemplate();
 
         String mimeType();
@@ -50,6 +52,14 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
     interface ResourceTemplateDefinition
             extends
             FeatureDefinition<ResourceTemplateInfo, ResourceTemplateArguments, ResourceResponse, ResourceTemplateDefinition> {
+
+        /**
+         *
+         * @param title
+         * @return self
+         * @see ResourceTemplate#title()
+         */
+        ResourceTemplateDefinition setTitle(String title);
 
         /**
          *

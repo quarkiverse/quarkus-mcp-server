@@ -5,6 +5,7 @@ import java.util.List;
 import io.quarkiverse.mcp.server.ToolManager;
 
 public record FeatureMethodInfo(String name,
+        String title,
         String description,
         String uri,
         String mimeType,

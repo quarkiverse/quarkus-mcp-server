@@ -54,7 +54,10 @@ public class ProgrammaticToolTest extends McpServerTest {
         assertEquals("notifications/tools/list_changed", notifications.get(0).getString("method"));
 
         client.when()
-                .toolsList(page -> assertEquals(1, page.size()))
+                .toolsList(page -> {
+                    assertEquals(1, page.size());
+                    assertEquals("ALPHA", page.tools().get(0).title());
+                })
                 .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.content().get(0).asText().text()))
                 .thenAssertResults();
 
@@ -95,6 +98,7 @@ public class ProgrammaticToolTest extends McpServerTest {
 
         void register(String name, String result) {
             manager.newTool(name)
+                    .setTitle(name.toUpperCase())
                     .setDescription(name + " description!")
                     .addArgument("foo", "Foo arg", true, int.class)
                     .setHandler(

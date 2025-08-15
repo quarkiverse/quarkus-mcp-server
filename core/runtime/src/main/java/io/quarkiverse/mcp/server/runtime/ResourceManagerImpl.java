@@ -213,6 +213,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public String title() {
+            return metadata.info().title();
+        }
+
+        @Override
         public String description() {
             return metadata.info().description();
         }
@@ -252,16 +257,23 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     class ResourceDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<ResourceArguments, ResourceResponse>
             implements ResourceManager.ResourceInfo {
 
+        private final String title;
         private final String uri;
         private final String mimeType;
 
-        private ResourceDefinitionInfo(String name, String description, String serverName,
+        private ResourceDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            this.title = title;
             this.uri = uri;
             this.mimeType = mimeType;
+        }
+
+        @Override
+        public String title() {
+            return title;
         }
 
         @Override
@@ -281,6 +293,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     .put("uri", uri);
             if (mimeType != null) {
                 ret.put("mimeType", mimeType);
+            }
+            if (title != null) {
+                ret.put("title", title);
             }
             return ret;
         }
@@ -326,11 +341,18 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             FeatureManagerBase.FeatureDefinitionBase<ResourceInfo, ResourceArguments, ResourceResponse, ResourceDefinitionImpl>
             implements ResourceManager.ResourceDefinition {
 
+        private String title;
         private String uri;
         private String mimeType;
 
         ResourceDefinitionImpl(String name) {
             super(name);
+        }
+
+        @Override
+        public ResourceDefinition setTitle(String title) {
+            this.title = title;
+            return this;
         }
 
         @Override
@@ -351,7 +373,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public ResourceInfo register() {
             validate();
-            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, description, serverName, fun, asyncFun,
+            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
                     runOnVirtualThread, uri, mimeType);
             ResourceInfo existing = resources.putIfAbsent(uri, ret);
             if (existing != null) {

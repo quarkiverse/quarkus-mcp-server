@@ -6,6 +6,7 @@ import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
 import java.time.DayOfWeek;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import jakarta.inject.Inject;
@@ -13,6 +14,7 @@ import jakarta.inject.Inject;
 import dev.langchain4j.agent.tool.P;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
@@ -31,11 +33,14 @@ public class MyTools {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
-        return ToolResponse.success(
-                new TextContent(fooService.ping(price.get() + "", 1, new Options(true))));
+        return new ToolResponse(false,
+                List.of(new TextContent(
+                        fooService.ping(price.get() + "", 1, new Options(true)),
+                        Map.of(MetaKey.from("content/foo"), 10))),
+                Map.of(MetaKey.of("alpha-foo"), true));
     }
 
-    @Tool
+    @Tool(title = "Uni Alpha!")
     Uni<ToolResponse> uni_alpha(@ToolArg(name = "uni_price") double price) {
         checkExecutionModel(false);
         checkDuplicatedContext();

@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.prompts;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Map;
 
@@ -31,11 +32,15 @@ public class PromptsTest extends McpServerTest {
                 .promptsList(page -> {
                     assertEquals(6, page.size());
                     PromptInfo bar = page.findByName("BAR");
+                    assertNull(bar.title());
                     assertEquals(1, bar.arguments().size());
                     assertEquals("val", bar.arguments().get(0).name());
                     PromptInfo foo = page.findByName("foo");
+                    assertEquals("Foo...", foo.title());
                     assertEquals("Not much we can say here.", foo.description());
                     assertEquals(2, foo.arguments().size());
+                    assertEquals("Name...",
+                            foo.arguments().stream().filter(a -> a.name().equals("name")).findAny().get().title());
                 })
                 .promptsGet("foo", Map.of("name", "Lu", "repeat", "1"), r -> {
                     assertEquals("Hello Lu!", r.messages().get(0).content().asText().text());

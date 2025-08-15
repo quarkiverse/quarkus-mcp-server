@@ -243,6 +243,11 @@ class McpServerProcessor {
                         AnnotationValue nameValue = featureAnnotation.value("name");
                         name = nameValue != null ? nameValue.asString() : method.name();
                     }
+                    String title = null;
+                    AnnotationValue titleValue = featureAnnotation.value("title");
+                    if (titleValue != null) {
+                        title = titleValue.asString();
+                    }
 
                     String description;
                     if (feature == TOOL && method.hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)) {
@@ -278,12 +283,12 @@ class McpServerProcessor {
                         AnnotationValue annotations = featureAnnotation.value("annotations");
                         if (annotations != null) {
                             AnnotationInstance annotationsAnnotation = annotations.asNested();
-                            AnnotationValue titleValue = annotationsAnnotation.value("title");
+                            AnnotationValue annoTitleValue = annotationsAnnotation.value("title");
                             AnnotationValue readOnlyHintValue = annotationsAnnotation.value("readOnlyHint");
                             AnnotationValue destructiveHintValue = annotationsAnnotation.value("destructiveHint");
                             AnnotationValue idempotentHintValue = annotationsAnnotation.value("idempotentHint");
                             AnnotationValue openWorldHintValue = annotationsAnnotation.value("openWorldHint");
-                            toolAnnotations = new ToolAnnotations(titleValue != null ? titleValue.asString() : null,
+                            toolAnnotations = new ToolAnnotations(annoTitleValue != null ? annoTitleValue.asString() : null,
                                     readOnlyHintValue != null ? readOnlyHintValue.asBoolean() : false,
                                     destructiveHintValue != null ? destructiveHintValue.asBoolean() : true,
                                     idempotentHintValue != null ? idempotentHintValue.asBoolean() : false,
@@ -301,7 +306,7 @@ class McpServerProcessor {
                         server = serverAnotation.value().asString();
                     }
 
-                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
                             description, uri, mimeType, feature, toolAnnotations, server);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
@@ -619,7 +624,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.ROOTS)
                         || paramType.name().equals(DotNames.SAMPLING)
                         || paramType.name().equals(DotNames.CANCELLATION)
-                        || paramType.name().equals(DotNames.RAW_MESSAGE)) {
+                        || paramType.name().equals(DotNames.RAW_MESSAGE)
+                        || paramType.name().equals(DotNames.META)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -750,7 +756,7 @@ class McpServerProcessor {
     private void validatePromptMethod(MethodInfo method) {
         // No need to validate return type
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
@@ -774,7 +780,7 @@ class McpServerProcessor {
             throw new IllegalStateException("Unsupported Prompt complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT_COMPLETE);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Prompt complete must consume exactly one String argument: " + methodDesc(method));
@@ -794,7 +800,7 @@ class McpServerProcessor {
                     "Unsupported Resource template complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE_COMPLETE);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Resource template complete must consume exactly one String argument: " + methodDesc(method));
@@ -808,6 +814,7 @@ class McpServerProcessor {
 
     private void validateToolMethod(MethodInfo method, List<DefaultValueConverterBuildItem> defaultValueConverters,
             IndexView index) {
+        parameters(method, TOOL);
         for (MethodParameterInfo p : method.parameters()) {
             AnnotationInstance toolArg = p.annotation(DotNames.TOOL_ARG);
             if (toolArg != null) {
@@ -857,7 +864,7 @@ class McpServerProcessor {
     private void validateResourceMethod(MethodInfo method) {
         // No need to validate return type
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE);
         if (!parameters.isEmpty()) {
             throw new IllegalStateException(
                     "Resource method may only accept built-in parameter types" + methodDesc(method));
@@ -873,7 +880,7 @@ class McpServerProcessor {
         }
         VariableMatcher variableMatcher = ResourceTemplateManagerImpl.createMatcherFromUriTemplate(uriTemplateValue.asString());
 
-        List<MethodParameterInfo> parameters = parameters(method);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
@@ -894,23 +901,27 @@ class McpServerProcessor {
                                 .equals(DotName.createSimple(Void.class)))) {
             throw new IllegalStateException("Notification method must return void or Uni<Void>");
         }
-        List<MethodParameterInfo> parameters = method.parameters();
-        for (MethodParameterInfo param : parameters) {
-            if (!param.type().name().equals(DotNames.MCP_CONNECTION)
-                    && !param.type().name().equals(DotNames.MCP_LOG)
-                    && !param.type().name().equals(DotNames.ROOTS)
-                    && !param.type().name().equals(DotNames.SAMPLING)
-                    && !param.type().name().equals(DotNames.RAW_MESSAGE)) {
-                throw new IllegalStateException(
-                        "Notification methods may only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling, RawMessage]: "
-                                + methodDesc(method));
-            }
+        List<MethodParameterInfo> params = parameters(method, NOTIFICATION);
+        if (!params.isEmpty()) {
+            throw new IllegalStateException(
+                    "Notification method %s may not consume the following parameter types: %s".formatted(methodDesc(method),
+                            params.stream().map(MethodParameterInfo::type).toList()));
         }
     }
 
-    private List<MethodParameterInfo> parameters(MethodInfo method) {
-        return method.parameters().stream()
-                .filter(p -> providerFrom(p.type()) == Provider.PARAMS).toList();
+    private List<MethodParameterInfo> parameters(MethodInfo method, Feature feature) {
+        List<MethodParameterInfo> ret = new ArrayList<>();
+        for (MethodParameterInfo param : method.parameters()) {
+            Provider provider = providerFrom(param.type());
+            if (!provider.isValidFor(feature)) {
+                throw new IllegalStateException("%s feature method %s may not accept parameter of type %s".formatted(feature,
+                        methodDesc(method), param.type()));
+            }
+            if (provider == Provider.PARAMS) {
+                ret.add(param);
+            }
+        }
+        return ret;
     }
 
     private boolean hasFeatureMethod(BeanInfo bean) {
@@ -943,6 +954,7 @@ class McpServerProcessor {
         ResultHandle args = Gizmo.newArrayList(metaMethod);
         for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
             String name = param.name();
+            String title = null;
             String description = "";
             // Argument is required by default
             boolean required = true;
@@ -958,6 +970,10 @@ class McpServerProcessor {
                     }
                     if (nameValue != null) {
                         name = nameValue.asString();
+                    }
+                    AnnotationValue titleValue = argAnnotation.value("title");
+                    if (titleValue != null) {
+                        title = titleValue.asString();
                     }
                     AnnotationValue descriptionValue = argAnnotation.value("description");
                     if (descriptionValue != null) {
@@ -993,9 +1009,11 @@ class McpServerProcessor {
             ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
             ResultHandle provider = metaMethod.load(providerFrom(param.type()));
             ResultHandle arg = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, boolean.class,
+                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, String.class,
+                            boolean.class,
                             Type.class, String.class, FeatureArgument.Provider.class),
-                    metaMethod.load(name), metaMethod.load(description), metaMethod.load(required), type,
+                    metaMethod.load(name), title != null ? metaMethod.load(title) : metaMethod.loadNull(),
+                    metaMethod.load(description), metaMethod.load(required), type,
                     defaultValue != null ? metaMethod.load(defaultValue) : metaMethod.loadNull(),
                     provider);
             Gizmo.listOperations(metaMethod).on(args).add(arg);
@@ -1017,8 +1035,11 @@ class McpServerProcessor {
 
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
+                        String.class,
                         List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
-                metaMethod.load(featureMethod.getName()), metaMethod.load(featureMethod.getDescription()),
+                metaMethod.load(featureMethod.getName()),
+                featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
+                metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
@@ -1064,6 +1085,10 @@ class McpServerProcessor {
             return FeatureArgument.Provider.CANCELLATION;
         } else if (type.name().equals(DotNames.RAW_MESSAGE)) {
             return FeatureArgument.Provider.RAW_MESSAGE;
+        } else if (type.name().equals(DotNames.COMPLETE_CONTEXT)) {
+            return FeatureArgument.Provider.COMPLETE_CONTEXT;
+        } else if (type.name().equals(DotNames.META)) {
+            return FeatureArgument.Provider.META;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

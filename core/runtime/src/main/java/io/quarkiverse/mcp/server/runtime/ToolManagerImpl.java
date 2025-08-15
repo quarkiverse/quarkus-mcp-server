@@ -187,6 +187,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public String title() {
+            return metadata.info().title();
+        }
+
+        @Override
         public String description() {
             return metadata.info().description();
         }
@@ -256,6 +261,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             extends FeatureManagerBase.FeatureDefinitionBase<ToolInfo, ToolArguments, ToolResponse, ToolDefinitionImpl>
             implements ToolManager.ToolDefinition {
 
+        private String title;
         private final List<ToolArgument> arguments;
 
         private ToolAnnotations annotations;
@@ -278,9 +284,15 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition setTitle(String title) {
+            this.title = title;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
-            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, description, serverName, fun, asyncFun,
+            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
@@ -295,17 +307,23 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     class ToolDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<ToolArguments, ToolResponse>
             implements ToolManager.ToolInfo {
 
+        private final String title;
         private final List<ToolArgument> arguments;
-
         private final Optional<ToolAnnotations> annotations;
 
-        private ToolDefinitionInfo(String name, String description, String serverName,
+        private ToolDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
+        }
+
+        @Override
+        public String title() {
+            return title;
         }
 
         @Override
@@ -323,6 +341,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             JsonObject tool = new JsonObject()
                     .put("name", name())
                     .put("description", description());
+            if (title != null) {
+                tool.put("title", title);
+            }
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
             for (ToolArgument a : arguments) {

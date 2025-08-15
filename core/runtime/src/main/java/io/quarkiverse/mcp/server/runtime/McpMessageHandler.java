@@ -199,7 +199,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // we could perform a "dummy" initialization
         if (!INITIALIZE.equals(method)) {
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT && serverConfig(mcpRequest).devMode().dummyInit()) {
-                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1"), SUPPORTED_PROTOCOL_VERSIONS.get(0),
+                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1", null),
+                        SUPPORTED_PROTOCOL_VERSIONS.get(0),
                         List.of(), transport());
                 if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", mcpRequest.connection().id());
@@ -492,7 +493,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
-        Implementation implementation = new Implementation(clientInfo.getString("name"), clientInfo.getString("version"));
+        Implementation implementation = new Implementation(clientInfo.getString("name"), clientInfo.getString("version"),
+                clientInfo.getString("title"));
         String protocolVersion = params.getString("protocolVersion");
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         JsonObject capabilities = params.getJsonObject("capabilities");
@@ -517,13 +519,15 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         info.put("protocolVersion", version);
 
-        String serverName = serverConfig(mcpRequest).serverInfo().name()
+        McpServerRuntimeConfig serverConfig = serverConfig(mcpRequest);
+        String serverName = serverConfig.serverInfo().name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
                         .orElse("N/A"));
-        String serverVersion = serverConfig(mcpRequest).serverInfo().version()
+        String serverVersion = serverConfig.serverInfo().version()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
                         .orElse("N/A"));
-        info.put("serverInfo", Map.of("name", serverName, "version", serverVersion));
+        String serverTitle = serverConfig.serverInfo().title().orElse(serverName);
+        info.put("serverInfo", Map.of("name", serverName, "version", serverVersion, "title", serverTitle));
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
         if (promptManager.hasInfos(mcpRequest)) {

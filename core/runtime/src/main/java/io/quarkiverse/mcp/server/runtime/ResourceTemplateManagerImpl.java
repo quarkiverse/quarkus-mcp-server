@@ -235,6 +235,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public String title() {
+            return metadata.info().title();
+        }
+
+        @Override
         public String description() {
             return metadata.info().description();
         }
@@ -270,16 +275,23 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             extends FeatureManagerBase.FeatureDefinitionInfoBase<ResourceTemplateArguments, ResourceResponse>
             implements ResourceTemplateManager.ResourceTemplateInfo {
 
+        private final String title;
         private final String uriTemplate;
         private final String mimeType;
 
-        private ResourceTemplateDefinitionInfo(String name, String description, String serverName,
+        private ResourceTemplateDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
+        }
+
+        @Override
+        public String title() {
+            return title;
         }
 
         @Override
@@ -294,10 +306,14 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
         @Override
         public JsonObject asJson() {
-            return new JsonObject().put("name", name())
+            JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
                     .put("uriTemplate", uriTemplate())
                     .put("mimeType", mimeType());
+            if (title != null) {
+                ret.put("title", title);
+            }
+            return ret;
         }
 
         @Override
@@ -348,11 +364,18 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             FeatureManagerBase.FeatureDefinitionBase<ResourceTemplateInfo, ResourceTemplateArguments, ResourceResponse, ResourceTemplateDefinitionImpl>
             implements ResourceTemplateManager.ResourceTemplateDefinition {
 
+        private String title;
         private String uriTemplate;
         private String mimeType;
 
         ResourceTemplateDefinitionImpl(String name) {
             super(name);
+        }
+
+        @Override
+        public ResourceTemplateDefinition setTitle(String title) {
+            this.title = title;
+            return this;
         }
 
         @Override
@@ -370,7 +393,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         public ResourceTemplateInfo register() {
             validate();
-            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, description, serverName,
+            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverName,
                     fun, asyncFun,
                     runOnVirtualThread, uriTemplate, mimeType);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
