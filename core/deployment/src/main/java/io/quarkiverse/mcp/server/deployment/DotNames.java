@@ -19,6 +19,7 @@ import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.Meta;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.Prompt;
@@ -106,5 +107,6 @@ class DotNames {
     static final DotName TRANSACTIONAL = DotName.createSimple("jakarta.transaction.Transactional");
     static final DotName UNI = DotName.createSimple(Uni.class);
     static final DotName RAW_MESSAGE = DotName.createSimple(RawMessage.class);
+    static final DotName META = DotName.createSimple(Meta.class);
 
 }

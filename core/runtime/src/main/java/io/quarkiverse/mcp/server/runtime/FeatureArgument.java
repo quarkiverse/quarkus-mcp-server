@@ -35,7 +35,8 @@ public record FeatureArgument(String name,
         SAMPLING,
         CANCELLATION,
         RAW_MESSAGE,
-        COMPLETE_CONTEXT;
+        COMPLETE_CONTEXT,
+        META;
 
         public boolean isValidFor(Feature feature) {
             return switch (this) {

@@ -14,13 +14,11 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkiverse.mcp.server.Content;
-import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingResponse;
-import io.quarkiverse.mcp.server.TextContent;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
@@ -120,14 +118,8 @@ public class SamplingRequestImpl implements SamplingRequest {
                 }
                 String model = result.getString("model");
                 Role role = Role.valueOf(result.getString("role").toUpperCase());
-                JsonObject content = result.getJsonObject("content");
-                Content.Type contentType = Content.Type.valueOf(content.getString("type").toUpperCase());
-                Content c = switch (contentType) {
-                    case TEXT -> content.mapTo(TextContent.class);
-                    case IMAGE -> content.mapTo(ImageContent.class);
-                    default -> throw new IllegalArgumentException("Unexpected value: " + contentType);
-                };
-                SamplingResponse samplingResponse = new SamplingResponse(c, model, role, result.getString("stopReason"));
+                Content content = Contents.parseContent(result.getJsonObject("content"));
+                SamplingResponse samplingResponse = new SamplingResponse(content, model, role, result.getString("stopReason"));
                 future.complete(samplingResponse);
             });
             id.set(requestId);

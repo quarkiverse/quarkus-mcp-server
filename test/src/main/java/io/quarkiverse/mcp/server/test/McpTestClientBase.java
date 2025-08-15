@@ -15,22 +15,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import io.quarkiverse.mcp.server.AudioContent;
-import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
-import io.quarkiverse.mcp.server.Content.Type;
-import io.quarkiverse.mcp.server.EmbeddedResource;
-import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.Role;
-import io.quarkiverse.mcp.server.TextContent;
-import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.Contents;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
@@ -238,33 +232,6 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected abstract int nextRequestId();
-
-    static ResourceContents parseResourceContents(JsonObject resourceContent) {
-        if (resourceContent.containsKey("text")) {
-            return new TextResourceContents(resourceContent.getString("uri"), resourceContent.getString("text"),
-                    resourceContent.getString("mime"));
-        } else if (resourceContent.containsKey("blob")) {
-            return new BlobResourceContents(resourceContent.getString("uri"), resourceContent.getString("blob"),
-                    resourceContent.getString("mime"));
-        } else {
-            throw new IllegalStateException("Unsupported resource content type");
-        }
-    }
-
-    private static Content parseContent(JsonObject c) {
-        Content.Type type = Content.Type.valueOf(c.getString("type").toUpperCase());
-        if (type == Type.TEXT) {
-            return new TextContent(c.getString("text"));
-        } else if (type == Type.AUDIO) {
-            return new AudioContent(c.getString("data"), c.getString("mimeType"));
-        } else if (type == Type.IMAGE) {
-            return new ImageContent(c.getString("data"), c.getString("mimeType"));
-        } else if (type == Type.RESOURCE) {
-            return new EmbeddedResource(McpTestClientBase.parseResourceContents(c.getJsonObject("resource")));
-        } else {
-            throw new IllegalStateException("Unsupported content type: " + type);
-        }
-    }
 
     static final String getBasicAuthenticationHeader(String username, String password) {
         String value = username + ":" + password;
@@ -1096,11 +1063,11 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                     JsonObject message = messages.getJsonObject(i);
                     Role role = Role.valueOf(message.getString("role").toUpperCase());
                     JsonObject content = message.getJsonObject("content");
-                    Content messageContent = parseContent(content);
+                    Content messageContent = Contents.parseContent(content);
                     promptMessages.add(new PromptMessage(role, messageContent));
                 }
             }
-            assertFunction.accept(new PromptResponse(description, promptMessages));
+            assertFunction.accept(new PromptResponse(description, promptMessages, Contents.parseMeta(result)));
         }
     }
 
@@ -1171,10 +1138,10 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             List<ResourceContents> resourceContents = new ArrayList<>();
             if (!contents.isEmpty()) {
                 for (int i = 0; i < contents.size(); i++) {
-                    resourceContents.add(parseResourceContents(contents.getJsonObject(i)));
+                    resourceContents.add(Contents.parseResourceContents(contents.getJsonObject(i)));
                 }
             }
-            assertFunction.accept(new ResourceResponse(resourceContents));
+            assertFunction.accept(new ResourceResponse(resourceContents, Contents.parseMeta(result)));
         }
 
     }
@@ -1190,9 +1157,9 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             JsonArray contentArray = result.getJsonArray("content");
             List<Content> content = new ArrayList<>(contentArray.size());
             for (int i = 0; i < contentArray.size(); i++) {
-                content.add(parseContent(contentArray.getJsonObject(i)));
+                content.add(Contents.parseContent(contentArray.getJsonObject(i)));
             }
-            assertFunction.accept(new ToolResponse(isError, content));
+            assertFunction.accept(new ToolResponse(isError, content, Contents.parseMeta(result)));
         }
     }
 

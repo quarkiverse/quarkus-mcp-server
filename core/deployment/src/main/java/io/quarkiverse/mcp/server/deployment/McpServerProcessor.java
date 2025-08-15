@@ -624,7 +624,8 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.ROOTS)
                         || paramType.name().equals(DotNames.SAMPLING)
                         || paramType.name().equals(DotNames.CANCELLATION)
-                        || paramType.name().equals(DotNames.RAW_MESSAGE)) {
+                        || paramType.name().equals(DotNames.RAW_MESSAGE)
+                        || paramType.name().equals(DotNames.META)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -900,17 +901,11 @@ class McpServerProcessor {
                                 .equals(DotName.createSimple(Void.class)))) {
             throw new IllegalStateException("Notification method must return void or Uni<Void>");
         }
-        List<MethodParameterInfo> parameters = method.parameters();
-        for (MethodParameterInfo param : parameters) {
-            if (!param.type().name().equals(DotNames.MCP_CONNECTION)
-                    && !param.type().name().equals(DotNames.MCP_LOG)
-                    && !param.type().name().equals(DotNames.ROOTS)
-                    && !param.type().name().equals(DotNames.SAMPLING)
-                    && !param.type().name().equals(DotNames.RAW_MESSAGE)) {
-                throw new IllegalStateException(
-                        "Notification methods may only consume built-in parameter types [McpConnection, McpLog, Roots, Sampling, RawMessage]: "
-                                + methodDesc(method));
-            }
+        List<MethodParameterInfo> params = parameters(method, NOTIFICATION);
+        if (!params.isEmpty()) {
+            throw new IllegalStateException(
+                    "Notification method %s may not consume the following parameter types: %s".formatted(methodDesc(method),
+                            params.stream().map(MethodParameterInfo::type).toList()));
         }
     }
 
@@ -1092,6 +1087,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.RAW_MESSAGE;
         } else if (type.name().equals(DotNames.COMPLETE_CONTEXT)) {
             return FeatureArgument.Provider.COMPLETE_CONTEXT;
+        } else if (type.name().equals(DotNames.META)) {
+            return FeatureArgument.Provider.META;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

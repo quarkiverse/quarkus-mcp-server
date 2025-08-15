@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.DayOfWeek;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.MetaKey;
+import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -65,7 +68,16 @@ public class ToolsTest extends McpServerTest {
                     assertNotNull(dayProperty);
                     assertEquals("string", dayProperty.getString("type"));
                 })
-                .toolsCall("alpha", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                .toolsCall("alpha", Map.of("price", 1), r -> {
+                    TextContent t = r.content().get(0).asText();
+                    assertEquals("Hello 1!", t.text());
+                    assertEquals(1, t._meta().size());
+                    assertEquals(10, t._meta().entrySet().iterator().next().getValue());
+                    assertEquals(1, r._meta().size());
+                    Entry<MetaKey, Object> e = r._meta().entrySet().iterator().next();
+                    assertEquals("alpha-foo", e.getKey().toString());
+                    assertEquals(true, e.getValue());
+                })
                 .toolsCall("uni_alpha", Map.of("uni_price", 1),
                         r -> assertEquals("Hello 1.0!", r.content().get(0).asText().text()))
                 .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
