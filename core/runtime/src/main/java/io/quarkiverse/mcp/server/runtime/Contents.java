@@ -11,6 +11,7 @@ import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.vertx.core.json.JsonObject;
@@ -24,6 +25,9 @@ public final class Contents {
             case IMAGE -> new ImageContent(content.getString("data"), content.getString("mimeType"), parseMeta(content));
             case AUDIO -> new AudioContent(content.getString("data"), content.getString("mimeType"), parseMeta(content));
             case RESOURCE -> new EmbeddedResource(parseResourceContents(content.getJsonObject("resource")), parseMeta(content));
+            case RESOURCE_LINK -> new ResourceLink(content.getString("uri"), content.getString("mimeType"),
+                    content.getString("name"), content.getString("title"), content.getString("description"),
+                    content.getInteger("size"), parseMeta(content));
             default -> throw new IllegalArgumentException("Unexpected value: " + contentType);
         };
     }

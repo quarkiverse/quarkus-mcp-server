@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A content provided to or from an LLM.
  */
-public sealed interface Content permits TextContent, ImageContent, EmbeddedResource, AudioContent {
+public sealed interface Content
+        permits TextContent, ImageContent, EmbeddedResource, AudioContent, ResourceLink {
 
     /**
      *
@@ -53,6 +54,16 @@ public sealed interface Content permits TextContent, ImageContent, EmbeddedResou
         throw new IllegalArgumentException("Not an audio");
     }
 
+    /**
+     * Casts and returns this object as a resource link, or throws an {@link IllegalArgumentException} if the content object
+     * does not represent a {@link ResourceLink}.
+     *
+     * @return the audio content
+     */
+    default ResourceLink asResourceLink() {
+        throw new IllegalArgumentException("Not a resource link");
+    }
+
     @JsonProperty("type")
     default String getType() {
         return type().toString().toLowerCase();
@@ -62,7 +73,8 @@ public sealed interface Content permits TextContent, ImageContent, EmbeddedResou
         TEXT,
         IMAGE,
         RESOURCE,
-        AUDIO
+        AUDIO,
+        RESOURCE_LINK
     }
 
 }
