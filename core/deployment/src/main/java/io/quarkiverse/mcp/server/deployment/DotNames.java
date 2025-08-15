@@ -33,6 +33,7 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplate;
@@ -66,6 +67,7 @@ class DotNames {
     static final DotName DEFAULT_VALUE_CONVERTER = DotName.createSimple(DefaultValueConverter.class);
     static final DotName EMBEDDED_RESOURCE = DotName.createSimple(EmbeddedResource.class);
     static final DotName IMAGE_CONTENT = DotName.createSimple(ImageContent.class);
+    static final DotName RESOURCE_LINK = DotName.createSimple(ResourceLink.class);
     static final DotName LANGCHAIN4J_P = DotName.createSimple("dev.langchain4j.agent.tool.P");
     static final DotName LANGCHAIN4J_TOOL = DotName.createSimple("dev.langchain4j.agent.tool.Tool");
     static final DotName LIST = DotName.createSimple(List.class);
