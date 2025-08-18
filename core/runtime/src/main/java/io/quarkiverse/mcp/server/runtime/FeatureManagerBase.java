@@ -36,7 +36,6 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
-import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
@@ -141,7 +140,6 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return info.serverName().equals(mcpRequest.serverName());
     }
 
-    @SuppressWarnings("unchecked")
     protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
         if (metadata.info().arguments().isEmpty()) {
             return new Object[0];
@@ -149,60 +147,81 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         Object[] ret = new Object[metadata.info().arguments().size()];
         int idx = 0;
         for (FeatureArgument arg : metadata.info().arguments()) {
-            if (arg.provider() == Provider.MCP_CONNECTION) {
-                ret[idx] = argProviders.connection();
-            } else if (arg.provider() == Provider.REQUEST_ID) {
-                ret[idx] = new RequestId(argProviders.requestId());
-            } else if (arg.provider() == Provider.REQUEST_URI) {
-                ret[idx] = new RequestUri(argProviders.uri());
-            } else if (arg.provider() == Provider.MCP_LOG) {
-                ret[idx] = log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
-            } else if (arg.provider() == Provider.PROGRESS) {
-                ret[idx] = ProgressImpl.from(argProviders);
-            } else if (arg.provider() == Provider.ROOTS) {
-                ret[idx] = RootsImpl.from(argProviders);
-            } else if (arg.provider() == Provider.SAMPLING) {
-                ret[idx] = SamplingImpl.from(argProviders);
-            } else if (arg.provider() == Provider.CANCELLATION) {
-                ret[idx] = CancellationImpl.from(argProviders);
-            } else if (arg.provider() == Provider.RAW_MESSAGE) {
-                ret[idx] = RawMessageImpl.from(argProviders);
-            } else if (arg.provider() == Provider.COMPLETE_CONTEXT) {
-                ret[idx] = CompleteContextImpl.from(argProviders);
-            } else if (arg.provider() == Provider.META) {
-                ret[idx] = MetaImpl.from(argProviders);
-            } else {
-                Object val = argProviders.getArg(arg.name());
-                if (val == null && arg.defaultValue() != null) {
-                    val = convert(arg.defaultValue(), arg.type());
-                }
-                if (val == null && arg.required()) {
-                    throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
-                }
-                boolean isOptional = Types.isOptional(arg.type());
-                Type argType = isOptional ? Types.getFirstActualTypeArgument(arg.type()) : arg.type();
-                if (val instanceof Map map) {
-                    // json object
-                    JavaType javaType = mapper.getTypeFactory().constructType(argType);
-                    val = mapper.convertValue(map, javaType);
-                } else if (val instanceof List list) {
-                    // json array
-                    JavaType javaType = mapper.getTypeFactory().constructType(argType);
-                    val = mapper.convertValue(list, javaType);
-                } else if (argType instanceof Class clazz && clazz.isEnum()) {
-                    val = Enum.valueOf(clazz, val.toString());
-                } else if (val instanceof Number num) {
-                    val = coerceNumber(num, argType);
-                }
-
-                if (isOptional) {
-                    val = Optional.ofNullable(val);
-                }
-                ret[idx] = val;
-            }
+            ret[idx] = switch (arg.provider()) {
+                case MCP_CONNECTION -> argProviders.connection();
+                case REQUEST_ID -> new RequestId(argProviders.requestId());
+                case REQUEST_URI -> new RequestUri(argProviders.uri());
+                case MCP_LOG -> log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
+                case PROGRESS -> ProgressImpl.from(argProviders);
+                case ROOTS -> RootsImpl.from(argProviders);
+                case SAMPLING -> SamplingImpl.from(argProviders);
+                case CANCELLATION -> CancellationImpl.from(argProviders);
+                case RAW_MESSAGE -> RawMessageImpl.from(argProviders);
+                case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
+                case META -> MetaImpl.from(argProviders);
+                case PARAMS -> handleParam(arg, argProviders.getArg(arg.name()));
+                default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
+            };
             idx++;
         }
         return ret;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object handleParam(FeatureArgument arg, Object val) {
+        if (val == null) {
+            if (arg.defaultValue() != null) {
+                // Try to use the default value
+                val = convert(arg.defaultValue(), arg.type());
+            }
+            if (val == null && arg.required()) {
+                throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
+            }
+        } else if (!arg.isValid(val)) {
+            throw new McpException(
+                    "Invalid argument [%s] - value does not match %s".formatted(arg.name(), arg.type().getTypeName()),
+                    JsonRPC.INVALID_PARAMS);
+        } else {
+            if (val instanceof Map map) {
+                // json object
+                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                try {
+                    val = mapper.convertValue(map, javaType);
+                } catch (IllegalArgumentException e) {
+                    throw new McpException(
+                            "Invalid argument [%s] - unable to convert JSON object to %s".formatted(arg.name(),
+                                    arg.type().getTypeName()),
+                            JsonRPC.INVALID_PARAMS);
+                }
+            } else if (val instanceof List list) {
+                // json array
+                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+                try {
+                    val = mapper.convertValue(list, javaType);
+                } catch (IllegalArgumentException e) {
+                    throw new McpException(
+                            "Invalid argument [%s] - unable to convert JSON array to %s".formatted(arg.name(),
+                                    arg.type().getTypeName()),
+                            JsonRPC.INVALID_PARAMS);
+                }
+            } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
+                try {
+                    val = Enum.valueOf(clazz, val.toString());
+                } catch (IllegalArgumentException e) {
+                    throw new McpException(
+                            "Invalid argument [%s] - %s is not an enum constant of %s".formatted(arg.name(), val,
+                                    clazz.getName()),
+                            JsonRPC.INVALID_PARAMS);
+                }
+            } else if (val instanceof Number num) {
+                val = coerceNumber(num, arg.type());
+            }
+        }
+
+        if (arg.isOptional()) {
+            val = Optional.ofNullable(val);
+        }
+        return val;
     }
 
     private Object coerceNumber(Number num, Type argType) {
