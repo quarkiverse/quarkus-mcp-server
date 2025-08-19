@@ -624,8 +624,10 @@ class McpServerProcessor {
                         || paramType.name().equals(DotNames.ROOTS)
                         || paramType.name().equals(DotNames.SAMPLING)
                         || paramType.name().equals(DotNames.CANCELLATION)
+                        || paramType.name().equals(DotNames.COMPLETE_CONTEXT)
                         || paramType.name().equals(DotNames.RAW_MESSAGE)
-                        || paramType.name().equals(DotNames.META)) {
+                        || paramType.name().equals(DotNames.META)
+                        || paramType.name().equals(DotNames.ELICITATION)) {
                     continue;
                 }
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
@@ -1089,6 +1091,8 @@ class McpServerProcessor {
             return FeatureArgument.Provider.COMPLETE_CONTEXT;
         } else if (type.name().equals(DotNames.META)) {
             return FeatureArgument.Provider.META;
+        } else if (type.name().equals(DotNames.ELICITATION)) {
+            return FeatureArgument.Provider.ELICITATION;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }

@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.CompleteResourceTemplate;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
+import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -110,5 +111,6 @@ class DotNames {
     static final DotName UNI = DotName.createSimple(Uni.class);
     static final DotName RAW_MESSAGE = DotName.createSimple(RawMessage.class);
     static final DotName META = DotName.createSimple(Meta.class);
+    static final DotName ELICITATION = DotName.createSimple(Elicitation.class);
 
 }

@@ -11,4 +11,6 @@ public record ClientCapability(String name, Map<String, Object> properties) {
 
     public static final String SAMPLING = "sampling";
 
+    public static final String ELICITATION = "elicitation";
+
 }

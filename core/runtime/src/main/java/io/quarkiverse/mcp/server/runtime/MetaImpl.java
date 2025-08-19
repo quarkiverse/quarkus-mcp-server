@@ -6,10 +6,9 @@ import io.vertx.core.json.JsonObject;
 
 public class MetaImpl implements Meta {
 
-    static MetaImpl from(ArgumentProviders argProviders) {
-        JsonObject params = argProviders.rawMessage().getJsonObject("params");
-        if (params != null) {
-            return new MetaImpl(params.getJsonObject("_meta"));
+    static MetaImpl from(JsonObject json) {
+        if (json != null) {
+            return new MetaImpl(json.getJsonObject("_meta"));
         }
         return new MetaImpl(null);
     }

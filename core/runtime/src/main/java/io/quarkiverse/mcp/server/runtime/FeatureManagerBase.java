@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
+import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -158,7 +159,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case CANCELLATION -> CancellationImpl.from(argProviders);
                 case RAW_MESSAGE -> RawMessageImpl.from(argProviders);
                 case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
-                case META -> MetaImpl.from(argProviders);
+                case META -> MetaImpl.from(argProviders.rawMessage().getJsonObject("params"));
+                case ELICITATION -> ElicitationImpl.from(argProviders);
                 case PARAMS -> handleParam(arg, argProviders.getArg(arg.name()));
                 default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
             };
@@ -561,13 +563,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         @Override
+        public Elicitation elicitation() {
+            return ElicitationImpl.from(argProviders);
+        }
+
+        @Override
         public RawMessage rawMessage() {
             return RawMessageImpl.from(argProviders);
         }
 
         @Override
         public Meta meta() {
-            return MetaImpl.from(argProviders);
+            return MetaImpl.from(argProviders.rawMessage().getJsonObject("params"));
         }
 
     }

@@ -119,7 +119,8 @@ public class SamplingRequestImpl implements SamplingRequest {
                 String model = result.getString("model");
                 Role role = Role.valueOf(result.getString("role").toUpperCase());
                 Content content = Contents.parseContent(result.getJsonObject("content"));
-                SamplingResponse samplingResponse = new SamplingResponse(content, model, role, result.getString("stopReason"));
+                SamplingResponse samplingResponse = new SamplingResponse(content, model, role, result.getString("stopReason"),
+                        MetaImpl.from(result));
                 future.complete(samplingResponse);
             });
             id.set(requestId);

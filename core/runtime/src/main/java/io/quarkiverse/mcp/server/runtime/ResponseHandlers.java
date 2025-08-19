@@ -95,6 +95,10 @@ public class ResponseHandlers {
         return config.servers().get(serverName).roots().defaultTimeout();
     }
 
+    Duration getElicitationTimeout(String serverName) {
+        return config.servers().get(serverName).elicitation().defaultTimeout();
+    }
+
     private record ResponseHandler(Instant creationTime, Consumer<JsonObject> operation) {
 
         public ResponseHandler {

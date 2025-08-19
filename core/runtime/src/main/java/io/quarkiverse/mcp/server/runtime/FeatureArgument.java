@@ -115,7 +115,8 @@ public record FeatureArgument(String name,
         CANCELLATION,
         RAW_MESSAGE,
         COMPLETE_CONTEXT,
-        META;
+        META,
+        ELICITATION;
 
         public boolean isValidFor(Feature feature) {
             return switch (this) {

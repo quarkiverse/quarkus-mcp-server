@@ -27,7 +27,7 @@ public class MetaTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
-    public void testRawMessage() {
+    public void testMeta() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsCall("foo")
