@@ -878,6 +878,43 @@ public class MyTools {
 <2> If sampling is supported a convenient builder can be used to construct a `SamplingRequest`.
 <3> The server sends a sampling request and when a sampling response returns the tool method completes.
 
+== Elicitation
+
+If an MCP client supports the `elicitation` capability, then the server can request additional information from the client.
+Any server feature method can accept the `io.quarkiverse.mcp.server.Elicitation` parameter to build an elicitation request.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+   @Tool(description = "A tool that is using elicitation...")
+   Uni<String> samplingFoo(Elicitation elicitation) { <1>
+      if (elicitation.isSupported()) {
+         ElicitationRequest r = elicitation.requestBuilder() <2>
+                .setMessage("What's your GitHub account?")
+                .addSchemaProperty("username", new StringSchema())
+                .build();
+         return r.send().map(er -> { <3>
+                    if (er.action() == Action.ACCEPT) {
+                        return "It's GitHub user: " + er.content().getOrDefault("username", "UNKNOWN").toString() + ".";
+                    } else {
+                        return "Not accepted...";
+                    }
+         });
+     } else {
+        return Uni.createFrom().item("Elicitation not supported.);
+     }
+  }
+}
+----
+<1> The `Elicitation` parameter is injected automatically.
+<2> If elicitation is supported then a convenient builder can be used to construct a `ElicitationRequest`.
+<3> The server sends an elicitation request and when an elicitation response returns the tool method completes.
+
 
 == Cancellation
 

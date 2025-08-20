@@ -1,7 +1,8 @@
 package io.quarkiverse.mcp.server;
 
 /**
- * If an MCP client supports the {@code sampling} capability, then the server can request LLM sampling from language models.
+ * If an MCP client supports the {@value ClientCapability#SAMPLING} capability, then the server can request LLM sampling from
+ * language models.
  *
  * @see SamplingRequest
  * @see SamplingResponse

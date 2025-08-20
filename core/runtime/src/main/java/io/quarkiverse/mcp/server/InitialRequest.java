@@ -43,6 +43,13 @@ public record InitialRequest(Implementation implementation, String protocolVersi
     }
 
     /**
+     * @return {@code true} if the client supports the {@link ClientCapability#ELICITATION} capability
+     */
+    public boolean supportsElicitation() {
+        return supportsCapability(ClientCapability.ELICITATION);
+    }
+
+    /**
      * @return {@code true} if the client supports the specified capability
      */
     public boolean supportsCapability(String name) {

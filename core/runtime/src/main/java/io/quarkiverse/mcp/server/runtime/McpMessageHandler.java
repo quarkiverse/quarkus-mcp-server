@@ -272,7 +272,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 if (!infos.isEmpty()) {
                     ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null,
                             null,
-                            mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
+                            // For notifications/initialized we always use the connection as a sender
+                            mcpRequest.connection(),
+                            null, responseHandlers, mcpRequest.serverName());
                     FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
                         callNotification(notification, featureExecutionContext);
@@ -328,6 +330,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     public static final String PING = "ping";
     public static final String ROOTS_LIST = "roots/list";
     public static final String SAMPLING_CREATE_MESSAGE = "sampling/createMessage";
+    public static final String ELICITATION_CREATE = "elicitation/create";
     public static final String COMPLETION_COMPLETE = "completion/complete";
     public static final String LOGGING_SET_LEVEL = "logging/setLevel";
     // non-standard messages

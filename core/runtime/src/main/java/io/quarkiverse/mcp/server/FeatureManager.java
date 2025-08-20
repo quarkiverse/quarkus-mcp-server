@@ -128,6 +128,8 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
 
         Sampling sampling();
 
+        Elicitation elicitation();
+
         RawMessage rawMessage();
 
         Meta meta();

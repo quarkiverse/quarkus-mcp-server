@@ -63,6 +63,11 @@ public interface McpServerRuntimeConfig {
     Roots roots();
 
     /**
+     * Elicitation config.
+     */
+    Elicitation elicitation();
+
+    /**
      * Dev mode config.
      */
     DevMode devMode();
@@ -206,6 +211,15 @@ public interface McpServerRuntimeConfig {
 
         /**
          * The default timeout to list roots. Negative and zero durations imply no timeout.
+         */
+        @WithDefault("60s")
+        Duration defaultTimeout();
+    }
+
+    public interface Elicitation {
+
+        /**
+         * The default timeout for an elicitation request. Negative and zero durations imply no timeout.
          */
         @WithDefault("60s")
         Duration defaultTimeout();

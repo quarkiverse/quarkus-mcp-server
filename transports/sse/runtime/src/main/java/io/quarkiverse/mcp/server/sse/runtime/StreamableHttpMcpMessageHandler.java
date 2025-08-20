@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.sse.runtime;
 
+import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ELICITATION;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.MCP_LOG;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.PROGRESS;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ROOTS;
@@ -260,7 +261,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             PROGRESS,
             MCP_LOG,
             SAMPLING,
-            ROOTS);
+            ROOTS,
+            ELICITATION);
 
     record ScanResult(boolean forceSseInit, boolean containsRequest) {
     }
@@ -463,7 +465,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             } else {
                 if (response.ended()) {
                     // Try to use a subsidiary SSE
-                    LOG.debugf("HTTP responsed ended, try to use a subsidiary SSE channel instead");
+                    LOG.debugf("HTTP response ended, try to use a subsidiary SSE channel instead");
                     return connection().send(message);
                 } else {
                     response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
