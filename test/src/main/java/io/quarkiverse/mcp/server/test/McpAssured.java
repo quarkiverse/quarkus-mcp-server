@@ -1260,7 +1260,7 @@ public class McpAssured {
     public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments) {
     }
 
-    public record ResourceInfo(String uri, String mimeType, String name, String title, String description) {
+    public record ResourceInfo(String uri, String mimeType, String name, String title, String description, Integer size) {
     }
 
     public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description) {

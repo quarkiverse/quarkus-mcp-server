@@ -41,6 +41,9 @@ public record FeatureMetadata<M>(Feature feature,
             if (info.mimeType() != null) {
                 ret.put("mimeType", info.mimeType());
             }
+            if (info.size() > 0) {
+                ret.put("size", info.size());
+            }
         } else if (feature == Feature.RESOURCE_TEMPLATE) {
             ret.put("uriTemplate", info.uri());
             if (info.mimeType() != null) {

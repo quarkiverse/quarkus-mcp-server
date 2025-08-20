@@ -70,4 +70,9 @@ public @interface Resource {
      */
     String mimeType() default "";
 
+    /**
+     * "The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known."
+     */
+    int size() default -1;
+
 }
