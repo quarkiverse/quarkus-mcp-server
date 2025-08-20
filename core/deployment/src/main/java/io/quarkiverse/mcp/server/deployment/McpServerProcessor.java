@@ -266,18 +266,26 @@ class McpServerProcessor {
 
                     String uri = null;
                     String mimeType = null;
+                    int size = -1;
                     ToolManager.ToolAnnotations toolAnnotations = null;
 
                     if (feature == RESOURCE) {
                         AnnotationValue uriValue = featureAnnotation.value("uri");
-                        uri = uriValue != null ? uriValue.asString() : null;
+                        if (uriValue != null)
+                            uri = uriValue.asString();
                         AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
-                        mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+                        if (mimeTypeValue != null)
+                            mimeType = mimeTypeValue.asString();
+                        AnnotationValue sizeValue = featureAnnotation.value("size");
+                        if (sizeValue != null)
+                            size = sizeValue.asInt();
                     } else if (feature == RESOURCE_TEMPLATE) {
                         AnnotationValue uriValue = featureAnnotation.value("uriTemplate");
-                        uri = uriValue != null ? uriValue.asString() : null;
+                        if (uriValue != null)
+                            uri = uriValue.asString();
                         AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
-                        mimeType = mimeTypeValue != null ? mimeTypeValue.asString() : null;
+                        if (mimeTypeValue != null)
+                            mimeType = mimeTypeValue.asString();
                     } else if (feature == TOOL) {
                         // Tool annotations
                         AnnotationValue annotations = featureAnnotation.value("annotations");
@@ -307,7 +315,7 @@ class McpServerProcessor {
                     }
 
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
-                            description, uri, mimeType, feature, toolAnnotations, server);
+                            description, uri, mimeType, size, feature, toolAnnotations, server);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -1037,13 +1045,13 @@ class McpServerProcessor {
 
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        String.class,
-                        List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
+                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
                 featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
+                metaMethod.load(featureMethod.getSize()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
                 toolAnnotations, metaMethod.load(featureMethod.getServer()));
         ResultHandle invoker = metaMethod

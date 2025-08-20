@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.OptionalInt;
+
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 
 /**
@@ -39,6 +41,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         String uri();
 
         String mimeType();
+
+        OptionalInt size();
 
         /**
          * Sends update notifications to all subscribers without waiting for the result.
@@ -87,6 +91,14 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
          * @see Resource#mimeType()
          */
         ResourceDefinition setMimeType(String mimeType);
+
+        /**
+         *
+         * @param size
+         * @return self
+         * @see Resource#size()
+         */
+        ResourceDefinition setSize(int size);
 
     }
 

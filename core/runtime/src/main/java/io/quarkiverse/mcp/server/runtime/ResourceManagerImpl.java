@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -238,6 +239,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public OptionalInt size() {
+            return metadata.info().size() > 0 ? OptionalInt.of(metadata.info().size()) : OptionalInt.empty();
+        }
+
+        @Override
         public boolean isMethod() {
             return true;
         }
@@ -260,15 +266,17 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private final String title;
         private final String uri;
         private final String mimeType;
+        private final int size;
 
         private ResourceDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType) {
+                String mimeType, int size) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.uri = uri;
             this.mimeType = mimeType;
+            this.size = size;
         }
 
         @Override
@@ -287,6 +295,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public OptionalInt size() {
+            return size > 0 ? OptionalInt.of(size) : OptionalInt.empty();
+        }
+
+        @Override
         public JsonObject asJson() {
             JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
@@ -296,6 +309,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             }
             if (title != null) {
                 ret.put("title", title);
+            }
+            if (size > 0) {
+                ret.put("size", size);
             }
             return ret;
         }
@@ -344,6 +360,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private String title;
         private String uri;
         private String mimeType;
+        private int size = -1;
 
         ResourceDefinitionImpl(String name) {
             super(name);
@@ -371,10 +388,16 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public ResourceDefinition setSize(int size) {
+            this.size = size;
+            return this;
+        }
+
+        @Override
         public ResourceInfo register() {
             validate();
             ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, uri, mimeType);
+                    runOnVirtualThread, uri, mimeType, size);
             ResourceInfo existing = resources.putIfAbsent(uri, ret);
             if (existing != null) {
                 throw resourceWithUriAlreadyExists(uri);

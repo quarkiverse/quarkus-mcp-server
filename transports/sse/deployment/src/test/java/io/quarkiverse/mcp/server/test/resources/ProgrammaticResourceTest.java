@@ -55,7 +55,10 @@ public class ProgrammaticResourceTest extends McpServerTest {
         assertEquals("notifications/resources/list_changed", notifications.get(0).getString("method"));
 
         client.when()
-                .resourcesList(p -> assertEquals(1, p.size()))
+                .resourcesList(p -> {
+                    assertEquals(1, p.size());
+                    assertEquals(1, p.findByUri("file:///alpha").size());
+                })
                 .resourcesRead("file:///alpha", r -> assertEquals("2", r.contents().get(0).asText().text()))
                 .thenAssertResults();
 
@@ -104,6 +107,7 @@ public class ProgrammaticResourceTest extends McpServerTest {
             manager.newResource(name)
                     .setUri("file:///" + name)
                     .setDescription(name + " description!")
+                    .setSize(1)
                     .setHandler(
                             resourceArgs -> {
                                 lastArgs.set(resourceArgs);

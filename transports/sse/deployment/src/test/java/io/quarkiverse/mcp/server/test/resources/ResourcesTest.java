@@ -29,6 +29,7 @@ public class ResourcesTest extends McpServerTest {
                     ResourceInfo alpha = p.findByUri("file:///project/alpha");
                     assertEquals("alpha", alpha.name());
                     assertEquals("Alpha...", alpha.title());
+                    assertEquals(15, alpha.size());
                     assertEquals("bravo", p.findByUri("file:///project/bravo").name());
                     assertEquals("uni_alpha", p.findByUri("file:///project/uni_alpha").name());
                     assertEquals("uni_bravo", p.findByUri("file:///project/uni_bravo").name());

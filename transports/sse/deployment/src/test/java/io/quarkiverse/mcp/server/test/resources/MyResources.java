@@ -14,7 +14,7 @@ import io.smallrye.mutiny.Uni;
 
 public class MyResources {
 
-    @Resource(uri = "file:///project/alpha", title = "Alpha...")
+    @Resource(uri = "file:///project/alpha", title = "Alpha...", size = 15)
     ResourceResponse alpha(RequestUri uri) {
         checkExecutionModel(true);
         checkDuplicatedContext();

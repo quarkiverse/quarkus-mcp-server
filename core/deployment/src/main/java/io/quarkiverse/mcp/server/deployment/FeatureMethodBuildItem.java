@@ -29,6 +29,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     // Resource-only
     private final String uri;
     private final String mimeType;
+    private final int size;
 
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
@@ -37,8 +38,8 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final String server;
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
-            String uri,
-            String mimeType, Feature feature, ToolManager.ToolAnnotations toolAnnotations, String server) {
+            String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
+            String server) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -48,6 +49,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.description = description;
         this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
+        this.size = size;
         this.toolAnnotations = toolAnnotations;
         this.server = server;
     }
@@ -82,6 +84,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     String getMimeType() {
         return mimeType;
+    }
+
+    int getSize() {
+        return size;
     }
 
     Feature getFeature() {
