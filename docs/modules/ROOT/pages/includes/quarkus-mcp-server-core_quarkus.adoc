@@ -7,245 +7,6 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-auto-ping-interval[`quarkus.auto-ping-interval`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.auto-ping-interval+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".auto-ping-interval`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".auto-ping-interval+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The interval after which, when set, the server sends a ping message to the connected client automatically.
-
-Ping messages are not sent automatically by default.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_AUTO_PING_INTERVAL+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_AUTO_PING_INTERVAL+++`
-endif::add-copy-button-to-env-var[]
---
-|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
-|
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-client-logging-default-level[`quarkus.client-logging.default-level`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.client-logging.default-level+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".client-logging.default-level`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".client-logging.default-level+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The default log level.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++`
-endif::add-copy-button-to-env-var[]
---
-a|`alert`, `critical`, `debug`, `emergency`, `error`, `info`, `notice`, `warning`
-|`info`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-connection-idle-timeout[`quarkus.connection-idle-timeout`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.connection-idle-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".connection-idle-timeout`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".connection-idle-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The amount of time that a connection can be inactive. The connection might be automatically closed when the timeout expires. Negative and zero durations imply no timeout.
-
-The `stdio` transport disables this timeout by default.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++`
-endif::add-copy-button-to-env-var[]
---
-|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
-|`30M`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-dev-mode-dummy-init[`quarkus.dev-mode.dummy-init`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.dev-mode.dummy-init+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".dev-mode.dummy-init`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".dev-mode.dummy-init+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
-the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_DEV_MODE_DUMMY_INIT+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_DEV_MODE_DUMMY_INIT+++`
-endif::add-copy-button-to-env-var[]
---
-|boolean
-|`true`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-prompts-page-size[`quarkus.prompts.page-size`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.prompts.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".prompts.page-size`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".prompts.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-If the number of prompts exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_PROMPTS_PAGE_SIZE+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_PROMPTS_PAGE_SIZE+++`
-endif::add-copy-button-to-env-var[]
---
-|int
-|`50`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resource-templates-page-size[`quarkus.resource-templates.page-size`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.resource-templates.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".resource-templates.page-size`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".resource-templates.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++`
-endif::add-copy-button-to-env-var[]
---
-|int
-|`50`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resources-page-size[`quarkus.resources.page-size`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.resources.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".resources.page-size`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".resources.page-size+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-If the number of resources exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCES_PAGE_SIZE+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_RESOURCES_PAGE_SIZE+++`
-endif::add-copy-button-to-env-var[]
---
-|int
-|`50`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-roots-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-roots-default-timeout[`quarkus.roots.default-timeout`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.roots.default-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".roots.default-timeout`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".roots.default-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The default timeout to list roots. Negative and zero durations imply no timeout.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_ROOTS_DEFAULT_TIMEOUT+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_ROOTS_DEFAULT_TIMEOUT+++`
-endif::add-copy-button-to-env-var[]
---
-|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
-|`60S`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-sampling-default-timeout[`quarkus.sampling.default-timeout`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.sampling.default-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".sampling.default-timeout`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".sampling.default-timeout+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The default timeout for a sampling request. Negative and zero durations imply no timeout.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_SAMPLING_DEFAULT_TIMEOUT+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_SAMPLING_DEFAULT_TIMEOUT+++`
-endif::add-copy-button-to-env-var[]
---
-|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
-|`60S`
-
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-server-info-name[`quarkus.server-info.name`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.server-info.name+++[]
@@ -269,32 +30,6 @@ Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_NAME+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_SERVER_INFO_NAME+++`
-endif::add-copy-button-to-env-var[]
---
-|string
-|
-
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-server-info-title]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-server-info-title[`quarkus.server-info.title`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.server-info.title+++[]
-endif::add-copy-button-to-config-props[]
-
-
-`quarkus."server-name".server-info.title`
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".server-info.title+++[]
-endif::add-copy-button-to-config-props[]
-
-[.description]
---
-The human-readable name of the server is included in the response to an `initialize` request.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_TITLE+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_SERVER_INFO_TITLE+++`
 endif::add-copy-button-to-env-var[]
 --
 |string
@@ -328,31 +63,31 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-tools-page-size[`quarkus.tools.page-size`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-server-info-title]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-server-info-title[`quarkus.server-info.title`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.tools.page-size+++[]
+config_property_copy_button:+++quarkus.server-info.title+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus."server-name".tools.page-size`
+`quarkus."server-name".server-info.title`
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus."server-name".tools.page-size+++[]
+config_property_copy_button:+++quarkus."server-name".server-info.title+++[]
 endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-If the number of tools exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
+The human-readable name of the server is included in the response to an `initialize` request.
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_TOOLS_PAGE_SIZE+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SERVER_INFO_TITLE+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_TOOLS_PAGE_SIZE+++`
+Environment variable: `+++QUARKUS_SERVER_INFO_TITLE+++`
 endif::add-copy-button-to-env-var[]
 --
-|int
-|`50`
+|string
+|
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-traffic-logging-enabled[`quarkus.traffic-logging.enabled`]##
 ifdef::add-copy-button-to-config-props[]
@@ -405,6 +140,297 @@ endif::add-copy-button-to-env-var[]
 --
 |int
 |`200`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-client-logging-default-level[`quarkus.client-logging.default-level`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".client-logging.default-level`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".client-logging.default-level+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default log level.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_CLIENT_LOGGING_DEFAULT_LEVEL+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`alert`, `critical`, `debug`, `emergency`, `error`, `info`, `notice`, `warning`
+|`info`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-auto-ping-interval[`quarkus.auto-ping-interval`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".auto-ping-interval`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".auto-ping-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The interval after which, when set, the server sends a ping message to the connected client automatically.
+
+Ping messages are not sent automatically by default.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_AUTO_PING_INTERVAL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_AUTO_PING_INTERVAL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resources-page-size[`quarkus.resources.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".resources.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".resources.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of resources exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_RESOURCES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-resource-templates-page-size[`quarkus.resource-templates.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".resource-templates.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".resource-templates.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of resource templates exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_RESOURCE_TEMPLATES_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-tools-page-size[`quarkus.tools.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".tools.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".tools.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of tools exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_TOOLS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_TOOLS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-prompts-page-size[`quarkus.prompts.page-size`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".prompts.page-size`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".prompts.page-size+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If the number of prompts exceeds the page size then pagination is enabled and the given page size is used. The pagination is disabled if set to a value less or equal to zero.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_PROMPTS_PAGE_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_PROMPTS_PAGE_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`50`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-sampling-default-timeout[`quarkus.sampling.default-timeout`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.sampling.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".sampling.default-timeout`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".sampling.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default timeout for a sampling request. Negative and zero durations imply no timeout.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SAMPLING_DEFAULT_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SAMPLING_DEFAULT_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|`60S`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-roots-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-roots-default-timeout[`quarkus.roots.default-timeout`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.roots.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".roots.default-timeout`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".roots.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default timeout to list roots. Negative and zero durations imply no timeout.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_ROOTS_DEFAULT_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_ROOTS_DEFAULT_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|`60S`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-elicitation-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-elicitation-default-timeout[`quarkus.elicitation.default-timeout`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.elicitation.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".elicitation.default-timeout`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".elicitation.default-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default timeout for an elicitation request. Negative and zero durations imply no timeout.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_ELICITATION_DEFAULT_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_ELICITATION_DEFAULT_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|`60S`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-dev-mode-dummy-init[`quarkus.dev-mode.dummy-init`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".dev-mode.dummy-init`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".dev-mode.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
+the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DEV_MODE_DUMMY_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DEV_MODE_DUMMY_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`true`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-connection-idle-timeout[`quarkus.connection-idle-timeout`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.connection-idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".connection-idle-timeout`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".connection-idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The amount of time that a connection can be inactive. The connection might be automatically closed when the timeout expires. Negative and zero durations imply no timeout.
+
+The `stdio` transport disables this timeout by default.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_CONNECTION_IDLE_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus[icon:question-circle[title=More information about the Duration format]]
+|`30M`
 
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-invalid-server-name-strategy[`quarkus.invalid-server-name-strategy`]##
 ifdef::add-copy-button-to-config-props[]

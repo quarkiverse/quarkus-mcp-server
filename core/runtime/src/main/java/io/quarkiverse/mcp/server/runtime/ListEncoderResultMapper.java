@@ -1,8 +1,10 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
+import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.Encoder;
+import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -15,35 +17,35 @@ import io.smallrye.mutiny.Uni;
 abstract class ListEncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>, RESPONSE>
         extends EncoderResultMapper<ENCODED, Encoder<?, ENCODED>, RESPONSE> {
 
-    final EncoderMapper<List<Object>, RESPONSE> list;
-    final EncoderMapper<Uni<List<Object>>, RESPONSE> uniList;
+    final Function<Result<List<Object>>, Uni<RESPONSE>> list;
+    final Function<Result<Uni<List<Object>>>, Uni<RESPONSE>> uniList;
 
     protected ListEncoderResultMapper() {
         this.list = new EncoderMapper<List<Object>, RESPONSE>() {
 
             @Override
-            public Uni<RESPONSE> apply(List<Object> list) {
-                return Uni.createFrom().item(ListEncoderResultMapper.this.convertList(list));
+            public Uni<RESPONSE> apply(Result<List<Object>> r) {
+                return Uni.createFrom().item(ListEncoderResultMapper.this.convertList(r.value()));
             }
         };
         this.uniList = new EncoderMapper<Uni<List<Object>>, RESPONSE>() {
 
             @Override
-            public Uni<RESPONSE> apply(Uni<List<Object>> uni) {
-                return uni.map(
+            public Uni<RESPONSE> apply(Result<Uni<List<Object>>> r) {
+                return r.value().map(
                         list -> ListEncoderResultMapper.this.convertList(list));
             }
         };
     }
 
-    public EncoderMapper<List<Object>, RESPONSE> list() {
+    public Function<Result<List<Object>>, Uni<RESPONSE>> list() {
         if (list == null) {
             throw new UnsupportedOperationException();
         }
         return list;
     }
 
-    public EncoderMapper<Uni<List<Object>>, RESPONSE> uniList() {
+    public Function<Result<Uni<List<Object>>>, Uni<RESPONSE>> uniList() {
         if (uniList == null) {
             throw new UnsupportedOperationException();
         }

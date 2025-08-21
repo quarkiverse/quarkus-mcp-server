@@ -72,7 +72,7 @@ import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
-import io.quarkiverse.mcp.server.runtime.EncoderMapper;
+import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -97,6 +97,7 @@ import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.SamplingRequestImpl;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
@@ -157,6 +158,7 @@ class McpServerProcessor {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
         unremovable.addBeanClass(ResponseHandlers.class);
+        unremovable.addBeanClass(DefaultSchemaGenerator.class);
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
@@ -165,7 +167,7 @@ class McpServerProcessor {
         unremovable.addBeanClasses(JsonTextContentEncoder.class, JsonTextResourceContentsEncoder.class);
         // Result mappers
         unremovable.addBeanClasses(ToolEncoderResultMapper.class, ResourceContentsEncoderResultMapper.class,
-                PromptEncoderResultMapper.class);
+                PromptEncoderResultMapper.class, ToolStructuredContentResultMapper.class);
         additionalBeans.produce(unremovable.build());
         additionalBeans
                 .produce(new AdditionalBeanBuildItem(WrapBusinessError.class, WrapBusinessErrorInterceptor.class));
@@ -267,6 +269,9 @@ class McpServerProcessor {
                     String uri = null;
                     String mimeType = null;
                     int size = -1;
+                    boolean structuredContent = false;
+                    org.jboss.jandex.Type outputSchemaFrom = null;
+                    org.jboss.jandex.Type outputSchemaGenerator = null;
                     ToolManager.ToolAnnotations toolAnnotations = null;
 
                     if (feature == RESOURCE) {
@@ -302,6 +307,25 @@ class McpServerProcessor {
                                     idempotentHintValue != null ? idempotentHintValue.asBoolean() : false,
                                     openWorldHintValue != null ? openWorldHintValue.asBoolean() : true);
                         }
+                        AnnotationValue structuredContentValue = featureAnnotation.value("structuredContent");
+                        if (structuredContentValue != null)
+                            structuredContent = structuredContentValue.asBoolean();
+                        AnnotationValue outputSchemaValue = featureAnnotation.value("outputSchema");
+                        if (outputSchemaValue != null) {
+                            AnnotationValue outputSchemaFromValue = outputSchemaValue.asNested().value("from");
+                            if (outputSchemaFromValue != null)
+                                outputSchemaFrom = outputSchemaFromValue.asClass();
+                            AnnotationValue outputSchemaGeneratorValue = outputSchemaValue.asNested().value("generator");
+                            if (outputSchemaGeneratorValue != null) {
+                                outputSchemaGenerator = outputSchemaGeneratorValue.asClass();
+                            } else {
+                                outputSchemaGenerator = ClassType.create(DefaultSchemaGenerator.class);
+                            }
+                        } else if (structuredContent) {
+                            outputSchemaFrom = ClassType.create(method.returnType().name());
+                            outputSchemaGenerator = ClassType.create(DefaultSchemaGenerator.class);
+                        }
+
                     }
 
                     String server = McpServer.DEFAULT;
@@ -315,7 +339,8 @@ class McpServerProcessor {
                     }
 
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
-                            description, uri, mimeType, size, feature, toolAnnotations, server);
+                            description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
+                            outputSchemaFrom, outputSchemaGenerator);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -1045,7 +1070,8 @@ class McpServerProcessor {
 
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class, String.class),
+                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class, String.class,
+                        Class.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
@@ -1053,11 +1079,15 @@ class McpServerProcessor {
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 metaMethod.load(featureMethod.getSize()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations, metaMethod.load(featureMethod.getServer()));
+                toolAnnotations, metaMethod.load(featureMethod.getServer()),
+                featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
+                        : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
+                featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()
+                        : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()));
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
-        ResultHandle resultMapper = getMapper(metaMethod, featureMethod.getMethod().returnType(), featureMethod.getFeature());
+        ResultHandle resultMapper = getMapper(metaMethod, featureMethod);
         ResultHandle metadata = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMetadata.class, Feature.class, FeatureMethodInfo.class, Invoker.class,
                         ExecutionModel.class, Function.class),
@@ -1106,35 +1136,37 @@ class McpServerProcessor {
         }
     }
 
-    private ResultHandle getMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
-            Feature feature) {
+    private ResultHandle getMapper(BytecodeCreator bytecode, FeatureMethodBuildItem featureMethod) {
         // Returns a function that converts the returned object to Uni<RESPONSE>
         // where the RESPONSE is one of ToolResponse, PromptResponse, ResourceResponse, CompleteResponse
         // IMPL NOTE: at this point the method return type is already validated
-        return switch (feature) {
-            case PROMPT -> promptResultMapper(bytecode, returnType);
+        org.jboss.jandex.Type returnType = featureMethod.getMethod().returnType();
+        return switch (featureMethod.getFeature()) {
+            case PROMPT -> promptResultMapper(featureMethod, bytecode, returnType);
             case PROMPT_COMPLETE -> readResultMapper(bytecode,
                     createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "String"));
-            case TOOL -> toolResultMapper(bytecode, returnType);
-            case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(bytecode, returnType);
+            case TOOL -> toolResultMapper(featureMethod, bytecode, returnType);
+            case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(featureMethod, bytecode, returnType);
             case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bytecode,
                     createMapperClassSimpleName(RESOURCE_TEMPLATE_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE,
                             c -> "String"));
             case NOTIFICATION -> readResultMapper(bytecode, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
-            default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
+            default -> throw new IllegalArgumentException("Unsupported feature: " + featureMethod.getFeature());
         };
     }
 
-    ResultHandle resourceResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+    ResultHandle resourceResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+            org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, RESOURCE_TYPES)) {
-            return encoderResultMapper(RESOURCE, bytecode, returnType, ResourceContentsEncoderResultMapper.class);
+            return encoderResultMapper(featureMethod, bytecode, returnType, ResourceContentsEncoderResultMapper.class);
         } else {
             return readResultMapper(bytecode,
                     createMapperClassSimpleName(RESOURCE, returnType, DotNames.RESOURCE_RESPONSE, c -> "Content"));
         }
     }
 
-    ResultHandle encoderResultMapper(Feature feature, BytecodeCreator bytecode, org.jboss.jandex.Type returnType,
+    ResultHandle encoderResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+            org.jboss.jandex.Type returnType,
             Class<?> mapperClazz) {
         // Arc.container().instance(mapperClazz).get();
         ResultHandle container = bytecode
@@ -1146,23 +1178,31 @@ class McpServerProcessor {
                 MethodDescriptor.ofMethod(InstanceHandle.class, "get", Object.class),
                 instance);
         if (DotNames.UNI.equals(returnType.name())) {
-            if (feature != PROMPT && DotNames.LIST.equals(returnType.asParameterizedType().arguments().get(0).name())) {
+            if (featureMethod.getFeature() != PROMPT
+                    && DotNames.LIST.equals(returnType.asParameterizedType().arguments().get(0).name())) {
                 mapper = bytecode.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(mapperClazz, "uniList", EncoderMapper.class), mapper);
+                        MethodDescriptor.ofMethod(mapperClazz, "uniList", Function.class), mapper);
             } else {
                 mapper = bytecode.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(mapperClazz, "uni", EncoderMapper.class), mapper);
+                        MethodDescriptor.ofMethod(mapperClazz, "uni", Function.class), mapper);
             }
-        } else if (feature != PROMPT && DotNames.LIST.equals(returnType.name())) {
+        } else if (featureMethod.getFeature() != PROMPT
+                && !featureMethod.isStructuredContent()
+                && DotNames.LIST.equals(returnType.name())) {
             mapper = bytecode.invokeVirtualMethod(
-                    MethodDescriptor.ofMethod(mapperClazz, "list", EncoderMapper.class), mapper);
+                    MethodDescriptor.ofMethod(mapperClazz, "list", Function.class), mapper);
         }
         return mapper;
     }
 
-    ResultHandle toolResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+    ResultHandle toolResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+            org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, TOOL_TYPES)) {
-            return encoderResultMapper(TOOL, bytecode, returnType, ToolEncoderResultMapper.class);
+            if (featureMethod.isStructuredContent()) {
+                return encoderResultMapper(featureMethod, bytecode, returnType, ToolStructuredContentResultMapper.class);
+            } else {
+                return encoderResultMapper(featureMethod, bytecode, returnType, ToolEncoderResultMapper.class);
+            }
         } else {
             return readResultMapper(bytecode, createMapperClassSimpleName(TOOL, returnType, DotNames.TOOL_RESPONSE, c -> {
                 return isContent(c) ? "Content" : "String";
@@ -1170,9 +1210,10 @@ class McpServerProcessor {
         }
     }
 
-    ResultHandle promptResultMapper(BytecodeCreator bytecode, org.jboss.jandex.Type returnType) {
+    ResultHandle promptResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+            org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, PROMPT_TYPES)) {
-            return encoderResultMapper(PROMPT, bytecode, returnType, PromptEncoderResultMapper.class);
+            return encoderResultMapper(featureMethod, bytecode, returnType, PromptEncoderResultMapper.class);
         } else {
             return readResultMapper(bytecode,
                     createMapperClassSimpleName(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> "OfMessage"));

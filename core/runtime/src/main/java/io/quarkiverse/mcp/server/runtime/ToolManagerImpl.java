@@ -20,15 +20,11 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.victools.jsonschema.generator.Option;
-import com.github.victools.jsonschema.generator.OptionPreset;
-import com.github.victools.jsonschema.generator.SchemaGenerator;
-import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
-import com.github.victools.jsonschema.generator.SchemaVersion;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
@@ -45,13 +41,15 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     private static final Logger LOG = Logger.getLogger(ToolManagerImpl.class);
 
-    private final SchemaGenerator schemaGenerator;
+    private final DefaultSchemaGenerator schemaGenerator;
 
     final ConcurrentMap<String, ToolInfo> tools;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
     final List<ToolFilter> filters;
+
+    final Instance<OutputSchemaGenerator> outputSchemaGenerator;
 
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
@@ -60,14 +58,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
             @All List<ToolFilter> filters,
-            @All List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
+            DefaultSchemaGenerator schemaGenerator,
+            Instance<OutputSchemaGenerator> outputSchemaGenerator) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             this.tools.put(f.info().name(), new ToolMethod(f));
         }
-        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers);
+        this.schemaGenerator = schemaGenerator;
         this.defaultValueConverters = metadata.defaultValueConverters();
+        this.outputSchemaGenerator = outputSchemaGenerator;
         this.filters = filters;
     }
 
@@ -220,6 +220,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public JsonObject asJson() {
+            // TODO: it might make sense to cache the generated schemas
             JsonObject tool = metadata.asJson();
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
@@ -242,19 +243,20 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     .put("type", "object")
                     .put("properties", properties)
                     .put("required", required));
+            Class<? extends OutputSchemaGenerator> outputSchemaGeneratorClass = metadata.info().outputSchemaGenerator();
+            if (outputSchemaGeneratorClass != null) {
+                Object outputSchema;
+                if (DefaultSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
+                    outputSchema = schemaGenerator.generate(metadata.info().outputSchemaFrom());
+                } else {
+                    outputSchema = outputSchemaGenerator.select(outputSchemaGeneratorClass).get()
+                            .generate(metadata.info().outputSchemaFrom());
+                }
+                tool.put("outputSchema", outputSchema);
+            }
             return tool;
         }
 
-    }
-
-    private static SchemaGenerator constructSchemaGenerator(
-            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
-        var configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON)
-                .without(Option.SCHEMA_VERSION_INDICATOR);
-        for (SchemaGeneratorConfigCustomizer customizer : schemaGeneratorConfigCustomizers) {
-            customizer.customize(configBuilder);
-        }
-        return new SchemaGenerator(configBuilder.build());
     }
 
     class ToolDefinitionImpl
@@ -263,6 +265,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         private String title;
         private final List<ToolArgument> arguments;
+        private Object outputSchema;
 
         private ToolAnnotations annotations;
 
@@ -290,10 +293,22 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition generateOutputSchema(Class<?> from) {
+            this.outputSchema = schemaGenerator.generate(from);
+            return this;
+        }
+
+        @Override
+        public ToolDefinition setOutputSchema(Object schema) {
+            this.outputSchema = schema;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, arguments, annotations);
+                    runOnVirtualThread, arguments, annotations, outputSchema);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
                 throw toolAlreadyExists(name);
@@ -310,15 +325,18 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final String title;
         private final List<ToolArgument> arguments;
         private final Optional<ToolAnnotations> annotations;
+        private final Object outputSchema;
 
         private ToolDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
-                ToolAnnotations annotations) {
+                ToolAnnotations annotations,
+                Object outputSchema) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
+            this.outputSchema = outputSchema;
         }
 
         @Override
@@ -364,6 +382,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     .put("type", "object")
                     .put("properties", properties)
                     .put("required", required));
+            if (outputSchema != null) {
+                tool.put("outputSchema", outputSchema);
+            }
             return tool;
         }
 

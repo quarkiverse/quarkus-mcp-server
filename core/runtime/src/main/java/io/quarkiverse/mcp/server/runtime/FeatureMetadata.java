@@ -4,19 +4,16 @@ import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
 
+import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-/**
- *
- * @param <M> The response message
- */
 public record FeatureMetadata<M>(Feature feature,
         FeatureMethodInfo info,
         Invoker<Object, Object> invoker,
         ExecutionModel executionModel,
-        Function<Object, Uni<M>> resultMapper) implements Comparable<FeatureMetadata<M>> {
+        Function<Result<Object>, Uni<M>> resultMapper) implements Comparable<FeatureMetadata<M>> {
 
     @Override
     public int compareTo(FeatureMetadata<M> o) {

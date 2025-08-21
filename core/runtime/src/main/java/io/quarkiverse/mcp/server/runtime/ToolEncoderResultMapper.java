@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
+import java.util.function.Function;
 
 import jakarta.inject.Singleton;
 
@@ -8,6 +9,7 @@ import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ContentEncoder;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.ToolResponseEncoder;
+import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkus.arc.All;
 import io.smallrye.mutiny.Uni;
 
@@ -17,32 +19,32 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
     @All
     List<ToolResponseEncoder<?>> toolResponseEncoders;
 
-    final EncoderMapper<Uni<Object>, ToolResponse> uni;
+    final Function<Result<Uni<Object>>, Uni<ToolResponse>> uni;
 
     private ToolEncoderResultMapper() {
         this.uni = new EncoderMapper<Uni<Object>, ToolResponse>() {
 
             @Override
-            public Uni<ToolResponse> apply(Uni<Object> uni) {
-                return uni.chain(o -> ToolEncoderResultMapper.this.apply(o));
+            public Uni<ToolResponse> apply(Result<Uni<Object>> r) {
+                return r.value().chain(o -> ToolEncoderResultMapper.this.apply(new Result<Object>(o, r.serverName())));
             }
         };
     }
 
     @Override
-    public Uni<ToolResponse> apply(Object obj) {
+    public Uni<ToolResponse> apply(Result<Object> r) {
         Uni<ToolResponse> ret = null;
-        ToolResponse toolResponse = convertContainer(obj);
+        ToolResponse toolResponse = convertContainer(r.value());
         if (toolResponse != null) {
             ret = Uni.createFrom().item(toolResponse);
         } else {
-            ret = super.apply(obj);
+            ret = super.apply(r);
         }
         return ret;
     }
 
     @Override
-    public EncoderMapper<Uni<Object>, ToolResponse> uni() {
+    public Function<Result<Uni<Object>>, Uni<ToolResponse>> uni() {
         return uni;
     }
 

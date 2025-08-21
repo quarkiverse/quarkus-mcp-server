@@ -1253,7 +1253,7 @@ public class McpAssured {
         }
     }
 
-    public record ToolInfo(String name, String title, String description, JsonObject inputSchema,
+    public record ToolInfo(String name, String title, String description, JsonObject inputSchema, JsonObject outputSchema,
             Optional<ToolAnnotations> annotations) {
     }
 

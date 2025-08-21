@@ -12,10 +12,14 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  *
  * @param isError {@code true} if the tool call ended in an error
  * @param content the list of content items (must not be {@code null})
+ * @param structuredContent the optional structured result of the tool call
  * @param _meta the optional metadata
  */
 @JsonInclude(Include.NON_NULL)
-public record ToolResponse(boolean isError, List<? extends Content> content, Map<MetaKey, Object> _meta) {
+public record ToolResponse(boolean isError,
+        List<? extends Content> content,
+        Object structuredContent,
+        Map<MetaKey, Object> _meta) {
 
     /**
      * @param <C>
@@ -52,12 +56,32 @@ public record ToolResponse(boolean isError, List<? extends Content> content, Map
         return new ToolResponse(false, List.of(new TextContent(message)));
     }
 
+    /**
+     * @param message
+     * @return an unsuccessful response with structured content
+     */
+    public static ToolResponse structuredError(Object structuredContent) {
+        return new ToolResponse(true, null, structuredContent, null);
+    }
+
+    /**
+     * @param message
+     * @return a successful response with structured content
+     */
+    public static ToolResponse structuredSuccess(Object structuredContent) {
+        return new ToolResponse(false, null, structuredContent, null);
+    }
+
+    public ToolResponse(boolean isError, List<? extends Content> content, Map<MetaKey, Object> _meta) {
+        this(isError, content, null, _meta);
+    }
+
     public ToolResponse(boolean isError, List<? extends Content> content) {
         this(isError, content, null);
     }
 
     public ToolResponse {
-        if (content == null) {
+        if (content == null && structuredContent == null) {
             throw new IllegalArgumentException("content must not be null");
         }
     }
