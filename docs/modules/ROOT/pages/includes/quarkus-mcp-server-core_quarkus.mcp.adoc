@@ -702,6 +702,33 @@ endif::add-copy-button-to-env-var[]
 |int
 |`50`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode[`quarkus.mcp.server.tools.structured-content.compatibility-mode`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.structured-content.compatibility-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".tools.structured-content.compatibility-mode`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.structured-content.compatibility-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` and a tool returns a structured content but no other content then the serialized JSON is
+also automatically set as a `TextContent` for backwards compatibility.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_STRUCTURED_CONTENT_COMPATIBILITY_MODE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_STRUCTURED_CONTENT_COMPATIBILITY_MODE+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`false`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]

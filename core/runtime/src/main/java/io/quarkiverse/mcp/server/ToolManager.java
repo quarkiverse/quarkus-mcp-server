@@ -91,6 +91,20 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
          */
         ToolDefinition setTitle(String title);
 
+        /**
+         * Generate the output schema for structured content from the given class.
+         *
+         * @param outputSchema
+         * @return self
+         */
+        ToolDefinition generateOutputSchema(Class<?> from);
+
+        /**
+         * @param schema
+         * @return self
+         */
+        ToolDefinition setOutputSchema(Object schema);
+
     }
 
     public interface ToolArguments extends RequestFeatureArguments {

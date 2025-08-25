@@ -583,6 +583,33 @@ By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the
 The same goes for `com.github.victools:jsonschema-module-jakarta-validation and `com.github.victools:jsonschema-module-swagger-2`.
 See the <<extension-configuration-reference>> for relevant config properties.
 
+=== Structured Content
+
+Since MCP `2025-06-18` it's possible to return a _structured content_ in a tool response.
+Where _structured content_ means basically a custom JSON object.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    FooService fooService;
+
+    @Tool(description = "Put you description here.", structuredContent = true) <1> <2>
+    Foo foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
+        return fooService.ping(name);
+    }
+}
+----
+<1> If `Tool#structuredContent()` is to `true` and the method returns a type `X` which is not specifically treated (see the conversion rules), then the return value is converted to JSON and used as the `structuredContent` of the result.
+<2> Also the output schema is generated automatically from the return type.
+
+TIP: If a tool method returns with structured content directly then the return type may not be used for schema generation. In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
+
 == Notifications
 
 You can annotate a business method of a CDI bean with `@io.quarkiverse.mcp.server.Notification`.

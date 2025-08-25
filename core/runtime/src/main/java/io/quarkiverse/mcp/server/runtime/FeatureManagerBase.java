@@ -37,6 +37,7 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
@@ -333,10 +334,10 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             Invoker<Object, Object> invoker = metadata.invoker();
             Object[] arguments = prepareArguments(metadata, argProviders);
             try {
-                Function<Object, Uni<RESPONSE>> resultMapper = metadata.resultMapper();
+                Function<Result<Object>, Uni<RESPONSE>> resultMapper = metadata.resultMapper();
                 Object ret = invoker.invoke(null, arguments);
                 ret = wrapResult(ret, metadata, argProviders);
-                return resultMapper.apply(ret);
+                return resultMapper.apply(new Result<>(ret, argProviders.serverName()));
             } catch (Throwable e) {
                 return Uni.createFrom().failure(e);
             }

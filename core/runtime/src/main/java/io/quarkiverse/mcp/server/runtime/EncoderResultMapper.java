@@ -1,8 +1,10 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
+import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.Encoder;
+import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkus.arc.All;
 import io.smallrye.mutiny.Uni;
 
@@ -19,24 +21,24 @@ abstract class EncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>,
     @All
     List<ENCODER> encoders;
 
-    final EncoderMapper<Uni<Object>, RESPONSE> uni;
+    final Function<Result<Uni<Object>>, Uni<RESPONSE>> uni;
 
     protected EncoderResultMapper() {
         this.uni = new EncoderMapper<Uni<Object>, RESPONSE>() {
 
             @Override
-            public Uni<RESPONSE> apply(Uni<Object> uni) {
-                return uni.map(o -> toResponse(EncoderResultMapper.this.convert(o)));
+            public Uni<RESPONSE> apply(Result<Uni<Object>> r) {
+                return r.value().map(o -> toResponse(EncoderResultMapper.this.convert(o)));
             }
         };
     }
 
     @Override
-    public Uni<RESPONSE> apply(Object obj) {
-        return Uni.createFrom().item(toResponse(convert(obj)));
+    public Uni<RESPONSE> apply(Result<Object> r) {
+        return Uni.createFrom().item(toResponse(convert(r.value())));
     }
 
-    public EncoderMapper<Uni<Object>, RESPONSE> uni() {
+    public Function<Result<Uni<Object>>, Uni<RESPONSE>> uni() {
         return uni;
     }
 

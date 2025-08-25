@@ -195,6 +195,24 @@ public interface McpServerRuntimeConfig {
         @WithDefault("50")
         int pageSize();
 
+        /**
+         * Structured content config.
+         */
+        StructuredContent structuredContent();
+
+    }
+
+    public interface StructuredContent {
+
+        /**
+         * If set to `true` and a tool returns a structured content but no other content then the serialized JSON is
+         * also automatically set as a `TextContent` for backwards compatibility.
+         *
+         * @asciidoclet
+         */
+        @WithDefault("false")
+        boolean compatibilityMode();
+
     }
 
     public interface Sampling {

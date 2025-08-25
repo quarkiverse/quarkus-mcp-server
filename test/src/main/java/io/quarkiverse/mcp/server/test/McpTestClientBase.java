@@ -1122,6 +1122,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                     tool.getString("title"),
                     tool.getString("description"),
                     tool.getJsonObject("inputSchema"),
+                    tool.getJsonObject("outputSchema"),
                     toolAnnotations);
         }
     }
@@ -1154,11 +1155,17 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             JsonObject result = assertResultResponse(request, response);
             boolean isError = result.getBoolean("isError");
             JsonArray contentArray = result.getJsonArray("content");
-            List<Content> content = new ArrayList<>(contentArray.size());
-            for (int i = 0; i < contentArray.size(); i++) {
-                content.add(Contents.parseContent(contentArray.getJsonObject(i)));
+            List<Content> content;
+            if (contentArray != null) {
+                content = new ArrayList<>(contentArray.size());
+                for (int i = 0; i < contentArray.size(); i++) {
+                    content.add(Contents.parseContent(contentArray.getJsonObject(i)));
+                }
+            } else {
+                content = List.of();
             }
-            assertFunction.accept(new ToolResponse(isError, content, Contents.parseMeta(result)));
+            assertFunction.accept(
+                    new ToolResponse(isError, content, result.getJsonObject("structuredContent"), Contents.parseMeta(result)));
         }
     }
 

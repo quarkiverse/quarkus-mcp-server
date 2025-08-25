@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.deployment;
 import java.util.Objects;
 
 import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.Type;
 
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.Feature;
@@ -33,13 +34,16 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
+    private final boolean structuredContent;
+    private final Type outputSchemaFrom;
+    private final Type outputSchemaGenerator;
 
     // Server config name
     private final String server;
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
             String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
-            String server) {
+            String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -52,6 +56,9 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.size = size;
         this.toolAnnotations = toolAnnotations;
         this.server = server;
+        this.structuredContent = structuredContent;
+        this.outputSchemaFrom = outputSchemaFrom;
+        this.outputSchemaGenerator = outputSchemaGenerator;
     }
 
     BeanInfo getBean() {
@@ -100,6 +107,18 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     String getServer() {
         return server;
+    }
+
+    boolean isStructuredContent() {
+        return structuredContent;
+    }
+
+    Type getOutputSchemaFrom() {
+        return outputSchemaFrom;
+    }
+
+    Type getOutputSchemaGenerator() {
+        return outputSchemaGenerator;
     }
 
     boolean isTool() {
