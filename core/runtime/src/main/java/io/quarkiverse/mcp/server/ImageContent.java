@@ -2,9 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * An image content provided to or from an LLM.
  *
@@ -12,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @param mimeType the mime type of the image (must not be {@code null})
  * @param _meta the optional metadata
  */
-@JsonInclude(Include.NON_NULL)
 public record ImageContent(String data, String mimeType, Map<MetaKey, Object> _meta) implements Content {
 
     public ImageContent(String data, String mimeType) {

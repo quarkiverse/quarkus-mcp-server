@@ -1,8 +1,5 @@
 package io.quarkiverse.mcp.server;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * Text data of a resource.
  *
@@ -10,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @param text (must not be {@code null})
  * @param mimeType the mime type of this resource
  */
-@JsonInclude(Include.NON_NULL)
 public record TextResourceContents(String uri, String text, String mimeType) implements ResourceContents {
 
     /**

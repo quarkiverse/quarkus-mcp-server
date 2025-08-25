@@ -2,9 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import java.util.Base64;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * Binary data of a resource.
  *
@@ -12,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @param blob a base64-encoded string representing the binary data of the item (must not be {@code null})
  * @param mimeType the mime type of this resource
  */
-@JsonInclude(Include.NON_NULL)
 public record BlobResourceContents(String uri, String blob, String mimeType) implements ResourceContents {
 
     /**

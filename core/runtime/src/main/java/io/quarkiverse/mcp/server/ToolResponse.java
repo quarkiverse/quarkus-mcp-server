@@ -4,9 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * Response to a {@code tools/call} request from the client.
  *
@@ -15,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @param structuredContent the optional structured result of the tool call
  * @param _meta the optional metadata
  */
-@JsonInclude(Include.NON_NULL)
 public record ToolResponse(boolean isError,
         List<? extends Content> content,
         Object structuredContent,
