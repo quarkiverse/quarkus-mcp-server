@@ -2,9 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * A resource link.
  *
@@ -15,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @see Prompt
  * @see Tool
  */
-@JsonInclude(Include.NON_NULL)
 public record ResourceLink(String uri, String mimeType, String name, String title, String description, Integer size,
         Map<MetaKey, Object> _meta) implements Content {
 

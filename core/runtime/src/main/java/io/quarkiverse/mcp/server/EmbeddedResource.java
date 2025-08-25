@@ -2,9 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * A resource embedded into a prompt or tool call result.
  *
@@ -13,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @see Prompt
  * @see Tool
  */
-@JsonInclude(Include.NON_NULL)
 public record EmbeddedResource(ResourceContents resource, Map<MetaKey, Object> _meta) implements Content {
 
     public EmbeddedResource(ResourceContents resource) {

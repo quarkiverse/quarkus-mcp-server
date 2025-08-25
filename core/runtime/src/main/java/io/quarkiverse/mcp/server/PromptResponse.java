@@ -3,9 +3,6 @@ package io.quarkiverse.mcp.server;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 /**
  * Response to a {@code prompts/get} request from the client.
  *
@@ -13,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  * @param messages the prompt messages (must not be {@code null})
  * @param _meta the optional metadata
  */
-@JsonInclude(Include.NON_NULL)
 public record PromptResponse(String description, List<PromptMessage> messages, Map<MetaKey, Object> _meta) {
 
     /**

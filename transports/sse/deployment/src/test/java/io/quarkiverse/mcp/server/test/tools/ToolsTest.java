@@ -79,7 +79,10 @@ public class ToolsTest extends McpServerTest {
                     assertEquals(true, e.getValue());
                 })
                 .toolsCall("uni_alpha", Map.of("uni_price", 1),
-                        r -> assertEquals("Hello 1.0!", r.content().get(0).asText().text()))
+                        r -> {
+                            assertEquals("Hello 1.0!", r.content().get(0).asText().text());
+                            assertNull(r._meta());
+                        })
                 .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
                 .toolsCall("uni_bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
                 .toolsCall("charlie", Map.of("day", DayOfWeek.FRIDAY),
