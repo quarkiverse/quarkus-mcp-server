@@ -5,6 +5,9 @@ import static io.quarkiverse.mcp.server.test.Checks.checkExecutionModel;
 import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
 import java.time.DayOfWeek;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +18,7 @@ import dev.langchain4j.agent.tool.P;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.MetaKey;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
@@ -36,7 +40,11 @@ public class MyTools {
         return new ToolResponse(false,
                 List.of(new TextContent(
                         fooService.ping(price.get() + "", 1, new Options(true)),
-                        Map.of(MetaKey.from("content/foo"), 10))),
+                        Map.of(MetaKey.from("content/foo"), 10),
+                        new Content.Annotations(Role.ASSISTANT,
+                                ZonedDateTime.of(2025, 8, 26, 8, 40, 0, 0, ZoneOffset.UTC)
+                                        .format(DateTimeFormatter.ISO_INSTANT),
+                                0.5))),
                 Map.of(MetaKey.of("alpha-foo"), true));
     }
 

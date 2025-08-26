@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 import java.util.Map;
+import java.util.Optional;
 
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
 
@@ -42,6 +43,8 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
 
         String mimeType();
 
+        Optional<Content.Annotations> annotations();
+
     }
 
     /**
@@ -54,7 +57,6 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
             FeatureDefinition<ResourceTemplateInfo, ResourceTemplateArguments, ResourceResponse, ResourceTemplateDefinition> {
 
         /**
-         *
          * @param title
          * @return self
          * @see ResourceTemplate#title()
@@ -62,7 +64,6 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
         ResourceTemplateDefinition setTitle(String title);
 
         /**
-         *
          * @param uriTemplate
          * @return self
          * @see ResourceTemplate#uriTemplate()
@@ -70,12 +71,17 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
         ResourceTemplateDefinition setUriTemplate(String uriTemplate);
 
         /**
-         *
          * @param mimeType
          * @return self
          * @see ResourceTemplate#mimeType()
          */
         ResourceTemplateDefinition setMimeType(String mimeType);
+
+        /**
+         * @param annotations
+         * @return self
+         */
+        ResourceTemplateDefinition setAnnotations(Content.Annotations annotations);
 
     }
 

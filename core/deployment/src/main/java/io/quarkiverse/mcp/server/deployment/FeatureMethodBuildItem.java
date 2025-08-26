@@ -5,6 +5,8 @@ import java.util.Objects;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
 
+import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
@@ -31,6 +33,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final String uri;
     private final String mimeType;
     private final int size;
+    private final Content.Annotations resourceAnnotations;
 
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
@@ -43,7 +46,8 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
             String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
-            String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator) {
+            String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
+            Content.Annotations resourceAnnotations) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -59,6 +63,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.structuredContent = structuredContent;
         this.outputSchemaFrom = outputSchemaFrom;
         this.outputSchemaGenerator = outputSchemaGenerator;
+        this.resourceAnnotations = resourceAnnotations;
     }
 
     BeanInfo getBean() {
@@ -119,6 +124,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Type getOutputSchemaGenerator() {
         return outputSchemaGenerator;
+    }
+
+    Annotations getResourceAnnotations() {
+        return resourceAnnotations;
     }
 
     boolean isTool() {

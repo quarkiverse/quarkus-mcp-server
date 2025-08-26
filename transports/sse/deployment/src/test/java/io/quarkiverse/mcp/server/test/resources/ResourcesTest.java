@@ -1,10 +1,12 @@
 package io.quarkiverse.mcp.server.test.resources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
@@ -30,6 +32,9 @@ public class ResourcesTest extends McpServerTest {
                     assertEquals("alpha", alpha.name());
                     assertEquals("Alpha...", alpha.title());
                     assertEquals(15, alpha.size());
+                    assertNotNull(alpha.annotations());
+                    assertEquals(Role.USER, alpha.annotations().audience());
+                    assertEquals(0.5, alpha.annotations().priority());
                     assertEquals("bravo", p.findByUri("file:///project/bravo").name());
                     assertEquals("uni_alpha", p.findByUri("file:///project/uni_alpha").name());
                     assertEquals("uni_bravo", p.findByUri("file:///project/uni_bravo").name());

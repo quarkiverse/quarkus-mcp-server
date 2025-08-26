@@ -8,13 +8,15 @@ import java.util.List;
 
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.smallrye.mutiny.Uni;
 
 public class MyResources {
 
-    @Resource(uri = "file:///project/alpha", title = "Alpha...", size = 15)
+    @Resource(uri = "file:///project/alpha", title = "Alpha...", size = 15, annotations = @Annotations(audience = Role.USER, priority = 0.5))
     ResourceResponse alpha(RequestUri uri) {
         checkExecutionModel(true);
         checkDuplicatedContext();

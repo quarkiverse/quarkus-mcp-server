@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -1260,10 +1261,12 @@ public class McpAssured {
     public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments) {
     }
 
-    public record ResourceInfo(String uri, String mimeType, String name, String title, String description, Integer size) {
+    public record ResourceInfo(String uri, String mimeType, String name, String title, String description, Integer size,
+            Content.Annotations annotations) {
     }
 
-    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description) {
+    public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description,
+            Content.Annotations annotations) {
     }
 
     public record PromptArgument(String name, String title, String description, boolean required) {

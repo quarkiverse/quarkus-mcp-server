@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.MetaKey;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
@@ -73,6 +74,12 @@ public class ToolsTest extends McpServerTest {
                     assertEquals("Hello 1!", t.text());
                     assertEquals(1, t._meta().size());
                     assertEquals(10, t._meta().entrySet().iterator().next().getValue());
+                    // content annotations
+                    assertNotNull(t.annotations());
+                    assertEquals(Role.ASSISTANT, t.annotations().audience());
+                    assertEquals("2025-08-26T08:40:00Z", t.annotations().lastModified());
+                    assertEquals(0.5, t.annotations().priority());
+                    // result _meta
                     assertEquals(1, r._meta().size());
                     Entry<MetaKey, Object> e = r._meta().entrySet().iterator().next();
                     assertEquals("alpha-foo", e.getKey().toString());

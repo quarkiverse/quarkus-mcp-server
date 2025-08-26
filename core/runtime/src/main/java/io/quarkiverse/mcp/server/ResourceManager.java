@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.Optional;
 import java.util.OptionalInt;
 
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
@@ -44,6 +45,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
         OptionalInt size();
 
+        Optional<Content.Annotations> annotations();
+
         /**
          * Sends update notifications to all subscribers without waiting for the result.
          * <p>
@@ -70,14 +73,12 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
             extends FeatureDefinition<ResourceInfo, ResourceArguments, ResourceResponse, ResourceDefinition> {
 
         /**
-         *
          * @param title
          * @return self
          */
         ResourceDefinition setTitle(String title);
 
         /**
-         *
          * @param uri
          * @return self
          * @see Resource#uri()
@@ -85,7 +86,6 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         ResourceDefinition setUri(String uri);
 
         /**
-         *
          * @param mimeType
          * @return self
          * @see Resource#mimeType()
@@ -93,12 +93,17 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         ResourceDefinition setMimeType(String mimeType);
 
         /**
-         *
          * @param size
          * @return self
          * @see Resource#size()
          */
         ResourceDefinition setSize(int size);
+
+        /**
+         * @param annotations
+         * @return self
+         */
+        ResourceDefinition setAnnotations(Content.Annotations annotations);
 
     }
 

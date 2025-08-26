@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.resources.templates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
@@ -11,12 +12,15 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceTemplateInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -49,7 +53,13 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
         assertThrows(NullPointerException.class, () -> myTemplates.register(null));
 
         client.when()
-                .resourcesTemplatesList(p -> assertEquals(1, p.size()))
+                .resourcesTemplatesList(p -> {
+                    assertEquals(1, p.size());
+                    ResourceTemplateInfo alpha = p.findByUriTemplate("file:///alpha/{foo}");
+                    assertNotNull(alpha.annotations());
+                    assertEquals(Role.ASSISTANT, alpha.annotations().audience());
+                    assertEquals(0.9, alpha.annotations().priority());
+                })
                 .resourcesRead("file:///alpha/ok", r -> assertEquals("ok", r.contents().get(0).asText().text()))
                 .thenAssertResults();
 
@@ -84,6 +94,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
             manager.newResourceTemplate(name)
                     .setUriTemplate("file:///" + name + "/{foo}")
                     .setDescription(name + " description!")
+                    .setAnnotations(new Annotations(Role.ASSISTANT, null, .9))
                     .setHandler(
                             args -> new ResourceResponse(
                                     List.of(TextResourceContents.create(args.requestUri().value(), args.args().get("foo")))))

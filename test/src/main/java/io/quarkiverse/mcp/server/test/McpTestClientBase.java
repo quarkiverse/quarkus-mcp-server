@@ -981,7 +981,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
         private ResourceInfo parseResource(JsonObject resource) {
             return new ResourceInfo(resource.getString("uri"), resource.getString("mimeType"), resource.getString("name"),
-                    resource.getString("title"), resource.getString("description"), resource.getInteger("size"));
+                    resource.getString("title"), resource.getString("description"), resource.getInteger("size"),
+                    Contents.parseAnnotations(resource));
         }
     }
 
@@ -1006,7 +1007,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             return new ResourceTemplateInfo(resource.getString("uriTemplate"), resource.getString("mimeType"),
                     resource.getString("name"),
                     resource.getString("title"),
-                    resource.getString("description"));
+                    resource.getString("description"),
+                    Contents.parseAnnotations(resource));
         }
     }
 
