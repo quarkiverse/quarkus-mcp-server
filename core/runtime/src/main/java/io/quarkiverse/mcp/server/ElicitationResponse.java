@@ -28,6 +28,10 @@ public record ElicitationResponse(Action action, Content content, Meta meta) {
         }
     }
 
+    public boolean actionAccepted() {
+        return action == Action.ACCEPT;
+    }
+
     public interface Content {
 
         /**

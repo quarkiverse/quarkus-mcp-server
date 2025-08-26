@@ -919,15 +919,15 @@ import io.smallrye.mutiny.Uni;
 public class MyTools {
 
    @Tool(description = "A tool that is using elicitation...")
-   Uni<String> samplingFoo(Elicitation elicitation) { <1>
+   Uni<String> elicitationFoo(Elicitation elicitation) { <1>
       if (elicitation.isSupported()) {
-         ElicitationRequest r = elicitation.requestBuilder() <2>
+         ElicitationRequest request = elicitation.requestBuilder() <2>
                 .setMessage("What's your GitHub account?")
                 .addSchemaProperty("username", new StringSchema())
                 .build();
-         return r.send().map(er -> { <3>
-                    if (er.action() == Action.ACCEPT) {
-                        return "It's GitHub user: " + er.content().getOrDefault("username", "UNKNOWN").toString() + ".";
+         return request.send().map(response -> { <3>
+                    if (response.isAccepted()) {
+                        return "It's GitHub user: " + response.content().getString("username") + ".";
                     } else {
                         return "Not accepted...";
                     }

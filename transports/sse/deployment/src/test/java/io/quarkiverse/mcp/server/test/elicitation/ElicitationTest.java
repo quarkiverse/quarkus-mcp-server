@@ -16,7 +16,6 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.ElicitationResponse;
-import io.quarkiverse.mcp.server.ElicitationResponse.Action;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -34,7 +33,7 @@ public class ElicitationTest extends McpServerTest {
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
-    public void testSampling() throws InterruptedException {
+    public void testElicitation() throws InterruptedException {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
                 .setClientCapabilities(new ClientCapability(ClientCapability.ELICITATION, Map.of()))
                 .build()
@@ -84,14 +83,14 @@ public class ElicitationTest extends McpServerTest {
         @Tool
         Uni<String> elicitationFoo(Elicitation elicitation) {
             if (elicitation.isSupported()) {
-                ElicitationRequest r = elicitation.requestBuilder()
+                ElicitationRequest request = elicitation.requestBuilder()
                         .setMessage("What's your github account?")
                         .addSchemaProperty("username", new StringSchema(true))
                         .build();
-                return r.send().map(er -> {
-                    if (er.action() == Action.ACCEPT
-                            && "bar".equals(er.meta().getValue(MetaKey.of("foo")))) {
-                        return "It's ok " + er.content().getString("username") + ".";
+                return request.send().map(response -> {
+                    if (response.actionAccepted()
+                            && "bar".equals(response.meta().getValue(MetaKey.of("foo")))) {
+                        return "It's ok " + response.content().getString("username") + ".";
                     } else {
                         return "Not accepted";
                     }
