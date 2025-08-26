@@ -54,14 +54,6 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
          */
         void sendUpdateAndForget();
 
-        /**
-         * @deprecated Use {@link #sendUpdateAndForget()} instead
-         */
-        @Deprecated(forRemoval = true, since = "1.1")
-        default void sendUpdate() {
-            sendUpdateAndForget();
-        }
-
     }
 
     /**

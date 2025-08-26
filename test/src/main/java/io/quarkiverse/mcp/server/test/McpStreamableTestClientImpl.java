@@ -241,7 +241,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         private String name = "test-client";
         private String version = "1.0";
-        private String protocolVersion = "2024-11-05";
+        private String protocolVersion = "2025-06-18";
         private String mcpPath = "/mcp";
         private Set<ClientCapability> clientCapabilities = Set.of();
         private URI baseUri = McpAssured.baseUri;
