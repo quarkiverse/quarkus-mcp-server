@@ -20,7 +20,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Elicitation;
-import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
@@ -70,12 +69,11 @@ public class ElicitationTimeoutTest extends McpServerTest {
 
         @Tool
         Uni<String> elicitationDefaultTimeout(Elicitation elicitation) {
-            ElicitationRequest r = elicitation.requestBuilder()
+            return elicitation.requestBuilder()
                     .setMessage("What's your github account?")
                     .addSchemaProperty("username", new StringSchema())
                     .setTimeout(Duration.ofSeconds(1))
-                    .build();
-            return r.send()
+                    .build().send()
                     .onFailure().recoverWithItem(t -> {
                         ERROR1.set(t);
                         return null;

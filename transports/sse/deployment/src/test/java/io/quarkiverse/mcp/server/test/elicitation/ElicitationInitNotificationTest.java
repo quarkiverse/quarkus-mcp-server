@@ -68,12 +68,12 @@ public class ElicitationInitNotificationTest extends McpServerTest {
 
         @Notification(Type.INITIALIZED)
         Uni<Void> init(Elicitation elicitation) {
-            ElicitationRequest r = elicitation.requestBuilder()
+            ElicitationRequest request = elicitation.requestBuilder()
                     .setMessage("What's your github account?")
                     .addSchemaProperty("username", new StringSchema())
                     .build();
-            return r.send().invoke(er -> {
-                USERNAME.set(er.content().getString("username"));
+            return request.send().invoke(response -> {
+                USERNAME.set(response.content().getString("username"));
                 INIT_LATCH.countDown();
             }).replaceWithVoid();
         }
