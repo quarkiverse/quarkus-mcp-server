@@ -510,7 +510,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
-    private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-03-26", "2024-11-05");
+    private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-06-18", "2025-03-26", "2024-11-05");
 
     private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest) {
         Map<String, Object> info = new HashMap<>();
