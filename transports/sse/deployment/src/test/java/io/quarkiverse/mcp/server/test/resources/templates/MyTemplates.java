@@ -7,13 +7,15 @@ import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 import java.util.List;
 
 import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 
 public class MyTemplates {
 
-    @ResourceTemplate(uriTemplate = "file:///{path}", title = "Alpha...")
+    @ResourceTemplate(uriTemplate = "file:///{path}", title = "Alpha...", annotations = @Annotations(audience = Role.USER, priority = 0.5))
     ResourceResponse alpha(String path) {
         String uri = "file:///" + path;
         checkExecutionModel(true);

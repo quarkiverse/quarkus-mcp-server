@@ -273,6 +273,7 @@ class McpServerProcessor {
                     org.jboss.jandex.Type outputSchemaFrom = null;
                     org.jboss.jandex.Type outputSchemaGenerator = null;
                     ToolManager.ToolAnnotations toolAnnotations = null;
+                    Content.Annotations resourceAnnotations = null;
 
                     if (feature == RESOURCE) {
                         AnnotationValue uriValue = featureAnnotation.value("uri");
@@ -284,6 +285,7 @@ class McpServerProcessor {
                         AnnotationValue sizeValue = featureAnnotation.value("size");
                         if (sizeValue != null)
                             size = sizeValue.asInt();
+                        resourceAnnotations = parseResourceAnnotations(featureAnnotation);
                     } else if (feature == RESOURCE_TEMPLATE) {
                         AnnotationValue uriValue = featureAnnotation.value("uriTemplate");
                         if (uriValue != null)
@@ -291,6 +293,7 @@ class McpServerProcessor {
                         AnnotationValue mimeTypeValue = featureAnnotation.value("mimeType");
                         if (mimeTypeValue != null)
                             mimeType = mimeTypeValue.asString();
+                        resourceAnnotations = parseResourceAnnotations(featureAnnotation);
                     } else if (feature == TOOL) {
                         // Tool annotations
                         AnnotationValue annotations = featureAnnotation.value("annotations");
@@ -340,7 +343,7 @@ class McpServerProcessor {
 
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
                             description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                            outputSchemaFrom, outputSchemaGenerator);
+                            outputSchemaFrom, outputSchemaGenerator, resourceAnnotations);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -417,6 +420,20 @@ class McpServerProcessor {
                 }
             }
         }
+    }
+
+    private Content.Annotations parseResourceAnnotations(AnnotationInstance featureAnnotation) {
+        AnnotationValue annotationsValue = featureAnnotation.value("annotations");
+        if (annotationsValue != null) {
+            AnnotationInstance annotationsAnnotation = annotationsValue.asNested();
+            AnnotationValue audienceValue = annotationsAnnotation.value("audience");
+            AnnotationValue lastModifiedValue = annotationsAnnotation.value("lastModified");
+            AnnotationValue priorityValue = annotationsAnnotation.value("priority");
+            return new Content.Annotations(audienceValue != null ? Role.valueOf(audienceValue.asEnum()) : null,
+                    lastModifiedValue != null ? lastModifiedValue.asString() : null,
+                    priorityValue != null ? priorityValue.asDouble() : null);
+        }
+        return null;
     }
 
     private List<Throwable> findWrongAnnotationUsage(CombinedIndexBuildItem combinedIndex,
@@ -1068,9 +1085,23 @@ class McpServerProcessor {
             toolAnnotations = metaMethod.loadNull();
         }
 
+        ResultHandle resourceAnnotations;
+        if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
+                && featureMethod.getResourceAnnotations() != null) {
+            Content.Annotations annotations = featureMethod.getResourceAnnotations();
+            resourceAnnotations = metaMethod.newInstance(
+                    MethodDescriptor.ofConstructor(Content.Annotations.class, Role.class, String.class, Double.class),
+                    annotations.audience() == null ? metaMethod.loadNull() : metaMethod.load(annotations.audience()),
+                    annotations.lastModified() == null ? metaMethod.loadNull() : metaMethod.load(annotations.lastModified()),
+                    annotations.priority() == null ? metaMethod.loadNull() : metaMethod.load(annotations.priority()));
+        } else {
+            resourceAnnotations = metaMethod.loadNull();
+        }
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class, String.class,
+                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
+                        Content.Annotations.class, String.class,
                         Class.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
@@ -1079,7 +1110,7 @@ class McpServerProcessor {
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 metaMethod.load(featureMethod.getSize()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations, metaMethod.load(featureMethod.getServer()),
+                toolAnnotations, resourceAnnotations, metaMethod.load(featureMethod.getServer()),
                 featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
                 featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()

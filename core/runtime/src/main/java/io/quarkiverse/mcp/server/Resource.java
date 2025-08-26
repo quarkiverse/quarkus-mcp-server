@@ -3,11 +3,9 @@ package io.quarkiverse.mcp.server;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.util.List;
-
-import io.smallrye.mutiny.Uni;
 
 /**
  * Annotates a business method of a CDI bean as an exposed resource.
@@ -18,11 +16,11 @@ import io.smallrye.mutiny.Uni;
  * <ul>
  * <li>If it returns an implementation of {@link ResourceContents} then the response contains the single contents
  * object.</li>
- * <li>If it returns a {@link List} of {@link ResourceContents} implementations then the response contains the list of
+ * <li>If it returns a {@link java.util.List} of {@link ResourceContents} implementations then the response contains the list of
  * contents objects.</li>
  * <li>If it returns any other type {@code X} or {@code List<X>} then {@code X} is encoded using the
  * {@link ResourceContentsEncoder} API and afterwards the rules above apply.</li>
- * <li>The method may return a {@link Uni} that wraps any of the type mentioned above.</li>
+ * <li>The method may return a {@link io.smallrye.mutiny.Uni} that wraps any of the type mentioned above.</li>
  * </ul>
  *
  * <p>
@@ -74,5 +72,25 @@ public @interface Resource {
      * "The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known."
      */
     int size() default -1;
+
+    /**
+     * Optional annotations for the client.
+     * <p>
+     * Note that the default value of this annotation member is ignored. In other words, the annotations have to be declared
+     * explicitly in order to be included in Resource metadata.
+     */
+    Annotations annotations() default @Annotations(audience = Role.USER, lastModified = "", priority = 0.5);
+
+    @Retention(RUNTIME)
+    @Target(ElementType.ANNOTATION_TYPE)
+    public @interface Annotations {
+
+        Role audience();
+
+        String lastModified() default "";
+
+        double priority();
+
+    }
 
 }

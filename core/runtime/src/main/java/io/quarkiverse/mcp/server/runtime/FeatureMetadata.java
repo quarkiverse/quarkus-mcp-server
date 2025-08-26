@@ -41,10 +41,16 @@ public record FeatureMetadata<M>(Feature feature,
             if (info.size() > 0) {
                 ret.put("size", info.size());
             }
+            if (info.resourceAnnotations() != null) {
+                ret.put("annotations", info.resourceAnnotations());
+            }
         } else if (feature == Feature.RESOURCE_TEMPLATE) {
             ret.put("uriTemplate", info.uri());
             if (info.mimeType() != null) {
                 ret.put("mimeType", info.mimeType());
+            }
+            if (info.resourceAnnotations() != null) {
+                ret.put("annotations", info.resourceAnnotations());
             }
         }
         return ret;

@@ -13,13 +13,16 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceArguments;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -57,7 +60,12 @@ public class ProgrammaticResourceTest extends McpServerTest {
         client.when()
                 .resourcesList(p -> {
                     assertEquals(1, p.size());
-                    assertEquals(1, p.findByUri("file:///alpha").size());
+                    ResourceInfo alpha = p.findByUri("file:///alpha");
+                    assertNotNull(alpha);
+                    assertEquals(1, alpha.size());
+                    assertNotNull(alpha.annotations());
+                    assertEquals(Role.ASSISTANT, alpha.annotations().audience());
+                    assertEquals(0.9, alpha.annotations().priority());
                 })
                 .resourcesRead("file:///alpha", r -> assertEquals("2", r.contents().get(0).asText().text()))
                 .thenAssertResults();
@@ -107,6 +115,7 @@ public class ProgrammaticResourceTest extends McpServerTest {
             manager.newResource(name)
                     .setUri("file:///" + name)
                     .setDescription(name + " description!")
+                    .setAnnotations(new Annotations(Role.ASSISTANT, null, .9))
                     .setSize(1)
                     .setHandler(
                             resourceArgs -> {

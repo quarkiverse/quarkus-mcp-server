@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceLink;
+import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.vertx.core.json.JsonObject;
@@ -21,13 +22,16 @@ public final class Contents {
     public static Content parseContent(JsonObject content) {
         Content.Type contentType = Content.Type.valueOf(content.getString("type").toUpperCase());
         return switch (contentType) {
-            case TEXT -> new TextContent(content.getString("text"), parseMeta(content));
-            case IMAGE -> new ImageContent(content.getString("data"), content.getString("mimeType"), parseMeta(content));
-            case AUDIO -> new AudioContent(content.getString("data"), content.getString("mimeType"), parseMeta(content));
-            case RESOURCE -> new EmbeddedResource(parseResourceContents(content.getJsonObject("resource")), parseMeta(content));
+            case TEXT -> new TextContent(content.getString("text"), parseMeta(content), parseAnnotations(content));
+            case IMAGE -> new ImageContent(content.getString("data"), content.getString("mimeType"), parseMeta(content),
+                    parseAnnotations(content));
+            case AUDIO -> new AudioContent(content.getString("data"), content.getString("mimeType"), parseMeta(content),
+                    parseAnnotations(content));
+            case RESOURCE -> new EmbeddedResource(parseResourceContents(content.getJsonObject("resource")), parseMeta(content),
+                    parseAnnotations(content));
             case RESOURCE_LINK -> new ResourceLink(content.getString("uri"), content.getString("mimeType"),
                     content.getString("name"), content.getString("title"), content.getString("description"),
-                    content.getInteger("size"), parseMeta(content));
+                    content.getInteger("size"), parseMeta(content), parseAnnotations(content));
             default -> throw new IllegalArgumentException("Unexpected value: " + contentType);
         };
     }
@@ -54,6 +58,16 @@ public final class Contents {
             ret.put(MetaKey.from(e.getKey()), e.getValue());
         }
         return ret;
+    }
+
+    public static Content.Annotations parseAnnotations(JsonObject json) {
+        JsonObject annotations = json.getJsonObject("annotations");
+        if (annotations == null) {
+            return null;
+        }
+        return new Content.Annotations(
+                annotations.containsKey("audience") ? Role.valueOf(annotations.getString("audience").toUpperCase()) : null,
+                annotations.getString("lastModified"), annotations.getDouble("priority"));
     }
 
 }

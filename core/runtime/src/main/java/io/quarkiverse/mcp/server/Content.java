@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -9,10 +11,19 @@ public sealed interface Content
         permits TextContent, ImageContent, EmbeddedResource, AudioContent, ResourceLink {
 
     /**
-     *
      * @return the type of the content
      */
     Type type();
+
+    /**
+     * @return the optional metadata
+     */
+    Map<MetaKey, Object> _meta();
+
+    /**
+     * @return the optional annotations
+     */
+    Annotations annotations();
 
     /**
      * Casts and returns this object as a text content, or throws an {@link IllegalArgumentException} if the content object does
@@ -69,7 +80,15 @@ public sealed interface Content
         return type().toString().toLowerCase();
     }
 
-    enum Type {
+    /**
+     * @param audience (may be {@code null})
+     * @param lastModified (may be {@code null})
+     * @param priority (may be {@code null})
+     */
+    public record Annotations(Role audience, String lastModified, Double priority) {
+    }
+
+    public enum Type {
         TEXT,
         IMAGE,
         RESOURCE,

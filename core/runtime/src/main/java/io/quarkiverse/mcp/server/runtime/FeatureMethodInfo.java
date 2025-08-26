@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
 
+import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolManager;
 
@@ -14,6 +15,7 @@ public record FeatureMethodInfo(String name,
         List<FeatureArgument> arguments,
         String declaringClassName,
         ToolManager.ToolAnnotations toolAnnotations,
+        Content.Annotations resourceAnnotations,
         String serverName,
         Class<?> outputSchemaFrom,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator) {

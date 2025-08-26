@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,6 +23,8 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestUri;
@@ -260,6 +263,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public Optional<Annotations> annotations() {
+            return Optional.ofNullable(metadata.info().resourceAnnotations());
+        }
+
+        @Override
         public boolean isMethod() {
             return true;
         }
@@ -278,15 +286,17 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final String title;
         private final String uriTemplate;
         private final String mimeType;
+        private final Content.Annotations annotations;
 
         private ResourceTemplateDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType) {
+                String mimeType, Content.Annotations annotations) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
+            this.annotations = annotations;
         }
 
         @Override
@@ -305,6 +315,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public Optional<Annotations> annotations() {
+            return Optional.ofNullable(annotations);
+        }
+
+        @Override
         public JsonObject asJson() {
             JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
@@ -312,6 +327,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                     .put("mimeType", mimeType());
             if (title != null) {
                 ret.put("title", title);
+            }
+            if (annotations != null) {
+                ret.put("annotations", annotations);
             }
             return ret;
         }
@@ -367,6 +385,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private String title;
         private String uriTemplate;
         private String mimeType;
+        private Annotations annotations;
 
         ResourceTemplateDefinitionImpl(String name) {
             super(name);
@@ -391,11 +410,16 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public ResourceTemplateDefinition setAnnotations(Annotations annotations) {
+            this.annotations = annotations;
+            return this;
+        }
+
+        @Override
         public ResourceTemplateInfo register() {
             validate();
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverName,
-                    fun, asyncFun,
-                    runOnVirtualThread, uriTemplate, mimeType);
+                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));
             if (existing != null) {

@@ -7,6 +7,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.List;
 
+import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -71,5 +72,13 @@ public @interface ResourceTemplate {
      * The MIME type of this resource template.
      */
     String mimeType() default "";
+
+    /**
+     * Optional annotations for the client.
+     * <p>
+     * Note that the default value of this annotation member is ignored. In other words, the annotations have to be declared
+     * explicitly in order to be included in Resource metadata.
+     */
+    Annotations annotations() default @Annotations(audience = Role.USER, lastModified = "", priority = 0.5);
 
 }
