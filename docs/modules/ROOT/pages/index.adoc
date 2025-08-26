@@ -913,6 +913,8 @@ Any server feature method can accept the `io.quarkiverse.mcp.server.Elicitation`
 [source,java]
 ----
 import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest;
+import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.Tool;
 import io.smallrye.mutiny.Uni;
 
@@ -926,7 +928,7 @@ public class MyTools {
                 .addSchemaProperty("username", new StringSchema())
                 .build();
          return request.send().map(response -> { <3>
-                    if (response.isAccepted()) {
+                    if (response.actionAccepted()) {
                         return "It's GitHub user: " + response.content().getString("username") + ".";
                     } else {
                         return "Not accepted...";
