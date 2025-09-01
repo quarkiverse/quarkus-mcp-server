@@ -35,7 +35,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.20.2.1</quarkus.version>
+        <quarkus.version>3.20.2.2</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <swagger-annotations.version>2.2.36</swagger-annotations.version>
     </properties>
