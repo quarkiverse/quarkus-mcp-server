@@ -25,6 +25,7 @@ import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpConnection.Subsidi
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServersBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
+import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -46,11 +47,11 @@ public class SseMcpServerRecorder {
 
     static final String CONTEXT_KEY = "mcp.sse.server-name";
 
-    private final McpServersRuntimeConfig config;
+    private final RuntimeValue<McpServersRuntimeConfig> config;
 
     private final McpSseServersBuildTimeConfig sseConfig;
 
-    public SseMcpServerRecorder(McpServersRuntimeConfig config, McpSseServersBuildTimeConfig sseConfig) {
+    public SseMcpServerRecorder(RuntimeValue<McpServersRuntimeConfig> config, McpSseServersBuildTimeConfig sseConfig) {
         this.config = config;
         this.sseConfig = sseConfig;
     }
@@ -121,7 +122,7 @@ public class SseMcpServerRecorder {
 
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
 
-        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
+        McpServerRuntimeConfig serverConfig = config.getValue().servers().get(serverName);
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
