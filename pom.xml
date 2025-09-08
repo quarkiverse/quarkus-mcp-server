@@ -31,12 +31,9 @@
   </scm>
 
     <properties>
-        <compiler-plugin.version>3.14.0</compiler-plugin.version>
-        <maven.compiler.release>17</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.20.2.1</quarkus.version>
+        <quarkus.version>3.20.2.2</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
+        <sundrio.version>0.201.0</sundrio.version>
         <swagger-annotations.version>2.2.36</swagger-annotations.version>
     </properties>
 
@@ -61,19 +58,41 @@
                     <version>${quarkus.version}</version>
                 </plugin>
                 <plugin>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${compiler-plugin.version}</version>
-                    <configuration>
-                        <parameters>true</parameters>
-                    </configuration>
-                </plugin>
-                <plugin>
                     <groupId>io.quarkus</groupId>
                     <artifactId>quarkus-config-doc-maven-plugin</artifactId>
                     <version>${quarkus.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>io.sundr</groupId>
+                <artifactId>sundr-maven-plugin</artifactId>
+                <version>${sundrio.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-bom</goal>
+                        </goals>
+                        <configuration>
+                            <boms>
+                                <bom>
+                                    <artifactId>quarkus-mcp-server-bom</artifactId>
+                                    <name>Quarkus MCP Server - BOM</name>
+                                    <description>Centralized dependencyManagement for the Quarkus MCP Server Project</description>
+                                    <modules>
+                                        <excludes>
+                                            <exclude>io.quarkiverse.mcp:*-integration-tests</exclude>
+                                            <exclude>io.quarkiverse.mcp:quarkus-mcp-server-docs</exclude>
+                                        </excludes>
+                                    </modules>
+                                </bom>
+                            </boms>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <profiles>
