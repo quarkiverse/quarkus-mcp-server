@@ -518,6 +518,32 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions[`quarkus.mcp.server.server-info.instructions`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.instructions+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.instructions`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.instructions+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The instructions describing how to use the server and its features. These are hints for the clients.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_INSTRUCTIONS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_INSTRUCTIONS+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled[`quarkus.mcp.server.traffic-logging.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.traffic-logging.enabled+++[]

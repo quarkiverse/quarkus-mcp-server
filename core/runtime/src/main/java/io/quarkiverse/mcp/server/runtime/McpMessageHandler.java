@@ -549,6 +549,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);
+        if (serverConfig.serverInfo().instructions().isPresent()) {
+            info.put("instructions", serverConfig.serverInfo().instructions().get());
+        }
         return info;
     }
 
