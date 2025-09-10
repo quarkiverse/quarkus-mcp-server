@@ -9,9 +9,10 @@ import java.util.List;
  * @param protocolVersion the protocol version supported by the client (must not be {@code null})
  * @param clientCapabilities the capabilities supported by the client (must not be {@code null})
  * @param transport the transport used by the client (must not be {@code null})
+ * @param instructions the instructions used by the client
  */
 public record InitialRequest(Implementation implementation, String protocolVersion,
-        List<ClientCapability> clientCapabilities, Transport transport) {
+        List<ClientCapability> clientCapabilities, Transport transport, String instructions) {
 
     public InitialRequest {
         if (implementation == null) {
@@ -25,6 +26,9 @@ public record InitialRequest(Implementation implementation, String protocolVersi
         }
         if (transport == null) {
             throw new IllegalArgumentException("transport must not be null");
+        }
+        if (instructions == null) {
+            instructions = "";
         }
     }
 

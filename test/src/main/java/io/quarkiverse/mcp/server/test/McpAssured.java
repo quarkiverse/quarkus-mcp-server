@@ -1200,7 +1200,7 @@ public class McpAssured {
     }
 
     public record InitResult(String protocolVersion, String serverName, String serverTitle, String serverVersion,
-            List<ServerCapability> capabilities) {
+            List<ServerCapability> capabilities, String instructions) {
 
     }
 

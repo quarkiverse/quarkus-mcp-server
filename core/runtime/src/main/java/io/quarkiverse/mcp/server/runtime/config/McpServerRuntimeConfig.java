@@ -100,7 +100,7 @@ public interface McpServerRuntimeConfig {
         public int textLimit();
     }
 
-    public interface ServerInfo {
+    interface ServerInfo {
 
         /**
          * The name of the server is included in the response to an `initialize` request.
@@ -124,6 +124,11 @@ public interface McpServerRuntimeConfig {
          * The human-readable name of the server is included in the response to an `initialize` request.
          */
         Optional<String> title();
+
+        /**
+         * The instructions describing how to use the server and its features. These are hints for the clients.
+         */
+        Optional<String> instructions();
 
     }
 
