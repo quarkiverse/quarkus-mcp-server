@@ -201,7 +201,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT && serverConfig(mcpRequest).devMode().dummyInit()) {
                 InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1", null),
                         SUPPORTED_PROTOCOL_VERSIONS.get(0),
-                        List.of(), transport(), buildInitialInstructions(mcpRequest));
+                        List.of(), transport());
                 if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
                     LOG.infof("Connection initialized with dummy info [%s]", mcpRequest.connection().id());
                     return operation(message, mcpRequest);
@@ -219,7 +219,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, msg);
         }
 
-        InitialRequest initialRequest = decodeInitializeRequest(params, buildInitialInstructions(mcpRequest));
+        InitialRequest initialRequest = decodeInitializeRequest(params);
         // Start the context first
         mcpRequest.contextStart();
         // Then apply init checks
@@ -242,10 +242,6 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }).onComplete(r -> {
             mcpRequest.contextEnd();
         });
-    }
-
-    private String buildInitialInstructions(MCP_REQUEST mcpRequest) {
-        return serverConfig(mcpRequest).serverInfo().instructions().orElse("");
     }
 
     private static Uni<InitialCheck.CheckResult> checkInit(InitialRequest initialRequest, List<InitialCheck> checks, int idx) {
@@ -498,7 +494,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
     }
 
-    private InitialRequest decodeInitializeRequest(JsonObject params, String instructions) {
+    private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
         Implementation implementation = new Implementation(clientInfo.getString("name"), clientInfo.getString("version"),
                 clientInfo.getString("title"));
@@ -511,7 +507,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 clientCapabilities.add(new ClientCapability(name, Map.of()));
             }
         }
-        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport(), instructions);
+        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
     private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-06-18", "2025-03-26", "2024-11-05");
@@ -553,8 +549,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);
-        if (!"".equals(initialRequest.instructions())) {
-            info.put("instructions", initialRequest.instructions());
+        if (serverConfig.serverInfo().instructions().isPresent()) {
+            info.put("instructions", serverConfig.serverInfo().instructions().get());
         }
         return info;
     }
