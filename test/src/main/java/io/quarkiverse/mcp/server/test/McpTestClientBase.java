@@ -271,6 +271,13 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         }
     }
 
+    protected void addAuthorizationHeader(MultiMap headers, BasicAuth basicAuth) {
+        if (basicAuth != null) {
+            headers.add(HEADER_AUTHORIZATION,
+                    McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
+        }
+    }
+
     abstract class McpAssertBase implements McpAssert<ASSERT> {
 
         protected final List<McpTestClientBase.ResponseAssert> asserts = new ArrayList<>();

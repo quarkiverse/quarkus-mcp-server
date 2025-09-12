@@ -1,7 +1,7 @@
 package io.quarkiverse.mcp.server.test.tools.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -13,19 +13,19 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class SecuredSseEndpointTest extends McpServerTest {
+public class SecuredMcpEndpointTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, TestIdentityProvider.class, TestIdentityController.class))
-            .overrideConfigKey("quarkus.http.auth.permission.secured.paths", "/mcp/sse")
+            .overrideConfigKey("quarkus.http.auth.permission.secured.paths", "/mcp")
             .overrideConfigKey("quarkus.http.auth.permission.secured.policy", "authenticated");
 
     @BeforeAll
@@ -36,18 +36,23 @@ public class SecuredSseEndpointTest extends McpServerTest {
     }
 
     @Test
-    public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
-        McpSseTestClient client = McpAssured.newSseClient()
-                .setExpectSseConnectionFailure()
+    public void testMcpEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setExpectConnectFailure()
                 .build()
                 .connect();
         assertFalse(client.isConnected());
 
-        client = McpAssured.newSseClient()
+        client = McpAssured.newStreamableClient()
                 .setBasicAuth("bob", "bob")
                 .build()
                 .connect();
-        assertTrue(client.isConnected());
+
+        client.when()
+                .toolsList(page -> {
+                    assertEquals(1, page.tools().size());
+                })
+                .thenAssertResults();
     }
 
     public static class MyTools {
