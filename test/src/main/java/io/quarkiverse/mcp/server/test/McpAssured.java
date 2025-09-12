@@ -288,8 +288,6 @@ public class McpAssured {
             Builder setSsePath(String ssePath);
 
             /**
-             *
-             * @param expected
              * @return self
              */
             Builder setExpectSseConnectionFailure();
@@ -361,6 +359,15 @@ public class McpAssured {
              * @return self
              */
             Builder setOpenSubsidiarySse(boolean value);
+
+            /**
+             * If set to {@code true} then the response to the initialize request must not return the status code {@code 200}.
+             * <p>
+             * Note that the client will not be connected after the invocation of {@link McpStreamableTestClient#connect()}.
+             *
+             * @return self
+             */
+            Builder setExpectConnectFailure();
 
             /**
              *

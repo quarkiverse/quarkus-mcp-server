@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
@@ -32,6 +34,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private final URI mcpEndpoint;
     private final boolean openSubsidiarySse;
+    private final boolean expectConnectFailure;
 
     private volatile McpStreamableClient client;
     private volatile String mcpSessionId;
@@ -42,6 +45,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
         this.openSubsidiarySse = builder.openSubsidiarySse;
+        this.expectConnectFailure = builder.expectConnectFailure;
     }
 
     @Override
@@ -60,10 +64,16 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             client = new McpStreamableClient(mcpEndpoint);
         }
         JsonObject initMessage = newInitMessage();
-        HttpResponse<String> response = client.sendSync(initMessage.encode(), additionalHeaders.apply(initMessage));
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("Invalid HTTP response status: " + response.statusCode());
+        MultiMap initHeaders = additionalHeaders.apply(initMessage);
+        addAuthorizationHeader(initHeaders, clientBasicAuth);
+        HttpResponse<String> response = client.sendSync(initMessage.encode(), initHeaders);
+        if (expectConnectFailure) {
+            assertNotEquals(200, response.statusCode());
+            return this;
+        } else {
+            assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
         }
+
         mcpSessionId = response.headers().firstValue("Mcp-Session-Id").orElse(null);
         if (mcpSessionId == null) {
             throw new IllegalStateException("Mcp-Session-Id header not found: " + response.headers());
@@ -99,7 +109,9 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
-        response = client.sendSync(nofitication.encode(), additionalHeaders(nofitication));
+        MultiMap headers = additionalHeaders(nofitication);
+        addAuthorizationHeader(headers, clientBasicAuth);
+        response = client.sendSync(nofitication.encode(), headers);
         // The server must respond with 202 for response or notification
         if (response.statusCode() != 202) {
             throw new IllegalStateException(
@@ -161,10 +173,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (!connected.get()) {
             throw new IllegalStateException("Client is not connected");
         }
-        if (basicAuth != null) {
-            additionalHeaders.add(HEADER_AUTHORIZATION,
-                    McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
-        }
+        addAuthorizationHeader(additionalHeaders, basicAuth);
         client.send(data, additionalHeaders);
     }
 
@@ -204,7 +213,11 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         }
 
         protected void doSend(JsonObject message) {
-            send(message, additionalHeaders(message), clientBasicAuth);
+            BasicAuth basicAuth = this.basicAuth.get();
+            if (basicAuth == null) {
+                basicAuth = clientBasicAuth;
+            }
+            send(message, additionalHeaders(message), basicAuth);
         }
 
     }
@@ -233,7 +246,11 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             if (additionalHeaders != null) {
                 headers.addAll(additionalHeaders);
             }
-            send(batch, headers, basicAuth.get());
+            BasicAuth basicAuth = this.basicAuth.get();
+            if (basicAuth == null) {
+                basicAuth = clientBasicAuth;
+            }
+            send(batch, headers, basicAuth);
             return super.thenAssertResults();
         }
 
@@ -251,6 +268,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         private boolean autoPong = true;
         private BasicAuth basicAuth;
         private boolean openSubsidiarySse = false;
+        private boolean expectConnectFailure = false;
 
         @Override
         public McpStreamableTestClient.Builder setName(String clientName) {
@@ -333,6 +351,12 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         @Override
         public McpStreamableTestClient.Builder setOpenSubsidiarySse(boolean value) {
             this.openSubsidiarySse = value;
+            return this;
+        }
+
+        @Override
+        public McpStreamableTestClient.Builder setExpectConnectFailure() {
+            this.expectConnectFailure = true;
             return this;
         }
 
