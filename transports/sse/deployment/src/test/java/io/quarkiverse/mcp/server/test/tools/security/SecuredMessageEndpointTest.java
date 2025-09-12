@@ -37,9 +37,7 @@ public class SecuredMessageEndpointTest extends McpServerTest {
     @Test
     public void testSseEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
         try {
-            McpAssured.newSseClient()
-                    .build()
-                    .connect();
+            McpAssured.newConnectedSseClient();
         } catch (AssertionError expected) {
             // 401 status during init
         }

@@ -89,7 +89,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         Map<String, String> headers = new HashMap<>();
         if (clientBasicAuth != null) {
-            headers.put("Authorization",
+            headers.put(HEADER_AUTHORIZATION,
                     McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
         }
 
@@ -235,7 +235,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
 
         protected void doSend(JsonObject message) {
-            HttpResponse response = sendSync(message, additionalHeaders(message), basicAuth.get());
+            BasicAuth basicAuth = this.basicAuth.get();
+            if (basicAuth == null) {
+                basicAuth = clientBasicAuth;
+            }
+            HttpResponse response = sendSync(message, additionalHeaders(message), basicAuth);
             Consumer<HttpResponse> validator = httpResponseValidator.get();
             if (validator != null) {
                 validator.accept(response);
@@ -279,7 +283,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             if (additionalHeaders != null) {
                 headers.addAll(additionalHeaders);
             }
-            HttpResponse response = sendSync(batch, headers, basicAuth.get());
+            BasicAuth basicAuth = this.basicAuth.get();
+            if (basicAuth == null) {
+                basicAuth = clientBasicAuth;
+            }
+            HttpResponse response = sendSync(batch, headers, basicAuth);
             Consumer<HttpResponse> validator = httpResponseValidator.get();
             if (validator != null) {
                 validator.accept(response);
@@ -442,14 +450,9 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 .POST(BodyPublishers.ofString(data));
         additionalHeaders.forEach(builder::header);
 
-        if (basicAuth != null) {
-            if (!basicAuth.isEmpty()) {
-                builder.header(HEADER_AUTHORIZATION,
-                        McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
-            }
-        } else if (clientBasicAuth != null) {
+        if (basicAuth != null && !basicAuth.isEmpty()) {
             builder.header(HEADER_AUTHORIZATION,
-                    McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
+                    McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
         }
         return builder.build();
     }
