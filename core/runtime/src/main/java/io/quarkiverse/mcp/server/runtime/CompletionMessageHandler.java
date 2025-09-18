@@ -5,6 +5,7 @@ import java.util.Map;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.McpException;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -50,7 +51,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                 return sender.sendResult(id, result);
             }, cause -> handleFailure(id, sender, mcpRequest.connection(), cause, LOG, "Unable to complete %s", referenceName));
         } catch (McpException e) {
-            return sender.sendError(id, e.getJsonRpcError(), e.getMessage());
+            return sender.sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
     }
 

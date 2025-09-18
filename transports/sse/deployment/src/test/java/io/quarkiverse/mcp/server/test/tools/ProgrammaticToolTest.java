@@ -14,10 +14,10 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolArguments;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -41,7 +41,7 @@ public class ProgrammaticToolTest extends McpServerTest {
                 .toolsList(page -> assertEquals(0, page.size()))
                 .toolsCall("alpha")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Invalid tool name: alpha", e.message());
                 }).send()
                 .thenAssertResults();

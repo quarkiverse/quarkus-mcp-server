@@ -21,7 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
@@ -186,7 +188,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     protected McpException notFound(String id) {
-        return new McpException("Invalid resource uri: " + id, JsonRPC.RESOURCE_NOT_FOUND);
+        return new McpException("Resource not found: " + id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
     }
 
     private boolean test(ResourceInfo resource, McpConnection connection) {

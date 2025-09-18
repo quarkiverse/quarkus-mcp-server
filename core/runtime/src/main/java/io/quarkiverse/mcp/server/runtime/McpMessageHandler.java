@@ -17,6 +17,8 @@ import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -177,7 +179,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             case INITIALIZING -> initializing(message, mcpRequest);
             case IN_OPERATION -> operation(message, mcpRequest);
             case CLOSED -> mcpRequest.sender().send(
-                    Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR, "Connection is closed"));
+                    Messages.newError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR, "Connection is closed"));
         };
     }
 
@@ -210,13 +212,13 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
             String msg = "The first message from the client must be \"initialize\": " + method;
             initializeFailed(mcpRequest);
-            return mcpRequest.sender().sendError(id, JsonRPC.METHOD_NOT_FOUND, msg);
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.METHOD_NOT_FOUND, msg);
         }
 
         if (params == null) {
             String msg = "Initialization params not found";
             initializeFailed(mcpRequest);
-            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_PARAMS, msg);
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, msg);
         }
 
         InitialRequest initialRequest = decodeInitializeRequest(params);
@@ -227,7 +229,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (res.error()) {
                 // An init check failed - send the error message
                 initializeFailed(mcpRequest);
-                return mcpRequest.sender().sendError(id, JsonRPC.INTERNAL_ERROR, res.message());
+                return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INTERNAL_ERROR, res.message());
             }
             // Init checks passed - attempt to initialize the connection
             if (mcpRequest.connection().initialize(initialRequest)) {
@@ -237,7 +239,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             } else {
                 initializeFailed(mcpRequest);
                 String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
-                return mcpRequest.sender().sendError(id, JsonRPC.INTERNAL_ERROR, msg);
+                return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INTERNAL_ERROR, msg);
             }
         }).onComplete(r -> {
             mcpRequest.contextEnd();
@@ -285,7 +287,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         } else if (PING.equals(method)) {
             return ping(message, mcpRequest);
         } else {
-            return mcpRequest.sender().send(Messages.newError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
+            return mcpRequest.sender().send(Messages.newError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR,
                     "Client not initialized yet [" + mcpRequest.connection().id() + "]"));
         }
     }
@@ -366,7 +368,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 default -> mcpRequest.sender().send(
-                        Messages.newError(message.getValue("id"), JsonRPC.METHOD_NOT_FOUND, "Unsupported method: " + method));
+                        Messages.newError(message.getValue("id"), JsonRpcErrorCodes.METHOD_NOT_FOUND,
+                                "Unsupported method: " + method));
             };
             future.onComplete(r -> {
                 mcpRequest.contextEnd();
@@ -435,11 +438,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         JsonObject params = message.getJsonObject("params");
         String level = params.getString("level");
         if (level == null) {
-            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST, "Log level not set");
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Log level not set");
         } else {
             LogLevel logLevel = LogLevel.from(level);
             if (logLevel == null) {
-                return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST, "Invalid log level set: " + level);
+                return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Invalid log level set: " + level);
             } else {
                 mcpRequest.connection().setLogLevel(logLevel);
                 // Send empty result
@@ -454,15 +457,15 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         JsonObject params = message.getJsonObject("params");
         JsonObject ref = params.getJsonObject("ref");
         if (ref == null) {
-            return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST, "Reference not found");
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Reference not found");
         } else {
             String referenceType = ref.getString("type");
             if (referenceType == null) {
-                return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST, "Reference type not found");
+                return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Reference type not found");
             } else {
                 JsonObject argument = params.getJsonObject("argument");
                 if (argument == null) {
-                    return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST, "Argument not found");
+                    return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Argument not found");
                 } else {
                     if ("ref/prompt".equals(referenceType)) {
                         return promptCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(), mcpRequest);
@@ -470,7 +473,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                         return resourceTemplateCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(),
                                 mcpRequest);
                     } else {
-                        return mcpRequest.sender().sendError(id, JsonRPC.INVALID_REQUEST,
+                        return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));
                     }
                 }
@@ -489,7 +492,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             LOG.debugf("Connection %s explicitly closed ", mcpRequest.connection().id());
             return Future.succeededFuture();
         } else {
-            return mcpRequest.sender().sendError(message.getValue("id"), JsonRPC.INTERNAL_ERROR,
+            return mcpRequest.sender().sendError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR,
                     "Unable to obtain the connection to be closed:" + mcpRequest.connection().id());
         }
     }

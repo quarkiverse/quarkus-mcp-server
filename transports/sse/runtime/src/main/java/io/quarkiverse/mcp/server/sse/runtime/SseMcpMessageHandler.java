@@ -9,9 +9,9 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -111,7 +111,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
             LOG.errorf(e, msg);
-            connection.sendError(null, JsonRPC.PARSE_ERROR, msg);
+            connection.sendError(null, JsonRpcErrorCodes.PARSE_ERROR, msg);
             ctx.end();
             return;
         }

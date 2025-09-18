@@ -6,6 +6,8 @@ import jakarta.inject.Singleton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -30,7 +32,7 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
 
     @Override
     protected McpException notFound(String id) {
-        return new McpException("Prompt completion does not exist: " + id, JsonRPC.INVALID_PARAMS);
+        return new McpException("Prompt completion does not exist: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
     @Override

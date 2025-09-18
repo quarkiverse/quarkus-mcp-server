@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -32,7 +32,7 @@ public class InvalidResourceTemplateCompleteTest extends McpServerTest {
                                 .put("value", "Vo")));
         client.sendAndForget(completeMessage);
         JsonObject response = client.waitForResponse(completeMessage);
-        assertEquals(JsonRPC.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
+        assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, response.getJsonObject("error").getInteger("code"));
         assertEquals("Prompt completion does not exist: bar_name", response.getJsonObject("error").getString("message"));
     }
 

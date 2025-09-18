@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -81,7 +82,7 @@ class ToolMessageHandler extends MessageHandler {
                 }
             });
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcError(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
     }
 

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
@@ -25,8 +25,8 @@ public class InvalidResourceUriTest extends McpServerTest {
         client.when()
                 .resourcesRead("file:///nonexistent")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.RESOURCE_NOT_FOUND, e.code());
-                    assertEquals("Invalid resource uri: file:///nonexistent", e.message());
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
+                    assertEquals("Resource not found: file:///nonexistent", e.message());
                 })
                 .send()
                 .thenAssertResults();

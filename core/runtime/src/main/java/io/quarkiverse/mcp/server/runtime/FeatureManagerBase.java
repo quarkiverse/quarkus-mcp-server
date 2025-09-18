@@ -27,7 +27,9 @@ import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Meta;
@@ -178,12 +180,12 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 val = convert(arg.defaultValue(), arg.type());
             }
             if (val == null && arg.required()) {
-                throw new McpException("Missing required argument: " + arg.name(), JsonRPC.INVALID_PARAMS);
+                throw new McpException("Missing required argument: " + arg.name(), JsonRpcErrorCodes.INVALID_PARAMS);
             }
         } else if (!arg.isValid(val)) {
             throw new McpException(
                     "Invalid argument [%s] - value does not match %s".formatted(arg.name(), arg.type().getTypeName()),
-                    JsonRPC.INVALID_PARAMS);
+                    JsonRpcErrorCodes.INVALID_PARAMS);
         } else {
             if (val instanceof Map map) {
                 // json object
@@ -194,7 +196,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                     throw new McpException(
                             "Invalid argument [%s] - unable to convert JSON object to %s".formatted(arg.name(),
                                     arg.type().getTypeName()),
-                            JsonRPC.INVALID_PARAMS);
+                            JsonRpcErrorCodes.INVALID_PARAMS);
                 }
             } else if (val instanceof List list) {
                 // json array
@@ -205,7 +207,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                     throw new McpException(
                             "Invalid argument [%s] - unable to convert JSON array to %s".formatted(arg.name(),
                                     arg.type().getTypeName()),
-                            JsonRPC.INVALID_PARAMS);
+                            JsonRpcErrorCodes.INVALID_PARAMS);
                 }
             } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
                 try {
@@ -214,7 +216,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                     throw new McpException(
                             "Invalid argument [%s] - %s is not an enum constant of %s".formatted(arg.name(), val,
                                     clazz.getName()),
-                            JsonRPC.INVALID_PARAMS);
+                            JsonRpcErrorCodes.INVALID_PARAMS);
                 }
             } else if (val instanceof Number num) {
                 val = coerceNumber(num, arg.type());

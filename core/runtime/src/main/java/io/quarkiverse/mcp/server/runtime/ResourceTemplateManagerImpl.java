@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
@@ -121,12 +123,21 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     public ResourceTemplateInfo findMatching(String uri) {
+        List<ResourceTemplateInfo> matching = new ArrayList<>();
         for (ResourceTemplateMetadata t : templates.values()) {
             if (t.variableMatcher().matches(uri)) {
-                return t.info();
+                matching.add(t.info());
             }
         }
-        return null;
+        if (matching.isEmpty()) {
+            return null;
+        } else if (matching.size() > 1) {
+            throw new McpException("Multiple resource templates match uri %s [%s]".formatted(uri,
+                    matching.stream().map(ResourceTemplateInfo::name).toList()), JsonRpcErrorCodes.INTERNAL_ERROR);
+        } else {
+            return matching.get(0);
+        }
+
     }
 
     private boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection) {
@@ -154,7 +165,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @Override
     protected McpException notFound(String id) {
-        return new McpException("Invalid resource uri: " + id, JsonRPC.RESOURCE_NOT_FOUND);
+        return new McpException("Resource not found: " + id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
     }
 
     @Override
@@ -184,6 +195,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @Override
     protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
+        if (ret == null) {
+            throw notFound(argProviders.uri());
+        }
         if (metadata.resultMapper() instanceof EncoderMapper) {
             // We need to wrap the returned value with ResourceContentsData
             // Supported variants are Uni<X>, List<X>, Uni<List<X>

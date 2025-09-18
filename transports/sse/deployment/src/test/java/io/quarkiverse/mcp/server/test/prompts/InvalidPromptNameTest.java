@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -27,7 +27,7 @@ public class InvalidPromptNameTest extends McpServerTest {
         client.when()
                 .promptsGet("nonexistent")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Invalid prompt name: nonexistent", e.message());
                 })
                 .send()

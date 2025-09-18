@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.Objects;
 
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.vertx.core.Future;
 

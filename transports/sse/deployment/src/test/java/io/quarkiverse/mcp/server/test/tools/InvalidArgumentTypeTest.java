@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -31,21 +31,21 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", true, "timeUnit", TimeUnit.DAYS, "isActive", true))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Invalid argument [price] - value does not match int", e.message());
                 })
                 .send()
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", "hello"))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Invalid argument [isActive] - value does not match java.lang.Boolean", e.message());
                 })
                 .send()
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", 1, "timeUnit", "AGES", "isActive", true))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Invalid argument [timeUnit] - AGES is not an enum constant of java.util.concurrent.TimeUnit",
                             e.message());
                 })
@@ -53,7 +53,7 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", true))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals(
                             "Invalid argument [pojo] - value does not match io.quarkiverse.mcp.server.test.tools.InvalidArgumentTypeTest$MyPojo",
                             e.message());
@@ -66,7 +66,7 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                 .toolsCall("charlie")
                 .withArguments(Map.of("pojos", List.of(1, 2)))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals(
                             "Invalid argument [pojos] - unable to convert JSON array to java.util.List<io.quarkiverse.mcp.server.test.tools.InvalidArgumentTypeTest$MyPojo>",
                             e.message());

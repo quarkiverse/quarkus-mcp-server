@@ -13,11 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ResourceTemplateInfo;
@@ -42,8 +42,8 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                 .resourcesTemplatesList(p -> assertEquals(0, p.size()))
                 .resourcesRead("file:///alpha/nok")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.RESOURCE_NOT_FOUND, e.code());
-                    assertEquals("Invalid resource uri: file:///alpha/nok", e.message());
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
+                    assertEquals("Resource not found: file:///alpha/nok", e.message());
                 })
                 .send()
                 .thenAssertResults();
@@ -76,8 +76,8 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                 .resourcesTemplatesList(p -> assertEquals(1, p.size()))
                 .resourcesRead("file:///alpha/nok")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.RESOURCE_NOT_FOUND, e.code());
-                    assertEquals("Invalid resource uri: file:///alpha/nok", e.message());
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
+                    assertEquals("Resource not found: file:///alpha/nok", e.message());
                 })
                 .send()
                 .resourcesRead("file:///bravo/bim", r -> assertEquals("bim", r.contents().get(0).asText().text()))
