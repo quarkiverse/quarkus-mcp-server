@@ -17,6 +17,7 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
+import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
@@ -25,7 +26,7 @@ public class InitTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClass(MyTools.class));
+            .withApplicationRoot(root -> root.addClasses(MyTools.class, Checks.class));
 
     @Inject
     MyTools myTools;
@@ -48,6 +49,7 @@ public class InitTest extends McpServerTest {
 
         @Notification(Type.INITIALIZED)
         void onInit(McpConnection connection) {
+            Checks.checkRequestContext();
             if (connection.initialRequest().supportsSampling()) {
                 initCalled.set(true);
             }

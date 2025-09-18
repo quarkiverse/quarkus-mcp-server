@@ -279,7 +279,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                             null, responseHandlers, mcpRequest.serverName());
                     FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
-                        callNotification(notification, featureExecutionContext);
+                        callNotification(notification, featureExecutionContext, mcpRequest);
                     }
                 }
             }
@@ -309,6 +309,36 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             LOG.errorf(e, "Unable to call notification method: %s", notification);
             throw e;
         }
+    }
+
+    private Future<Void> callNotification(NotificationManager.NotificationInfo notification,
+            FeatureExecutionContext featureExecutionContext, McpRequest mcpRequest) {
+        // Create a new duplicated context and process the notification on this context
+        Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
+        VertxContextSafetyToggle.setContextSafe(context, true);
+        Promise<Void> ret = Promise.promise();
+
+        context.runOnContext(v -> {
+            mcpRequest.contextStart();
+            try {
+                Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
+                        featureExecutionContext);
+                fu.onComplete(r -> {
+                    mcpRequest.contextEnd();
+                    if (r.failed()) {
+                        LOG.errorf(r.cause(), "Unable to call notification method: %s", notification);
+                        ret.fail(r.cause());
+                    } else {
+                        ret.complete();
+                    }
+                });
+            } catch (McpException e) {
+                LOG.errorf(e, "Unable to call notification method: %s", notification);
+                throw e;
+            }
+
+        });
+        return ret.future();
     }
 
     public static final String INITIALIZE = "initialize";

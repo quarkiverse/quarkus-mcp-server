@@ -193,7 +193,7 @@ public class ServerFeaturesIT {
 
     private JsonObject awaitResponse() {
         try {
-            return synchronizer.poll(2, TimeUnit.SECONDS);
+            return synchronizer.poll(5, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
