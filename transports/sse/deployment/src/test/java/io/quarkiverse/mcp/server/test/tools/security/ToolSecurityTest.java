@@ -11,9 +11,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -57,7 +57,7 @@ public class ToolSecurityTest extends McpServerTest {
                 // Test @Authenticated declared on class
                 .toolsCall("charlie")
                 .withErrorAssert(error -> {
-                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals(JsonRpcErrorCodes.SECURITY_ERROR, error.code());
                     assertEquals("io.quarkus.security.UnauthorizedException", error.message());
                 })
                 .send()
@@ -65,7 +65,7 @@ public class ToolSecurityTest extends McpServerTest {
                 .toolsCall("alpha")
                 .withArguments(Map.of("price", 2))
                 .withErrorAssert(error -> {
-                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals(JsonRpcErrorCodes.SECURITY_ERROR, error.code());
                     assertEquals("io.quarkus.security.UnauthorizedException", error.message());
                 })
                 .send()
@@ -73,7 +73,7 @@ public class ToolSecurityTest extends McpServerTest {
                 .toolsCall("alpha")
                 .withArguments(Map.of("price", 2))
                 .withErrorAssert(error -> {
-                    assertEquals(JsonRPC.SECURITY_ERROR, error.code());
+                    assertEquals(JsonRpcErrorCodes.SECURITY_ERROR, error.code());
                     assertEquals("io.quarkus.security.ForbiddenException", error.message());
                 })
                 .send()

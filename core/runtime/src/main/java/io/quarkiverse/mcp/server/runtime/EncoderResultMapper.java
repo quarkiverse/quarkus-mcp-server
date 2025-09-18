@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.Encoder;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkus.arc.All;
 import io.smallrye.mutiny.Uni;
@@ -53,7 +55,7 @@ abstract class EncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>,
                     encoded = encoder.encode(cast(obj));
                 } catch (Exception e) {
                     throw new McpException("Unable to encode object of type " + type + " with " + encoder.getClass().getName(),
-                            e, JsonRPC.INTERNAL_ERROR);
+                            e, JsonRpcErrorCodes.INTERNAL_ERROR);
                 }
                 return encoded;
             }
@@ -62,7 +64,7 @@ abstract class EncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>,
     }
 
     protected ENCODED encoderNotFound(Object obj) {
-        throw new McpException("No encoder found for " + obj.getClass(), JsonRPC.INTERNAL_ERROR);
+        throw new McpException("No encoder found for " + obj.getClass(), JsonRpcErrorCodes.INTERNAL_ERROR);
     }
 
     @SuppressWarnings("unchecked")

@@ -90,13 +90,13 @@ public class MutipleServersTest extends McpServerTest {
                 .withErrorAssert(e -> assertEquals("Invalid prompt name: foxtrotPrompt", e.message())).send()
                 // resources
                 .resourcesRead("file://1", r -> assertEquals("1", r.contents().get(0).asText().text()))
-                .resourcesRead("file://2").withErrorAssert(e -> assertEquals("Invalid resource uri: file://2", e.message()))
+                .resourcesRead("file://2").withErrorAssert(e -> assertEquals("Resource not found: file://2", e.message()))
                 .send()
-                .resourcesRead("file://3").withErrorAssert(e -> assertEquals("Invalid resource uri: file://3", e.message()))
+                .resourcesRead("file://3").withErrorAssert(e -> assertEquals("Resource not found: file://3", e.message()))
                 .send()
                 .resourcesRead("file://4", r -> assertEquals("4", r.contents().get(0).asText().text()))
                 .resourcesRead("file://5", r -> assertEquals("5", r.contents().get(0).asText().text()))
-                .resourcesRead("file://6").withErrorAssert(e -> assertEquals("Invalid resource uri: file://6", e.message()))
+                .resourcesRead("file://6").withErrorAssert(e -> assertEquals("Resource not found: file://6", e.message()))
                 .send()
                 .thenAssertResults();
     }

@@ -6,6 +6,8 @@ import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
 import java.util.List;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
@@ -24,12 +26,28 @@ public class MyTemplates {
         return new ResourceResponse(List.of(TextResourceContents.create(uri, "foo:" + path)));
     }
 
-    @ResourceTemplate(uriTemplate = "file:///{foo}/{bar}")
+    @ResourceTemplate(uriTemplate = "file:///bravo/{foo}/{bar}")
     TextResourceContents bravo(String foo, String bar, RequestUri uri) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();
         return TextResourceContents.create(uri.value(), foo + ":" + bar);
+    }
+
+    @ResourceTemplate(uriTemplate = "file:///charlie/{foo}")
+    TextResourceContents charlie(String foo) {
+        return null;
+    }
+
+    @ResourceTemplate(uriTemplate = "file:///delta/{foo}")
+    TextResourceContents delta(String foo) {
+        throw new McpException("The resource could not be found", JsonRpcErrorCodes.INVALID_PARAMS);
+    }
+
+    @AlwaysError
+    @ResourceTemplate(uriTemplate = "file:///echo/{foo}")
+    TextResourceContents echo(String foo, RequestUri uri) {
+        return TextResourceContents.create(uri.value(), foo);
     }
 
 }

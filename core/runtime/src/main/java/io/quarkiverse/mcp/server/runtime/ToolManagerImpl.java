@@ -22,7 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolFilter;
@@ -126,7 +128,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @Override
     protected McpException notFound(String id) {
-        return new McpException("Invalid tool name: " + id, JsonRPC.INVALID_PARAMS);
+        return new McpException("Invalid tool name: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
     @Override

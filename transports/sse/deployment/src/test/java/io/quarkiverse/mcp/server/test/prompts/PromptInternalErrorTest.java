@@ -7,9 +7,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptMessage;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -30,7 +30,7 @@ public class PromptInternalErrorTest extends McpServerTest {
                 .promptsGet("uni_bar")
                 .withArguments(Map.of("val", "lav"))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INTERNAL_ERROR, e.code());
+                    assertEquals(JsonRpcErrorCodes.INTERNAL_ERROR, e.code());
                     assertEquals("Internal error", e.message());
                 })
                 .send()

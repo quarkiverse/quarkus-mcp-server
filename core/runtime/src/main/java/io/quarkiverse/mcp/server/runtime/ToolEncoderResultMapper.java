@@ -7,6 +7,8 @@ import jakarta.inject.Singleton;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ContentEncoder;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.ToolResponseEncoder;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
@@ -63,7 +65,7 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
                     encoded = encoder.encode(cast(obj));
                 } catch (Exception e) {
                     throw new McpException("Unable to encode object of type " + type + " with " + encoder.getClass().getName(),
-                            JsonRPC.INTERNAL_ERROR);
+                            JsonRpcErrorCodes.INTERNAL_ERROR);
                 }
                 return encoded;
             }

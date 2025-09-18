@@ -20,6 +20,7 @@ import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
@@ -28,7 +29,6 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -146,7 +146,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             String msg = "Unable to parse the JSON message";
             LOG.errorf(e, msg);
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-            ctx.end(newError(null, JsonRPC.PARSE_ERROR, msg).toBuffer());
+            ctx.end(newError(null, JsonRpcErrorCodes.PARSE_ERROR, msg).toBuffer());
             return;
         }
         QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();

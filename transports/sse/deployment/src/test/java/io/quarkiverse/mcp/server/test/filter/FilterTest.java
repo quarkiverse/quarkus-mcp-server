@@ -107,7 +107,7 @@ public class FilterTest extends McpServerTest {
                     assertEquals(1, page.size());
                 })
                 .resourcesRead("file:///foxtrot/1")
-                .withErrorAssert(error -> assertEquals("Invalid resource uri: file:///foxtrot/1", error.message()))
+                .withErrorAssert(error -> assertEquals("Resource not found: file:///foxtrot/1", error.message()))
                 .send()
                 .resourcesRead("file:///1", response -> {
                     assertEquals("foo:1", response.contents().get(0).asText().text());
@@ -130,7 +130,7 @@ public class FilterTest extends McpServerTest {
 
         client.when()
                 .resourcesRead("file:///project/delta")
-                .withErrorAssert(error -> assertEquals("Invalid resource uri: file:///project/delta", error.message()))
+                .withErrorAssert(error -> assertEquals("Resource not found: file:///project/delta", error.message()))
                 .send()
                 .thenAssertResults();
     }

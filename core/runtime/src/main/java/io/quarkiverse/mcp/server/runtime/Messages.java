@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.vertx.core.json.JsonObject;
 
@@ -82,7 +83,7 @@ public class Messages {
                 } catch (Exception e) {
                     // Invalid cursors should result in an error with code -32602 (Invalid params).
                     LOG.warnf("Invalid cursor detected %s: %s", cursorVal, e.toString());
-                    sender.sendError(message.getValue("id"), JsonRPC.INVALID_PARAMS,
+                    sender.sendError(message.getValue("id"), JsonRpcErrorCodes.INVALID_PARAMS,
                             "Invalid cursor detected: " + cursorVal);
                     return null;
                 }

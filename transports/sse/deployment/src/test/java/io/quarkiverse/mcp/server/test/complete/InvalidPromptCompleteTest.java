@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -25,7 +25,7 @@ public class InvalidPromptCompleteTest extends McpServerTest {
                 .promptComplete("bar")
                 .withArgument("name", "Vo")
                 .withErrorAssert(error -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, error.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
                     assertEquals("Prompt completion does not exist: bar_name", error.message());
                 })
                 .send()

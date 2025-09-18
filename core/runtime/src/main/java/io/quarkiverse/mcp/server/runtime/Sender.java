@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 import static io.quarkiverse.mcp.server.runtime.Messages.newResult;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -19,7 +20,7 @@ public interface Sender {
     }
 
     default Future<Void> sendInternalError(Object id) {
-        return sendError(id, JsonRPC.INTERNAL_ERROR, "Internal error");
+        return sendError(id, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
     }
 
 }

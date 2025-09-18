@@ -7,9 +7,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -29,7 +29,7 @@ public class ToolInternalErrorTest extends McpServerTest {
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", 10))
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INTERNAL_ERROR, e.code());
+                    assertEquals(JsonRpcErrorCodes.INTERNAL_ERROR, e.code());
                     assertEquals("Internal error", e.message());
                 })
                 .send()

@@ -14,12 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceArguments;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ResourceInfo;
@@ -44,8 +44,8 @@ public class ProgrammaticResourceTest extends McpServerTest {
                 .resourcesList(p -> assertEquals(0, p.size()))
                 .resourcesRead("file:///alpha")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.RESOURCE_NOT_FOUND, e.code());
-                    assertEquals("Invalid resource uri: file:///alpha", e.message());
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
+                    assertEquals("Resource not found: file:///alpha", e.message());
                 })
                 .send()
                 .thenAssertResults();
@@ -95,8 +95,8 @@ public class ProgrammaticResourceTest extends McpServerTest {
                 .resourcesList(p -> assertEquals(1, p.size()))
                 .resourcesRead("file:///alpha")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.RESOURCE_NOT_FOUND, e.code());
-                    assertEquals("Invalid resource uri: file:///alpha", e.message());
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
+                    assertEquals("Resource not found: file:///alpha", e.message());
                 })
                 .send()
                 .resourcesRead("file:///bravo", r -> assertEquals("3", r.contents().get(0).asText().text()))

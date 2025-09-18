@@ -12,6 +12,8 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
@@ -75,7 +77,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
     @Override
     protected McpException notFound(String id) {
-        return new McpException("Invalid notification name: " + id, JsonRPC.INVALID_PARAMS);
+        return new McpException("Invalid notification name: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
     class NotificationMethod extends FeatureMetadataInvoker<Void> implements NotificationManager.NotificationInfo {

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -27,7 +27,7 @@ public class MissingToolArgumentTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo")
                 .withErrorAssert(e -> {
-                    assertEquals(JsonRPC.INVALID_PARAMS, e.code());
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals("Missing required argument: price", e.message());
                 })
                 .send()

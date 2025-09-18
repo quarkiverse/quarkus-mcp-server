@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
@@ -79,7 +80,7 @@ class PromptMessageHandler extends MessageHandler {
             }, cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
                     "Unable to obtain prompt %s", promptName));
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcError(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
 
     }
