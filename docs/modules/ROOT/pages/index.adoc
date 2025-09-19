@@ -610,6 +610,17 @@ public class MyTools {
 
 TIP: If a tool method returns with structured content directly then the return type may not be used for schema generation. In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
 
+[WARNING]
+====
+The https://modelcontextprotocol.io/specification/2025-06-18/server/tools#structured-content[MCP specification of Structured Content] mentions: +
+[quote, MCP specification 2025-06-18]
+For backwards compatibility, a tool that returns structured content SHOULD also return the serialized JSON in a TextContent block.
+
+While the specification says _SHOULD_, some MCP clients actually expect the JSON `content` element in `result` to be always present in tools responses (check the specification's link for an example). This is the case for https://github.com/langchain4j/langchain4j/issues/3714[Langchain4j 1.5.0], or https://github.com/modelcontextprotocol/python-sdk/blob/main/src/mcp/types.py#L889[the MCP reference python SDK 1.14.1] for instance. +
+ +
+To address this compatibility point, the configuration property `quarkus.mcp.server.tools.structured-content.compatibility-mode` enables the backward compatibility mode, in either a global manner or by MCP server as needed.
+====
+
 == Notifications
 
 You can annotate a business method of a CDI bean with `@io.quarkiverse.mcp.server.Notification`.
