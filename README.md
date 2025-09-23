@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-11-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-12-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -101,6 +101,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="http://kpavlov.me"><img src="https://avatars.githubusercontent.com/u/1517853?v=4?s=100" width="100px;" alt="Konstantin Pavlov"/><br /><sub><b>Konstantin Pavlov</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=kpavlov" title="Tests">⚠️</a> <a href="#infra-kpavlov" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mvduijnhoven"><img src="https://avatars.githubusercontent.com/u/16058040?v=4?s=100" width="100px;" alt="Martijn van Duijnhoven"/><br /><sub><b>Martijn van Duijnhoven</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mvduijnhoven" title="Code">💻</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mvduijnhoven" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mvduijnhoven" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/PierreBtz"><img src="https://avatars.githubusercontent.com/u/9881659?v=4?s=100" width="100px;" alt="Pierre Beitz"/><br /><sub><b>Pierre Beitz</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=PierreBtz" title="Code">💻</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=PierreBtz" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/mrecouly"><img src="https://avatars.githubusercontent.com/u/583648?v=4?s=100" width="100px;" alt="Matthieu Recouly"/><br /><sub><b>Matthieu Recouly</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mrecouly" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
