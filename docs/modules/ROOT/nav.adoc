@@ -1,4 +1,3 @@
-* xref:index.adoc[Getting started]
-
-* Additional Tools
-** xref:cli-adapter.adoc[CLI Adapter]
+* xref:index.adoc[Reference Guide]
+* xref:cli-adapter.adoc[CLI Adapter]
+* xref:hibernate-validator.adoc[Hibernate Validator Integration]

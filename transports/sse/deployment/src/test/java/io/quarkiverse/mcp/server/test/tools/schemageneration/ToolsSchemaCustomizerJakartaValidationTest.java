@@ -41,7 +41,7 @@ public class ToolsSchemaCustomizerJakartaValidationTest extends McpServerTest {
                 .connect();
 
         client.when().toolsList(page -> {
-            assertEquals(1, page.tools().size());
+            assertEquals(2, page.tools().size());
             ToolInfo addProducts = page.findByName("add-products");
             JsonObject schema = addProducts.inputSchema();
             assertHasPropertyWithNameTypeDescription(schema, "products", "array");
@@ -62,6 +62,10 @@ public class ToolsSchemaCustomizerJakartaValidationTest extends McpServerTest {
             assertHasPropertyWithNameTypeDescription(productType, "price", "number");
             assertPropertyHasMinimum(productType, "price", 0);
             assertHasPropertyCount(productType, 4);
+
+            ToolInfo noPojo = page.findByName("noPojo");
+            JsonObject noPojoSchema = noPojo.inputSchema();
+            assertPropertyHasMinimum(noPojoSchema, "age", 1);
         }).thenAssertResults();
     }
 
@@ -113,6 +117,11 @@ public class ToolsSchemaCustomizerJakartaValidationTest extends McpServerTest {
         public String addProducts(
                 @ToolArg(name = "products", description = "The products to add to the catalog") List<Product> products) {
             return "ok";
+        }
+
+        @Tool
+        String noPojo(@Min(1) Integer age) {
+            return "ko";
         }
     }
 

@@ -40,8 +40,10 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
+import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
+import org.jboss.jandex.WildcardType;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.AudioContent;
@@ -131,11 +133,13 @@ import io.quarkus.deployment.util.JandexUtil;
 import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
+import io.quarkus.gizmo.FieldCreator;
 import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
+import io.quarkus.gizmo.SignatureBuilder;
 
 class McpServerProcessor {
 
@@ -505,7 +509,8 @@ class McpServerProcessor {
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             List<ServerNameBuildItem> serverNames,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
+            BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
 
         // Note that the generated McpMetadata impl must be considered an application class
         // so that it can see the generated invokers
@@ -647,6 +652,16 @@ class McpServerProcessor {
         }
         serverNamesMethod.returnValue(set);
 
+        // McpMetadata.toolArgumentHolders()
+        // Generated tool argument holders are used to workaround a limitation of com.github.victools.jsonschema.generator.SchemaGenerator
+        // that can only consume java.lang.reflect.Type
+        MethodCreator toolArgumentHolders = metadataCreator.getMethodCreator("toolArgumentHolders", Map.class);
+        ResultHandle holders = Gizmo.newHashMap(toolArgumentHolders);
+        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
+            generateToolArgsHolder(toolArgumentHolders, holders, tool, classOutput, reflectiveClasses);
+        }
+        toolArgumentHolders.returnValue(holders);
+
         metadataCreator.close();
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
@@ -654,6 +669,66 @@ class McpServerProcessor {
                 .setRuntimeInit()
                 .runtimeValue(recorderContext.newInstance(metadataClassName))
                 .done());
+    }
+
+    private void generateToolArgsHolder(MethodCreator toolArgumentHolders, ResultHandle holders, FeatureMethodBuildItem tool,
+            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        // Generate a holder for each tool with at least one argument that is:
+        // - serialized
+        // - annotated with any other annotation than @ToolArg and @P
+        boolean generateHolder = false;
+        List<MethodParameterInfo> serializedArguments = new ArrayList<>();
+        for (MethodParameterInfo param : tool.getMethod().parameters()) {
+            if (providerFrom(param.type()) == Provider.PARAMS) {
+                serializedArguments.add(param);
+                List<AnnotationInstance> annotations = param.declaredAnnotations();
+                if (!annotations.isEmpty()
+                        && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
+                                && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
+                    generateHolder = true;
+                }
+            }
+        }
+        if (generateHolder) {
+            // org.example.MyTool_foo
+            String className = tool.getMethod().declaringClass().name().toString() + "_" + tool.getName();
+            LOG.debugf("Generate tool arguments holder: %s", className);
+            reflectiveClasses.produce(ReflectiveClassBuildItem.builder(className).fields().build());
+            ClassCreator argumentsHolder = ClassCreator.builder().classOutput(classOutput)
+                    .className(className)
+                    .build();
+            for (MethodParameterInfo param : serializedArguments) {
+                FieldCreator paramField = argumentsHolder.getFieldCreator(param.name(), param.type().name().toString());
+                setSignature(paramField, param.type());
+                param.declaredAnnotations().forEach(paramField::addAnnotation);
+            }
+            argumentsHolder.close();
+            // map.put("foo", org.example.MyTool_foo.class)
+            Gizmo.mapOperations(toolArgumentHolders).on(holders).put(toolArgumentHolders.load(tool.getName()),
+                    toolArgumentHolders.loadClass(argumentsHolder.getClassName()));
+        }
+    }
+
+    private void setSignature(FieldCreator field, org.jboss.jandex.Type type) {
+        if (type.kind() == Kind.PARAMETERIZED_TYPE) {
+            field.setSignature(SignatureBuilder.forField().setType(gizmoType(type)).build());
+        }
+    }
+
+    private io.quarkus.gizmo.Type gizmoType(org.jboss.jandex.Type type) {
+        if (type.kind() == Kind.CLASS) {
+            return io.quarkus.gizmo.Type.classType(type.name());
+        } else if (type.kind() == Kind.PARAMETERIZED_TYPE) {
+            ParameterizedType parameterizedType = type.asParameterizedType();
+            return io.quarkus.gizmo.Type.parameterizedType(io.quarkus.gizmo.Type.classType(type.name()),
+                    parameterizedType.arguments().stream().map(this::gizmoType).toArray(io.quarkus.gizmo.Type[]::new));
+        } else if (type.kind() == Kind.WILDCARD_TYPE) {
+            WildcardType wildcardType = type.asWildcardType();
+            return wildcardType.superBound() != null
+                    ? io.quarkus.gizmo.Type.wildcardTypeWithLowerBound(gizmoType(wildcardType.superBound()))
+                    : io.quarkus.gizmo.Type.wildcardTypeWithUpperBound(gizmoType(wildcardType.extendsBound()));
+        }
+        throw new IllegalArgumentException("Unsupported type: " + type);
     }
 
     @BuildStep
