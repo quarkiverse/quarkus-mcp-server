@@ -88,6 +88,145 @@ Each feature method execution is associated with a new CDI request context.
 This means that if a client sends a batch of MCP requests (e.g. multiple `tools/call` messages) then each MCP request (e.g. `@Tool` method invocation) receives a different instance of a `@RequestScoped` bean.
 However, if the `HTTP` transport is used then all MCP requests will have the same `io.vertx.core.http.HttpServerRequest` injected.
 
+== Tools
+
+MCP provides a standardized way for servers to expose tools that can be invoked by clients.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Inject;
+
+// @Singleton <1>
+public class MyTools {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Tool(description = "Put you description here.") <3>
+    ToolResponse foo(@ToolArg(description = "The name", defaultValue = "Andy") String name) { <4>
+        return ToolResponse.success(
+                new TextContent(fooService.ping(name)));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyTools` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Tool` annotates a business method of a CDI bean that should be exposed as a tool. By default, the name of the tool is derived from the method name.
+<4> The `@ToolArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
+
+TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response is a failed `ToolResponse` and the message of the exception is used as the text of the result content. It is also possible to annotate the method or declaring class with `@io.quarkiverse.mcp.server.WrapBusinessError` - in that case, an exception thrown is wrapped automatically in a `ToolCallException` if it's assignable from any of the specified exception classes.
+
+A result of a "tool call" operation is always represented as a `ToolResponse`.
+However, the annotated method can also return other types that are converted according to the following rules.
+
+* If the method returns `java.lang.String` then the response is "success" and contains the single `TextContent` object.
+* If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the response is "success" and contains the single content object.
+* If the method returns a `List` of `Content` implementations or `String`s then the response is "success" and contains the list of relevant content objects.
+* The method may return a `Uni` that wraps any of the type mentioned above.
+
+* If it returns `java.lang.String` then the response is "success" and contains a single `TextContent`.
+* If it returns an implementation of `Content` then the response is "success" and contains a single content object.
+* If it returns a `List` of `Content` implementations or strings then the response is "success" and contains a list of relevant content objects.
+* If it returns any other type `X` or `List<X>` then `X` is encoded using the `ToolResponseEncoder` and `ContentEncoder` API and afterwards the rules above apply.
+* It may also return a `Uni` that wraps any of the type mentioned above.
+
+TIP: There is a default content encoder registered; it encodes the returned value as JSON.
+
+=== Method parameters
+
+A `@Tool` method may accept parameters that represent Tool arguments.
+However, it may also accept the following parameters:
+
+* `io.quarkiverse.mcp.server.McpConnection`
+* `io.quarkiverse.mcp.server.McpLog`
+* `io.quarkiverse.mcp.server.RequestId`
+* `io.quarkiverse.mcp.server.Progress`
+* `io.quarkiverse.mcp.server.Roots`
+* `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Cancellation`
+* `io.quarkiverse.mcp.server.RawMessage`
+
+TIP: If you need to validate the parameters of a `@Tool` method then the xref:hibernate-validator.adoc[Hibernate Validator integration] fits perfectly.
+
+=== Programmatic API
+
+It's also possible to register a tool programmatically with the `ToolManager` API.
+
+For example, if some tool is only known at application startup time, it can be added as follows:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager; <1>
+
+    @Startup <2>
+    void addTool() {
+       toolManager.newTool("toLowerCase") <3>
+          .setDescription("Converts input string to lower case.")
+          .addArgument("value", "Value to convert", true, String.class)
+          .setHandler(
+              ta -> ToolResponse.success(ta.args().get("value").toString().toLowerCase()))
+          .register(); <4>
+    }
+}
+----
+<1> The injected manager can be used to obtain metadata and register a new tool programmatically.
+<2> Ensure that `addTool` is executed when the application starts
+<3> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API.
+<4> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
+
+=== Support `@Tool`/`@P` annotations from LangChain4j
+
+The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
+However, keep in mind that semantics may vary and follows the rules defined in this documentation.
+For example, `void` methods are not supported.
+
+=== Customizing JSON Schema Generation
+
+The MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
+This library is configurable through modules that process various annotations (e.g., Jackson, Bean Validation) to enrich the generated schemas.
+
+By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the schema generator server will be automatically configured to use the Jackson module.
+The same goes for `com.github.victools:jsonschema-module-jakarta-validation and `com.github.victools:jsonschema-module-swagger-2`.
+See the <<extension-configuration-reference>> for relevant config properties.
+
+=== Structured Content
+
+Since MCP `2025-06-18` it's possible to return a _structured content_ in a tool response.
+Where _structured content_ means basically a custom JSON object.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    FooService fooService;
+
+    @Tool(description = "Put you description here.", structuredContent = true) <1> <2>
+    Foo foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
+        return fooService.ping(name);
+    }
+}
+----
+<1> If `Tool#structuredContent()` is to `true` and the method returns a type `X` which is not specifically treated (see the conversion rules), then the return value is converted to JSON and used as the `structuredContent` of the result.
+<2> Also the output schema is generated automatically from the return type.
+
+TIP: If a tool method returns with structured content directly then the return type may not be used for schema generation. In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
+
 == Prompts
 
 MCP provides a standardized way for servers to expose prompt templates to clients.
@@ -473,142 +612,6 @@ public class MyResourceTemplates {
 <3> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition` - a builder-like API.
 <4> Registers the resource template definition.
 
-== Tools
-
-MCP provides a standardized way for servers to expose tools that can be invoked by clients.
-
-[source,java]
-----
-import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.ToolArg;
-import io.quarkiverse.mcp.server.ToolResponse;
-import jakarta.inject.Inject;
-
-// @Singleton <1>
-public class MyTools {
-
-    @Inject <2>
-    FooService fooService;
-
-    @Tool(description = "Put you description here.") <3>
-    ToolResponse foo(@ToolArg(description = "The name", defaultValue = "Andy") String name) { <4>
-        return ToolResponse.success(
-                new TextContent(fooService.ping(name)));
-    }
-
-}
-----
-<1> The `@Singleton` scope is added automatically, if needed.
-<2> `MyTools` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
-<3> `@Tool` annotates a business method of a CDI bean that should be exposed as a tool. By default, the name of the tool is derived from the method name.
-<4> The `@ToolArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
-
-TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response is a failed `ToolResponse` and the message of the exception is used as the text of the result content. It is also possible to annotate the method or declaring class with `@io.quarkiverse.mcp.server.WrapBusinessError` - in that case, an exception thrown is wrapped automatically in a `ToolCallException` if it's assignable from any of the specified exception classes.
-
-A result of a "tool call" operation is always represented as a `ToolResponse`.
-However, the annotated method can also return other types that are converted according to the following rules.
-
-* If the method returns `java.lang.String` then the response is "success" and contains the single `TextContent` object.
-* If the method returns an implementation of `io.quarkiverse.mcp.server.Content` then the response is "success" and contains the single content object.
-* If the method returns a `List` of `Content` implementations or `String`s then the response is "success" and contains the list of relevant content objects.
-* The method may return a `Uni` that wraps any of the type mentioned above.
-
-* If it returns `java.lang.String` then the response is "success" and contains a single `TextContent`.
-* If it returns an implementation of `Content` then the response is "success" and contains a single content object.
-* If it returns a `List` of `Content` implementations or strings then the response is "success" and contains a list of relevant content objects.
-* If it returns any other type `X` or `List<X>` then `X` is encoded using the `ToolResponseEncoder` and `ContentEncoder` API and afterwards the rules above apply.
-* It may also return a `Uni` that wraps any of the type mentioned above.
-
-TIP: There is a default content encoder registered; it encodes the returned value as JSON.
-
-=== Method parameters
-
-A `@Tool` method may accept parameters that represent Tool arguments.
-However, it may also accept the following parameters:
-
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
-
-=== Programmatic API
-
-It's also possible to register a tool programmatically with the `ToolManager` API.
-
-For example, if some tool is only known at application startup time, it can be added as follows:
-
-[source,java]
-----
-import io.quarkiverse.mcp.server.ToolManager;
-import io.quarkus.runtime.Startup;
-import jakarta.inject.Inject;
-
-public class MyTools {
-
-    @Inject
-    ToolManager toolManager; <1>
-
-    @Startup <2>
-    void addTool() {
-       toolManager.newTool("toLowerCase") <3>
-          .setDescription("Converts input string to lower case.")
-          .addArgument("value", "Value to convert", true, String.class)
-          .setHandler(
-              ta -> ToolResponse.success(ta.args().get("value").toString().toLowerCase()))
-          .register(); <4>
-    }
-}
-----
-<1> The injected manager can be used to obtain metadata and register a new tool programmatically.
-<2> Ensure that `addTool` is executed when the application starts
-<3> The `ToolManager#newTool(String)` method returns `ToolDefinition` - a builder-like API.
-<4> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
-
-=== Support `@Tool`/`@P` annotations from LangChain4j
-
-The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
-However, keep in mind that semantics may vary and follows the rules defined in this documentation.
-For example, `void` methods are not supported.
-
-=== Customizing JSON Schema Generation
-
-The MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
-This library is configurable through modules that process various annotations (e.g., Jackson, Bean Validation) to enrich the generated schemas.
-
-By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the schema generator server will be automatically configured to use the Jackson module.
-The same goes for `com.github.victools:jsonschema-module-jakarta-validation and `com.github.victools:jsonschema-module-swagger-2`.
-See the <<extension-configuration-reference>> for relevant config properties.
-
-=== Structured Content
-
-Since MCP `2025-06-18` it's possible to return a _structured content_ in a tool response.
-Where _structured content_ means basically a custom JSON object.
-
-[source,java]
-----
-import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.ToolArg;
-import jakarta.inject.Inject;
-
-public class MyTools {
-
-    @Inject
-    FooService fooService;
-
-    @Tool(description = "Put you description here.", structuredContent = true) <1> <2>
-    Foo foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
-        return fooService.ping(name);
-    }
-}
-----
-<1> If `Tool#structuredContent()` is to `true` and the method returns a type `X` which is not specifically treated (see the conversion rules), then the return value is converted to JSON and used as the `structuredContent` of the result.
-<2> Also the output schema is generated automatically from the return type.
-
-TIP: If a tool method returns with structured content directly then the return type may not be used for schema generation. In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
 
 == Notifications
 
@@ -663,13 +666,15 @@ public class MyNotifications {
 <2> Instructs Quarkus to execute the `addNotification()` method when the application starts.
 <3> Registers the notification definition.
 
-== Pagination
+== Advanced APIs
+
+=== Pagination
 
 Pagination is automatically enabled if the number of results exceeds the configured page size.
 See the <<extension-configuration-reference>> for relevant config properties.
 The following MCP operations support pagination: `resources/list`, `resources/templates/list`, `prompts/list` and `tools/list`.
 
-== Client logging
+=== Client logging
 
 Methods annotated with `@Tool`, `@Resource`, `@ResourceTemplate`, `@Prompt` and `@CompletePrompt` may accept a parameter of type `io.quarkiverse.mcp.server.McpLog`.
 `McpLog` is a utility class that can send log message notifications to a connected MCP client.
@@ -706,7 +711,7 @@ public class MyTools {
 
 TIP: The default log level can be set with the `quarkus.mcp.server.client-logging.default-level` configuration property.
 
-== Progress API
+=== Progress API
 
 Server features which have the nature of long running operations can send progress notifications to the clients.
 A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter.
@@ -836,7 +841,7 @@ public class MyTools {
 <3> The server should only send notifications if the client request contains the progress token.
 <4> Send the message to the client without waiting for the result.
 
-== Roots
+=== Roots
 
 If an MCP client supports the `roots` capability the server can obtain the list of root objects.
 Any server feature method can accept the `io.quarkiverse.mcp.server.Roots` parameter.
@@ -874,7 +879,7 @@ public class MyRoots {
 <3> Update the list of roots when an MCP client sends the `notifications/roots/list_changed` message.
 
 
-== Sampling
+=== Sampling
 
 If an MCP client supports the `sampling` capability the server can request LLM sampling from language models via client.
 Any server feature method can accept the `io.quarkiverse.mcp.server.Sampling` parameter.
@@ -905,7 +910,7 @@ public class MyTools {
 <2> If sampling is supported a convenient builder can be used to construct a `SamplingRequest`.
 <3> The server sends a sampling request and when a sampling response returns the tool method completes.
 
-== Elicitation
+=== Elicitation
 
 If an MCP client supports the `elicitation` capability, then the server can request additional information from the client.
 Any server feature method can accept the `io.quarkiverse.mcp.server.Elicitation` parameter to build an elicitation request.
@@ -945,7 +950,7 @@ public class MyTools {
 <3> The server sends an elicitation request and when an elicitation response returns the tool method completes.
 
 
-== Cancellation
+=== Cancellation
 
 MCP supports optional cancellation of in-progress requests.
 The `io.quarkiverse.mcp.server.Cancellation` interface can be used to determine if an MCP client requested a cancellation of the current request.
@@ -976,7 +981,7 @@ public class MyTools {
 <2> Perform the check and if cancellation is requested then skip the processing, i.e. throw an `OperationCancellationException`.
 <3> The convenient method `Cancellation#skipProcessingIfCancelled()` can be used instead.
  
-== Raw messages
+=== Raw messages
 
 Any server feature method can accept the `io.quarkiverse.mcp.server.RawMessage` parameter.
 A raw message represents an unprocessed MCP request or notification from an MCP client.
@@ -1013,6 +1018,67 @@ public class MyTools {
 ----
 <1> The `RawMessage` parameter is injected automatically.
 <2> We can use the `JsonObject` API to inspect the raw message from the client.
+ 
+=== Initial checks
+
+The CDI beans that implement `io.quarkiverse.mcp.server.InitialCheck` are used to perform an initial check when an MCP client connection is initialized, i.e. before the server capabilities are sent back to the client.
+If an initial check fails then the connection is not initialized successfully and the error message is sent back to the client.
+Multiple checks are sorted by `InjectableBean#getPriority()` and executed sequentially. 
+Higher priority is executed first.
+
+.`InitialCheck` Example
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
+
+// @Singleton is added automatically
+public class MyCheck implements InitialCheck {
+
+   public Uni<CheckResult> perform(InitialRequest initialRequest) {
+      return initialRequest.supportsSampling() ? InitialCheck.CheckResult.successs()
+               : InitialCheck.CheckResult.error("Sampling not supported");
+   }
+}
+----
+
+=== Filters
+
+It is possible to determine the set of visible/accesible tools, prompts, resources and resource templates for a specific MCP client.
+Any CDI bean that implements `ToolFilter`, `PrompFilter`, `ResourceFilter` and `ResourceTemplateFilter` respectively is automatically applied.
+Filters should be fast and efficient, and should never block the current thread (read data from a socket, write data to disk, etc.) because they can be executed on an event loop.
+If a filter throws an unchecked exception then its execution is ignored and the next filter is applied.
+
+Multiple filters are sorted by `InjectableBean#getPriority()` and executed sequentially.
+Higher priority is executed first.
+Only features that match all the filters are visible/accesible. 
+
+.Filters Example
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.ToolFilter;
+import io.quarkiverse.mcp.server.PromptFilter;
+
+// @Singleton is added automatically
+public class MyFilters implements ToolFilter, PromptFilter {
+
+   @Override
+   public boolean test(PromptInfo prompt, McpConnection connection) {
+     // Skip clients that do not support sampling
+     return connection.initialRequest().supportsSampling();
+   }
+   
+   @Override
+   public boolean test(ToolInfo tool, McpConnection connection) {
+       // Skip tools registered programmatically
+       return tool.isMethod();
+   }
+}
+----
  
 == Security
 
@@ -1065,67 +1131,110 @@ public class MyTools {
 <1> Permit only authenticated users. All CDI business methods are protected.
 <2> Permit only user with role `admin`.
 
+== Development mode
 
-== Initial checks
+=== Traffic logging
 
-The CDI beans that implement `io.quarkiverse.mcp.server.InitialCheck` are used to perform an initial check when an MCP client connection is initialized, i.e. before the server capabilities are sent back to the client.
-If an initial check fails then the connection is not initialized successfully and the error message is sent back to the client.
-Multiple checks are sorted by `InjectableBean#getPriority()` and executed sequentially. 
-Higher priority is executed first.
+The extension can log JSON messages sent and received for debugging purposes.
+To enable traffic logging, set the `quarkus.mcp.server.traffic-logging.enabled` configuration property to `true`.
+Note that the number of logged characters is limited.
+The default limit is 100, but you can change this limit with the `quarkus.mcp.server.traffic-logging.text-limit` configuration property.
 
-.`InitialCheck` Example
+.Example server configuration
+[source, properties]
+----
+quarkus.mcp.server.traffic-logging.enabled=true <1>
+quarkus.mcp.server.traffic-logging.text-limit=500 <2>
+----
+<1> Enables traffic logging.
+<2> Set the number of characters of a JSON message which will be logged.
+
+=== Dev UI
+
+The `quarkus-mcp-server-sse` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
+You can inspect and test the server features easily without third-party tools like <<mcp_inspector,MCP Inspector>>
+
+[[mcp_inspector]]
+=== MCP Inspector
+
+The https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] is a developer tool for testing and debugging MCP servers.
+It's a Node.js app that can be run locally:
+
+[source,console]
+----
+$ npx @modelcontextprotocol/inspector
+----
+
+The UI is then available at `locahost:5173` by default.
+
+If you don't have the `npx` command installed locally you can also use the official Node.js Docker image.
+Linux developers will need to add the `--network=host` option because the inspector app needs to access your MCP server running on the localhost:
+
+[source,console]
+----
+$ docker run --rm --network=host node:18 npx @modelcontextprotocol/inspector
+----
+
+However, `--network=host` does not work for Mac and Windows.
+Mac and Windows developers will need to export the default MCP inspector port (`5137`) and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
+
+
+TIP: When inspecting a server that uses the "Streamable HTTP" or HTTP/SSE transport, you need to configure the proper path in the MCP inspector. The path should be  `${quarkus.mcp.server.sse.root-path}` for "Streamable HTTP" and `${quarkus.mcp.server.sse.root-path}/sse` for HTTP/SSE; i.e. `/mcp` and `/mcp/sse` by default.
+
+[source,console]
+----
+$ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
+----
+
+== Testing
+
+The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient utils to test your MCP server.
+The starting point is the `io.quarkiverse.mcp.server.test.McpAssured` class.
+First, you need to create a new test client. 
+Currently, the clients for SSE and Streamable HTTP transports are supported.
+The workflow continues as follows.
+You create a group of MCP requests and corresponding assert functions.
+The MCP requests are sent immediately but the responses are not processed and the assert functions are not used until the `McpAssert#thenAssertResults()` method is called.
+In other words, the `McpAssert#thenAssertResults()` blocks and waits for all results; then all assert functions are applied. 
+You can create as many groups as you need.
+A typical test for a `@Tool` may look like:
+
+.`McpAssured` Example
 [source,java]
 ----
 package org.acme;
 
-import io.quarkiverse.mcp.server.InitialCheck;
-import io.quarkiverse.mcp.server.InitialRequest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-// @Singleton is added automatically
-public class MyCheck implements InitialCheck {
+import java.util.Map;
 
-   public Uni<CheckResult> perform(InitialRequest initialRequest) {
-      return initialRequest.supportsSampling() ? InitialCheck.CheckResult.successs()
-               : InitialCheck.CheckResult.error("Sampling not supported");
-   }
+import org.junit.jupiter.api.Test;
+
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkus.test.junit.QuarkusTest;
+
+@QuarkusTest
+public class ToolsAnswerTest {
+
+    @Test
+    public void testAnswer() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient(); <1>
+
+        client.when()
+                .toolsCall("theAnswer", Map.of("lang", "Java"), r -> { <2>
+                    assertEquals("Spaces are better for indentation.", r.content().get(0).asText().text());
+                })
+                .toolsCall("theAnswer", Map.of("lang", "python"), r -> {
+                    assertEquals("Tabs are better for indentation.", r.content().get(0).asText().text());
+                })
+                .thenAssertResults(); <3>
+    }
 }
 ----
-
-== Filters
-
-It is possible to determine the set of visible/accesible tools, prompts, resources and resource templates for a specific MCP client.
-Any CDI bean that implements `ToolFilter`, `PrompFilter`, `ResourceFilter` and `ResourceTemplateFilter` respectively is automatically applied.
-Filters should be fast and efficient, and should never block the current thread (read data from a socket, write data to disk, etc.) because they can be executed on an event loop.
-If a filter throws an unchecked exception then its execution is ignored and the next filter is applied.
-
-Multiple filters are sorted by `InjectableBean#getPriority()` and executed sequentially.
-Higher priority is executed first.
-Only features that match all the filters are visible/accesible. 
-
-.Filters Example
-[source,java]
-----
-package org.acme;
-
-import io.quarkiverse.mcp.server.ToolFilter;
-import io.quarkiverse.mcp.server.PromptFilter;
-
-// @Singleton is added automatically
-public class MyFilters implements ToolFilter, PromptFilter {
-
-   @Override
-   public boolean test(PromptInfo prompt, McpConnection connection) {
-     // Skip clients that do not support sampling
-     return connection.initialRequest().supportsSampling();
-   }
-   
-   @Override
-   public boolean test(ToolInfo tool, McpConnection connection) {
-       // Skip tools registered programmatically
-       return tool.isMethod();
-   }
-}
-----
+<1> Create and connect a client. If you need to configure the client use the builder returned by `McpAssured#newStreamableClient()` instead.
+<2> Send an MCP request and register an assert function.
+<3> Wait for all responses and assert the results.
 
 == Multiple server configurations
 
@@ -1182,108 +1291,6 @@ public class MyTools {
 
 TIP: The programmatic API also makes it possible to set the server configuration name; e.g. `ToolDefinition#setServerName()`.
 
-== Traffic logging
-
-The extension can log JSON messages sent and received for debugging purposes.
-To enable traffic logging, set the `quarkus.mcp.server.traffic-logging.enabled` configuration property to `true`.
-Note that the number of logged characters is limited.
-The default limit is 100, but you can change this limit with the `quarkus.mcp.server.traffic-logging.text-limit` configuration property.
-
-.Example server configuration
-[source, properties]
-----
-quarkus.mcp.server.traffic-logging.enabled=true <1>
-quarkus.mcp.server.traffic-logging.text-limit=500 <2>
-----
-<1> Enables traffic logging.
-<2> Set the number of characters of a JSON message which will be logged.
-
-== Testing
-
-The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient utils to test your MCP server.
-The starting point is the `io.quarkiverse.mcp.server.test.McpAssured` class.
-First, you need to create a new test client. 
-Currently, the clients for SSE and Streamable HTTP transports are supported.
-The workflow continues as follows.
-You create a group of MCP requests and corresponding assert functions.
-The MCP requests are sent immediately but the responses are not processed and the assert functions are not used until the `McpAssert#thenAssertResults()` method is called.
-In other words, the `McpAssert#thenAssertResults()` blocks and waits for all results; then all assert functions are applied. 
-You can create as many groups as you need.
-A typical test for a `@Tool` may look like:
-
-.`McpAssured` Example
-[source,java]
-----
-package org.acme;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
-import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.junit.QuarkusTest;
-
-@QuarkusTest
-public class ToolsAnswerTest {
-
-    @Test
-    public void testAnswer() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient(); <1>
-
-        client.when()
-                .toolsCall("theAnswer", Map.of("lang", "Java"), r -> { <2>
-                    assertEquals("Spaces are better for indentation.", r.content().get(0).asText().text());
-                })
-                .toolsCall("theAnswer", Map.of("lang", "python"), r -> {
-                    assertEquals("Tabs are better for indentation.", r.content().get(0).asText().text());
-                })
-                .thenAssertResults(); <3>
-    }
-}
-----
-<1> Create and connect a client. If you need to configure the client use the builder returned by `McpAssured#newStreamableClient()` instead.
-<2> Send an MCP request and register an assert function.
-<3> Wait for all responses and assert the results.
-
-== Dev UI
-
-The `quarkus-mcp-server-sse` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
-You can inspect and test the server features easily without third-party tools like <<mcp_inspector,MCP Inspector>>
-
-[[mcp_inspector]]
-== MCP Inspector
-
-The https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] is a developer tool for testing and debugging MCP servers.
-It's a Node.js app that can be run locally:
-
-[source,console]
-----
-$ npx @modelcontextprotocol/inspector
-----
-
-The UI is then available at `locahost:5173` by default.
-
-If you don't have the `npx` command installed locally you can also use the official Node.js Docker image.
-Linux developers will need to add the `--network=host` option because the inspector app needs to access your MCP server running on the localhost:
-
-[source,console]
-----
-$ docker run --rm --network=host node:18 npx @modelcontextprotocol/inspector
-----
-
-However, `--network=host` does not work for Mac and Windows.
-Mac and Windows developers will need to export the default MCP inspector port (`5137`) and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
-
-
-TIP: When inspecting a server that uses the "Streamable HTTP" or HTTP/SSE transport, you need to configure the proper path in the MCP inspector. The path should be  `${quarkus.mcp.server.sse.root-path}` for "Streamable HTTP" and `${quarkus.mcp.server.sse.root-path}/sse` for HTTP/SSE; i.e. `/mcp` and `/mcp/sse` by default.
-
-[source,console]
-----
-$ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
-----
 
 [[extension-configuration-reference]]
 == Extension configuration reference

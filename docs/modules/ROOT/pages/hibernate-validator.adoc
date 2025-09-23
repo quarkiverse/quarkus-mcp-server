@@ -1,0 +1,99 @@
+== Hibernate Validator Integration
+
+include::./includes/attributes.adoc[]
+
+The extension provides integration with Hibernate Validator, a Jakarta Validation implementation.
+First, it adds the `quarkus-hibernate-validator` dependency so that all `@Tool` methods with constraint annotations are validated when executed.
+The resulting constraint violations are transformed in a procotol error message.
+Additionaly, the extension adds a transitive dependency on `com.github.victools:jsonschema-module-jakarta-validation` which means that Jakarta Validation annotations will be considered when generating the input schema for `@Tool` methods.
+
+If you want to use the Hibernate Validator integration in your application you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-hibernate-validator` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+```xml
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-hibernate-validator</artifactId>
+    <version>${quarkus-mcp.version}</version>
+</dependency>
+```
+
+Then you can use constraint annotations to define constraints for the tool arguments.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.validation.constraints.NotBlank;
+
+public class MyTools {
+
+    @Tool(description = "Use this tool to foo!")
+    String foo(@ToolArg(description = "The name") @NotBlank String name) { <1>
+        return name.toUpperCase();
+    }
+}
+----
+<1> `@NotBlank` defines a constraint used for the tool argument `name`.
+
+When the tool method is executed and the name argument is blank, then the server responds with a protocol error message like:
+
+[source,json]
+----
+{
+  "jsonrpc" : "2.0",
+  "id" : 3,
+  "error" : {
+    "code" : -32602,
+    "message" : "foo.name: must not be blank"
+  }
+}
+----
+
+[NOTE] 
+==== 
+Keep in mind that validation is only triggered if a method or any of its parameters declares a constraint annotation.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
+public class MyTools {
+
+    @Tool(description = "Use this tool to foo!")
+    String foo(@ToolArg(description = "The person") @Valid Person person) { <1>
+        return person.name().toUpperCase();
+    }
+    
+    public record Person(@NotBlank String name) {}
+}
+----
+<1> `@Valid` is required to trigger the validation of `Person`.
+
+====
+
+=== `ConstraintViolationConverter`
+
+By default, a `ConstraintViolationException` is converted into an `McpException` with JSON-RPC error code `-32602` (invalid params) and the message contains `ConstraintViolation#getPropertyPath()` and `ConstraintViolation#getMessage()` for each violation.
+However, it possible to implement a custom CDI bean that implements the `io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter` interface and supply some custom logic.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
+import io.quarkiverse.mcp.server.ToolCallException;
+import jakarta.inject.Singleton;
+
+@Singleton <1>
+public MyConstraintViolationConverter implements ConstraintViolationConverter {
+
+   @Override
+   public Exception convert(ConstraintViolationException exception) {
+      return new ToolCallException(exception); <2>
+   }
+}
+----
+<1> Use the `@Singleton` scope to define a bean.
+<2> Turn the `ConstraintViolationException` into a business error.
