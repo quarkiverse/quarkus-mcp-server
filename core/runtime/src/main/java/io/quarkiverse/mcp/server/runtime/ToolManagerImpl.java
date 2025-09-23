@@ -44,6 +44,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     private static final Logger LOG = Logger.getLogger(ToolManagerImpl.class);
 
     private final DefaultSchemaGenerator schemaGenerator;
+    private final Map<String, Class<?>> toolArgumentHolders;
 
     final ConcurrentMap<String, ToolInfo> tools;
 
@@ -71,6 +72,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.defaultValueConverters = metadata.defaultValueConverters();
         this.outputSchemaGenerator = outputSchemaGenerator;
         this.filters = filters;
+        this.toolArgumentHolders = metadata.toolArgumentHolders();
     }
 
     @Override
@@ -136,8 +138,28 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return defaultValueConverters;
     }
 
+    Object generateSchema(Class<?> holderClass, List<FeatureArgument> serializedArguments) {
+        JsonNode jsonNode = schemaGenerator.generateSchema(holderClass);
+        if (jsonNode.isObject()) {
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+            for (FeatureArgument arg : serializedArguments) {
+                JsonNode node = objectNode.get(arg.name());
+                if (node != null) {
+                    postProcessJsonNode(node, arg.type(), arg.description(), arg.defaultValue());
+                }
+            }
+            return objectNode.get("properties");
+        }
+        return jsonNode;
+    }
+
     Object generateSchema(Type type, String description, String defaultValue) {
         JsonNode jsonNode = schemaGenerator.generateSchema(type);
+        postProcessJsonNode(jsonNode, type, description, defaultValue);
+        return jsonNode;
+    }
+
+    private void postProcessJsonNode(JsonNode jsonNode, Type type, String description, String defaultValue) {
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
             if (Types.isOptional(type)) {
@@ -156,9 +178,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 Object converted = convert(defaultValue, type);
                 objectNode.putPOJO("default", converted);
             }
-            return objectNode;
         }
-        return jsonNode;
     }
 
     private boolean test(ToolInfo tool, McpConnection connection) {
@@ -224,14 +244,25 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         public JsonObject asJson() {
             // TODO: it might make sense to cache the generated schemas
             JsonObject tool = metadata.asJson();
-            JsonObject properties = new JsonObject();
+            Object properties;
             JsonArray required = new JsonArray();
             for (FeatureArgument a : metadata.info().serializedArguments()) {
-                properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
                 if (a.required()) {
                     required.add(a.name());
                 }
             }
+
+            Class<?> holder = toolArgumentHolders.get(name());
+            if (holder != null) {
+                properties = generateSchema(holder, metadata.info().serializedArguments());
+            } else {
+                JsonObject props = new JsonObject();
+                for (FeatureArgument a : metadata.info().serializedArguments()) {
+                    props.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
+                }
+                properties = props;
+            }
+
             ToolAnnotations toolAnnotations = metadata.info().toolAnnotations();
             if (toolAnnotations != null) {
                 tool.put("annotations", new JsonObject()
