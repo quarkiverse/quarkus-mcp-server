@@ -26,7 +26,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_STDIO_INITIALIZATION_ENABLED+++`
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled[`quarkus.mcp.server.stdio.enabled`]##
 ifdef::add-copy-button-to-config-props[]
@@ -51,7 +51,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_STDIO_ENABLED+++`
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out[`quarkus.mcp.server.stdio.null-system-out`]##
 ifdef::add-copy-button-to-config-props[]
@@ -72,7 +72,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_STDIO_NULL_SYSTEM_OUT+++`
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 |===
 

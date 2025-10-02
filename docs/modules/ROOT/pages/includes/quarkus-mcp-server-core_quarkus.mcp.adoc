@@ -7,27 +7,6 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy[`quarkus.mcp.server.invalid-server-name-strategy`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.invalid-server-name-strategy+++[]
-endif::add-copy-button-to-config-props[]
-
-
-[.description]
---
-The strategy used when server features, such as tools, prompts, and resources, reference an non-existent server name.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++`
-endif::add-copy-button-to-env-var[]
---
-a|`fail`, `ignore`
-|`fail`
-
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.enabled+++[]
@@ -47,7 +26,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_ENABLED+++
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-order`]##
 ifdef::add-copy-button-to-config-props[]
@@ -70,7 +49,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_RESPECT_JS
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-required`]##
 ifdef::add-copy-button-to-config-props[]
@@ -93,7 +72,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_RESPECT_JS
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value`]##
 ifdef::add-copy-button-to-config-props[]
@@ -116,7 +95,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_FLATTENED_
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property`]##
 ifdef::add-copy-button-to-config-props[]
@@ -139,7 +118,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_FLATTENED_
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods[`quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods`]##
 ifdef::add-copy-button-to-config-props[]
@@ -162,7 +141,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_INCLUDE_ON
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy[`quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy`]##
 ifdef::add-copy-button-to-config-props[]
@@ -185,7 +164,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_IGNORE_PRO
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes[`quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes`]##
 ifdef::add-copy-button-to-config-props[]
@@ -208,7 +187,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_ALWAYS_REF
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes[`quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes`]##
 ifdef::add-copy-button-to-config-props[]
@@ -231,7 +210,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_INLINE_TRA
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup[`quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup`]##
 ifdef::add-copy-button-to-config-props[]
@@ -254,7 +233,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_SKIP_SUBTY
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform[`quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform`]##
 ifdef::add-copy-button-to-config-props[]
@@ -277,7 +256,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_IGNORE_TYP
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id[`quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id`]##
 ifdef::add-copy-button-to-config-props[]
@@ -300,28 +279,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JACKSON_JSON_IDENT
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
-
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`quarkus.mcp.server.schema-generator.swagger2.enabled`]##
-ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.schema-generator.swagger2.enabled+++[]
-endif::add-copy-button-to-config-props[]
-
-
-[.description]
---
-Whether to use the SchemaGenerator's Swagger 2 Module. If this module is not present as a dependency, this module won't be enabled.
-
-
-ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_SWAGGER2_ENABLED+++[]
-endif::add-copy-button-to-env-var[]
-ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_SWAGGER2_ENABLED+++`
-endif::add-copy-button-to-env-var[]
---
-|boolean
-|`true`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled[`quarkus.mcp.server.schema-generator.jakarta-validation.enabled`]##
 ifdef::add-copy-button-to-config-props[]
@@ -342,7 +300,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JAKARTA_VALIDATION
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required`]##
 ifdef::add-copy-button-to-config-props[]
@@ -365,7 +323,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JAKARTA_VALIDATION
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required`]##
 ifdef::add-copy-button-to-config-props[]
@@ -388,7 +346,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JAKARTA_VALIDATION
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format[`quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format`]##
 ifdef::add-copy-button-to-config-props[]
@@ -411,7 +369,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JAKARTA_VALIDATION
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions[`quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions`]##
 ifdef::add-copy-button-to-config-props[]
@@ -434,7 +392,49 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_JAKARTA_VALIDATION
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`quarkus.mcp.server.schema-generator.swagger2.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.schema-generator.swagger2.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to use the SchemaGenerator's Swagger 2 Module. If this module is not present as a dependency, this module won't be enabled.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_SWAGGER2_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_GENERATOR_SWAGGER2_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy[`quarkus.mcp.server.invalid-server-name-strategy`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.invalid-server-name-strategy+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The strategy used when server features, such as tools, prompts, and resources, reference an non-existent server name.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_INVALID_SERVER_NAME_STRATEGY+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`fail`, `ignore`
+|`+++fail+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`quarkus.mcp.server.server-info.name`]##
 ifdef::add-copy-button-to-config-props[]
@@ -568,7 +568,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_TRAFFIC_LOGGING_ENABLED+++`
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit[`quarkus.mcp.server.traffic-logging.text-limit`]##
 ifdef::add-copy-button-to-config-props[]
@@ -594,7 +594,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_TRAFFIC_LOGGING_TEXT_LIMIT+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`200`
+|`+++200+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`quarkus.mcp.server.client-logging.default-level`]##
 ifdef::add-copy-button-to-config-props[]
@@ -620,7 +620,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_CLIENT_LOGGING_DEFAULT_LEVEL+++`
 endif::add-copy-button-to-env-var[]
 --
 a|`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
-|`info`
+|`+++info+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval[`quarkus.mcp.server.auto-ping-interval`]##
 ifdef::add-copy-button-to-config-props[]
@@ -674,7 +674,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCES_PAGE_SIZE+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`50`
+|`+++50+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`quarkus.mcp.server.resource-templates.page-size`]##
 ifdef::add-copy-button-to-config-props[]
@@ -700,7 +700,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_PAGE_SIZE+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`50`
+|`+++50+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`quarkus.mcp.server.tools.page-size`]##
 ifdef::add-copy-button-to-config-props[]
@@ -726,7 +726,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_PAGE_SIZE+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`50`
+|`+++50+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode[`quarkus.mcp.server.tools.structured-content.compatibility-mode`]##
 ifdef::add-copy-button-to-config-props[]
@@ -753,7 +753,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_STRUCTURED_CONTENT_COMPATIBIL
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`false`
+|`+++false+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
 ifdef::add-copy-button-to-config-props[]
@@ -779,7 +779,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_PROMPTS_PAGE_SIZE+++`
 endif::add-copy-button-to-env-var[]
 --
 |int
-|`50`
+|`+++50+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout[`quarkus.mcp.server.sampling.default-timeout`]##
 ifdef::add-copy-button-to-config-props[]
@@ -805,7 +805,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_SAMPLING_DEFAULT_TIMEOUT+++`
 endif::add-copy-button-to-env-var[]
 --
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
-|`60S`
+|`+++60S+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout[`quarkus.mcp.server.roots.default-timeout`]##
 ifdef::add-copy-button-to-config-props[]
@@ -831,7 +831,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_ROOTS_DEFAULT_TIMEOUT+++`
 endif::add-copy-button-to-env-var[]
 --
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
-|`60S`
+|`+++60S+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout[`quarkus.mcp.server.elicitation.default-timeout`]##
 ifdef::add-copy-button-to-config-props[]
@@ -857,7 +857,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_ELICITATION_DEFAULT_TIMEOUT+++`
 endif::add-copy-button-to-env-var[]
 --
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
-|`60S`
+|`+++60S+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
 ifdef::add-copy-button-to-config-props[]
@@ -884,7 +884,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_DEV_MODE_DUMMY_INIT+++`
 endif::add-copy-button-to-env-var[]
 --
 |boolean
-|`true`
+|`+++true+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout[`quarkus.mcp.server.connection-idle-timeout`]##
 ifdef::add-copy-button-to-config-props[]
@@ -912,7 +912,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_CONNECTION_IDLE_TIMEOUT+++`
 endif::add-copy-button-to-env-var[]
 --
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
-|`30M`
+|`+++30M+++`
 
 |===
 

@@ -105,6 +105,14 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
          */
         ToolDefinition setOutputSchema(Object schema);
 
+        /**
+         * If not set the input schema is generated automatically.
+         *
+         * @param schema
+         * @return self
+         */
+        ToolDefinition setInputSchema(Object schema);
+
     }
 
     public interface ToolArguments extends RequestFeatureArguments {

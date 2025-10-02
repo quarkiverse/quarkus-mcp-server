@@ -481,12 +481,16 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return Map.of();
     }
 
-    protected Object convert(String value, Type type) {
+    Object convert(String value, Type type) {
+        return convert(value, type, defaultValueConverters());
+    }
+
+    static Object convert(String value, Type type, Map<Type, DefaultValueConverter<?>> defaultValueConverters) {
         if (String.class.equals(type)) {
             return value;
         }
         type = box(type);
-        DefaultValueConverter<?> converter = defaultValueConverters().get(type);
+        DefaultValueConverter<?> converter = defaultValueConverters.get(type);
         if (converter != null) {
             return converter.convert(value);
         }
