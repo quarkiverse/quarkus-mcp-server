@@ -7,6 +7,8 @@ import jakarta.annotation.Priority;
  * <p>
  * Converters are discovered automatically, i.e. all implementations in a Quarkus application are registered.
  * <p>
+ * Implementations must declare a public no-args constructor.
+ * <p>
  * An implementation may be annotated with {@link Priority}. If multiple converters of the same priority exist for a specific
  * argument type, then only the converter with highest priority is registered.
  *

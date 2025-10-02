@@ -40,6 +40,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final boolean structuredContent;
     private final Type outputSchemaFrom;
     private final Type outputSchemaGenerator;
+    private final Type inputSchemaGenerator;
 
     // Server config name
     private final String server;
@@ -47,6 +48,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
             String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
             String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
+            Type inputSchemaGenerator,
             Content.Annotations resourceAnnotations) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
@@ -63,6 +65,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.structuredContent = structuredContent;
         this.outputSchemaFrom = outputSchemaFrom;
         this.outputSchemaGenerator = outputSchemaGenerator;
+        this.inputSchemaGenerator = inputSchemaGenerator;
         this.resourceAnnotations = resourceAnnotations;
     }
 
@@ -124,6 +127,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Type getOutputSchemaGenerator() {
         return outputSchemaGenerator;
+    }
+
+    Type getInputSchemaGenerator() {
+        return inputSchemaGenerator;
     }
 
     Annotations getResourceAnnotations() {

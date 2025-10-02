@@ -17,11 +17,12 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
+import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
+import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
+import io.quarkiverse.mcp.server.InputSchemaGenerator;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
@@ -35,7 +36,6 @@ import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
@@ -43,16 +43,17 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     private static final Logger LOG = Logger.getLogger(ToolManagerImpl.class);
 
-    private final DefaultSchemaGenerator schemaGenerator;
-    private final Map<String, Class<?>> toolArgumentHolders;
+    private final GlobalInputSchemaGenerator globalInputSchemaGenerator;
+    private final GlobalOutputSchemaGenerator globalOutputSchemaGenerator;
+
+    final Instance<InputSchemaGenerator<?>> inputSchemaGenerator;
+    final Instance<OutputSchemaGenerator> outputSchemaGenerator;
 
     final ConcurrentMap<String, ToolInfo> tools;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
     final List<ToolFilter> filters;
-
-    final Instance<OutputSchemaGenerator> outputSchemaGenerator;
 
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
@@ -61,18 +62,21 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
             @All List<ToolFilter> filters,
-            DefaultSchemaGenerator schemaGenerator,
+            GlobalInputSchemaGenerator globalInputSchemaGenerator,
+            GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
+            Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
             Instance<OutputSchemaGenerator> outputSchemaGenerator) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             this.tools.put(f.info().name(), new ToolMethod(f));
         }
-        this.schemaGenerator = schemaGenerator;
-        this.defaultValueConverters = metadata.defaultValueConverters();
+        this.globalInputSchemaGenerator = globalInputSchemaGenerator;
+        this.globalOutputSchemaGenerator = globalOutputSchemaGenerator;
         this.outputSchemaGenerator = outputSchemaGenerator;
+        this.inputSchemaGenerator = inputSchemaGenerator;
+        this.defaultValueConverters = metadata.defaultValueConverters();
         this.filters = filters;
-        this.toolArgumentHolders = metadata.toolArgumentHolders();
     }
 
     @Override
@@ -138,49 +142,6 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return defaultValueConverters;
     }
 
-    Object generateSchema(Class<?> holderClass, List<FeatureArgument> serializedArguments) {
-        JsonNode jsonNode = schemaGenerator.generateSchema(holderClass);
-        if (jsonNode.isObject()) {
-            ObjectNode objectNode = (ObjectNode) jsonNode;
-            for (FeatureArgument arg : serializedArguments) {
-                JsonNode node = objectNode.get(arg.name());
-                if (node != null) {
-                    postProcessJsonNode(node, arg.type(), arg.description(), arg.defaultValue());
-                }
-            }
-            return objectNode.get("properties");
-        }
-        return jsonNode;
-    }
-
-    Object generateSchema(Type type, String description, String defaultValue) {
-        JsonNode jsonNode = schemaGenerator.generateSchema(type);
-        postProcessJsonNode(jsonNode, type, description, defaultValue);
-        return jsonNode;
-    }
-
-    private void postProcessJsonNode(JsonNode jsonNode, Type type, String description, String defaultValue) {
-        if (jsonNode.isObject()) {
-            ObjectNode objectNode = (ObjectNode) jsonNode;
-            if (Types.isOptional(type)) {
-                // The generated schema for Optional<List<String>> looks like:
-                // {"type":"object","properties":{"value":{"type":"array","items":{"type":"string"}}}}
-                // We need to extract the value property and replace the original object node
-                ObjectNode valueProp = objectNode.withObjectProperty("properties").withObjectProperty("value");
-                if (valueProp != null) {
-                    objectNode = valueProp;
-                }
-            }
-            if (description != null && !description.isBlank()) {
-                objectNode.put("description", description);
-            }
-            if (defaultValue != null) {
-                Object converted = convert(defaultValue, type);
-                objectNode.putPOJO("default", converted);
-            }
-        }
-    }
-
     private boolean test(ToolInfo tool, McpConnection connection) {
         if (filters.isEmpty() || connection == null) {
             return true;
@@ -244,25 +205,6 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         public JsonObject asJson() {
             // TODO: it might make sense to cache the generated schemas
             JsonObject tool = metadata.asJson();
-            Object properties;
-            JsonArray required = new JsonArray();
-            for (FeatureArgument a : metadata.info().serializedArguments()) {
-                if (a.required()) {
-                    required.add(a.name());
-                }
-            }
-
-            Class<?> holder = toolArgumentHolders.get(name());
-            if (holder != null) {
-                properties = generateSchema(holder, metadata.info().serializedArguments());
-            } else {
-                JsonObject props = new JsonObject();
-                for (FeatureArgument a : metadata.info().serializedArguments()) {
-                    props.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
-                }
-                properties = props;
-            }
-
             ToolAnnotations toolAnnotations = metadata.info().toolAnnotations();
             if (toolAnnotations != null) {
                 tool.put("annotations", new JsonObject()
@@ -272,15 +214,24 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                         .put("openWorldHint", toolAnnotations.openWorldHint())
                         .put("readOnlyHint", toolAnnotations.readOnlyHint()));
             }
-            tool.put("inputSchema", new JsonObject()
-                    .put("type", "object")
-                    .put("properties", properties)
-                    .put("required", required));
+
+            Class<? extends InputSchemaGenerator<?>> inputSchemaGeneratorClass = metadata.info().inputSchemaGenerator();
+            Object inputSchema;
+            if (inputSchemaGeneratorClass != null
+                    && !inputSchemaGeneratorClass.equals(GlobalInputSchemaGenerator.class)) {
+                inputSchema = inputSchemaGenerator.select(inputSchemaGeneratorClass)
+                        .get()
+                        .generate(this);
+            } else {
+                inputSchema = globalInputSchemaGenerator.generate(this).value();
+            }
+            tool.put("inputSchema", inputSchema);
+
             Class<? extends OutputSchemaGenerator> outputSchemaGeneratorClass = metadata.info().outputSchemaGenerator();
             if (outputSchemaGeneratorClass != null) {
                 Object outputSchema;
-                if (DefaultSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
-                    outputSchema = schemaGenerator.generate(metadata.info().outputSchemaFrom());
+                if (GlobalOutputSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
+                    outputSchema = globalOutputSchemaGenerator.generate(metadata.info().outputSchemaFrom());
                 } else {
                     outputSchema = outputSchemaGenerator.select(outputSchemaGeneratorClass).get()
                             .generate(metadata.info().outputSchemaFrom());
@@ -299,6 +250,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private String title;
         private final List<ToolArgument> arguments;
         private Object outputSchema;
+        private Object inputSchema;
 
         private ToolAnnotations annotations;
 
@@ -327,7 +279,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public ToolDefinition generateOutputSchema(Class<?> from) {
-            this.outputSchema = schemaGenerator.generate(from);
+            this.outputSchema = globalOutputSchemaGenerator.generate(from);
             return this;
         }
 
@@ -338,10 +290,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition setInputSchema(Object schema) {
+            this.inputSchema = schema;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, arguments, annotations, outputSchema);
+                    runOnVirtualThread, arguments, annotations, outputSchema, inputSchema);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
                 throw toolAlreadyExists(name);
@@ -359,17 +317,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolArgument> arguments;
         private final Optional<ToolAnnotations> annotations;
         private final Object outputSchema;
+        private final Object inputSchema;
 
         private ToolDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
-                Object outputSchema) {
+                Object outputSchema, Object inputSchema) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
             this.outputSchema = outputSchema;
+            this.inputSchema = inputSchema;
         }
 
         @Override
@@ -395,14 +355,6 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (title != null) {
                 tool.put("title", title);
             }
-            JsonObject properties = new JsonObject();
-            JsonArray required = new JsonArray();
-            for (ToolArgument a : arguments) {
-                properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
-                if (a.required()) {
-                    required.add(a.name());
-                }
-            }
             if (annotations.isPresent()) {
                 tool.put("annotations", new JsonObject()
                         .put("title", annotations.get().title())
@@ -411,10 +363,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                         .put("openWorldHint", annotations.get().openWorldHint())
                         .put("readOnlyHint", annotations.get().readOnlyHint()));
             }
-            tool.put("inputSchema", new JsonObject()
-                    .put("type", "object")
-                    .put("properties", properties)
-                    .put("required", required));
+            if (inputSchema != null) {
+                tool.put("inputSchema", inputSchema);
+            } else {
+                tool.put("inputSchema", globalInputSchemaGenerator.generate(this).value());
+            }
             if (outputSchema != null) {
                 tool.put("outputSchema", outputSchema);
             }

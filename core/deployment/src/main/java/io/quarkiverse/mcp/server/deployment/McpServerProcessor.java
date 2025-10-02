@@ -51,6 +51,8 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
+import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.McpServer;
@@ -84,6 +86,7 @@ import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
 import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpObjectMapperCustomizer;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -163,6 +166,7 @@ class McpServerProcessor {
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
         unremovable.addBeanClass(ResponseHandlers.class);
         unremovable.addBeanClass(DefaultSchemaGenerator.class);
+        unremovable.addBeanClass(McpObjectMapperCustomizer.class);
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
@@ -276,6 +280,7 @@ class McpServerProcessor {
                     boolean structuredContent = false;
                     org.jboss.jandex.Type outputSchemaFrom = null;
                     org.jboss.jandex.Type outputSchemaGenerator = null;
+                    org.jboss.jandex.Type inputSchemaGenerator = null;
                     ToolManager.ToolAnnotations toolAnnotations = null;
                     Content.Annotations resourceAnnotations = null;
 
@@ -317,6 +322,7 @@ class McpServerProcessor {
                         AnnotationValue structuredContentValue = featureAnnotation.value("structuredContent");
                         if (structuredContentValue != null)
                             structuredContent = structuredContentValue.asBoolean();
+
                         AnnotationValue outputSchemaValue = featureAnnotation.value("outputSchema");
                         if (outputSchemaValue != null) {
                             AnnotationValue outputSchemaFromValue = outputSchemaValue.asNested().value("from");
@@ -326,13 +332,22 @@ class McpServerProcessor {
                             if (outputSchemaGeneratorValue != null) {
                                 outputSchemaGenerator = outputSchemaGeneratorValue.asClass();
                             } else {
-                                outputSchemaGenerator = ClassType.create(DefaultSchemaGenerator.class);
+                                outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
                             }
                         } else if (structuredContent) {
                             outputSchemaFrom = ClassType.create(method.returnType().name());
-                            outputSchemaGenerator = ClassType.create(DefaultSchemaGenerator.class);
+                            outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
                         }
 
+                        AnnotationValue inputSchemaValue = featureAnnotation.value("inputSchema");
+                        if (inputSchemaValue != null) {
+                            AnnotationValue inputSchemaValueGeneratorValue = inputSchemaValue.asNested().value("generator");
+                            if (inputSchemaValueGeneratorValue != null) {
+                                inputSchemaGenerator = inputSchemaValueGeneratorValue.asClass();
+                            } else {
+                                inputSchemaGenerator = ClassType.create(GlobalInputSchemaGenerator.class);
+                            }
+                        }
                     }
 
                     String server = McpServer.DEFAULT;
@@ -347,7 +362,7 @@ class McpServerProcessor {
 
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
                             description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                            outputSchemaFrom, outputSchemaGenerator, resourceAnnotations);
+                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -1177,7 +1192,7 @@ class McpServerProcessor {
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
                         Content.Annotations.class, String.class,
-                        Class.class, Class.class),
+                        Class.class, Class.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
@@ -1189,7 +1204,9 @@ class McpServerProcessor {
                 featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
                 featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()
-                        : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()));
+                        : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()),
+                featureMethod.getInputSchemaGenerator() == null ? metaMethod.loadNull()
+                        : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()));
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));

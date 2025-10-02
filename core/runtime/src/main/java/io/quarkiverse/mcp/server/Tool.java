@@ -81,6 +81,11 @@ public @interface Tool {
     boolean structuredContent() default false;
 
     /**
+     * An input schema for validation of results.
+     */
+    InputSchema inputSchema() default @InputSchema;
+
+    /**
      * An output schema for validation of results with structured content.
      * <p>
      * This configuration is useful when a tool method returns a {@link ToolResponse} with structured content directly - in this
@@ -89,6 +94,18 @@ public @interface Tool {
      * @see #structuredContent()
      */
     OutputSchema outputSchema() default @OutputSchema;
+
+    @Retention(RUNTIME)
+    @Target(ElementType.ANNOTATION_TYPE)
+    public @interface InputSchema {
+
+        /**
+         * The generator class. Implementation classes must be CDI beans. Qualifiers are ignored.
+         * <p>
+         * By default, the built-in generator is used.
+         */
+        Class<? extends InputSchemaGenerator<?>> generator() default GlobalInputSchemaGenerator.class;
+    }
 
     @Retention(RUNTIME)
     @Target(ElementType.ANNOTATION_TYPE)
@@ -106,7 +123,7 @@ public @interface Tool {
          * <p>
          * By default, the built-in generator is used.
          */
-        Class<? extends OutputSchemaGenerator> generator() default OutputSchemaGenerator.class;
+        Class<? extends OutputSchemaGenerator> generator() default GlobalOutputSchemaGenerator.class;
 
     }
 

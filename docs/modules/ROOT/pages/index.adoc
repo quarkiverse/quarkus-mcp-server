@@ -193,12 +193,73 @@ For example, `void` methods are not supported.
 
 === Customizing JSON Schema Generation
 
-The MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
+By default, the MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
 This library is configurable through modules that process various annotations (e.g., Jackson, Bean Validation) to enrich the generated schemas.
 
 By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the schema generator server will be automatically configured to use the Jackson module.
-The same goes for `com.github.victools:jsonschema-module-jakarta-validation and `com.github.victools:jsonschema-module-swagger-2`.
+The same goes for `com.github.victools:jsonschema-module-jakarta-validation` and `com.github.victools:jsonschema-module-swagger-2`.
 See the <<extension-configuration-reference>> for relevant config properties.
+
+However, it is also possible to override the default behavior.
+First, you can customize the input schema generation on the method level, using a custom `io.quarkiverse.mcp.server.InputSchemaGenerator` together with `Tool.InputSchema#generator()`. 
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Tool(description = "Put you description here.", inputSchema = @InputSchema(generator = MySchemaGenerator.class)) <1>
+    String foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
+        return "Foo name is " + name;
+    }
+}
+----
+<1> The `MySchemaGenerator` is used to generate the input schema for this `@Tool` method. `InputSchemaGenerator` implementations must be CDI beans. Qualifiers are ignored.
+
+Furthermore, you can also implement a custom `io.quarkiverse.mcp.server.GlobalInputSchemaGenerator`.
+This generator is then used for all `@Tool` methods instead of the buil-in implementation.
+
+=== Caching Generated JSON Schemas
+
+If your application contains a lot of tools with complex input/output schemas it might make sense to cache the generated schemas so that they are not re-generated for each `tools/list` request.
+
+You can leverage CDI decorators to implement a simple cache:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
+import jakarta.inject.Inject;
+import jakarta.decorator.Decorator;
+import jakarta.decorator.Delegate;
+import jakarta.annotation.Priority;
+
+@Priority(1) <1>
+@Decorator <2>
+public class CachingGlobalSchemaGenerator implements GlobalInputSchemaGenerator {
+
+   private final ConcurrentMap<String, InputSchema> cache = new ConcurrentHashMap<>();
+
+   @Inject
+   @Delegate
+   GlobalInputSchemaGenerator delegate; <3>
+
+   @Override
+   public InputSchema generate(ToolInfo tool) {
+      return CACHE.computeIfAbsent(tool.name(), k -> {
+            return delegate.generate(tool); <4>
+      });
+   }
+}
+----
+<1> `@Priority` enables the decorator. Decorators with smaller priority values are called first.
+<2> `@Decorator` marks a decorator component.
+<3> Each decorator must declare exactly one delegate injection point. The decorator applies to beans that are assignable to this delegate injection point.
+<4> The decorator may invoke any method of the delegate object. And the container invokes either the next decorator in the chain or the business method of the intercepted instance.
+
+TIP: CDI decorators are similar to CDI interceptors, but because they implement interfaces with business semantics, they are able to implement business logic.
 
 === Structured Content
 
