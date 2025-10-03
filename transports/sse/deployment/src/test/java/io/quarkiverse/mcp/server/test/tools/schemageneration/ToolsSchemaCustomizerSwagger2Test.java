@@ -25,7 +25,7 @@ public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.swagger2.enabled", "true")
+            .overrideConfigKey("quarkus.mcp.server.schema-generator.swagger2.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithSwagger2AnnotatedType.class));
 

@@ -27,7 +27,7 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "true")
+            .overrideConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithJacksonAnnotatedType.class));
 

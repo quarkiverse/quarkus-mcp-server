@@ -7,7 +7,7 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -28,7 +28,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-order`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-order`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-order+++[]
 endif::add-copy-button-to-config-props[]
@@ -51,7 +51,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-required`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-required`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -74,7 +74,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value+++[]
 endif::add-copy-button-to-config-props[]
@@ -97,7 +97,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property+++[]
 endif::add-copy-button-to-config-props[]
@@ -120,7 +120,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods[`quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods[`quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods+++[]
 endif::add-copy-button-to-config-props[]
@@ -143,7 +143,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy[`quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy[`quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy+++[]
 endif::add-copy-button-to-config-props[]
@@ -166,7 +166,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes[`quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes[`quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes+++[]
 endif::add-copy-button-to-config-props[]
@@ -189,7 +189,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes[`quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes[`quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes+++[]
 endif::add-copy-button-to-config-props[]
@@ -212,7 +212,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup[`quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup[`quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup+++[]
 endif::add-copy-button-to-config-props[]
@@ -235,7 +235,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform[`quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform[`quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform+++[]
 endif::add-copy-button-to-config-props[]
@@ -258,7 +258,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id[`quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id[`quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id+++[]
 endif::add-copy-button-to-config-props[]
@@ -281,7 +281,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled[`quarkus.mcp.server.schema-generator.jakarta-validation.enabled`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled[`quarkus.mcp.server.schema-generator.jakarta-validation.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -302,7 +302,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -325,7 +325,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -348,7 +348,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format[`quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format[`quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format+++[]
 endif::add-copy-button-to-config-props[]
@@ -371,7 +371,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions[`quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions[`quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions+++[]
 endif::add-copy-button-to-config-props[]
@@ -394,7 +394,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`quarkus.mcp.server.schema-generator.swagger2.enabled`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`quarkus.mcp.server.schema-generator.swagger2.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.swagger2.enabled+++[]
 endif::add-copy-button-to-config-props[]
