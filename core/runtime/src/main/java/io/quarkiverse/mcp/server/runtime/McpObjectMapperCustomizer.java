@@ -1,6 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.Dependent;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -19,7 +19,7 @@ import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkus.jackson.ObjectMapperCustomizer;
 
-@Singleton
+@Dependent
 public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
 
     @Override
