@@ -238,7 +238,7 @@ import jakarta.annotation.Priority;
 
 @Priority(1) <1>
 @Decorator <2>
-public class CachingGlobalSchemaGenerator implements GlobalInputSchemaGenerator {
+public class CachingGlobalSchemaGeneratorDecorator implements GlobalInputSchemaGenerator {
 
    private final ConcurrentMap<String, InputSchema> cache = new ConcurrentHashMap<>();
 
@@ -248,7 +248,7 @@ public class CachingGlobalSchemaGenerator implements GlobalInputSchemaGenerator 
 
    @Override
    public InputSchema generate(ToolInfo tool) {
-      return CACHE.computeIfAbsent(tool.name(), k -> {
+      return cache.computeIfAbsent(tool.name(), k -> {
             return delegate.generate(tool); <4>
       });
    }
