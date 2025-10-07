@@ -34,7 +34,7 @@
     <properties>
         <quarkus.version>3.27.0</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
-        <sundrio.version>0.220.1</sundrio.version>
+        <sundrio.version>0.230.0</sundrio.version>
         <swagger-annotations.version>2.2.38</swagger-annotations.version>
     </properties>
 
