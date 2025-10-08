@@ -20,11 +20,14 @@ Add the following dependency to your POM file:
 ```xml
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <!-- use 'quarkus-mcp-server-stdio' if you want to use the STDIO transport instead of the HTTP/SSE transport -->
     <artifactId>quarkus-mcp-server-sse</artifactId>
-    <version>${project-version}</version>
+    <version>${quarkus-mcp-server-version}</version>
 </dependency>
 ```
+
+> [!NOTE]  
+> This dependency includes the HTTP/SSE transport. Use the `quarkus-mcp-server-stdio` artifactId if you want to use the STDIO transport instead. See also the [Supported transports](https://docs.quarkiverse.io/quarkus-mcp-server/dev/#_supported_transports) section in the docs for more information.
+
 
 ### Step #2 
 
@@ -41,13 +44,12 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
-
-import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.Tool;
 
 // This class is automatically registered as a @Singleton CDI bean
-public class ServerFeatures {
+public class MyServerFeatures {
 
     @Inject
     CodeService codeService;
