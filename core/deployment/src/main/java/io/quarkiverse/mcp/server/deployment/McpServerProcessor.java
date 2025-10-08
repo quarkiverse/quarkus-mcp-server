@@ -84,6 +84,7 @@ import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
 import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpObjectMapperCustomizer;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -163,6 +164,7 @@ class McpServerProcessor {
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
         unremovable.addBeanClass(ResponseHandlers.class);
         unremovable.addBeanClass(DefaultSchemaGenerator.class);
+        unremovable.addBeanClass(McpObjectMapperCustomizer.class);
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
