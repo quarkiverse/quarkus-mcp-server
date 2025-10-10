@@ -120,7 +120,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         URI endpoint = URI.create(uriBase.toString() + event.data().strip());
         this.messageEndpoint = endpoint;
         LOG.infof("Message endpoint received: %s", endpoint);
-        connected.set(true);
 
         JsonObject initMessage = newInitMessage();
         HttpResponse response = sendSync(initMessage, additionalHeaders.apply(initMessage), clientBasicAuth);
@@ -152,6 +151,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         JsonObject nofitication = newMessage("notifications/initialized");
         response = sendSync(nofitication, additionalHeaders.apply(nofitication), clientBasicAuth);
         assertEquals(200, response.statusCode());
+        connected.set(true);
         return this;
     }
 
@@ -416,15 +416,15 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     private CompletableFuture<java.net.http.HttpResponse<String>> sendAsync(String data, MultiMap additionalHeaders,
             BasicAuth basicAuth) {
-        if (!connected.get()) {
-            throw new IllegalStateException("Client is not connected");
+        if (messageEndpoint == null) {
+            throw new IllegalStateException("Message endpoint not ready");
         }
         return httpClient.sendAsync(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
     }
 
     private HttpResponse sendSync(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        if (!connected.get()) {
-            throw new IllegalStateException("Client is not connected");
+        if (messageEndpoint == null) {
+            throw new IllegalStateException("Message endpoint not ready");
         }
         java.net.http.HttpResponse<String> r;
         try {
@@ -457,14 +457,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                     McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
         }
         return builder.build();
-    }
-
-    @Override
-    protected int nextRequestId() {
-        if (!isConnected()) {
-            throw notConnected();
-        }
-        return client.state.nextRequestId();
     }
 
 }

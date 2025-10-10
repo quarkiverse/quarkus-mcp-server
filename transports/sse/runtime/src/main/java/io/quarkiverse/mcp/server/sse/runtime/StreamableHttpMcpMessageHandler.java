@@ -85,14 +85,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl notificationManager,
-            ResponseHandlers serverRequests,
+            ResponseHandlers responseHandlers,
             @All List<InitialCheck> initialChecks,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
             Vertx vertx) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests, metadata, vertx,
+                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, responseHandlers, metadata,
+                vertx,
                 initialChecks);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;

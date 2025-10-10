@@ -18,6 +18,7 @@ import java.util.function.Function;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
@@ -105,6 +106,15 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         if (openSubsidiarySse) {
             client.connectSubsidiarySse(additionalHeaders(null));
+            if (autoPong) {
+                client.setRequestConsumer(m -> {
+                    String method = m.getString("method");
+                    if (method != null && "ping".equals(method)) {
+                        JsonObject pong = Messages.newResult(m.getValue("id"), new JsonObject());
+                        sendAndForget(pong);
+                    }
+                });
+            }
         }
 
         // Send "notifications/initialized"
@@ -152,11 +162,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     }
 
     @Override
-    protected int nextRequestId() {
-        return client.state.nextRequestId();
-    }
-
-    @Override
     public void sendAndForget(JsonObject message) {
         send(message, additionalHeaders(message), clientBasicAuth);
     }
@@ -178,8 +183,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     }
 
     class McpStreamableAssertImpl extends McpAssertBase implements McpStreamableAssert {
-
-        protected final List<McpTestClientBase.ResponseAssert> asserts = new ArrayList<>();
 
         protected final AtomicReference<MultiMap> additionalHeaders;
         protected final AtomicReference<BasicAuth> basicAuth;

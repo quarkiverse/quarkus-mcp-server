@@ -231,7 +231,9 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         return initMessage;
     }
 
-    protected abstract int nextRequestId();
+    protected int nextRequestId() {
+        return clientState().nextRequestId();
+    }
 
     static final String getBasicAuthenticationHeader(String username, String password) {
         String value = username + ":" + password;
