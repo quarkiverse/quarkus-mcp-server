@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.hibernate.validator.test;
+package io.quarkiverse.mcp.server.websocket.test;
 
 import java.net.URI;
 

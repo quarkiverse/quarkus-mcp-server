@@ -38,11 +38,12 @@ public class McpAssured {
     /**
      * The base URI is used by HTTP-based client implementations.
      * <p>
-     * The URI set by {@link McpSseTestClient.Builder#setBaseUri(URI)} or
-     * {@link McpStreamableTestClient.Builder#setBaseUri(URI)} takes precedence over this value.
+     * The URI set by {@link McpSseTestClient.Builder#setBaseUri(URI)}, {@link McpStreamableTestClient.Builder#setBaseUri(URI)},
+     * or {@link McpWebSocketTestClient.Builder#setBaseUri(URI)} takes precedence over this value.
      *
      * @see McpSseTestClient.Builder#setBaseUri(URI)
      * @see McpStreamableTestClient.Builder#setBaseUri(URI)
+     * @see McpWebSocketTestClient.Builder#setBaseUri(URI)
      */
     public static URI baseUri;
 
@@ -76,6 +77,22 @@ public class McpAssured {
      */
     public static McpStreamableTestClient newConnectedStreamableClient() {
         return newStreamableClient().build().connect();
+    }
+
+    /**
+     *
+     * @return a new WebSocket test client builder
+     */
+    public static McpWebSocketTestClient.Builder newWebSocketClient() {
+        return new McpWebSocketTestClientImpl.BuilderImpl();
+    }
+
+    /**
+     *
+     * @return a connected WebSocket test client
+     */
+    public static McpWebSocketTestClient newConnectedWebSocketClient() {
+        return newWebSocketClient().build().connect();
     }
 
     public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>> {
@@ -374,6 +391,53 @@ public class McpAssured {
              * @return a new test client
              */
             McpStreamableTestClient build();
+        }
+
+    }
+
+    /**
+     * A test client that leverages the WebSocket transport.
+     */
+    public interface McpWebSocketTestClient
+            extends McpTestClient<McpWebSocketAssert, McpWebSocketTestClient> {
+
+        /**
+         *
+         * @return the WebSocket endpoint
+         */
+        URI endpointUri();
+
+        public interface Builder extends McpTestClient.Builder<Builder> {
+
+            /**
+             *
+             * @param username
+             * @param password
+             * @return self
+             */
+            Builder setBasicAuth(String username, String password);
+
+            /**
+             *
+             * @param baseUri
+             * @return self
+             * @see McpAssured#baseUri
+             */
+            Builder setBaseUri(URI baseUri);
+
+            /**
+             * {@code /ws/mcp} is used by default.
+             *
+             * @param ssePath
+             * @return self
+             */
+            Builder setEndpointPath(String path);
+
+            /**
+             *
+             * @return a new test client
+             */
+            McpWebSocketTestClient build();
         }
 
     }
@@ -1175,6 +1239,10 @@ public class McpAssured {
          * @return self
          */
         McpSseAssert noBasicAuth();
+
+    }
+
+    public interface McpWebSocketAssert extends McpAssert<McpWebSocketAssert> {
 
     }
 

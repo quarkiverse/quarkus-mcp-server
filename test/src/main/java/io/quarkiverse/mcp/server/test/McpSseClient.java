@@ -11,13 +11,11 @@ import org.awaitility.Awaitility;
 import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.vertx.core.json.JsonObject;
 
-public class McpSseClient extends SseClient {
+class McpSseClient extends SseClient {
 
-    public final McpClientState state;
-
-    private final List<SseEvent> allEvents;
-
-    private final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
+    final McpClientState state;
+    final List<SseEvent> allEvents;
+    final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
 
     public McpSseClient(URI uri) {
         super(uri);

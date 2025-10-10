@@ -10,14 +10,15 @@ NOTE: The https://github.com/langchain4j/langchain4j[LangChain4j] project provid
 
 == Supported transports
 
-MCP currently defines two standard transports for client-server communication.
+The MCP specification currently defines two standard transports for client-server communication.
 The `stdio` transport starts an MCP server as a subprocess and communicates over standard `in` and `out`.
 The `HTTP` transports connects to a running HTTP server.
 The `HTTP` transport is defined in two variants: the "Streamable HTTP" variant (introduced in the protocol version 2025-03-26) replaces the "HTTP/SSE" transport (introduced in protocol version 2024-11-05).
 The "HTTP/SSE" transport is considered deprecated but it's still supported by most clients and servers.
 
 This extension supports the `stdio` transport and both variants of the `HTTP` transport.
-Moreover, it defines a unified API to declare server features (tools, prompts and resources).
+Moreover, it also support the unofficial `websocket` transport.
+It also defines a unified API to declare server features (tools, prompts and resources).
 In other words, the server features are declared using the same API but the selected transport determines the way the MCP server communicates with clients.
 
 If you want to use the `stdio` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
@@ -54,6 +55,21 @@ The SSE endpoint (as defined in `2024-11-05`) is exposed at `\{rootPath}/sse`, i
 The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
 
 NOTE: The https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#resumability-and-redelivery[Resumability and Redelivery] for the Streamable HTTP is not supported yet.
+
+If you want to use the `WebSocket` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-websocket` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-websocket</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+The WebSocket endpoint is exposed at `\{endpointPath}`.
+The `\{endpointPath}` is set to `/mcp/ws` by default, but it can be changed with the `quarkus.mcp.server.websocket.endpoint-path` configuration property.
 
 == Supported server features
 

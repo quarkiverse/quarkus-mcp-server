@@ -73,7 +73,11 @@ public record InitialRequest(Implementation implementation, String protocolVersi
         /**
          * The Streamable HTTP transport from version 2025-03-26.
          */
-        STREAMABLE_HTTP
+        STREAMABLE_HTTP,
+        /**
+         * Unofficial WebSocket transport.
+         */
+        WEBSOCKET,
     }
 
 }

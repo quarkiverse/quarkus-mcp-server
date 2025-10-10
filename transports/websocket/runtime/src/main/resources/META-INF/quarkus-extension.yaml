@@ -1,0 +1,9 @@
+name: MCP Server - WebSocket
+description: This extension enables developers to implement the MCP server features easily.
+metadata:
+  keywords:
+    - mcp-server
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html
+  categories:
+    - "miscellaneous"
+  status: "preview"

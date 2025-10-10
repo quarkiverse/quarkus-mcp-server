@@ -9,6 +9,8 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.vertx.core.MultiMap;
@@ -19,12 +21,17 @@ class McpStreamableClient extends SseClient {
     final HttpClient httpClient;
     final URI mcpEndpoint;
     final McpClientState state;
+    final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
 
     McpStreamableClient(URI mcpEndpoint) {
         super(mcpEndpoint);
         this.httpClient = HttpClient.newHttpClient();
         this.mcpEndpoint = mcpEndpoint;
         this.state = new McpClientState();
+    }
+
+    public void setRequestConsumer(Consumer<JsonObject> value) {
+        this.requestConsumer.set(value);
     }
 
     // impl. note: the response is not reflected in the client state object

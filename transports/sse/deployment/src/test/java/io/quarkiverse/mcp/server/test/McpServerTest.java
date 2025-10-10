@@ -17,8 +17,6 @@ public abstract class McpServerTest {
     }
 
     public static QuarkusUnitTest defaultConfig(int textLimit) {
-        // TODO in theory, we should also add SseClient to all test archives
-        // but the test CL can see the class and we don't need Quarkus to analyze this util class
         QuarkusUnitTest config = new QuarkusUnitTest();
         if (System.getProperty("logTraffic") != null) {
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");

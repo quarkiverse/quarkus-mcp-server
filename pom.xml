@@ -17,6 +17,7 @@
         <module>core</module>
         <module>transports/sse</module>
         <module>transports/stdio</module>
+        <module>transports/websocket</module>
         <module>sse-client</module>
         <module>test</module>
         <module>devtools/stdio-sse-proxy</module>
