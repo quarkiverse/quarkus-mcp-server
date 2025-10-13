@@ -12,7 +12,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-        <quarkus.platform.version>3.26.3</quarkus.platform.version>
+        <quarkus.platform.version>3.27.0</quarkus.platform.version>
+        <quarkus.mcp-server.version>1.6.1</quarkus.mcp-server.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.0</surefire-plugin.version>
     </properties>
@@ -23,6 +24,13 @@
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>${quarkus.platform.artifact-id}</artifactId>
                 <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.mcp</groupId>
+                <artifactId>quarkus-mcp-server-bom</artifactId>
+                <version>${quarkus.mcp-server.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -37,7 +45,6 @@
         <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
             <artifactId>quarkus-mcp-server-sse</artifactId>
-            <version>1.5.3</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
