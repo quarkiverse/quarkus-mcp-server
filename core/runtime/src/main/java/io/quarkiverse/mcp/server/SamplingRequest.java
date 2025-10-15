@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 
@@ -69,6 +70,7 @@ public interface SamplingRequest {
      *
      * @return a new {@link Uni} that completes with a {@code SamplingResponse}
      */
+    @CheckReturnValue
     Uni<SamplingResponse> send();
 
     /**

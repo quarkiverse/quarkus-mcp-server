@@ -15,7 +15,9 @@ public interface Elicitation {
     boolean isSupported();
 
     /**
+     *
      * @return a new elicitation request builder
+     * @throws IllegalStateException if the client does not support the {@link ClientCapability#ELICITATION} capability
      */
     ElicitationRequest.Builder requestBuilder();
 

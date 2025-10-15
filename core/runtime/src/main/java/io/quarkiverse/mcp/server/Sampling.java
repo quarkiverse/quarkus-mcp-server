@@ -10,13 +10,14 @@ package io.quarkiverse.mcp.server;
 public interface Sampling {
 
     /**
-     * @return {@code true} if the client supports the {@code sampling} capability, {@code false} otherwise
+     * @return {@code true} if the client supports the {@value ClientCapability#SAMPLING} capability, {@code false} otherwise
      * @see InitialRequest
      */
     boolean isSupported();
 
     /**
      * @return a new sampling request builder
+     * @throws IllegalStateException if the client does not support the {@value ClientCapability#SAMPLING} capability
      */
     SamplingRequest.Builder requestBuilder();
 
