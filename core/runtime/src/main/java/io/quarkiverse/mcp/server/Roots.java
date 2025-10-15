@@ -7,14 +7,15 @@ import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 
 /**
- * If an MCP client supports the {@code roots} capability, then the server can obtain the list of root objects.
+ * If an MCP client supports the {@value ClientCapability#ROOTS} capability, then the server can obtain the list of root
+ * objects.
  *
  * @see Notification.Type#ROOTS_LIST_CHANGED
  */
 public interface Roots {
 
     /**
-     * @return {@code true} if the client supports the {@code roots} capability, {@code false} otherwise
+     * @return {@code true} if the client supports the {@value ClientCapability#ROOTS} capability, {@code false} otherwise
      */
     boolean isSupported();
 
@@ -25,7 +26,7 @@ public interface Roots {
      * {@link TimeoutException}. The timeout is configured with the {@code quarkus.mcp.server.roots.default-timeout} config
      * property.
      *
-     * @throws IllegalStateException if the client does not support the {@code roots} capability
+     * @throws IllegalStateException if the client does not support the {@value ClientCapability#ROOTS} capability
      * @return a new {@link Uni} completed with the list of roots
      */
     @CheckReturnValue
@@ -39,7 +40,7 @@ public interface Roots {
      * If the client does not respond before the timeout expires then a {@link TimeoutException} is thrown. The timeout is
      * configured with the {@code quarkus.mcp.server.roots.default-timeout} config property.
      *
-     * @throws IllegalStateException if the client does not support the {@code roots} capability
+     * @throws IllegalStateException if the client does not support the {@value ClientCapability#ROOTS} capability
      * @return the list of roots
      */
     default List<Root> listAndAwait() {

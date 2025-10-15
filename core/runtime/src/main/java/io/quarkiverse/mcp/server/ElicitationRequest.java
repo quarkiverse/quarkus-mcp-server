@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
@@ -33,6 +34,7 @@ public interface ElicitationRequest {
      *
      * @return a new {@link Uni} that completes with a {@code ElicitationResponse}
      */
+    @CheckReturnValue
     Uni<ElicitationResponse> send();
 
     /**

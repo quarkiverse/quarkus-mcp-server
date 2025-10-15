@@ -183,6 +183,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
@@ -372,6 +373,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
@@ -423,6 +425,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.Progress`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
@@ -511,6 +514,7 @@ A `@Resource` method may accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
@@ -618,6 +622,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
@@ -669,6 +674,7 @@ However, it may also accept the following parameters:
 * `io.quarkiverse.mcp.server.RequestUri`
 * `io.quarkiverse.mcp.server.Roots`
 * `io.quarkiverse.mcp.server.Sampling`
+* `io.quarkiverse.mcp.server.Elicitation`
 * `io.quarkiverse.mcp.server.Cancellation`
 * `io.quarkiverse.mcp.server.RawMessage`
 
