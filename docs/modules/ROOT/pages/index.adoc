@@ -323,7 +323,30 @@ public class MyTools {
 <1> If `Tool#structuredContent()` is to `true` and the method returns a type `X` which is not specifically treated (see the conversion rules), then the return value is converted to JSON and used as the `structuredContent` of the result.
 <2> Also the output schema is generated automatically from the return type.
 
-TIP: If a tool method returns with structured content directly then the return type may not be used for schema generation. In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
+If a tool method returns the `ToolResponse` directly then the return type may not be used for schema generation.
+In this case, the `Tool#outputSchema()` can be used to define the output schema for validation of results with structured content.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.OutputSchema;
+import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    FooService fooService;
+
+    @Tool(description = "Put you description here.", outputSchema = @OutputSchema(from = Foo.class)) <1>
+    ToolResponse foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
+        return ToolResponse.structuredSuccess(fooService.ping(name));
+    }
+}
+----
+<1> The `Tool#outputSchema()` is used to define the class from which the output schema is generated.
 
 == Prompts
 
