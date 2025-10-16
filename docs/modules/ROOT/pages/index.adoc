@@ -80,7 +80,7 @@ You can also use the BOM (Bill Of Materials) to control the versions of all `io.
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>io.quarkiverse.mcp</groupId>
+            <groupId>${quarkus.platform.group-id}</groupId>
             <artifactId>quarkus-mcp-server-bom</artifactId>
             <version>{project-version}</version>
             <type>pom</type>
@@ -89,7 +89,7 @@ You can also use the BOM (Bill Of Materials) to control the versions of all `io.
     </dependencies>
 </dependencyManagement>
 ----
-==== 
+====
 
 == Supported server features
 
@@ -238,7 +238,7 @@ The same goes for `com.github.victools:jsonschema-module-jakarta-validation` and
 See the <<extension-configuration-reference>> for relevant config properties.
 
 However, it is also possible to override the default behavior.
-First, you can customize the input schema generation on the method level, using a custom `io.quarkiverse.mcp.server.InputSchemaGenerator` together with `Tool.InputSchema#generator()`. 
+First, you can customize the input schema generation on the method level, using a custom `io.quarkiverse.mcp.server.InputSchemaGenerator` together with `Tool.InputSchema#generator()`.
 
 [source,java]
 ----
@@ -881,7 +881,7 @@ public class MyTools {
     void destroy() {
        executor.shutdownNow();
     }
-    
+
     @Tool
     Uni<String> longRunning(Progress progress) { <1> <2>
        if (progress.token().isEmpty()) { <3>
@@ -911,7 +911,7 @@ public class MyTools {
 
 }
 ----
-<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter. 
+<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter.
 <2> Long running operations must return `Uni` so that the server can process them asynchronously.
 <3> The server should only send notifications if the client request contains the progress token.
 <4> `ProgressTracker` is a stateful thread-safe object can be be used to update the progress status and send notification messages to the client.
@@ -943,7 +943,7 @@ public class MyTools {
     void destroy() {
        executor.shutdownNow();
     }
-    
+
     @Tool
     Uni<String> longRunning(Progress progress) { <1> <2>
        if (progress.token().isEmpty()) { <3>
@@ -973,7 +973,7 @@ public class MyTools {
 
 }
 ----
-<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter. 
+<1> A server feature method can accept the `io.quarkiverse.mcp.server.Progress` parameter.
 <2> Long running operations must return `Uni` so that the server can process them asynchronously.
 <3> The server should only send notifications if the client request contains the progress token.
 <4> Send the message to the client without waiting for the result.
@@ -1004,7 +1004,7 @@ public class MyRoots {
    void change(McpConnection connection, Roots roots) { <3>
       rootsMap.put(connection.id(), roots.listAndAwait());
    }
-   
+
    public List<Root> getRoots(String connectionId) {
       return rootsMap.get(connectionId);
    }
@@ -1117,7 +1117,7 @@ public class MyTools {
 <1> The `Cancellation` parameter is injected automatically.
 <2> Perform the check and if cancellation is requested then skip the processing, i.e. throw an `OperationCancellationException`.
 <3> The convenient method `Cancellation#skipProcessingIfCancelled()` can be used instead.
- 
+
 === Raw messages
 
 Any server feature method can accept the `io.quarkiverse.mcp.server.RawMessage` parameter.
@@ -1155,12 +1155,12 @@ public class MyTools {
 ----
 <1> The `RawMessage` parameter is injected automatically.
 <2> We can use the `JsonObject` API to inspect the raw message from the client.
- 
+
 === Initial checks
 
 The CDI beans that implement `io.quarkiverse.mcp.server.InitialCheck` are used to perform an initial check when an MCP client connection is initialized, i.e. before the server capabilities are sent back to the client.
 If an initial check fails then the connection is not initialized successfully and the error message is sent back to the client.
-Multiple checks are sorted by `InjectableBean#getPriority()` and executed sequentially. 
+Multiple checks are sorted by `InjectableBean#getPriority()` and executed sequentially.
 Higher priority is executed first.
 
 .`InitialCheck` Example
@@ -1190,7 +1190,7 @@ If a filter throws an unchecked exception then its execution is ignored and the 
 
 Multiple filters are sorted by `InjectableBean#getPriority()` and executed sequentially.
 Higher priority is executed first.
-Only features that match all the filters are visible/accesible. 
+Only features that match all the filters are visible/accesible.
 
 .Filters Example
 [source,java]
@@ -1208,7 +1208,7 @@ public class MyFilters implements ToolFilter, PromptFilter {
      // Skip clients that do not support sampling
      return connection.initialRequest().supportsSampling();
    }
-   
+
    @Override
    public boolean test(ToolInfo tool, McpConnection connection) {
        // Skip tools registered programmatically
@@ -1216,7 +1216,7 @@ public class MyFilters implements ToolFilter, PromptFilter {
    }
 }
 ----
- 
+
 == Security
 
 In case of using the HTTP/SSE transport, you can secure the MCP SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].
@@ -1327,12 +1327,12 @@ $ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
 
 The `io.quarkiverse.mcp:quarkus-mcp-server-test` artifact provides a set of convenient utils to test your MCP server.
 The starting point is the `io.quarkiverse.mcp.server.test.McpAssured` class.
-First, you need to create a new test client. 
+First, you need to create a new test client.
 Currently, the clients for SSE and Streamable HTTP transports are supported.
 The workflow continues as follows.
 You create a group of MCP requests and corresponding assert functions.
 The MCP requests are sent immediately but the responses are not processed and the assert functions are not used until the `McpAssert#thenAssertResults()` method is called.
-In other words, the `McpAssert#thenAssertResults()` blocks and waits for all results; then all assert functions are applied. 
+In other words, the `McpAssert#thenAssertResults()` blocks and waits for all results; then all assert functions are applied.
 You can create as many groups as you need.
 A typical test for a `@Tool` may look like:
 
@@ -1393,7 +1393,7 @@ quarkus.mcp.server.bravo.server-info.name=Bravo server <2>
 quarkus.mcp.server.sse.root-path=/alpha/mcp <3>
 quarkus.mcp.server.bravo.sse.root-path=/bravo/mcp <4>
 ----
-<1> Set the server name for the default server. Note that the default server name can be omitted. 
+<1> Set the server name for the default server. Note that the default server name can be omitted.
 <2> Set the server name for the `bravo` server.
 <3> Set the root path for the default server, i.e. the MCP endpoint is exposed at `/alpha/mcp`.
 <4> Set the root path for the `bravo` server, i.e. the MCP endpoint is exposed at `/bravo/mcp`.
@@ -1411,17 +1411,17 @@ import io.quarkiverse.mcp.server.Tool;
 
 public class MyTools {
 
-   // No @McpServer annotation means the default server configuration 
+   // No @McpServer annotation means the default server configuration
    @Tool(description = "Put you description here.")
    String atool() {
       return "...some content";
    }
-   
-   @McpServer("bravo") <1> 
+
+   @McpServer("bravo") <1>
    @Tool(description = "Put you description here.")
    String btool() {
       return "...some content";
-   }  
+   }
 }
 ----
 <1> `MyTools#btool` is bound to the server configuration `bravo`, i.e. it's exposed with the `/bravo/mcp` endpoint. It's not available at `/alpha/mcp`.
