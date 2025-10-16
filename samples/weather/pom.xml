@@ -28,9 +28,9 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>io.quarkiverse.mcp</groupId>
+                <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-mcp-server-bom</artifactId>
-                <version>${quarkus.mcp-server.version}</version>
+                <version>${quarkus.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
