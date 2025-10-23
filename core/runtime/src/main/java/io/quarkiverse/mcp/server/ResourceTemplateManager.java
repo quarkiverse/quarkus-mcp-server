@@ -21,6 +21,7 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
      *
      * @param name The name must be unique
      * @return a new definition builder
+     * @throws IllegalArgumentException if a resource template with the given name already exits
      * @see ResourceTemplateDefinition#register()
      */
     ResourceTemplateDefinition newResourceTemplate(String name);
@@ -33,7 +34,7 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
     ResourceTemplateInfo removeResourceTemplate(String name);
 
     /**
-     * Resource info.
+     * Resource template info.
      */
     interface ResourceTemplateInfo extends FeatureManager.FeatureInfo {
 
@@ -82,6 +83,13 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
          * @return self
          */
         ResourceTemplateDefinition setAnnotations(Content.Annotations annotations);
+
+        /**
+         * @throws IllegalArgumentException if a resource template with the given name already exits
+         * @return the resource template info
+         */
+        @Override
+        ResourceTemplateInfo register();
 
     }
 
