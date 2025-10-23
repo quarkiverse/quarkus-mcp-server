@@ -33,7 +33,7 @@ public interface NotificationManager extends FeatureManager<NotificationInfo> {
     boolean removeNotification(Predicate<NotificationInfo> filter);
 
     /**
-     * Notification callback info.
+     * Notification info.
      */
     interface NotificationInfo extends FeatureManager.FeatureInfo {
 
@@ -59,6 +59,14 @@ public interface NotificationManager extends FeatureManager<NotificationInfo> {
          * @see Notification#value()
          */
         NotificationDefinition setType(Notification.Type type);
+
+        /**
+         *
+         * @return the notification info
+         * @throws IllegalArgumentException if a notification with the given name and type already exits
+         */
+        @Override
+        NotificationInfo register();
 
     }
 

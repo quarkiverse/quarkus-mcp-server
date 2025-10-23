@@ -66,6 +66,13 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
          */
         CompletionDefinition setArgumentName(String argumentName);
 
+        /**
+         * @return the completion info
+         * @throws IllegalArgumentException if a completion for the given name reference and agument already exits
+         */
+        @Override
+        CompletionInfo register();
+
     }
 
     interface CompletionArguments extends RequestFeatureArguments {

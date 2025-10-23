@@ -1,9 +1,12 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,11 +47,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     final ResourceTemplateManagerImpl resourceTemplateManager;
 
-    // uri -> resource
-    final ConcurrentMap<String, ResourceInfo> resources;
+    final ConcurrentMap<String, ResourceInfo> uriToResource;
+    final Set<String> resourceNames;
 
     // uri -> subscribers (connection ids)
-    final ConcurrentMap<String, List<String>> subscribers;
+    final ConcurrentMap<String, List<String>> uriToSubscribers;
 
     final List<ResourceFilter> filters;
 
@@ -62,17 +65,19 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             @All List<ResourceFilter> filters) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.resourceTemplateManager = resourceTemplateManager;
-        this.resources = new ConcurrentHashMap<>();
-        this.subscribers = new ConcurrentHashMap<>();
+        this.uriToResource = new ConcurrentHashMap<>();
+        this.resourceNames = Collections.synchronizedSet(new HashSet<>());
+        this.uriToSubscribers = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
-            this.resources.put(f.info().uri(), new ResourceMethod(f));
+            this.uriToResource.put(f.info().uri(), new ResourceMethod(f));
+            this.resourceNames.add(f.info().name());
         }
         this.filters = filters;
     }
 
     @Override
     Stream<ResourceInfo> infos() {
-        return resources.values().stream();
+        return uriToResource.values().stream();
     }
 
     @Override
@@ -82,7 +87,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     public ResourceInfo getResource(String uri) {
-        return resources.get(Objects.requireNonNull(uri));
+        return uriToResource.get(Objects.requireNonNull(uri));
     }
 
     void subscribe(String uri, McpRequest mcpRequest) {
@@ -92,12 +97,12 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
         List<String> ids = new CopyOnWriteArrayList<>();
         ids.add(mcpRequest.connection().id());
-        subscribers.merge(uri, ids, (old, val) -> Stream.concat(old.stream(), val.stream())
+        uriToSubscribers.merge(uri, ids, (old, val) -> Stream.concat(old.stream(), val.stream())
                 .collect(Collectors.toCollection(CopyOnWriteArrayList::new)));
     }
 
     void unsubscribe(String uri, String connectionId) {
-        List<String> ids = subscribers.get(uri);
+        List<String> ids = uriToSubscribers.get(uri);
         if (ids != null) {
             ids.remove(connectionId);
         }
@@ -105,7 +110,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     public ResourceDefinition newResource(String name) {
-        for (ResourceInfo resource : resources.values()) {
+        for (ResourceInfo resource : uriToResource.values()) {
             if (resource.name().equals(name)) {
                 resourceWithNameAlreadyExists(name);
             }
@@ -115,7 +120,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     private void sendUpdateNotifications(String uri) {
         JsonObject updated = Messages.newNotification("notifications/resources/updated", new JsonObject().put("uri", uri));
-        List<String> ids = subscribers.get(uri);
+        List<String> ids = uriToSubscribers.get(uri);
         if (ids != null) {
             for (String connectionId : ids) {
                 McpConnectionBase connection = connectionManager.get(connectionId);
@@ -139,9 +144,10 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     @Override
     public ResourceInfo removeResource(String uri) {
         AtomicReference<ResourceInfo> removed = new AtomicReference<>();
-        resources.computeIfPresent(uri, (key, value) -> {
+        uriToResource.computeIfPresent(uri, (key, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
+                resourceNames.remove(value.name());
                 notifyConnections("notifications/resources/list_changed");
                 return null;
             }
@@ -153,7 +159,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest) {
-        ResourceInfo resource = resources.get(id);
+        ResourceInfo resource = uriToResource.get(id);
         if (resource instanceof FeatureInvoker fi
                 && matches(resource, mcpRequest)
                 && test(resource, mcpRequest.connection())) {
@@ -395,7 +401,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
         @Override
         public ResourceDefinition setUri(String uri) {
-            if (resources.containsKey(uri)) {
+            if (uriToResource.containsKey(uri)) {
                 throw resourceWithUriAlreadyExists(uri);
             }
             this.uri = Objects.requireNonNull(uri);
@@ -423,15 +429,21 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public ResourceInfo register() {
             validate();
-            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, uri, mimeType, size, annotations);
-            ResourceInfo existing = resources.putIfAbsent(uri, ret);
-            if (existing != null) {
-                throw resourceWithUriAlreadyExists(uri);
-            } else {
+            ResourceInfo newValue = uriToResource.compute(uri, (uri, old) -> {
+                if (old != null) {
+                    throw resourceWithUriAlreadyExists(uri);
+                }
+                if (resourceNames.contains(name)) {
+                    throw resourceWithNameAlreadyExists(name);
+                }
+                resourceNames.add(name);
+                return new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
+                        runOnVirtualThread, uri, mimeType, size, annotations);
+            });
+            if (newValue != null) {
                 notifyConnections(McpMessageHandler.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
             }
-            return ret;
+            return newValue;
         }
     }
 

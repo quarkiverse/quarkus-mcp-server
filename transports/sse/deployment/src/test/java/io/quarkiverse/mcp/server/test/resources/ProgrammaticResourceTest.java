@@ -101,6 +101,9 @@ public class ProgrammaticResourceTest extends McpServerTest {
                 .send()
                 .resourcesRead("file:///bravo", r -> assertEquals("3", r.contents().get(0).asText().text()))
                 .thenAssertResults();
+
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> myResources.registerFailure());
+        assertEquals("A resource with name [dummy] already exits", iae.getMessage());
     }
 
     @Singleton
@@ -124,6 +127,31 @@ public class ProgrammaticResourceTest extends McpServerTest {
                                         List.of(TextResourceContents.create(resourceArgs.requestUri().value(), result)));
                             })
                     .register();
+        }
+
+        void registerFailure() {
+            String name = "dummy";
+            // Verification must be successful
+            ResourceManager.ResourceDefinition rd = manager.newResource(name)
+                    .setDescription(name + " description!")
+                    .setUri(name)
+                    .setHandler(
+                            resourceArgs -> {
+                                return new ResourceResponse(
+                                        List.of(TextResourceContents.create(resourceArgs.requestUri().value(), name)));
+                            });
+            // Add a resource with the same name but different URI
+            manager.newResource(name)
+                    .setUri("file:///" + name)
+                    .setDescription(name + " description!")
+                    .setHandler(
+                            resourceArgs -> {
+                                return new ResourceResponse(
+                                        List.of(TextResourceContents.create(resourceArgs.requestUri().value(), name)));
+                            })
+                    .register();
+            // Verification must fail
+            rd.register();
         }
 
         ResourceManager.ResourceInfo remove(String name) {
