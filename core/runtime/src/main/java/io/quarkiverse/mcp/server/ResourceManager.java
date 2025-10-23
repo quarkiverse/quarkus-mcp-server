@@ -13,7 +13,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
     /**
      *
      * @param uri
-     * @return the resource with the given uri or {@code null}
+     * @return the resource with the given URI or {@code null}
      */
     ResourceInfo getResource(String uri);
 
@@ -21,6 +21,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      *
      * @param name The name must be unique
      * @return a new definition builder
+     * @throws IllegalArgumentException if a resource with the given name already exits
      * @see ResourceDefinition#register()
      */
     ResourceDefinition newResource(String name);
@@ -73,6 +74,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         /**
          * @param uri
          * @return self
+         * @throws IllegalArgumentException if a resource with the given URI already exits
          * @see Resource#uri()
          */
         ResourceDefinition setUri(String uri);
@@ -96,6 +98,13 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
          * @return self
          */
         ResourceDefinition setAnnotations(Content.Annotations annotations);
+
+        /**
+         * @return the resource info
+         * @throws IllegalArgumentException if a resource with the given name or URI already exits
+         */
+        @Override
+        ResourceInfo register();
 
     }
 
