@@ -1219,15 +1219,15 @@ public class MyFilters implements ToolFilter, PromptFilter {
  
 == Security
 
-In case of using the HTTP/SSE transport, you can secure the MCP SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].
+In case of using the HTTP transport, you can secure MCP Streamable HTTP and SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].
 
 .Example `application.properties`
 [source,properties]
 ----
-quarkus.http.auth.permission.mcp-endpoints.paths=/mcp/sse,/mcp/messages/* <1>
+quarkus.http.auth.permission.mcp-endpoints.paths=/mcp/* <1>
 quarkus.http.auth.permission.mcp-endpoints.policy=authenticated <2>
 ----
-<1> Apply the `mcp-endpoints` policy to the default MCP SSE endpoint - `/mcp/sse`, and also to all MCP message endpoints - `/mcp/messages/*`.
+<1> Apply the `mcp-endpoints` policy to all requests targeting both Streamable HTTP and SSE MCP endpoints. All tools, resources and prompts that can be accessed via the Streamable HTTP and SSE MCP endpoints are controlled by this policy.
 <2> Permit only authenticated users.
 
 Alternatively, you can also secure the annotated server feature methods with security annotations such as `io.quarkus.security.Authenticated`,
@@ -1267,6 +1267,35 @@ public class MyTools {
 ----
 <1> Permit only authenticated users. All CDI business methods are protected.
 <2> Permit only user with role `admin`.
+
+[IMPORTANT]
+====
+You are strongly encouraged to enable Cross-Origin Resource Sharing filter for Streamable HTTP MCP server endpoints to accept request from the trusted origins only, for example:
+
+.Example `CORS configuration`
+[source,properties]
+----
+quarkus.http.cors.enabled=true <1>
+quarkus.http.cors.origins=http://localhost:6274 <2>
+----
+<1> Enable CORS.
+<2> Accept requests from a Single-Page MCP Client running at http://localhost:6274.
+====
+
+Typically, to enforce the HTTP security policy configuration, you can use the https://quarkus.io/guides/security-oidc-bearer-token-authentication[Quarkus OIDC extension].
+
+For example, to verify bearer access tokens against an OIDC provider such as Keycloak, you can add the following configuration:
+
+.Example `Quarkus OIDC configuration`
+[source,properties]
+----
+quarkus.oidc.auth-server-url=${keycloak.url}/realms/quarkus <1>
+quarkus.oidc.token.audience=quarkus-mcp-server <2>
+quarkus.oidc.resource-metadata.enabled=true <3>
+----
+<1> Keycloak realm address. Replace it with your own provider's address.
+<2> Require that only access tokens that have a `quarkus-mcp-server` audience can be accepted. Change this audience value to uniquely identify your Quarkus MCP HTTP Server deployment.
+<3> Allow MCP Clients to discover OAuth2 Protected Resource Metadata of this Quarkus MCP Server in order to follow the https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization[MCP Authorization OAuth2 Flow]. See https://quarkus.io/guides/security-oidc-expanded-configuration#resource-metadata-properties[Quarkus OIDC Expanded Configuration Guide] for more details.
 
 == Development mode
 
