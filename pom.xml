@@ -36,7 +36,7 @@
         <quarkus.version>3.27.0</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.230.1</sundrio.version>
-        <swagger-annotations.version>2.2.39</swagger-annotations.version>
+        <swagger-annotations.version>2.2.40</swagger-annotations.version>
     </properties>
 
     <dependencyManagement>
