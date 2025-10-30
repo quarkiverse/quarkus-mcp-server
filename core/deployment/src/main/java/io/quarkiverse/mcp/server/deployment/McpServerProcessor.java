@@ -104,6 +104,7 @@ import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
+import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InstanceHandle;
@@ -148,17 +149,33 @@ class McpServerProcessor {
 
     private static final Logger LOG = Logger.getLogger(McpServerProcessor.class);
 
-    private static final Map<DotName, Feature> ANNOTATION_TO_FEATURE = Map.of(
-            DotNames.PROMPT, PROMPT,
-            DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
-            DotNames.RESOURCE, RESOURCE,
-            DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
-            DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
-            DotNames.TOOL, TOOL,
-            DotNames.LANGCHAIN4J_TOOL, TOOL,
-            DotNames.NOTIFICATION, NOTIFICATION);
-
     private static final String DEFAULT_VALUE = "defaultValue";
+
+    @BuildStep
+    FeatureAnnotationsBuildItem featureAnnotations(McpServerBuildTimeConfig config) {
+        Map<DotName, Feature> annotationToFeature;
+        if (config.supportLangchain4jAnnotations()) {
+            annotationToFeature = Map.of(
+                    DotNames.PROMPT, PROMPT,
+                    DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
+                    DotNames.RESOURCE, RESOURCE,
+                    DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
+                    DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
+                    DotNames.TOOL, TOOL,
+                    DotNames.LANGCHAIN4J_TOOL, TOOL,
+                    DotNames.NOTIFICATION, NOTIFICATION);
+        } else {
+            annotationToFeature = Map.of(
+                    DotNames.PROMPT, PROMPT,
+                    DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
+                    DotNames.RESOURCE, RESOURCE,
+                    DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
+                    DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
+                    DotNames.TOOL, TOOL,
+                    DotNames.NOTIFICATION, NOTIFICATION);
+        }
+        return new FeatureAnnotationsBuildItem(annotationToFeature);
+    }
 
     @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
@@ -182,12 +199,12 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    void autoScopes(BuildProducer<AutoAddScopeBuildItem> autoScopes) {
+    void autoScopes(BuildProducer<AutoAddScopeBuildItem> autoScopes, FeatureAnnotationsBuildItem featureAnnotations) {
         // Add @Singleton to a class that contains a feature annotation
         // and at least one non-static method annotated with a feature annotation
         autoScopes.produce(AutoAddScopeBuildItem.builder()
-                .containsAnnotations(ANNOTATION_TO_FEATURE.keySet().toArray(DotName[]::new))
-                .anyMethodMatches(this::isFeatureMethod)
+                .containsAnnotations(featureAnnotations.annotationToFeature().keySet().toArray(DotName[]::new))
+                .anyMethodMatches(featureAnnotations::isFeatureMethod)
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build());
         // Add @Singleton to filters
@@ -214,13 +231,13 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    ExecutionModelAnnotationsAllowedBuildItem executionModelAnnotations(
+    ExecutionModelAnnotationsAllowedBuildItem executionModelAnnotations(FeatureAnnotationsBuildItem featureAnnotations,
             TransformedAnnotationsBuildItem transformedAnnotations) {
-        Set<DotName> featureAnnotations = ANNOTATION_TO_FEATURE.keySet();
+        Set<DotName> annotations = featureAnnotations.annotationToFeature().keySet();
         return new ExecutionModelAnnotationsAllowedBuildItem(new Predicate<MethodInfo>() {
             @Override
             public boolean test(MethodInfo method) {
-                return Annotations.containsAny(transformedAnnotations.getAnnotations(method), featureAnnotations);
+                return Annotations.containsAny(transformedAnnotations.getAnnotations(method), annotations);
             }
         });
     }
@@ -228,21 +245,22 @@ class McpServerProcessor {
     @BuildStep
     void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters, CombinedIndexBuildItem combinedIndex,
-            BuildProducer<FeatureMethodBuildItem> features, BuildProducer<ValidationErrorBuildItem> errors) {
+            FeatureAnnotationsBuildItem featureAnnotations, BuildProducer<FeatureMethodBuildItem> features,
+            BuildProducer<ValidationErrorBuildItem> errors) {
 
-        List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, errors);
+        List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, featureAnnotations, errors);
         if (!wrongUsages.isEmpty()) {
             errors.produce(new ValidationErrorBuildItem(wrongUsages));
         }
 
         Map<Feature, List<FeatureMethodBuildItem>> found = new HashMap<>();
 
-        for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(this::hasFeatureMethod)) {
+        for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(featureAnnotations::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
             for (MethodInfo method : beanClass.methods()) {
-                AnnotationInstance featureAnnotation = getFeatureAnnotation(method);
+                AnnotationInstance featureAnnotation = featureAnnotations.getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
-                    Feature feature = getFeature(featureAnnotation);
+                    Feature feature = featureAnnotations.getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature, featureAnnotation, defaultValueConverters,
                             combinedIndex.getComputingIndex());
                     String name;
@@ -456,9 +474,10 @@ class McpServerProcessor {
     }
 
     private List<Throwable> findWrongAnnotationUsage(CombinedIndexBuildItem combinedIndex,
+            FeatureAnnotationsBuildItem featureAnnotations,
             BuildProducer<ValidationErrorBuildItem> validationErrors) {
         List<Throwable> wrongUsages = new ArrayList<>();
-        for (Map.Entry<DotName, Feature> e : ANNOTATION_TO_FEATURE.entrySet()) {
+        for (Map.Entry<DotName, Feature> e : featureAnnotations.annotationToFeature().entrySet()) {
             findWrongMethods(combinedIndex.getIndex(), e.getKey(), e.getValue(), wrongUsages);
         }
         return wrongUsages;
@@ -495,23 +514,6 @@ class McpServerProcessor {
             return featureMethod.getName() + argumentName;
         }
         return featureMethod.getName();
-    }
-
-    private AnnotationInstance getFeatureAnnotation(MethodInfo method) {
-        for (AnnotationInstance annotation : method.declaredAnnotations()) {
-            if (ANNOTATION_TO_FEATURE.containsKey(annotation.name())) {
-                return annotation;
-            }
-        }
-        return null;
-    }
-
-    private Feature getFeature(AnnotationInstance annotation) {
-        Feature ret = ANNOTATION_TO_FEATURE.get(annotation.name());
-        if (ret != null) {
-            return ret;
-        }
-        throw new IllegalStateException();
     }
 
     @Record(RUNTIME_INIT)
@@ -1064,27 +1066,6 @@ class McpServerProcessor {
             }
         }
         return ret;
-    }
-
-    private boolean hasFeatureMethod(BeanInfo bean) {
-        ClassInfo beanClass = bean.getTarget().get().asClass();
-        for (DotName annotationName : ANNOTATION_TO_FEATURE.keySet()) {
-            if (beanClass.hasAnnotation(annotationName)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isFeatureMethod(MethodInfo method) {
-        if (!Modifier.isStatic(method.flags())) {
-            for (DotName annotationName : ANNOTATION_TO_FEATURE.keySet()) {
-                if (method.hasDeclaredAnnotation(annotationName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,

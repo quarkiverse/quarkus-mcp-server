@@ -228,6 +228,8 @@ The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annot
 However, keep in mind that semantics may vary and follows the rules defined in this documentation.
 For example, `void` methods are not supported.
 
+TIP: The default behavior can be changed with `quarkus.mcp.server.support-langchain4j-annotations=false`.
+
 === Customizing JSON Schema Generation
 
 By default, the MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
