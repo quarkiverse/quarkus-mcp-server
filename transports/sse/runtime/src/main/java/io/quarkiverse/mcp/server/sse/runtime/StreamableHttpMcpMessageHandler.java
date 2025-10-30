@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
@@ -48,6 +50,7 @@ import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkus.arc.All;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
@@ -67,6 +70,8 @@ import io.vertx.ext.web.RoutingContext;
 public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRequest> implements Handler<RoutingContext> {
 
     private static final Logger LOG = Logger.getLogger(StreamableHttpMcpMessageHandler.class);
+    private static final String CORS_ENABLED_PROPERTY = "quarkus.http.cors.enabled";
+    private static final String CORS_ORIGINS_PROPERTY = "quarkus.http.cors.origins";
 
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
 
@@ -98,6 +103,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
+        checkCorsConfig(config);
     }
 
     @Override
@@ -475,6 +481,32 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         }
 
+    }
+
+    private static void checkCorsConfig(McpServersRuntimeConfig mcpConfig) {
+        if (!mcpConfig.servers().isEmpty() && (LaunchMode.current().isProduction() || LaunchMode.current().isDev())) {
+            final Config config = ConfigProvider.getConfig();
+            if (!corsEnabled(config)) {
+                LOG.warnf(
+                        "Cross-Origin Resource Sharing (CORS) filter must be enabled for Streamable HTTP MCP server endpoints "
+                                + " with `%s=true`",
+                        CORS_ENABLED_PROPERTY);
+                return;
+            }
+            if (corsOriginsEmpty(config)) {
+                LOG.debugf("CORS filter allows single-origin requests only,"
+                        + " use `%s` to accept requests from other trusted origins", CORS_ORIGINS_PROPERTY);
+            }
+        }
+
+    }
+
+    private static boolean corsEnabled(Config config) {
+        return config.getOptionalValue(CORS_ENABLED_PROPERTY, Boolean.class).orElse(false);
+    }
+
+    private static boolean corsOriginsEmpty(Config config) {
+        return config.getOptionalValues(CORS_ORIGINS_PROPERTY, String.class).orElse(List.of()).isEmpty();
     }
 
 }
