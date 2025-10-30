@@ -7,6 +7,28 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations[`quarkus.mcp.server.support-langchain4j-annotations`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.support-langchain4j-annotations+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+If set to `true` then the `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from
+LangChain4j can be used instead of `@Tool`/`@ToolArg`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SUPPORT_LANGCHAIN4J_ANNOTATIONS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SUPPORT_LANGCHAIN4J_ANNOTATIONS+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.enabled+++[]
