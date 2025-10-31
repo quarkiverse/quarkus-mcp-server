@@ -39,6 +39,10 @@ public class ToolStructuredContentResultMapper implements Function<Result<Object
         };
     }
 
+    public Function<Result<Uni<Object>>, Uni<ToolResponse>> uni() {
+        return uni;
+    }
+
     @Override
     public Uni<ToolResponse> apply(Result<Object> r) {
         boolean compatMode = true;
