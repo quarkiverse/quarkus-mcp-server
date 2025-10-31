@@ -49,7 +49,14 @@ class ToolMessageHandler extends MessageHandler {
         JsonObject result = new JsonObject().put("tools", tools);
         Page<ToolManager.ToolInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
         for (ToolManager.ToolInfo info : page) {
-            tools.add(info.asJson());
+            try {
+                tools.add(info.asJson());
+            } catch (McpException e) {
+                return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            } catch (Exception e) {
+                LOG.errorf(e, "Unable to encode Tool [%s] as JSON", info.name());
+                return mcpRequest.sender().sendInternalError(id);
+            }
         }
         if (page.hasNextCursor()) {
             ToolManager.ToolInfo last = page.lastInfo();

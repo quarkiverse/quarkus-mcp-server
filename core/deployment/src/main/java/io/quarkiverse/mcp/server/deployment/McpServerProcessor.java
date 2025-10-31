@@ -344,8 +344,11 @@ class McpServerProcessor {
                         AnnotationValue outputSchemaValue = featureAnnotation.value("outputSchema");
                         if (outputSchemaValue != null) {
                             AnnotationValue outputSchemaFromValue = outputSchemaValue.asNested().value("from");
-                            if (outputSchemaFromValue != null)
+                            if (outputSchemaFromValue != null) {
                                 outputSchemaFrom = outputSchemaFromValue.asClass();
+                            } else {
+                                outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
+                            }
                             AnnotationValue outputSchemaGeneratorValue = outputSchemaValue.asNested().value("generator");
                             if (outputSchemaGeneratorValue != null) {
                                 outputSchemaGenerator = outputSchemaGeneratorValue.asClass();
@@ -353,7 +356,7 @@ class McpServerProcessor {
                                 outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
                             }
                         } else if (structuredContent) {
-                            outputSchemaFrom = ClassType.create(method.returnType().name());
+                            outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
                             outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
                         }
 
@@ -457,6 +460,13 @@ class McpServerProcessor {
                 }
             }
         }
+    }
+
+    private ClassType outputSchemaFromReturnType(org.jboss.jandex.Type returnType) {
+        if (returnType.name().equals(DotNames.UNI)) {
+            return ClassType.create(returnType.asParameterizedType().arguments().get(0).name());
+        }
+        return ClassType.create(returnType.name());
     }
 
     private Content.Annotations parseResourceAnnotations(AnnotationInstance featureAnnotation) {
@@ -1282,21 +1292,24 @@ class McpServerProcessor {
                 MethodDescriptor.ofMethod(InstanceHandle.class, "get", Object.class),
                 instance);
         if (DotNames.UNI.equals(returnType.name())) {
-            if (featureMethod.getFeature() != PROMPT
-                    && DotNames.LIST.equals(returnType.asParameterizedType().arguments().get(0).name())) {
+            if (useUniList(featureMethod, returnType.asParameterizedType().arguments().get(0))) {
                 mapper = bytecode.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(mapperClazz, "uniList", Function.class), mapper);
             } else {
                 mapper = bytecode.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(mapperClazz, "uni", Function.class), mapper);
             }
-        } else if (featureMethod.getFeature() != PROMPT
-                && !featureMethod.isStructuredContent()
-                && DotNames.LIST.equals(returnType.name())) {
+        } else if (useUniList(featureMethod, returnType)) {
             mapper = bytecode.invokeVirtualMethod(
                     MethodDescriptor.ofMethod(mapperClazz, "list", Function.class), mapper);
         }
         return mapper;
+    }
+
+    private boolean useUniList(FeatureMethodBuildItem featureMethod, org.jboss.jandex.Type type) {
+        return featureMethod.getFeature() != PROMPT
+                && !featureMethod.isStructuredContent()
+                && DotNames.LIST.equals(type.name());
     }
 
     ResultHandle toolResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
