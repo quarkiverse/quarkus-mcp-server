@@ -3,6 +3,7 @@ import { LitElement, html, css } from 'lit';
 import { columnBodyRenderer } from '@vaadin/grid/lit.js';
 import { themeState } from 'theme-state';
 import '@quarkus-webcomponents/codeblock';
+import 'qui/qui-alert.js';
 import '@vaadin/grid';
 import '@vaadin/text-field';
 import '@vaadin/split-layout';
@@ -113,8 +114,11 @@ export class QwcMcpPrompts extends LitElement {
 
     _renderPrompts() {
         return html`
-                <vaadin-grid .items="${this._prompts}" class="prompts-table" theme="no-border" all-rows-visible>
+                <qui-alert level="success">This view contains all Prompts for all MCP server configurations. Prompt filters are not applied.</qui-alert>
+                <vaadin-grid .items="${this._prompts}" class="prompts-table" theme="no-border wrap-cell-content" all-rows-visible>
                     <vaadin-grid-column width="10rem" flex-grow="0" header="Name" ${columnBodyRenderer(this._renderName, [])}>
+                    </vaadin-grid-column>
+                    <vaadin-grid-column width="10rem" flex-grow="0" header="MCP Server" ${columnBodyRenderer(this._renderServerName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column width="25rem" flex-grow="0" header="Description" ${columnBodyRenderer(this._renderDescription,
                         [])}>
@@ -140,6 +144,12 @@ export class QwcMcpPrompts extends LitElement {
             ${prompt.name}
         `;
     }
+    
+    _renderServerName(prompt) {
+            return html`
+                ${prompt.serverName}
+            `;
+    }
 
     _renderDescription(prompt) {
         return html`
@@ -150,7 +160,7 @@ export class QwcMcpPrompts extends LitElement {
     _renderArgs(prompt) {
         if (prompt.arguments) {
             return html`
-                                <vaadin-grid .items="${prompt.arguments}" class="prompt-args-table" theme="row-stripes" all-rows-visible>
+                                <vaadin-grid .items="${prompt.arguments}" class=" prompt-args-table" theme="no-border wrap-cell-content row-stripes compact" all-rows-visible>
                                     <vaadin-grid-column auto-width header="Name" ${columnBodyRenderer(this._renderArgName, [])} resizable>
                                     </vaadin-grid-column>
                                     <vaadin-grid-column auto-width header="Description" ${columnBodyRenderer(this._renderArgDescription, [])} resizable>
