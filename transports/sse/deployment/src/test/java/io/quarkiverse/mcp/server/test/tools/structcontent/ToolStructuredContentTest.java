@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.Objects;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -20,6 +22,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 public class ToolStructuredContentTest extends McpServerTest {
@@ -35,7 +38,7 @@ public class ToolStructuredContentTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(4, page.tools().size());
+                    assertEquals(5, page.tools().size());
                     JsonObject alphaSchema = page.findByName("alpha").outputSchema();
                     assertNotNull(alphaSchema);
                     assertEquals("integer", alphaSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
@@ -49,6 +52,9 @@ public class ToolStructuredContentTest extends McpServerTest {
                     assertNotNull(deltaSchema);
                     assertEquals("integer", deltaSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
                     assertEquals("baz", deltaSchema.getJsonObject("properties").getJsonObject("val").getString("foo"));
+                    JsonObject echoSchema = page.findByName("echo").outputSchema();
+                    assertNotNull(echoSchema);
+                    assertEquals("integer", echoSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
                 })
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals(0, toolResponse.content().size());
@@ -82,6 +88,15 @@ public class ToolStructuredContentTest extends McpServerTest {
                     assertNotNull(toolResponse.structuredContent());
                     if (toolResponse.structuredContent() instanceof JsonObject json) {
                         assertEquals(10, json.getInteger("val"));
+                    } else {
+                        fail("Not a JsonObject");
+                    }
+                })
+                .toolsCall("echo", toolResponse -> {
+                    assertEquals(0, toolResponse.content().size());
+                    assertNotNull(toolResponse.structuredContent());
+                    if (toolResponse.structuredContent() instanceof JsonObject json) {
+                        assertEquals(7, json.getInteger("val"));
                     } else {
                         fail("Not a JsonObject");
                     }
@@ -142,6 +157,13 @@ public class ToolStructuredContentTest extends McpServerTest {
                     .register();
         }
 
+        @Tool(description = "Use echo!", structuredContent = true)
+        Uni<MyPojo> echo() {
+            MyPojo pojo = new MyPojo();
+            pojo.setVal(7);
+            return Uni.createFrom().item(pojo);
+        }
+
     }
 
     @Singleton
@@ -149,6 +171,7 @@ public class ToolStructuredContentTest extends McpServerTest {
 
         @Override
         public Object generate(Class<?> from) {
+            Objects.requireNonNull(from);
             // "type" : "object",
             // "properties" : {
             //    "val" : {
