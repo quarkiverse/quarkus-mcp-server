@@ -3,6 +3,7 @@ import { LitElement, html, css } from 'lit';
 import { columnBodyRenderer } from '@vaadin/grid/lit.js';
 import { themeState } from 'theme-state';
 import '@quarkus-webcomponents/codeblock';
+import 'qui/qui-alert.js';
 import '@vaadin/grid';
 import '@vaadin/text-field';
 import '@vaadin/split-layout';
@@ -118,11 +119,14 @@ export class QwcMcpTools extends LitElement {
 
     _renderTools() {
         return html`
-                <vaadin-grid .items="${this._tools}" class="tools-table" theme="no-border" all-rows-visible>
+                <qui-alert level="success">This view contains all Tools for all MCP server configurations. Tool filters are not applied.</qui-alert>
+                <vaadin-grid .items="${this._tools}" class="tools-table" theme="no-border wrap-cell-content" all-rows-visible>
                     <vaadin-grid-column width="10rem" flex-grow="0" header="Name" ${columnBodyRenderer(this._renderName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column width="25rem" flex-grow="0" header="Description" ${columnBodyRenderer(this._renderDescription,
                         [])}>
+                    </vaadin-grid-column>
+                    <vaadin-grid-column width="10rem" flex-grow="0" header="MCP Server" ${columnBodyRenderer(this._renderServerName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column auto-width header="Arguments" ${columnBodyRenderer(this._renderArgs, [])} resizable>
                     </vaadin-grid-column>
@@ -145,6 +149,12 @@ export class QwcMcpTools extends LitElement {
             ${tool.name}
         `;
     }
+    
+    _renderServerName(tool) {
+            return html`
+                ${tool.serverName}
+            `;
+    }
 
     _renderDescription(tool) {
         return html`
@@ -155,7 +165,7 @@ export class QwcMcpTools extends LitElement {
     _renderArgs(tool) {
         if (tool.args) {
             return html`
-                                <vaadin-grid .items="${tool.args}" class="tool-args-table" theme="row-stripes" all-rows-visible>
+                                <vaadin-grid .items="${tool.args}" class="tool-args-table" theme="no-border wrap-cell-content row-stripes compact" all-rows-visible>
                                     <vaadin-grid-column auto-width header="Name" ${columnBodyRenderer(this._renderArgName, [])} resizable>
                                     </vaadin-grid-column>
                                     <vaadin-grid-column auto-width header="Description" ${columnBodyRenderer(this._renderArgDescription, [])} resizable>

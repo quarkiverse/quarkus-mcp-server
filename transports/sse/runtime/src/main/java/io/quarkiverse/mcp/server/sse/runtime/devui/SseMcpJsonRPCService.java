@@ -110,6 +110,7 @@ public class SseMcpJsonRPCService {
                 }
                 toolJson.put("args", args);
             }
+            toolJson.put("serverName", tool.serverName());
             // The prototype showed in tools/call UI
             toolJson.put("inputPrototype", createInputPrototype(tool));
             ret.add(toolJson);
@@ -125,6 +126,7 @@ public class SseMcpJsonRPCService {
             for (PromptManager.PromptArgument arg : prompt.arguments()) {
                 inputPrototype.put(arg.name(), arg.description());
             }
+            promptJson.put("serverName", prompt.serverName());
             promptJson.put("inputPrototype", inputPrototype);
             ret.add(promptJson);
         }
@@ -137,6 +139,7 @@ public class SseMcpJsonRPCService {
             JsonObject completionJson = new JsonObject();
             completionJson.put("name", completion.name());
             completionJson.put("argumentName", completion.argumentName());
+            completionJson.put("serverName", completion.serverName());
             ret.add(completionJson);
         }
         return ret;
@@ -145,7 +148,8 @@ public class SseMcpJsonRPCService {
     public JsonArray getResourcesData() {
         JsonArray ret = new JsonArray();
         for (ResourceManager.ResourceInfo resource : resourceManager) {
-            ret.add(resource.asJson().put("serverName", resource.serverName()));
+            ret.add(resource.asJson()
+                    .put("serverName", resource.serverName()));
         }
         return ret;
     }
@@ -165,6 +169,7 @@ public class SseMcpJsonRPCService {
             JsonObject completionJson = new JsonObject();
             completionJson.put("name", completion.name());
             completionJson.put("argumentName", completion.argumentName());
+            completionJson.put("serverName", completion.serverName());
             ret.add(completionJson);
         }
         return ret;

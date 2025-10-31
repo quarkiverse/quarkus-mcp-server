@@ -3,6 +3,7 @@ import { LitElement, html, css } from 'lit';
 import { columnBodyRenderer } from '@vaadin/grid/lit.js';
 import { themeState } from 'theme-state';
 import '@quarkus-webcomponents/codeblock';
+import 'qui/qui-alert.js';
 import '@vaadin/grid';
 import '@vaadin/text-field';
 import '@vaadin/split-layout';
@@ -112,10 +113,13 @@ export class QwcMcpResourceTemplateCompletions extends LitElement {
 
     _renderResourceTemplateCompletions() {
         return html`
-                <vaadin-grid .items="${this._completions}" class="prompts-table" theme="no-border" all-rows-visible>
+                <qui-alert level="success">This view contains all Resource template completions for all MCP server configurations.</qui-alert>
+                <vaadin-grid .items="${this._completions}" class="prompts-table" theme="no-border wrap-cell-content" all-rows-visible>
                     <vaadin-grid-column auto-width header="Resource template" ${columnBodyRenderer(this._renderName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column auto-width header="Completed argument" ${columnBodyRenderer(this._renderArgName, [])}>
+                    </vaadin-grid-column>
+                    <vaadin-grid-column width="10rem" flex-grow="0" header="MCP Server" ${columnBodyRenderer(this._renderServerName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column auto-width header="Actions" ${columnBodyRenderer(this._renderActions, [])}>
                     </vaadin-grid-column>
@@ -135,6 +139,12 @@ export class QwcMcpResourceTemplateCompletions extends LitElement {
         return html`
             ${completion.name}
         `;
+    }
+    
+    _renderServerName(completion) {
+            return html`
+                ${completion.serverName}
+            `;
     }
     
     _renderArgName(completion) {

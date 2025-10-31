@@ -3,6 +3,7 @@ import { LitElement, html, css } from 'lit';
 import { columnBodyRenderer } from '@vaadin/grid/lit.js';
 import { themeState } from 'theme-state';
 import '@quarkus-webcomponents/codeblock';
+import 'qui/qui-alert.js';
 import '@vaadin/grid';
 import '@vaadin/text-field';
 import '@vaadin/split-layout';
@@ -111,10 +112,13 @@ export class QwcMcpResourceTemplates extends LitElement {
 
     _renderResourceTemplates() {
         return html`
-                <vaadin-grid .items="${this._resourceTemplates}" class="resources-table" theme="no-border" all-rows-visible>
+                <qui-alert level="success">This view contains all Resource templates for all MCP server configurations. Resource template filters are not applied.</qui-alert>
+                <vaadin-grid .items="${this._resourceTemplates}" class="resources-table" theme="no-border wrap-cell-content" all-rows-visible>
                     <vaadin-grid-column width="10rem" flex-grow="0" header="URI template" ${columnBodyRenderer(this._renderUriTemplate, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column width="10rem" flex-grow="0" header="Name" ${columnBodyRenderer(this._renderName, [])}>
+                    </vaadin-grid-column>
+                    <vaadin-grid-column width="10rem" flex-grow="0" header="MCP Server" ${columnBodyRenderer(this._renderServerName, [])}>
                     </vaadin-grid-column>
                     <vaadin-grid-column width="25rem" flex-grow="0" header="Description" ${columnBodyRenderer(this._renderDescription,
                         [])}>
@@ -139,6 +143,12 @@ export class QwcMcpResourceTemplates extends LitElement {
         return html`
             ${resource.name}
         `;
+    }
+    
+    _renderServerName(resource) {
+            return html`
+                ${resource.serverName}
+            `;
     }
 
     _renderDescription(resource) {
