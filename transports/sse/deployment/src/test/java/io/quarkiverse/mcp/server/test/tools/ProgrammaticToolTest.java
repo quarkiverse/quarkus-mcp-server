@@ -29,7 +29,8 @@ public class ProgrammaticToolTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(MyTools.class));
+                    root -> root.addClasses(MyTools.class))
+            .overrideConfigKey("quarkus.mcp.server.tools.name-max-length", "10");
 
     @Inject
     MyTools myTools;
@@ -49,6 +50,7 @@ public class ProgrammaticToolTest extends McpServerTest {
         myTools.register("alpha", "2");
         assertThrows(IllegalArgumentException.class, () -> myTools.register("alpha", "2"));
         assertThrows(NullPointerException.class, () -> myTools.register(null, "2"));
+        assertThrows(IllegalStateException.class, () -> myTools.tryTooLongName());
 
         List<JsonObject> notifications = client.waitForNotifications(1).notifications();
         assertEquals("notifications/tools/list_changed", notifications.get(0).getString("method"));
@@ -95,6 +97,13 @@ public class ProgrammaticToolTest extends McpServerTest {
 
         @Inject
         ToolManager manager;
+
+        void tryTooLongName() {
+            manager.newTool("foo".repeat(4))
+                    .setDescription("foo")
+                    .setHandler(args -> null)
+                    .register();
+        }
 
         void register(String name, String result) {
             manager.newTool(name)
