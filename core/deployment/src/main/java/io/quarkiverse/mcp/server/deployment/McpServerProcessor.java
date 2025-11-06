@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -104,7 +105,7 @@ import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
-import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InstanceHandle;
@@ -152,7 +153,7 @@ class McpServerProcessor {
     private static final String DEFAULT_VALUE = "defaultValue";
 
     @BuildStep
-    FeatureAnnotationsBuildItem featureAnnotations(McpServerBuildTimeConfig config) {
+    FeatureAnnotationsBuildItem featureAnnotations(McpServersBuildTimeConfig config) {
         Map<DotName, Feature> annotationToFeature;
         if (config.supportLangchain4jAnnotations()) {
             annotationToFeature = Map.of(
@@ -243,7 +244,8 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    void collectFeatureMethods(BeanDiscoveryFinishedBuildItem beanDiscovery, InvokerFactoryBuildItem invokerFactory,
+    void collectFeatureMethods(McpServersBuildTimeConfig config, BeanDiscoveryFinishedBuildItem beanDiscovery,
+            InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters, CombinedIndexBuildItem combinedIndex,
             FeatureAnnotationsBuildItem featureAnnotations, BuildProducer<FeatureMethodBuildItem> features,
             BuildProducer<ValidationErrorBuildItem> errors) {
@@ -381,17 +383,27 @@ class McpServerProcessor {
                         server = serverAnotation.value().asString();
                     }
 
-                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name, title,
-                            description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations);
-                    features.produce(fm);
-                    found.compute(feature, (f, list) -> {
-                        if (list == null) {
-                            list = new ArrayList<>();
-                        }
-                        list.add(fm);
-                        return list;
-                    });
+                    OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
+                            : OptionalInt.empty();
+                    if (nameMaxLength.isPresent()
+                            && name.length() > nameMaxLength.getAsInt()) {
+                        String message = "Tool name [%s] exceeds the maximum length of %s characters"
+                                .formatted(name, nameMaxLength.getAsInt());
+                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                    } else {
+                        FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                                title,
+                                description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
+                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations);
+                        features.produce(fm);
+                        found.compute(feature, (f, list) -> {
+                            if (list == null) {
+                                list = new ArrayList<>();
+                            }
+                            list.add(fm);
+                            return list;
+                        });
+                    }
                 }
             }
         }

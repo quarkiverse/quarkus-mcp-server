@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +33,7 @@ import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -55,6 +57,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final List<ToolFilter> filters;
 
+    final McpServersBuildTimeConfig buildTimeConfig;
+
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
@@ -65,7 +69,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             GlobalInputSchemaGenerator globalInputSchemaGenerator,
             GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
             Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
-            Instance<OutputSchemaGenerator> outputSchemaGenerator) {
+            Instance<OutputSchemaGenerator> outputSchemaGenerator,
+            McpServersBuildTimeConfig buildTimeConfig) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
@@ -77,6 +82,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.inputSchemaGenerator = inputSchemaGenerator;
         this.defaultValueConverters = metadata.defaultValueConverters();
         this.filters = filters;
+        this.buildTimeConfig = buildTimeConfig;
     }
 
     @Override
@@ -300,6 +306,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public ToolInfo register() {
             validate();
+            OptionalInt nameMaxLength = buildTimeConfig.servers().get(serverName).tools().nameMaxLength();
+            if (nameMaxLength.isPresent() && name.length() > nameMaxLength.getAsInt()) {
+                throw new IllegalStateException("Tool name [%s] exceeds the maximum length of %s characters"
+                        .formatted(name, nameMaxLength.getAsInt()));
+            }
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema);
             ToolInfo existing = tools.putIfAbsent(name, ret);

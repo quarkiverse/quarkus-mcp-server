@@ -458,6 +458,32 @@ endif::add-copy-button-to-env-var[]
 a|`fail`, `ignore`
 |`+++fail+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length[`quarkus.mcp.server.tools.name-max-length`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.name-max-length+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".tools.name-max-length`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.name-max-length+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+Maximum length of a tool name.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_NAME_MAX_LENGTH+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_NAME_MAX_LENGTH+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`quarkus.mcp.server.server-info.name`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.name+++[]
