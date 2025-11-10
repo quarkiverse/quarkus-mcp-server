@@ -37,6 +37,7 @@ import io.quarkus.gizmo.SignatureBuilder;
 import io.quarkus.gizmo.Type;
 import io.quarkus.runtime.util.HashUtil;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
+import io.quarkus.websockets.next.InboundProcessingMode;
 import io.quarkus.websockets.next.WebSocket;
 import io.vertx.core.Vertx;
 
@@ -69,7 +70,10 @@ public class WebSocketMcpServerProcessor {
                     .build();
             // @WebSocket(path = "/foo/bar")
             endpointCreator.addAnnotation(
-                    AnnotationInstance.builder(WebSocket.class).add("path", e.getValue().websocket().endpointPath()).build());
+                    AnnotationInstance.builder(WebSocket.class)
+                            .add("path", e.getValue().websocket().endpointPath())
+                            .add("inboundProcessingMode", InboundProcessingMode.CONCURRENT)
+                            .build());
 
             Class<?>[] params = new Class<?>[] {
                     McpServersRuntimeConfig.class,
