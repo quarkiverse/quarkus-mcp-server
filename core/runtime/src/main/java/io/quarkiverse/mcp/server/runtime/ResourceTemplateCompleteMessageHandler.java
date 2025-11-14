@@ -6,6 +6,7 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 class ResourceTemplateCompleteMessageHandler extends CompletionMessageHandler {
 
@@ -14,6 +15,11 @@ class ResourceTemplateCompleteMessageHandler extends CompletionMessageHandler {
     ResourceTemplateCompleteMessageHandler(ResourceTemplateCompletionManagerImpl manager) {
         super(manager.responseHandlers);
         this.manager = Objects.requireNonNull(manager);
+    }
+
+    @Override
+    protected String referenceName(JsonObject ref) {
+        return ref.getString("uri");
     }
 
     @Override

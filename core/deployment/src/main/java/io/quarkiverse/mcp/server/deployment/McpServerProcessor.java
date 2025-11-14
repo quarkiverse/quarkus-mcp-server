@@ -434,6 +434,25 @@ class McpServerProcessor {
             }
         }
 
+        // Check duplicate uris for resource templates
+        List<FeatureMethodBuildItem> resourceTemplates = found.get(RESOURCE_TEMPLATE);
+        if (resourceTemplates != null) {
+            Map<String, List<FeatureMethodBuildItem>> byUri = resourceTemplates.stream()
+                    .collect(Collectors.toMap(FeatureMethodBuildItem::getUri, List::of, (v1, v2) -> {
+                        List<FeatureMethodBuildItem> list = new ArrayList<>();
+                        list.addAll(v1);
+                        list.addAll(v2);
+                        return list;
+                    }));
+            for (List<FeatureMethodBuildItem> list : byUri.values()) {
+                if (list.size() > 1) {
+                    String message = "Duplicate resource template uri found:\n\t%s"
+                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                }
+            }
+        }
+
         // Check existing prompts for completions
         List<FeatureMethodBuildItem> prompts = found.get(PROMPT);
         List<FeatureMethodBuildItem> promptCompletions = found.get(PROMPT_COMPLETE);
@@ -448,7 +467,6 @@ class McpServerProcessor {
         }
 
         // Check existing resource templates for completions
-        List<FeatureMethodBuildItem> resourceTemplates = found.get(RESOURCE_TEMPLATE);
         List<FeatureMethodBuildItem> resourceTemplateCompletions = found.get(RESOURCE_TEMPLATE_COMPLETE);
         if (resourceTemplateCompletions != null) {
             for (FeatureMethodBuildItem completion : resourceTemplateCompletions) {

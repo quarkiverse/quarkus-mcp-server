@@ -54,11 +54,11 @@ public class ResourceTemplateProgrammaticCompleteTest extends McpServerTest {
 
         client
                 .when()
-                .resourceTemplateComplete("foo_template", "foo", "Ja", completionResponse -> {
+                .resourceTemplateComplete("file:///{foo}/{bar}", "foo", "Ja", completionResponse -> {
                     assertEquals(1, completionResponse.values().size());
                     assertEquals("Jachym", completionResponse.values().get(0));
                 })
-                .resourceTemplateComplete("foo_template", "bar", "Ja", completionResponse -> {
+                .resourceTemplateComplete("file:///{foo}/{bar}", "bar", "Ja", completionResponse -> {
                     assertEquals(1, completionResponse.values().size());
                     assertEquals("_bar", completionResponse.values().get(0));
                 })
