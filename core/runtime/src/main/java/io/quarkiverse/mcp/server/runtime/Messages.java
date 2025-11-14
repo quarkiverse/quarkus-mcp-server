@@ -113,11 +113,11 @@ public class Messages {
     public static final String PROMPT_REF = "ref/prompt";
     public static final String RESOURCE_REF = "ref/resource";
 
-    public boolean isPromptRef(String referenceType) {
+    public static boolean isPromptRef(String referenceType) {
         return PROMPT_REF.equals(referenceType);
     }
 
-    public boolean isResourceRef(String referenceType) {
+    public static boolean isResourceRef(String referenceType) {
         return RESOURCE_REF.equals(referenceType);
     }
 

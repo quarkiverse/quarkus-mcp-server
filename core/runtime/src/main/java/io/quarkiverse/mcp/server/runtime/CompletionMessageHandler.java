@@ -22,9 +22,13 @@ public abstract class CompletionMessageHandler extends MessageHandler {
     protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
             McpRequest mcpRequest) throws McpException;
 
+    protected String referenceName(JsonObject ref) {
+        return ref.getString("name");
+    }
+
     Future<Void> complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
             McpRequest mcpRequest) {
-        String referenceName = ref.getString("name");
+        String referenceName = referenceName(ref);
         String argumentName = argument.getString("name");
 
         LOG.debugf("Complete %s for argument %s [id: %s]", referenceName, argumentName, id);
