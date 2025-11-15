@@ -41,6 +41,11 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
     }
 
     @Override
+    protected String refName(String refName) {
+        return refName;
+    }
+
+    @Override
     protected void validateReference(String refName, String argumentName) {
         PromptManager.PromptInfo prompt = promptManager.getPrompt(refName);
         if (prompt == null) {

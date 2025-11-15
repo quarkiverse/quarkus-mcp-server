@@ -497,9 +497,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 if (argument == null) {
                     return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Argument not found");
                 } else {
-                    if ("ref/prompt".equals(referenceType)) {
+                    if (Messages.isPromptRef(referenceType)) {
                         return promptCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(), mcpRequest);
-                    } else if ("ref/resource".equals(referenceType)) {
+                    } else if (Messages.isResourceRef(referenceType)) {
                         return resourceTemplateCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(),
                                 mcpRequest);
                     } else {
