@@ -67,6 +67,8 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
 
     protected abstract void validateReference(String refName, String argumentName);
 
+    protected abstract String refName(String refName);
+
     IllegalArgumentException completionAlreadyExists(String refName, String argName) {
         return new IllegalArgumentException("A completion for [" + refName + "] with agument [" + argName + "] already exits");
     }
@@ -131,7 +133,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         public CompletionInfo register() {
             validate();
             validateReference(name, argumentName);
-            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(name, description, serverName, fun, asyncFun,
+            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(refName(name), description, serverName, fun, asyncFun,
                     runOnVirtualThread, argumentName);
             String key = ret.name() + "_" + ret.argumentName();
             CompletionInfo existing = completions.putIfAbsent(key, ret);

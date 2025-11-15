@@ -656,25 +656,25 @@ public class McpAssured {
         /**
          * Build a {@value McpAssured#COMPLETION_COMPLETE} message.
          *
-         * @param promptName
+         * @param uriTemplate
          * @return a new builder
          */
-        ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String resourceTemplateName);
+        ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String uriTemplate);
 
         /**
          * Send a {@value McpAssured#COMPLETION_COMPLETE} message to the server.
          * <p>
          * The assert function is not used until the {@link #thenAssertResults()} method is called.
          *
-         * @param promptName
+         * @param uriTemplate
          * @param argumentName
          * @param argumentValue
          * @param assertFunction
          * @return self
          */
-        default ASSERT resourceTemplateComplete(String resourceTemplateName, String argumentName, String argumentValue,
+        default ASSERT resourceTemplateComplete(String uriTemplate, String argumentName, String argumentValue,
                 Consumer<CompletionResponse> assertFunction) {
-            return resourceTemplateComplete(resourceTemplateName)
+            return resourceTemplateComplete(uriTemplate)
                     .withArgument(argumentName, argumentValue)
                     .withAssert(assertFunction)
                     .send();

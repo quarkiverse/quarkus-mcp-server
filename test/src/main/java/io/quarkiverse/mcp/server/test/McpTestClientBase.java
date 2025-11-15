@@ -193,9 +193,13 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected JsonObject newCompleteMessage(String refType, String refName, String argumentName, String argumentValue,
             Map<String, String> contextArgs) {
         return newRequest(McpAssured.COMPLETION_COMPLETE, p -> {
-            p.put("ref", new JsonObject()
-                    .put("type", refType)
-                    .put("name", refName));
+            JsonObject ref = new JsonObject().put("type", refType);
+            if (Messages.isPromptRef(refType)) {
+                ref.put("name", refName);
+            } else if (Messages.isResourceRef(refType)) {
+                ref.put("uri", refName);
+            }
+            p.put("ref", ref);
             p.put("argument", new JsonObject()
                     .put("name", argumentName)
                     .put("value", argumentValue));
@@ -356,8 +360,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         }
 
         @Override
-        public ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String resourceTemplateName) {
-            return new ResourceTemplateCompleteMessageImpl(resourceTemplateName);
+        public ResourceTemplateCompleteMessage<ASSERT> resourceTemplateComplete(String uriTemplate) {
+            return new ResourceTemplateCompleteMessageImpl(uriTemplate);
         }
 
         @Override
@@ -639,8 +643,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         class ResourceTemplateCompleteMessageImpl extends CompleteMessageImpl
                 implements ResourceTemplateCompleteMessage<ASSERT> {
 
-            ResourceTemplateCompleteMessageImpl(String resourceTemplateName) {
-                super(resourceTemplateName);
+            ResourceTemplateCompleteMessageImpl(String uriTemplate) {
+                super(uriTemplate);
             }
 
             @Override
