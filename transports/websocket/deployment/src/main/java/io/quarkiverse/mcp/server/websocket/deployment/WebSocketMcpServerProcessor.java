@@ -68,7 +68,7 @@ public class WebSocketMcpServerProcessor {
                     .className(endpointClassName)
                     .superClass(WebSocketMcpMessageHandler.class)
                     .build();
-            // @WebSocket(path = "/foo/bar")
+            // @WebSocket(path = "/foo/bar", inboundProcessingMode = InboundProcessingMode.CONCURRENT)
             endpointCreator.addAnnotation(
                     AnnotationInstance.builder(WebSocket.class)
                             .add("path", e.getValue().websocket().endpointPath())
