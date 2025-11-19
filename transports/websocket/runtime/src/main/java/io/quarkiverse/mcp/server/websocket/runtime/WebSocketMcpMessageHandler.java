@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.websocket.runtime;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import jakarta.enterprise.inject.Instance;
 
@@ -30,7 +32,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
-import io.quarkus.websockets.next.UserData.TypedKey;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.UniHelper;
@@ -43,8 +44,6 @@ import io.vertx.core.json.Json;
 public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSocketMcpRequest> {
 
     private static final Logger LOG = Logger.getLogger(WebSocketMcpMessageHandler.class);
-
-    private static final String MCP_CONNECTION_ID = "mcpConnectionId";
 
     CurrentIdentityAssociation currentIdentityAssociation;
 
@@ -70,20 +69,17 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
 
     protected abstract String serverName();
 
+    private final ConcurrentMap<String, WebSocketMcpConnection> connections = new ConcurrentHashMap<>();
+
     @OnOpen
     void openConnection(WebSocketConnection connection) {
-        String id = ConnectionManager.connectionId();
-        WebSocketMcpConnection mcpConnection = new WebSocketMcpConnection(id, config.servers().get(serverName()), connection);
-        connectionManager.add(mcpConnection);
-        LOG.debugf("WebSocket connection initialized [%s]", id);
-        connection.userData().put(TypedKey.forString(MCP_CONNECTION_ID), id);
+        LOG.debugf("MCP WebSocket connection open [id: %s]", connection.id());
     }
 
     @SuppressWarnings("unchecked")
     @OnTextMessage
-    Uni<Void> consumeMessage(WebSocketConnection connection, String message) {
-        String connectionId = connection.userData().get(TypedKey.forString(MCP_CONNECTION_ID));
-        WebSocketMcpConnection mcpConnection = (WebSocketMcpConnection) connectionManager.get(connectionId);
+    Uni<Void> consumeMessage(WebSocketConnection connection, String message) throws InterruptedException {
+        WebSocketMcpConnection mcpConnection = connections.computeIfAbsent(connection.id(), k -> newConnection(connection));
         Object json = Json.decodeValue(message);
 
         SecuritySupport securitySupport;
@@ -106,14 +102,24 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
 
     @OnClose
     void closeConnection(WebSocketConnection connection) {
-        String id = connection.userData().get(TypedKey.forString(MCP_CONNECTION_ID));
-        connectionManager.remove(id);
-        LOG.debugf("WebSocket connection closed [%s]", id);
+        WebSocketMcpConnection mcpConnection = connections.remove(connection.id());
+        if (mcpConnection != null) {
+            connectionManager.remove(mcpConnection.id());
+            LOG.debugf("MCP WebSocket connection closed [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
+        }
     }
 
     @Override
     protected Transport transport() {
         return Transport.WEBSOCKET;
+    }
+
+    private WebSocketMcpConnection newConnection(WebSocketConnection connection) {
+        String id = ConnectionManager.connectionId();
+        WebSocketMcpConnection mcpConnection = new WebSocketMcpConnection(id, config.servers().get(serverName()), connection);
+        connectionManager.add(mcpConnection);
+        LOG.debugf("MCP WebSocket connection initialized [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
+        return mcpConnection;
     }
 
     static class WebSocketMcpRequest extends McpRequestImpl<WebSocketMcpConnection> {

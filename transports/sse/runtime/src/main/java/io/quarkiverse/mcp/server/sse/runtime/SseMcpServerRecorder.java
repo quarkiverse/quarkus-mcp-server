@@ -10,11 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpLog;
-import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -25,6 +25,7 @@ import io.quarkiverse.mcp.server.sse.runtime.StreamableHttpMcpConnection.Subsidi
 import io.quarkiverse.mcp.server.sse.runtime.config.McpSseServersBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
+import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.core.Handler;
@@ -32,7 +33,6 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
@@ -240,37 +240,15 @@ public class SseMcpServerRecorder {
         };
     }
 
-    public static void logEndpoints(List<McpServerEndpoints> endpoints, HttpServerOptions httpServerOptions) {
-        Logger log = Logger.getLogger("io.quarkiverse.mcp.server");
-        // base is scheme://host:port
-        String base = new StringBuilder(httpServerOptions.isSsl() ? "https://" : "http://")
-                .append(httpServerOptions.getHost())
-                .append(":")
-                .append(httpServerOptions.getPort())
-                .toString();
-        for (McpServerEndpoints e : endpoints) {
-            String serverInfo = "";
-            if (!McpServer.DEFAULT.equals(e.serverName)) {
-                serverInfo = " [" + e.serverName + "]";
+    public Function<SyntheticCreationalContext<McpServerEndpoints>, McpServerEndpoints> createMcpServerEndpoints(
+            List<McpServerEndpoints.McpServerEndpoint> endpoints) {
+        return new Function<SyntheticCreationalContext<McpServerEndpoints>, McpServerEndpoints>() {
+
+            @Override
+            public McpServerEndpoints apply(SyntheticCreationalContext<McpServerEndpoints> t) {
+                return new McpServerEndpoints(endpoints);
             }
-            log.infof("MCP%s HTTP transport endpoints [streamable: %s, SSE: %s]", serverInfo, base + e.mcpPath,
-                    base + e.ssePath);
-        }
-
-    }
-
-    public static class McpServerEndpoints {
-
-        public String serverName;
-        public String mcpPath;
-        public String ssePath;
-
-        public McpServerEndpoints(String serverName, String mcpPath, String ssePath) {
-            this.serverName = serverName;
-            this.mcpPath = mcpPath;
-            this.ssePath = ssePath;
-        }
-
+        };
     }
 
 }
