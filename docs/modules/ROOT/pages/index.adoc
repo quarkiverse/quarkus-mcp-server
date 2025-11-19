@@ -35,17 +35,19 @@ For instance, with Maven, add the following dependency to your POM file:
 
 IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output. Quarkus console logging is automatically redirected to the standard error. And the standard output stream is set to "null" when the app is started by default.
 
-If you want to use the `HTTP` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-sse` extension to your build file first.
+If you want to use the `HTTP` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-http` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
 [source,xml,subs=attributes+]
 ----
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <artifactId>quarkus-mcp-server-sse</artifactId>
+    <artifactId>quarkus-mcp-server-http</artifactId>
     <version>{project-version}</version>
 </dependency>
 ----
+
+NOTE: The `artifactId` has changed from `quarkus-mcp-server-sse` to `quarkus-mcp-server-http` in version 1.8.0. However, the old `artifactId` should still work because it's relocated. 
 
 This artifact contains both versions of the `HTTP` transport.
 // We need to escape the {rootPath}
@@ -1319,7 +1321,7 @@ quarkus.mcp.server.traffic-logging.text-limit=500 <2>
 
 === Dev UI
 
-The `quarkus-mcp-server-sse` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
+The `quarkus-mcp-server-http` extension provides convenient Dev UI views for tools, prompts, resources and resource templates.
 You can inspect and test the server features easily without third-party tools like <<mcp_inspector,MCP Inspector>>
 
 [[mcp_inspector]]
@@ -1467,4 +1469,4 @@ include::includes/quarkus-mcp-server-core.adoc[leveloffset=+1, opts=optional]
 
 include::includes/quarkus-mcp-server-stdio.adoc[leveloffset=+1, opts=optional]
 
-include::includes/quarkus-mcp-server-sse.adoc[leveloffset=+1, opts=optional]
+include::includes/quarkus-mcp-server-http.adoc[leveloffset=+1, opts=optional]
