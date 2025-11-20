@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolArguments;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -59,6 +60,7 @@ public class ProgrammaticToolTest extends McpServerTest {
                 .toolsList(page -> {
                     assertEquals(1, page.size());
                     assertEquals("ALPHA", page.tools().get(0).title());
+                    assertEquals("ALPHA", page.tools().get(0).meta().getString("upperCaseName"));
                 })
                 .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.content().get(0).asText().text()))
                 .thenAssertResults();
@@ -115,6 +117,7 @@ public class ProgrammaticToolTest extends McpServerTest {
                                 lastArgs.set(toolArgs);
                                 return ToolResponse.success(result + toolArgs.args().get("foo"));
                             })
+                    .setMetadata(Map.of(MetaKey.of("upperCaseName"), name.toUpperCase()))
                     .register();
         }
 

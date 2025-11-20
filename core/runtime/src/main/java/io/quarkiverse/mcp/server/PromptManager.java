@@ -42,6 +42,8 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
 
         List<PromptArgument> arguments();
 
+        Map<MetaKey, Object> metadata();
+
     }
 
     /**
@@ -92,6 +94,12 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
          * @return self
          */
         PromptDefinition addArgument(String name, String title, String description, boolean required, String defaultValue);
+
+        /**
+         * @param metadata
+         * @return self
+         */
+        PromptDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
          * @return the prompt info

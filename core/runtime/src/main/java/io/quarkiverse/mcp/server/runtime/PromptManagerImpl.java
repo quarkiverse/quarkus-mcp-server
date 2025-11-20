@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
@@ -23,6 +24,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
@@ -31,6 +33,7 @@ import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -159,6 +162,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata.info().metadata().entrySet()
+                    .stream()
+                    .collect(Collectors.toUnmodifiableMap(e -> MetaKey.from(e.getKey()), e -> Json.decodeValue(e.getValue())));
+        }
+
+        @Override
         public boolean isMethod() {
             return true;
         }
@@ -183,6 +193,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
         private String title;
         private final List<PromptArgument> arguments;
+        private Map<MetaKey, Object> metadata = Map.of();
 
         PromptDefinitionImpl(String name) {
             super(name);
@@ -203,10 +214,16 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
+        public PromptDefinition setMetadata(Map<MetaKey, Object> metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
+        @Override
         public PromptInfo register() {
             validate();
             PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, arguments);
+                    runOnVirtualThread, arguments, metadata);
             PromptInfo existing = prompts.putIfAbsent(name, ret);
             if (existing != null) {
                 throw promptWithNameAlreadyExists(name);
@@ -222,14 +239,16 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
         private final String title;
         private final List<PromptArgument> arguments;
+        private final Map<MetaKey, Object> metadata;
 
         private PromptDefinitionInfo(String name, String title, String description, String serverName,
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
-                List<PromptArgument> arguments) {
+                List<PromptArgument> arguments, Map<MetaKey, Object> metadata) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.arguments = List.copyOf(arguments);
+            this.metadata = Map.copyOf(metadata);
         }
 
         @Override
@@ -240,6 +259,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public List<PromptArgument> arguments() {
             return arguments;
+        }
+
+        @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata;
         }
 
         @Override
@@ -277,6 +301,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                 arguments.add(arg);
             }
             prompt.put("arguments", arguments);
+            if (!metadata.isEmpty()) {
+                JsonObject meta = new JsonObject();
+                for (Map.Entry<MetaKey, Object> e : metadata.entrySet()) {
+                    meta.put(e.getKey().toString(), e.getValue());
+                }
+                prompt.put("_meta", meta);
+            }
             return prompt;
         }
 

@@ -24,9 +24,14 @@ import io.smallrye.mutiny.Uni;
  * <li>It may also return a {@link Uni} that wraps any of the type mentioned above.</li>
  * </ul>
  *
+ * <p>
+ * If you need to provide additional metadata in the {@code _meta} object of the prompt definition included in the response to
+ * the {@code prompts/list} request, use the {@link MetaField} annotation.
+ *
  * @see PromptResponse
  * @see PromptArg
  * @see PromptResponseEncoder
+ * @see MetaField
  */
 @Retention(RUNTIME)
 @Target(METHOD)

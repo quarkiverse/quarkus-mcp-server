@@ -3,7 +3,7 @@ package io.quarkiverse.mcp.server;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Additional metadata sent from the client to the server.
+ * Additional metadata sent from the client to the server, i.e. the {@code _meta} part of the message.
  * <p>
  * All feature methods can accept this class as a parameter. It will be automatically injected before the
  * method is invoked.

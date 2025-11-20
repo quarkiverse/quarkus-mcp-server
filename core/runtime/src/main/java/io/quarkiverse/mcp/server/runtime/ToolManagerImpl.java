@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
@@ -28,6 +29,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -38,6 +40,7 @@ import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
@@ -191,6 +194,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata.info().metadata().entrySet()
+                    .stream()
+                    .collect(Collectors.toUnmodifiableMap(e -> MetaKey.from(e.getKey()), e -> Json.decodeValue(e.getValue())));
+        }
+
+        @Override
         public boolean isMethod() {
             return true;
         }
@@ -259,7 +269,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolArgument> arguments;
         private Object outputSchema;
         private Object inputSchema;
-
+        private Map<MetaKey, Object> metadata = Map.of();
         private ToolAnnotations annotations;
 
         private ToolDefinitionImpl(String name) {
@@ -304,6 +314,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition setMetadata(Map<MetaKey, Object> metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
             OptionalInt nameMaxLength = buildTimeConfig.servers().get(serverName).tools().nameMaxLength();
@@ -312,7 +328,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                         .formatted(name, nameMaxLength.getAsInt()));
             }
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, arguments, annotations, outputSchema, inputSchema);
+                    runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
                 throw toolAlreadyExists(name);
@@ -331,18 +347,20 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final Optional<ToolAnnotations> annotations;
         private final Object outputSchema;
         private final Object inputSchema;
+        private final Map<MetaKey, Object> metadata;
 
         private ToolDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
-                Object outputSchema, Object inputSchema) {
+                Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
             this.outputSchema = outputSchema;
             this.inputSchema = inputSchema;
+            this.metadata = Map.copyOf(metadata);
         }
 
         @Override
@@ -358,6 +376,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public Optional<ToolAnnotations> annotations() {
             return annotations;
+        }
+
+        @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata;
         }
 
         @Override
@@ -383,6 +406,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             }
             if (outputSchema != null) {
                 tool.put("outputSchema", outputSchema);
+            }
+            if (!metadata.isEmpty()) {
+                JsonObject meta = new JsonObject();
+                for (Map.Entry<MetaKey, Object> e : metadata.entrySet()) {
+                    meta.put(e.getKey().toString(), e.getValue());
+                }
+                tool.put("_meta", meta);
             }
             return tool;
         }

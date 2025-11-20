@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.jboss.jandex.MethodInfo;
@@ -45,11 +46,15 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     // Server config name
     private final String server;
 
+    // meta key (prefix + name) -> json
+    private final Map<String, String> metadata;
+
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
             String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
             String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
             Type inputSchemaGenerator,
-            Content.Annotations resourceAnnotations) {
+            Content.Annotations resourceAnnotations,
+            Map<String, String> metadata) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -67,6 +72,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.outputSchemaGenerator = outputSchemaGenerator;
         this.inputSchemaGenerator = inputSchemaGenerator;
         this.resourceAnnotations = resourceAnnotations;
+        this.metadata = Objects.requireNonNull(metadata);
     }
 
     BeanInfo getBean() {
@@ -135,6 +141,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Annotations getResourceAnnotations() {
         return resourceAnnotations;
+    }
+
+    Map<String, String> getMetadata() {
+        return metadata;
     }
 
     boolean isTool() {

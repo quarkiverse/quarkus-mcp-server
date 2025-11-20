@@ -29,9 +29,15 @@ import io.smallrye.mutiny.Uni;
  * <p>
  * There is a default resource contents encoder registered; it encodes the returned value as JSON.
  *
+ * <p>
+ * If you need to provide additional metadata in the {@code _meta} object of the resource template definition included in the
+ * response to the
+ * {@code resources/templates/list} request, use the {@link MetaField} annotation.
+ *
  * @see Resource
  * @see ResourceResponse
  * @see ResourceContentsEncoder
+ * @see MetaField
  */
 @Retention(RUNTIME)
 @Target(METHOD)
