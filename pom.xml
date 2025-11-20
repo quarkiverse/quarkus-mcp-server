@@ -15,7 +15,7 @@
 
     <modules>
         <module>core</module>
-        <module>transports/sse</module>
+        <module>transports/http</module>
         <module>transports/stdio</module>
         <module>transports/websocket</module>
         <module>sse-client</module>
@@ -23,6 +23,10 @@
         <module>devtools/stdio-sse-proxy</module>
         <module>cli-adapter</module>
         <module>hibernate-validator</module>
+        <module>relocations/sse/deployment</module>
+        <module>relocations/sse/runtime</module>
+        <module>relocations/sse/integration-tests</module>
+        <module>relocations/sse/parent</module>
     </modules>
 
     <scm>

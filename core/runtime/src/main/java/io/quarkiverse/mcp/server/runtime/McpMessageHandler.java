@@ -632,7 +632,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             IllegalStateException ise = new IllegalStateException("Invalid server name");
             for (FeatureInfo info : invalid) {
                 ise.addSuppressed(new IllegalStateException(
-                        String.format("Invalid server name [%s] used for: %s", info.serverName(), info)));
+                        String.format("Invalid server name [%s] used for: %s#%s", info.serverName(),
+                                info.getClass().getSimpleName(), info.name())));
             }
             throw ise;
         }
