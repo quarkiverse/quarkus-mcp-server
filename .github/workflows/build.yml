@@ -44,7 +44,7 @@ jobs:
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -68,7 +68,7 @@ jobs:
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -96,7 +96,7 @@ jobs:
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
