@@ -39,6 +39,11 @@ public class WrapBusinessErrorInterceptor {
 
     private boolean matches(Throwable t, InvocationContext context) {
         WrapBusinessError businessError = context.getInterceptorBinding(WrapBusinessError.class);
+        for (Class<? extends Throwable> e : businessError.unless()) {
+            if (e.isAssignableFrom(t.getClass())) {
+                return false;
+            }
+        }
         for (Class<? extends Throwable> e : businessError.value()) {
             if (e.isAssignableFrom(t.getClass())) {
                 return true;

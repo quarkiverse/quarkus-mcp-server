@@ -26,8 +26,19 @@ import jakarta.interceptor.InterceptorBinding;
 public @interface WrapBusinessError {
 
     /**
-     * The exception is only wrapped automatically if it's assignable from any of the specified classes.
+     * An exception is wrapped automatically if it's assignable to any of the specified classes.
+     * <p>
+     * By default, all exceptions are wrapped.
      */
     @Nonbinding
     public Class<? extends Throwable>[] value() default { Exception.class };
+
+    /**
+     * An exception is never wrapped automatically if it's assignable to any of the specified classes.
+     * <p>
+     * If both {@link #value()} and {@link #unless()} are specified, {@link #unless()} takes precedence.
+     */
+    @Nonbinding
+    public Class<? extends Throwable>[] unless() default {};
+
 }

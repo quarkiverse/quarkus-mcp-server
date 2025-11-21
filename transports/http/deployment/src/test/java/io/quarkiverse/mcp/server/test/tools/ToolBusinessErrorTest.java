@@ -8,6 +8,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -41,6 +43,12 @@ public class ToolBusinessErrorTest extends McpServerTest {
                     assertTrue(r.isError());
                     assertEquals("java.lang.NullPointerException: I am null!", r.content().get(0).asText().text());
                 })
+                .toolsCall("echo")
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INTERNAL_ERROR, error.code());
+                    assertEquals("Testik", error.message());
+                })
+                .send()
                 .thenAssertResults();
     }
 
@@ -61,6 +69,12 @@ public class ToolBusinessErrorTest extends McpServerTest {
         @Tool
         Uni<String> delta() {
             return Uni.createFrom().failure(new NullPointerException("I am null!"));
+        }
+
+        @WrapBusinessError(unless = McpException.class)
+        @Tool
+        String echo() {
+            throw new McpException("Testik", JsonRpcErrorCodes.INTERNAL_ERROR);
         }
 
     }
