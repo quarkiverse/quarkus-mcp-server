@@ -1,11 +1,13 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Map;
 import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
 
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -52,6 +54,13 @@ public record FeatureMetadata<M>(Feature feature,
             if (info.resourceAnnotations() != null) {
                 ret.put("annotations", info.resourceAnnotations());
             }
+        }
+        if (!info.metadata().isEmpty()) {
+            JsonObject meta = new JsonObject();
+            for (Map.Entry<String, String> e : info.metadata().entrySet()) {
+                meta.put(e.getKey(), Json.decodeValue(e.getValue()));
+            }
+            ret.put("_meta", meta);
         }
         return ret;
     }

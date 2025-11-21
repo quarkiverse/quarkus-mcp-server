@@ -29,10 +29,15 @@ import java.lang.annotation.Target;
  * <p>
  * There is a default content encoder registered; it encodes the returned value as JSON.
  *
+ * <p>
+ * If you need to provide additional metadata in the {@code _meta} object of the tool definition included in the response to the
+ * {@code tools/list} request, use the {@link MetaField} annotation.
+ *
  * @see ToolResponse
  * @see ToolArg
  * @see ToolResponseEncoder
  * @see ContentEncoder
+ * @see MetaField
  */
 @Retention(RUNTIME)
 @Target(METHOD)

@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
+import java.util.Map;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.InputSchemaGenerator;
@@ -20,7 +21,9 @@ public record FeatureMethodInfo(String name,
         String serverName,
         Class<?> outputSchemaFrom,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator,
-        Class<? extends InputSchemaGenerator<?>> inputSchemaGenerator) {
+        Class<? extends InputSchemaGenerator<?>> inputSchemaGenerator,
+        // meta key (prefix + name) -> json
+        Map<String, String> metadata) {
 
     public List<FeatureArgument> serializedArguments() {
         if (arguments == null) {

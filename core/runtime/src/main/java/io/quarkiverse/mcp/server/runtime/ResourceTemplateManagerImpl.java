@@ -29,6 +29,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
 import io.quarkiverse.mcp.server.ResourceResponse;
@@ -39,6 +40,7 @@ import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
@@ -282,6 +284,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata.info().metadata().entrySet()
+                    .stream()
+                    .collect(Collectors.toUnmodifiableMap(e -> MetaKey.from(e.getKey()), e -> Json.decodeValue(e.getValue())));
+        }
+
+        @Override
         public boolean isMethod() {
             return true;
         }
@@ -301,16 +310,18 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final String uriTemplate;
         private final String mimeType;
         private final Content.Annotations annotations;
+        private final Map<MetaKey, Object> metadata;
 
         private ResourceTemplateDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, Content.Annotations annotations) {
+                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata) {
             super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
             this.annotations = annotations;
+            this.metadata = Map.copyOf(metadata);
         }
 
         @Override
@@ -334,6 +345,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public Map<MetaKey, Object> metadata() {
+            return metadata;
+        }
+
+        @Override
         public JsonObject asJson() {
             JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
@@ -344,6 +360,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             }
             if (annotations != null) {
                 ret.put("annotations", annotations);
+            }
+            if (!metadata.isEmpty()) {
+                JsonObject meta = new JsonObject();
+                for (Map.Entry<MetaKey, Object> e : metadata.entrySet()) {
+                    meta.put(e.getKey().toString(), e.getValue());
+                }
+                ret.put("_meta", meta);
             }
             return ret;
         }
@@ -400,6 +423,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private String uriTemplate;
         private String mimeType;
         private Annotations annotations;
+        private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceTemplateDefinitionImpl(String name) {
             super(name);
@@ -430,10 +454,16 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public ResourceTemplateDefinition setMetadata(Map<MetaKey, Object> metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
+        @Override
         public ResourceTemplateInfo register() {
             validate();
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverName,
-                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations);
+                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));
             if (existing != null) {

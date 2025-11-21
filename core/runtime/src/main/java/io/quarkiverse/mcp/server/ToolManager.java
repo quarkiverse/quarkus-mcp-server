@@ -45,6 +45,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         Optional<ToolAnnotations> annotations();
 
+        Map<MetaKey, Object> metadata();
+
     }
 
     /**
@@ -113,6 +115,12 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
          * @return self
          */
         ToolDefinition setInputSchema(Object schema);
+
+        /**
+         * @param metadata
+         * @return self
+         */
+        ToolDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
          * @return the tool info

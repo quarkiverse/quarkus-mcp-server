@@ -50,6 +50,13 @@ public class ToolsTest extends McpServerTest {
                     assertEquals("integer", priceProperty.getString("type"));
                     assertEquals("Define the price...", priceProperty.getString("description"));
                     assertTrue(schema.getJsonArray("required").isEmpty());
+                    JsonObject meta = alpha.meta();
+                    assertNotNull(meta);
+                    assertEquals("high", meta.getString("priceLevel"));
+                    assertEquals(100, meta.getInteger("price"));
+                    assertTrue(meta.getBoolean("active"));
+                    assertEquals(3, meta.getJsonArray("activeNumbers").getInteger(2));
+                    assertTrue(meta.getJsonObject("object").getBoolean("foo"));
 
                     ToolInfo uniAlpha = page.findByName("uni_alpha");
                     assertEquals("Uni Alpha!", uniAlpha.title());

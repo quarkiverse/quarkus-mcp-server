@@ -44,6 +44,8 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
 
         String mimeType();
 
+        Map<MetaKey, Object> metadata();
+
         Optional<Content.Annotations> annotations();
 
     }
@@ -83,6 +85,12 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
          * @return self
          */
         ResourceTemplateDefinition setAnnotations(Content.Annotations annotations);
+
+        /**
+         * @param metadata
+         * @return self
+         */
+        ResourceTemplateDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
          * @throws IllegalArgumentException if a resource template with the given name already exits

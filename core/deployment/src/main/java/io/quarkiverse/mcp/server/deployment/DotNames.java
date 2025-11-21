@@ -21,6 +21,7 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Meta;
+import io.quarkiverse.mcp.server.MetaField;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.Prompt;
@@ -112,5 +113,7 @@ class DotNames {
     static final DotName RAW_MESSAGE = DotName.createSimple(RawMessage.class);
     static final DotName META = DotName.createSimple(Meta.class);
     static final DotName ELICITATION = DotName.createSimple(Elicitation.class);
+    static final DotName META_FIELD = DotName.createSimple(MetaField.class);
+    static final DotName META_FIELDS = DotName.createSimple(MetaField.MetaFields.class);
 
 }

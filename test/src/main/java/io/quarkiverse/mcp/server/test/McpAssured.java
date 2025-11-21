@@ -1330,18 +1330,18 @@ public class McpAssured {
     }
 
     public record ToolInfo(String name, String title, String description, JsonObject inputSchema, JsonObject outputSchema,
-            Optional<ToolAnnotations> annotations) {
+            Optional<ToolAnnotations> annotations, JsonObject meta) {
     }
 
-    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments) {
+    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments, JsonObject meta) {
     }
 
     public record ResourceInfo(String uri, String mimeType, String name, String title, String description, Integer size,
-            Content.Annotations annotations) {
+            Content.Annotations annotations, JsonObject meta) {
     }
 
     public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description,
-            Content.Annotations annotations) {
+            Content.Annotations annotations, JsonObject meta) {
     }
 
     public record PromptArgument(String name, String title, String description, boolean required) {

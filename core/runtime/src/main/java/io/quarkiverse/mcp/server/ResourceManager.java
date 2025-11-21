@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -47,6 +48,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         OptionalInt size();
 
         Optional<Content.Annotations> annotations();
+
+        Map<MetaKey, Object> metadata();
 
         /**
          * Sends update notifications to all subscribers without waiting for the result.
@@ -98,6 +101,12 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
          * @return self
          */
         ResourceDefinition setAnnotations(Content.Annotations annotations);
+
+        /**
+         * @param metadata
+         * @return self
+         */
+        ResourceDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
          * @return the resource info

@@ -57,6 +57,8 @@ import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.PromptFilter;
@@ -141,10 +143,13 @@ import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
 import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
+import io.quarkus.gizmo.Gizmo.JdkMap.JdkMapInstance;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.gizmo.SignatureBuilder;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
 
 class McpServerProcessor {
 
@@ -303,6 +308,7 @@ class McpServerProcessor {
                     org.jboss.jandex.Type inputSchemaGenerator = null;
                     ToolManager.ToolAnnotations toolAnnotations = null;
                     Content.Annotations resourceAnnotations = null;
+                    Map<String, String> metadata = new HashMap<>();
 
                     if (feature == RESOURCE) {
                         AnnotationValue uriValue = featureAnnotation.value("uri");
@@ -383,6 +389,19 @@ class McpServerProcessor {
                         server = serverAnotation.value().asString();
                     }
 
+                    // Process metadata entries
+                    AnnotationInstance metaField = method.declaredAnnotation(DotNames.META_FIELD);
+                    if (metaField != null) {
+                        addMetaField(metadata, metaField);
+                    } else {
+                        AnnotationInstance metaFields = method.declaredAnnotation(DotNames.META_FIELDS);
+                        if (metaFields != null) {
+                            for (AnnotationInstance entry : metaFields.value().asNestedArray()) {
+                                addMetaField(metadata, entry);
+                            }
+                        }
+                    }
+
                     OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
                             : OptionalInt.empty();
                     if (nameMaxLength.isPresent()
@@ -392,9 +411,8 @@ class McpServerProcessor {
                         errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
                     } else {
                         FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                                title,
-                                description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations);
+                                title, description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
+                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata);
                         features.produce(fm);
                         found.compute(feature, (f, list) -> {
                             if (list == null) {
@@ -490,6 +508,30 @@ class McpServerProcessor {
                 }
             }
         }
+    }
+
+    private void addMetaField(Map<String, String> metadata, AnnotationInstance metaEntry) {
+        AnnotationValue prefixValue = metaEntry.value("prefix");
+        String name = metaEntry.value("name").asString();
+        MetaKey key = new MetaKey(prefixValue != null ? prefixValue.asString() : null, name);
+        String value = metaEntry.value("value").asString();
+        AnnotationValue typeValue = metaEntry.value("type");
+        MetaField.Type type = typeValue != null ? MetaField.Type.valueOf(typeValue.asEnum()) : MetaField.Type.STRING;
+        String jsonValue = switch (type) {
+            case STRING -> Json.encode(value);
+            case BOOLEAN, INT -> value;
+            case JSON -> {
+                // Try to parse the JSON first
+                try {
+                    Json.decodeValue(value);
+                } catch (DecodeException e) {
+                    throw new IllegalArgumentException("Invalid JSON value: " + value);
+                }
+                yield value;
+            }
+            default -> throw new IllegalArgumentException("Unexpected value: " + type);
+        };
+        metadata.put(key.toString(), jsonValue);
     }
 
     private ClassType outputSchemaFromReturnType(org.jboss.jandex.Type returnType) {
@@ -1209,11 +1251,23 @@ class McpServerProcessor {
             resourceAnnotations = metaMethod.loadNull();
         }
 
+        ResultHandle meta;
+        Map<String, String> metaEntries = featureMethod.getMetadata();
+        if (metaEntries.isEmpty()) {
+            meta = Gizmo.mapOperations(metaMethod).of();
+        } else {
+            meta = Gizmo.newHashMap(metaMethod);
+            JdkMapInstance mapInstance = Gizmo.mapOperations(metaMethod).on(meta);
+            for (Map.Entry<String, String> e : metaEntries.entrySet()) {
+                mapInstance.put(metaMethod.load(e.getKey()), metaMethod.load(e.getValue()));
+            }
+        }
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
                         Content.Annotations.class, String.class,
-                        Class.class, Class.class, Class.class),
+                        Class.class, Class.class, Class.class, Map.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
@@ -1227,7 +1281,8 @@ class McpServerProcessor {
                 featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()),
                 featureMethod.getInputSchemaGenerator() == null ? metaMethod.loadNull()
-                        : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()));
+                        : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()),
+                meta);
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));

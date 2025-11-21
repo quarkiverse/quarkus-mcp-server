@@ -17,6 +17,8 @@ import jakarta.inject.Inject;
 import dev.langchain4j.agent.tool.P;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.MetaField.Type;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
@@ -32,6 +34,13 @@ public class MyTools {
     @Inject
     FooService fooService;
 
+    @MetaField(name = "priceLevel", value = "high")
+    @MetaField(name = "price", type = Type.INT, value = "100")
+    @MetaField(name = "active", type = Type.BOOLEAN, value = "true")
+    @MetaField(name = "activeNumbers", type = Type.JSON, value = "[1, 2, 3]")
+    @MetaField(name = "object", type = Type.JSON, value = """
+            {\"foo\":true}
+            """)
     @Tool
     ToolResponse alpha(@ToolArg(description = "Define the price...") Optional<Integer> price) {
         checkExecutionModel(true);
