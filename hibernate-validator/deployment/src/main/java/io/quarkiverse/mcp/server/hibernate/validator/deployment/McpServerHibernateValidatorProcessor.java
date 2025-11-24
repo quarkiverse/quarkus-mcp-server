@@ -4,6 +4,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTransformation;
 import org.jboss.jandex.DotName;
 
+import io.quarkiverse.mcp.server.deployment.FeatureAnnotationsBuildItem;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
 import io.quarkiverse.mcp.server.hibernate.validator.runtime.WrapConstraintViolations;
 import io.quarkiverse.mcp.server.hibernate.validator.runtime.WrapConstraintViolationsInterceptor;
@@ -28,10 +29,13 @@ public class McpServerHibernateValidatorProcessor {
     }
 
     @BuildStep
-    AnnotationsTransformerBuildItem wrapConstraintViolations() {
+    AnnotationsTransformerBuildItem wrapConstraintViolations(FeatureAnnotationsBuildItem featureAnnotations) {
         return new AnnotationsTransformerBuildItem(
                 AnnotationTransformation.forMethods()
+                        // It is annotated with @MethodValidated
                         .whenAnyMatch(METHOD_VALIDATED)
+                        // It is a feature method, e.g. @Tool
+                        .whenMethod(featureAnnotations::isFeatureMethod)
                         // Make sure the transformation happens after hibernate validator added @MethodValidated
                         .priority(AnnotationTransformation.DEFAULT_PRIORITY_VALUE - 1000)
                         .transform(tc -> {

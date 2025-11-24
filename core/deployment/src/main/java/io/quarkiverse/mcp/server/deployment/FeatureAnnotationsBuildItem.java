@@ -12,7 +12,7 @@ import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.builder.item.SimpleBuildItem;
 
-final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
+public final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
 
     private final Map<DotName, Feature> annotationToFeature;
 
@@ -20,11 +20,11 @@ final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
         this.annotationToFeature = annotationToFeature;
     }
 
-    Map<DotName, Feature> annotationToFeature() {
+    public Map<DotName, Feature> annotationToFeature() {
         return annotationToFeature;
     }
 
-    boolean isFeatureMethod(MethodInfo method) {
+    public boolean isFeatureMethod(MethodInfo method) {
         if (!Modifier.isStatic(method.flags())) {
             for (DotName annotationName : annotationToFeature.keySet()) {
                 if (method.hasDeclaredAnnotation(annotationName)) {
@@ -35,7 +35,7 @@ final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
         return false;
     }
 
-    boolean hasFeatureMethod(BeanInfo bean) {
+    public boolean hasFeatureMethod(BeanInfo bean) {
         ClassInfo beanClass = bean.getTarget().get().asClass();
         for (DotName annotationName : annotationToFeature.keySet()) {
             if (beanClass.hasAnnotation(annotationName)) {
@@ -45,7 +45,7 @@ final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
         return false;
     }
 
-    AnnotationInstance getFeatureAnnotation(MethodInfo method) {
+    public AnnotationInstance getFeatureAnnotation(MethodInfo method) {
         for (AnnotationInstance annotation : method.declaredAnnotations()) {
             if (annotationToFeature.containsKey(annotation.name())) {
                 return annotation;
@@ -54,7 +54,7 @@ final class FeatureAnnotationsBuildItem extends SimpleBuildItem {
         return null;
     }
 
-    Feature getFeature(AnnotationInstance annotation) {
+    public Feature getFeature(AnnotationInstance annotation) {
         Feature ret = annotationToFeature.get(annotation.name());
         if (ret != null) {
             return ret;

@@ -1,13 +1,17 @@
 package io.quarkiverse.mcp.server.hibernate.validator.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
+import jakarta.inject.Inject;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -28,6 +32,9 @@ public class ToolConstraintViolationTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class));
+
+    @Inject
+    MyTools tools;
 
     @Test
     public void testError() {
@@ -62,6 +69,11 @@ public class ToolConstraintViolationTest extends McpServerTest {
                     assertPropertyHasMinimum(bravoSchema.getJsonObject("properties"), "price", 5);
                 })
                 .thenAssertResults();
+
+        assertEquals("frantisek", tools.nonTool("Frantisek"));
+        assertThrows(ConstraintViolationException.class, () -> tools.nonTool(null));
+        assertEquals("age:15", tools.nonToolPerson(new Person(15)));
+        assertThrows(ConstraintViolationException.class, () -> tools.nonToolPerson(new Person(5)));
     }
 
     private void assertPropertyHasMinimum(JsonObject properties, String name, int expectedMinimum) {
@@ -86,6 +98,14 @@ public class ToolConstraintViolationTest extends McpServerTest {
         @Tool
         TextContent delta(@Valid Person person) {
             throw new ToolCallException("Business error");
+        }
+
+        String nonTool(@NotNull String name) {
+            return name.toLowerCase();
+        }
+
+        String nonToolPerson(@Valid Person person) {
+            return "age:" + person.age();
         }
 
     }
