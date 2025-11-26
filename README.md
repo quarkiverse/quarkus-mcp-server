@@ -13,20 +13,20 @@ This Quarkus extension provides both declarative and programmatic APIs that enab
 
 ## Get Started
 
-### Step #1 
+### Step #1
 
 Add the following dependency to your POM file:
 
 ```xml
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
-    <artifactId>quarkus-mcp-server-sse</artifactId>
+    <artifactId>quarkus-mcp-server-http</artifactId>
     <version>${quarkus-mcp-server-version}</version>
 </dependency>
 ```
 
 > [!NOTE]  
-> This dependency includes the HTTP/SSE transport. Use the `quarkus-mcp-server-stdio` artifactId if you want to use the STDIO transport instead. See also the [Supported transports](https://docs.quarkiverse.io/quarkus-mcp-server/dev/#_supported_transports) section in the docs for more information.
+> This dependency includes both the legacy "HTTP/SSE" and the "Streamable HTTP" transport. Use the `quarkus-mcp-server-stdio` artifactId if you want to use the STDIO transport instead. See also the [Supported transports](https://docs.quarkiverse.io/quarkus-mcp-server/dev/#_supported_transports) section in the docs for more information.
 
 
 ### Step #2 
