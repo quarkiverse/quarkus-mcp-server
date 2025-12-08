@@ -43,8 +43,23 @@ class McpStreamableClient extends SseClient {
                 .header("Accept", "application/json")
                 .POST(BodyPublishers.ofString(body));
         headers.forEach(builder::header);
+        return doSend(builder.build());
+    }
+
+    HttpResponse<String> sendTerminate(MultiMap headers) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(mcpEndpoint)
+                .version(Version.HTTP_1_1)
+                .header("Accept", "text/event-stream")
+                .header("Accept", "application/json")
+                .DELETE();
+        headers.forEach(builder::header);
+        return doSend(builder.build());
+    }
+
+    private HttpResponse<String> doSend(HttpRequest request) {
         try {
-            return httpClient.send(builder.build(), BodyHandlers.ofString());
+            return httpClient.send(request, BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted");

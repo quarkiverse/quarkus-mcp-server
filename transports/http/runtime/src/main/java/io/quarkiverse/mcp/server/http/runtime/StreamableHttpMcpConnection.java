@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.http.runtime;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.jboss.logging.Logger;
@@ -18,7 +19,7 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
     private final List<SubsidiarySse> sseStreams;
 
     StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig) {
-        super(id, serverConfig);
+        super(id, Objects.requireNonNull(serverConfig));
         this.sseStreams = new CopyOnWriteArrayList<>();
     }
 
