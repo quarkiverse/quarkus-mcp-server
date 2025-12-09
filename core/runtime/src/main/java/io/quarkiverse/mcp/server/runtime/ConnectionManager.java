@@ -10,12 +10,16 @@ import java.util.concurrent.ConcurrentMap;
 
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 @Singleton
 public class ConnectionManager implements Iterable<McpConnectionBase> {
+
+    private static final Logger LOG = Logger.getLogger(ConnectionManager.class);
 
     private final Vertx vertx;
 
@@ -84,7 +88,11 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
     record ConnectionTimerId(McpConnectionBase connection, Long timerId) {
 
         boolean isIdleTimeoutExpired() {
-            return connection.isIdleTimeoutExpired();
+            boolean ret = connection.isIdleTimeoutExpired();
+            if (ret) {
+                LOG.debugf("Connection idle timeout expired [%s]", connection.id());
+            }
+            return ret;
         }
     }
 
