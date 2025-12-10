@@ -2,12 +2,15 @@ package io.quarkiverse.mcp.server.test.dummyinit;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.URI;
 import java.util.stream.StreamSupport;
 
 import jakarta.inject.Inject;
 
+import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionTimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -16,7 +19,6 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -69,8 +71,14 @@ public class DummyInitTest extends McpServerTest {
                 .statusCode(200)
                 .extract().body().asString());
         assertTrue(response.getJsonObject("result").getBoolean("isError"));
-        assertFalse(connectionManager.iterator().hasNext(), "Connections: "
-                + StreamSupport.stream(connectionManager.spliterator(), false).map(McpConnectionBase::id).toList());
+
+        try {
+            Awaitility.await().until(() -> !connectionManager.iterator().hasNext());
+        } catch (ConditionTimeoutException e) {
+            fail("Some connections still exits: "
+                    + StreamSupport.stream(connectionManager.spliterator(), false)
+                            .map(c -> c.id() + "[" + c.initialRequest().implementation().name() + "]").toList());
+        }
     }
 
     private JsonObject toolsCall(String name, int id) {
