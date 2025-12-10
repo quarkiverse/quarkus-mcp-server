@@ -196,18 +196,28 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         String method = message.getString("method");
         JsonObject params = message.getJsonObject("params");
 
-        // The first message must be "initialize"
-        // However, in the dev mode if an MCP client attempts to reconnect an SSE connection but does not reinitialize propertly,
-        // we could perform a "dummy" initialization
         if (!INITIALIZE.equals(method)) {
-            if (LaunchMode.current() == LaunchMode.DEVELOPMENT && serverConfig(mcpRequest).devMode().dummyInit()) {
-                InitialRequest dummy = new InitialRequest(new Implementation("dummy", "1", null),
+            // Normally the first message must be "initialize"
+
+            // However, we could create a synthetic initial request and perform a dummy initialization
+            InitialRequest dummy = null;
+            if (LaunchMode.current() == LaunchMode.DEVELOPMENT
+                    && serverConfig(mcpRequest).devMode().dummyInit()) {
+                // In the dev mode, if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly
+                dummy = new InitialRequest(new Implementation("dummy", "1", null),
                         SUPPORTED_PROTOCOL_VERSIONS.get(0),
                         List.of(), transport());
-                if (mcpRequest.connection().initialize(dummy) && mcpRequest.connection().setInitialized()) {
-                    LOG.infof("Connection initialized with dummy info [%s]", mcpRequest.connection().id());
-                    return operation(message, mcpRequest);
-                }
+            } else {
+                // A transport can support other ways to supply dummy initial requests
+                dummy = dummyInitialRequest(mcpRequest);
+            }
+
+            if (dummy != null
+                    && mcpRequest.connection().initialize(dummy)
+                    && mcpRequest.connection().setInitialized()) {
+                LOG.debugf("Connection initialized with dummy initial request: %s [%s]", dummy.implementation().name(),
+                        mcpRequest.connection().id());
+                return operation(message, mcpRequest);
             }
 
             String msg = "The first message from the client must be \"initialize\": " + method;
@@ -244,6 +254,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }).onComplete(r -> {
             mcpRequest.contextEnd();
         });
+    }
+
+    protected InitialRequest dummyInitialRequest(MCP_REQUEST mcpRequest) {
+        return null;
     }
 
     private static Uni<InitialCheck.CheckResult> checkInit(InitialRequest initialRequest, List<InitialCheck> checks, int idx) {
@@ -543,7 +557,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
-    private static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-06-18", "2025-03-26", "2024-11-05");
+    protected static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-06-18", "2025-03-26", "2024-11-05");
 
     private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest) {
         Map<String, Object> info = new HashMap<>();

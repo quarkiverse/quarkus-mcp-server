@@ -45,7 +45,7 @@ public class HttpMcpServerRecorder {
 
     private static final Logger LOG = Logger.getLogger(HttpMcpServerRecorder.class);
 
-    static final String CONTEXT_KEY = "mcp.sse.server-name";
+    static final String CONTEXT_KEY = "mcp.http.server-name";
 
     private final RuntimeValue<McpServersRuntimeConfig> config;
 

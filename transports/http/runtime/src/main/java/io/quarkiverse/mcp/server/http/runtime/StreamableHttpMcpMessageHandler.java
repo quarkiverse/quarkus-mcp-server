@@ -20,7 +20,9 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
@@ -28,6 +30,8 @@ import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
+import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -74,6 +78,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private static final String CORS_ORIGINS_PROPERTY = "quarkus.http.cors.origins";
 
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
+    public static final String DUMMY_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
 
     private final McpMetadata metadata;
 
@@ -81,7 +86,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
+    private final McpHttpServersRuntimeConfig httpConfig;
+
     StreamableHttpMcpMessageHandler(McpServersRuntimeConfig config,
+            McpHttpServersRuntimeConfig runtimeConfig,
             ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager,
@@ -103,6 +111,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
+        this.httpConfig = runtimeConfig;
         checkCorsConfig(config);
     }
 
@@ -127,22 +136,22 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         StreamableHttpMcpConnection connection;
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
-            String id = ConnectionManager.connectionId();
-            LOG.debugf("Streamable connection initialized [%s]", id);
-            McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-            connection = new StreamableHttpMcpConnection(id, serverConfig);
-            connectionManager.add(connection);
+            connection = initConnection(serverName);
         } else {
-            McpConnectionBase conn = connectionManager.get(mcpSessionId);
-            if (conn == null) {
-                LOG.errorf("Mcp session not found: %s", mcpSessionId);
-                ctx.fail(404);
-                return;
-            }
-            if (conn instanceof StreamableHttpMcpConnection streamable) {
+            McpConnectionBase existing = connectionManager.get(mcpSessionId);
+            if (existing == null) {
+                if (httpConfig.servers().get(serverName).http().streamable().dummyInit()) {
+                    // We don't care about non-existent session when dummy init is enabled
+                    connection = initConnection(serverName);
+                } else {
+                    LOG.errorf("Mcp session not found: %s", mcpSessionId);
+                    ctx.fail(404);
+                    return;
+                }
+            } else if (existing instanceof StreamableHttpMcpConnection streamable) {
                 connection = streamable;
             } else {
-                throw new IllegalStateException("Invalid connection type: " + conn.getClass().getName());
+                throw new IllegalStateException("Invalid connection type: " + existing.getClass().getName());
             }
         }
 
@@ -203,7 +212,31 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     ctx.response().setStatusCode(500).end();
                 }
             }
+            // Make sure the dummy connection is removed
+            if (DUMMY_INIT_IMPL_NAME.equals(connection.initialRequest().implementation().name())
+                    && connectionManager.remove(connection.id())) {
+                LOG.debugf("Dummy session removed [%s]", connection.id());
+            }
         });
+    }
+
+    StreamableHttpMcpConnection initConnection(String serverName) {
+        String id = ConnectionManager.connectionId();
+        LOG.debugf("Streamable connection initialized [%s]", id);
+        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
+        StreamableHttpMcpConnection conn = new StreamableHttpMcpConnection(id, serverConfig);
+        connectionManager.add(conn);
+        return conn;
+    }
+
+    @Override
+    protected InitialRequest dummyInitialRequest(HttpMcpRequest mcpRequest) {
+        McpHttpServerRuntimeConfig config = httpConfig.servers().get(mcpRequest.serverName());
+        if (config != null && config.http().streamable().dummyInit()) {
+            return new InitialRequest(new Implementation(DUMMY_INIT_IMPL_NAME, "1", null), SUPPORTED_PROTOCOL_VERSIONS.get(0),
+                    List.of(), transport());
+        }
+        return null;
     }
 
     public void terminateSession(RoutingContext ctx) {
