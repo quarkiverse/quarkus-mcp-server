@@ -147,6 +147,15 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     }
 
     @Override
+    public void terminateSession() {
+        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+        if (mcpSessionId != null) {
+            headers.add("Mcp-Session-Id", mcpSessionId);
+        }
+        client.sendTerminate(headers);
+    }
+
+    @Override
     public McpStreamableAssert when() {
         return new McpStreamableAssertImpl();
     }

@@ -128,6 +128,8 @@ public class McpAssured {
 
         /**
          * Disconnect the client and terminate the MCP connection.
+         * <p>
+         * Does not necessarily terminate the session on the server.
          */
         void disconnect();
 
@@ -335,6 +337,11 @@ public class McpAssured {
          * @return the current MCP session id
          */
         String mcpSessionId();
+
+        /**
+         * Terminates the current MCP session on the server.
+         */
+        void terminateSession();
 
         public interface Builder extends McpTestClient.Builder<Builder> {
 
