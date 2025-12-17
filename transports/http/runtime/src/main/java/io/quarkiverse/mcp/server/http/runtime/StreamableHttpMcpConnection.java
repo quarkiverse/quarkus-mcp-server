@@ -55,9 +55,7 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
             LOG.warnf("Discarding message [id=%s,method=%s] - no 'subsidiary' SSE streams open yet", id, method);
             return Future.succeededFuture();
         } else {
-            if (trafficLogger != null) {
-                trafficLogger.messageSent(message, this);
-            }
+            messageSent(message);
             return sse.sendEvent("message", message.encode());
         }
     }

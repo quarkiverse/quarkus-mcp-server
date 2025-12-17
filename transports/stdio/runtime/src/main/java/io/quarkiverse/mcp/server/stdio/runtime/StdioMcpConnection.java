@@ -28,9 +28,7 @@ public class StdioMcpConnection extends McpConnectionBase {
         if (message == null) {
             return Future.succeededFuture();
         }
-        if (trafficLogger != null) {
-            trafficLogger.messageSent(message, this);
-        }
+        messageSent(message);
         if (BlockingOperationControl.isBlockingAllowed()) {
             out.println(message.encode());
             return Future.succeededFuture();

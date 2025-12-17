@@ -25,7 +25,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final AtomicReference<LogLevel> logLevel;
 
-    protected final TrafficLogger trafficLogger;
+    protected final int trafficLoggerTextLimit;
 
     protected final Optional<Duration> autoPingInterval;
 
@@ -40,9 +40,9 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.status = new AtomicReference<>(Status.NEW);
         this.initializeRequest = new AtomicReference<>();
         this.logLevel = new AtomicReference<>(serverConfig.clientLogging().defaultLevel());
-        this.trafficLogger = serverConfig.trafficLogging().enabled()
-                ? new TrafficLogger(serverConfig.trafficLogging().textLimit())
-                : null;
+        this.trafficLoggerTextLimit = serverConfig.trafficLogging().enabled()
+                ? serverConfig.trafficLogging().textLimit()
+                : -1;
         this.autoPingInterval = serverConfig.autoPingInterval();
         this.lastUsed = new AtomicLong(Instant.now().toEpochMilli());
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
@@ -89,8 +89,8 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         return status.compareAndSet(Status.INITIALIZING, Status.IN_OPERATION);
     }
 
-    public TrafficLogger trafficLogger() {
-        return trafficLogger;
+    public int getTrafficLoggerTextLimit() {
+        return trafficLoggerTextLimit;
     }
 
     public Optional<Duration> autoPingInterval() {
@@ -107,6 +107,12 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
             return false;
         }
         return Instant.now().minusMillis(lastUsed.get()).toEpochMilli() > idleTimeout;
+    }
+
+    protected void messageSent(JsonObject message) {
+        if (trafficLoggerTextLimit > 0) {
+            TrafficLogger.messageSent(message, this, trafficLoggerTextLimit);
+        }
     }
 
     Optional<String> getCancellationRequest(RequestId requestId) {

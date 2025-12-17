@@ -17,14 +17,14 @@ public interface McpRequest {
     ContextSupport contextSupport();
 
     default void messageReceived(JsonObject message) {
-        if (connection().trafficLogger() != null) {
-            connection().trafficLogger().messageReceived(message, connection());
+        if (connection().getTrafficLoggerTextLimit() > 0) {
+            TrafficLogger.messageReceived(message, connection(), connection().getTrafficLoggerTextLimit());
         }
     }
 
     default void messageSent(JsonObject message) {
-        if (connection().trafficLogger() != null) {
-            connection().trafficLogger().messageSent(message, connection());
+        if (connection().getTrafficLoggerTextLimit() > 0) {
+            TrafficLogger.messageSent(message, connection(), connection().getTrafficLoggerTextLimit());
         }
     }
 

@@ -25,10 +25,12 @@ import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
+import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SubsidiarySse;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
@@ -51,7 +53,9 @@ import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
+import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.TrafficLogging;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.runtime.LaunchMode;
@@ -119,7 +123,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     public void handle(RoutingContext ctx) {
         String serverName = ctx.get(HttpMcpServerRecorder.CONTEXT_KEY);
         if (serverName == null) {
-            throw new IllegalStateException("Server name not defined");
+            throw serverNameNotDefined();
         }
         HttpServerRequest request = ctx.request();
 
@@ -218,6 +222,52 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 LOG.debugf("Dummy session removed [%s]", connection.id());
             }
         });
+    }
+
+    void openSseStream(RoutingContext ctx, ConnectionManager connectionManager, String serverName) {
+        if (serverName == null) {
+            throw serverNameNotDefined();
+        }
+        HttpServerRequest request = ctx.request();
+        String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
+        if (mcpSessionId == null) {
+            LOG.errorf("%s header not found", MCP_SESSION_ID_HEADER);
+            ctx.fail(405);
+            return;
+        }
+        McpConnectionBase connection = connectionManager.get(mcpSessionId);
+        if (connection == null) {
+            LOG.errorf("Mcp session not found: %s", mcpSessionId);
+            ctx.fail(404);
+            return;
+        }
+
+        HttpServerResponse response = ctx.response();
+        response.setChunked(true);
+        response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
+
+        StreamableHttpMcpConnection streamableConnection = (StreamableHttpMcpConnection) connection;
+        SubsidiarySse sse = new SubsidiarySse(ConnectionManager.connectionId(), response);
+        streamableConnection.addSse(sse);
+
+        // Send log notification to the client
+        JsonObject log = Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+                Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
+                        "Subsidiary SSE opened [%s]".formatted(connection.id())));
+
+        TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
+        if (trafficLogging.enabled()) {
+            TrafficLogger.messageSent(log, connection, trafficLogging.textLimit());
+        }
+        sse.sendEvent("message", log.encode());
+
+        HttpMcpServerRecorder.setCloseHandler(request, () -> {
+            if (streamableConnection.removeSse(sse.id())) {
+                LOG.debugf("Subsidiary SSE [%s] stream closed [%s]", sse.id(), connection.id());
+            }
+        }, "subsidiary SSE will be closed upon session termination".formatted(connection.id()));
+
+        LOG.debugf("Subsidiary SSE stream [%s] initialized [%s]", sse.id(), connection.id());
     }
 
     StreamableHttpMcpConnection initConnection(String serverName) {
@@ -540,6 +590,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private static boolean corsOriginsEmpty(Config config) {
         return config.getOptionalValues(CORS_ORIGINS_PROPERTY, String.class).orElse(List.of()).isEmpty();
+    }
+
+    private IllegalStateException serverNameNotDefined() {
+        return new IllegalStateException("Server name not defined");
     }
 
 }
