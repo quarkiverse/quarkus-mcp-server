@@ -34,7 +34,7 @@ public interface McpConnection {
          */
         NEW,
         /**
-         * The server responded to the {@code initialize} request with its own capabilities and information. Now it's waigting
+         * The server responded to the {@code initialize} request with its own capabilities and information. Now it's waiting
          * for the {@code initialized} notification from the client.
          */
         INITIALIZING,
