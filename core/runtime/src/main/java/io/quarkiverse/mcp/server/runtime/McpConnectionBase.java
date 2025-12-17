@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitialRequest;
@@ -21,15 +20,15 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final AtomicReference<Status> status;
 
-    protected final AtomicReference<InitialRequest> initializeRequest;
+    protected volatile InitialRequest initializeRequest;
 
-    protected final AtomicReference<LogLevel> logLevel;
+    protected volatile LogLevel logLevel;
 
     protected final int trafficLoggerTextLimit;
 
     protected final Optional<Duration> autoPingInterval;
 
-    protected final AtomicLong lastUsed;
+    protected volatile long lastUsed;
 
     protected final long idleTimeout;
 
@@ -38,13 +37,12 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
-        this.initializeRequest = new AtomicReference<>();
-        this.logLevel = new AtomicReference<>(serverConfig.clientLogging().defaultLevel());
+        this.logLevel = serverConfig.clientLogging().defaultLevel();
         this.trafficLoggerTextLimit = serverConfig.trafficLogging().enabled()
                 ? serverConfig.trafficLogging().textLimit()
                 : -1;
         this.autoPingInterval = serverConfig.autoPingInterval();
-        this.lastUsed = new AtomicLong(Instant.now().toEpochMilli());
+        this.lastUsed = Instant.now().toEpochMilli();
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
         this.cancellationRequests = new ConcurrentHashMap<>();
     }
@@ -61,12 +59,12 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     @Override
     public InitialRequest initialRequest() {
-        return initializeRequest.get();
+        return initializeRequest;
     }
 
     public boolean initialize(InitialRequest request) {
         if (status.compareAndSet(Status.NEW, Status.INITIALIZING)) {
-            initializeRequest.set(request);
+            this.initializeRequest = request;
             return true;
         }
         return false;
@@ -78,11 +76,11 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     @Override
     public LogLevel logLevel() {
-        return logLevel.get();
+        return logLevel;
     }
 
     void setLogLevel(LogLevel level) {
-        this.logLevel.set(level);
+        this.logLevel = level;
     }
 
     public boolean setInitialized() {
@@ -98,7 +96,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     }
 
     public McpConnectionBase touch() {
-        this.lastUsed.set(Instant.now().toEpochMilli());
+        this.lastUsed = Instant.now().toEpochMilli();
         return this;
     }
 
@@ -106,7 +104,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         if (idleTimeout <= 0) {
             return false;
         }
-        return Instant.now().minusMillis(lastUsed.get()).toEpochMilli() > idleTimeout;
+        return Instant.now().minusMillis(lastUsed).toEpochMilli() > idleTimeout;
     }
 
     protected void messageSent(JsonObject message) {
