@@ -25,9 +25,7 @@ public class SseMcpConnection extends McpConnectionBase {
         if (message == null) {
             return Future.succeededFuture();
         }
-        if (trafficLogger != null) {
-            trafficLogger.messageSent(message, this);
-        }
+        messageSent(message);
         return sendEvent("message", message.encode());
     }
 

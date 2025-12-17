@@ -21,9 +21,7 @@ public class WebSocketMcpConnection extends McpConnectionBase {
         if (message == null) {
             return Future.succeededFuture();
         }
-        if (trafficLogger != null) {
-            trafficLogger.messageSent(message, this);
-        }
+        messageSent(message);
         return UniHelper.toFuture(connection.sendText(message.encode()));
     }
 

@@ -5,25 +5,19 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.vertx.core.json.JsonObject;
 
-public class TrafficLogger {
+public final class TrafficLogger {
 
     private static final Logger LOG = Logger.getLogger("io.quarkus.mcp.server.traffic");
 
-    private final int textPayloadLimit;
-
-    public TrafficLogger(int textPayloadLimit) {
-        this.textPayloadLimit = textPayloadLimit;
+    public static void messageReceived(JsonObject message, McpConnection connection, int textPayloadLimit) {
+        LOG.infof("MCP message received [%s]:\n\n%s", connection.id(), messageToString(message, textPayloadLimit));
     }
 
-    public void messageReceived(JsonObject message, McpConnection connection) {
-        LOG.infof("MCP message received [%s]:\n\n%s", connection.id(), messageToString(message));
+    public static void messageSent(JsonObject message, McpConnection connection, int textPayloadLimit) {
+        LOG.infof("MCP message sent [%s]:\n\n%s", connection.id(), messageToString(message, textPayloadLimit));
     }
 
-    public void messageSent(JsonObject message, McpConnection connection) {
-        LOG.infof("MCP message sent [%s]:\n\n%s", connection.id(), messageToString(message));
-    }
-
-    private String messageToString(JsonObject message) {
+    private static String messageToString(JsonObject message, int textPayloadLimit) {
         String encoded = message.encodePrettily();
         if (encoded == null || encoded.isBlank()) {
             return "n/a";

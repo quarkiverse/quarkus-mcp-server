@@ -1,7 +1,5 @@
 package io.quarkiverse.mcp.server.http.runtime;
 
-import static io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.MCP_SESSION_ID_HEADER;
-
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.URLEncoder;
@@ -14,13 +12,8 @@ import java.util.function.Function;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.McpLog;
-import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SubsidiarySse;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
-import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.Arc;
@@ -35,7 +28,6 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.impl.ConnectionBase;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
@@ -67,7 +59,7 @@ public class HttpMcpServerRecorder {
                 ctx.put(CONTEXT_KEY, serverName);
                 HttpMethod method = ctx.request().method();
                 if (HttpMethod.GET.equals(method)) {
-                    openSseStream(ctx, connectionManager);
+                    handler.openSseStream(ctx, connectionManager, serverName);
                 } else if (HttpMethod.POST.equals(method)) {
                     handler.handle(ctx);
                 } else if (HttpMethod.DELETE.equals(method)) {
@@ -77,47 +69,6 @@ public class HttpMcpServerRecorder {
                 }
             }
         };
-    }
-
-    private void openSseStream(RoutingContext ctx, ConnectionManager connectionManager) {
-        HttpServerRequest request = ctx.request();
-        String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
-        if (mcpSessionId == null) {
-            LOG.errorf("%s header not found", MCP_SESSION_ID_HEADER);
-            ctx.fail(405);
-            return;
-        }
-        McpConnectionBase connection = connectionManager.get(mcpSessionId);
-        if (connection == null) {
-            LOG.errorf("Mcp session not found: %s", mcpSessionId);
-            ctx.fail(404);
-            return;
-        }
-
-        HttpServerResponse response = ctx.response();
-        response.setChunked(true);
-        response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
-
-        StreamableHttpMcpConnection streamableConnection = (StreamableHttpMcpConnection) connection;
-        SubsidiarySse sse = new SubsidiarySse(ConnectionManager.connectionId(), response);
-        streamableConnection.addSse(sse);
-
-        // Send log notification to the client
-        JsonObject log = Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
-                Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
-                        "Subsidiary SSE opened [%s]".formatted(connection.id())));
-        if (connection.trafficLogger() != null) {
-            connection.trafficLogger().messageSent(log, connection);
-        }
-        sse.sendEvent("message", log.encode());
-
-        setCloseHandler(request, () -> {
-            if (streamableConnection.removeSse(sse.id())) {
-                LOG.debugf("Subsidiary SSE [%s] stream closed [%s]", sse.id(), connection.id());
-            }
-        }, "subsidiary SSE will be closed upon session termination".formatted(connection.id()));
-
-        LOG.debugf("Subsidiary SSE stream [%s] initialized [%s]", sse.id(), connection.id());
     }
 
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
@@ -185,7 +136,7 @@ public class HttpMcpServerRecorder {
         };
     }
 
-    private void setCloseHandler(HttpServerRequest request, String connectionId, ConnectionManager connectionManager) {
+    static void setCloseHandler(HttpServerRequest request, String connectionId, ConnectionManager connectionManager) {
         setCloseHandler(request, () -> {
             if (connectionManager.remove(connectionId)) {
                 LOG.debugf("Connection %s closed", connectionId);
@@ -194,7 +145,7 @@ public class HttpMcpServerRecorder {
         }, "client should close the connection [%s] explicitly".formatted(connectionId));
     }
 
-    private void setCloseHandler(HttpServerRequest request, Runnable closeAction, String errorMessage) {
+    static void setCloseHandler(HttpServerRequest request, Runnable closeAction, String errorMessage) {
         HttpConnection connection = request.connection();
         if (connection instanceof ConnectionBase base) {
             try {
