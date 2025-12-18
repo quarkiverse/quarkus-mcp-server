@@ -31,11 +31,14 @@ import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
+import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -50,6 +53,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     private final GlobalInputSchemaGenerator globalInputSchemaGenerator;
     private final GlobalOutputSchemaGenerator globalOutputSchemaGenerator;
+
+    private final McpServersRuntimeConfig config;
 
     final Instance<InputSchemaGenerator<?>> inputSchemaGenerator;
     final Instance<OutputSchemaGenerator> outputSchemaGenerator;
@@ -73,7 +78,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
             Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
             Instance<OutputSchemaGenerator> outputSchemaGenerator,
-            McpServersBuildTimeConfig buildTimeConfig) {
+            McpServersBuildTimeConfig buildTimeConfig,
+            McpServersRuntimeConfig config) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
@@ -86,6 +92,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.defaultValueConverters = metadata.defaultValueConverters();
         this.filters = filters;
         this.buildTimeConfig = buildTimeConfig;
+        this.config = config;
     }
 
     @Override
@@ -149,6 +156,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     @Override
     protected Map<Type, DefaultValueConverter<?>> defaultValueConverters() {
         return defaultValueConverters;
+    }
+
+    @Override
+    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String message) {
+        McpServerRuntimeConfig serverConfig = config.servers().get(metadata.info().serverName());
+        if (serverConfig == null) {
+            throw new IllegalStateException("Server config not found: " + metadata.info().serverName());
+        }
+        return switch (serverConfig.tools().inputValidationError()) {
+            case TOOL -> new ToolCallException(message);
+            case PROTOCOL -> new McpException(message, JsonRpcErrorCodes.INVALID_PARAMS);
+            default -> throw new IllegalArgumentException("Unexpected value: " + serverConfig.tools().inputValidationError());
+        };
     }
 
     private boolean test(ToolInfo tool, McpConnection connection) {

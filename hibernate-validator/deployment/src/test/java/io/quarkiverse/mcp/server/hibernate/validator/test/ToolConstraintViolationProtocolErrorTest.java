@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -25,12 +26,13 @@ import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
 
-public class ToolConstraintViolationTest extends McpServerTest {
+public class ToolConstraintViolationProtocolErrorTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
-                    root -> root.addClasses(MyTools.class));
+                    root -> root.addClasses(MyTools.class))
+            .overrideConfigKey("quarkus.mcp.server.tools.input-validation-error", "protocol");
 
     @Inject
     MyTools tools;
@@ -39,22 +41,28 @@ public class ToolConstraintViolationTest extends McpServerTest {
     public void testError() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
-                .toolsCall("bravo", Map.of("price", 1), toolResponse -> {
-                    assertTrue(toolResponse.isError());
-                    assertEquals("bravo.price: must be greater than or equal to 5",
-                            toolResponse.content().get(0).asText().text());
+                .toolsCall("bravo")
+                .withArguments(Map.of("price", 1))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
+                    assertEquals("bravo.price: must be greater than or equal to 5", error.message());
                 })
-                .toolsCall("charlie", Map.of("price", 1, "name", ""), toolResponse -> {
-                    assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
-                    assertTrue(text.contains("charlie.price: must be greater than or equal to 5"), text);
-                    assertTrue(text.contains("charlie.name: must not be blank"), text);
+                .send()
+                .toolsCall("charlie")
+                .withArguments(Map.of("price", 1, "name", ""))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
+                    assertTrue(error.message().contains("charlie.price: must be greater than or equal to 5"), error.toString());
+                    assertTrue(error.message().contains("charlie.name: must not be blank"), error.toString());
                 })
-                .toolsCall("delta", Map.of("person", Map.of("age", 5)), toolResponse -> {
-                    assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
-                    assertEquals("delta.person.age: must be greater than or equal to 10", text);
+                .send()
+                .toolsCall("delta")
+                .withArguments(Map.of("person", Map.of("age", 5)))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
+                    assertEquals("delta.person.age: must be greater than or equal to 10", error.message());
                 })
+                .send()
                 .toolsList(page -> {
                     assertEquals(3, page.tools().size());
                     ToolInfo bravo = page.findByName("bravo");

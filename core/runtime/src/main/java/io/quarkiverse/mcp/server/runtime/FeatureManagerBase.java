@@ -164,7 +164,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
                 case META -> MetaImpl.from(argProviders.rawMessage().getJsonObject("params"));
                 case ELICITATION -> ElicitationImpl.from(argProviders);
-                case PARAMS -> handleParam(arg, argProviders.getArg(arg.name()));
+                case PARAMS -> handleParam(metadata, arg, argProviders.getArg(arg.name()));
                 default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
             };
             idx++;
@@ -172,20 +172,23 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return ret;
     }
 
+    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String message) {
+        return new McpException(message, JsonRpcErrorCodes.INVALID_PARAMS);
+    }
+
     @SuppressWarnings("unchecked")
-    private Object handleParam(FeatureArgument arg, Object val) {
+    private Object handleParam(FeatureMetadata<?> metadata, FeatureArgument arg, Object val) {
         if (val == null) {
             if (arg.defaultValue() != null) {
                 // Try to use the default value
                 val = convert(arg.defaultValue(), arg.type());
             }
             if (val == null && arg.required()) {
-                throw new McpException("Missing required argument: " + arg.name(), JsonRpcErrorCodes.INVALID_PARAMS);
+                throw invalidArgument(metadata, "Missing required argument: " + arg.name());
             }
         } else if (!arg.isValid(val)) {
-            throw new McpException(
-                    "Invalid argument [%s] - value does not match %s".formatted(arg.name(), arg.type().getTypeName()),
-                    JsonRpcErrorCodes.INVALID_PARAMS);
+            throw invalidArgument(metadata,
+                    "Invalid argument [%s] - value does not match %s".formatted(arg.name(), arg.type().getTypeName()));
         } else {
             if (val instanceof Map map) {
                 // json object
@@ -193,10 +196,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 try {
                     val = mapper.convertValue(map, javaType);
                 } catch (IllegalArgumentException e) {
-                    throw new McpException(
+                    throw invalidArgument(metadata,
                             "Invalid argument [%s] - unable to convert JSON object to %s".formatted(arg.name(),
-                                    arg.type().getTypeName()),
-                            JsonRpcErrorCodes.INVALID_PARAMS);
+                                    arg.type().getTypeName()));
                 }
             } else if (val instanceof List list) {
                 // json array
@@ -204,19 +206,17 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 try {
                     val = mapper.convertValue(list, javaType);
                 } catch (IllegalArgumentException e) {
-                    throw new McpException(
+                    throw invalidArgument(metadata,
                             "Invalid argument [%s] - unable to convert JSON array to %s".formatted(arg.name(),
-                                    arg.type().getTypeName()),
-                            JsonRpcErrorCodes.INVALID_PARAMS);
+                                    arg.type().getTypeName()));
                 }
             } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
                 try {
                     val = Enum.valueOf(clazz, val.toString());
                 } catch (IllegalArgumentException e) {
-                    throw new McpException(
+                    throw invalidArgument(metadata,
                             "Invalid argument [%s] - %s is not an enum constant of %s".formatted(arg.name(), val,
-                                    clazz.getName()),
-                            JsonRpcErrorCodes.INVALID_PARAMS);
+                                    clazz.getName()));
                 }
             } else if (val instanceof Number num) {
                 val = coerceNumber(num, arg.type());

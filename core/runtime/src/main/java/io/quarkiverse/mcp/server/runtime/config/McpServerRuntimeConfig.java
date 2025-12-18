@@ -205,6 +205,31 @@ public interface McpServerRuntimeConfig {
          */
         StructuredContent structuredContent();
 
+        /**
+         * The strategy used for input validation errors.
+         */
+        @WithDefault("tool")
+        InputValidationError inputValidationError();
+
+        enum InputValidationError {
+
+            /**
+             * An input validation error results in a protocol error with JSON-RPC error code `-32602` (invalid params).
+             *
+             * @asciidoclet
+             */
+            PROTOCOL,
+
+            /**
+             * An input validation error is reported in a tool response with `isError: true`.
+             *
+             * This behavior is compliant with the specification.
+             *
+             * @asciidoclet
+             */
+            TOOL,
+        }
+
     }
 
     public interface StructuredContent {

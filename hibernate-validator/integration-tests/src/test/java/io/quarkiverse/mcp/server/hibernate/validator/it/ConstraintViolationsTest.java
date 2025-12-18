@@ -2,12 +2,12 @@ package io.quarkiverse.mcp.server.hibernate.validator.it;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.test.junit.QuarkusTest;
@@ -31,13 +31,11 @@ class ConstraintViolationsTest {
                     assertEquals(5, price.getInteger("minimum"));
 
                 })
-                .toolsCall("bravo")
-                .withArguments(Map.of("price", 1, "name", ""))
-                .withErrorAssert(error -> {
-                    assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
-                    assertEquals("bravo.price: must be greater than or equal to 5", error.message());
+                .toolsCall("bravo", Map.of("price", 1, "name", ""), toolResponse -> {
+                    assertTrue(toolResponse.isError());
+                    assertEquals("bravo.price: must be greater than or equal to 5",
+                            toolResponse.content().get(0).asText().text());
                 })
-                .send()
                 .thenAssertResults();
     }
 
