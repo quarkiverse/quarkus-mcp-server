@@ -36,7 +36,26 @@ public class MyTools {
 ----
 <1> `@NotBlank` defines a constraint used for the tool argument `name`.
 
-When the tool method is executed and the name argument is blank, then the server responds with a protocol error message like:
+When the tool method is executed and the name argument is blank, then the server responds with a tool response message like:
+
+[source,json]
+----
+{
+  "jsonrpc" : "2.0",
+  "id" : 2,
+  "result" : {
+    "isError" : true,
+    "content" : [ {
+      "text" : "foo.name: must not be blank",
+      "type" : "text"
+    } ]
+  }
+}
+----
+
+[NOTE]
+==== 
+Up to version 1.8.0 the server responded with a protocol error and JSON-RPC error code `-32602` (invalid params):
 
 [source,json]
 ----
@@ -50,8 +69,11 @@ When the tool method is executed and the name argument is blank, then the server
 }
 ----
 
-[NOTE] 
-==== 
+However, this behavior was not compliant with the specification.
+You can re-enable the previous behavior with `quarkus.mcp.server.tools.input-validation-error=protocol`.
+
+====
+
 Keep in mind that validation is only triggered if a method or any of its parameters declares a constraint annotation.
 
 [source,java]
@@ -73,11 +95,15 @@ public class MyTools {
 ----
 <1> `@Valid` is required to trigger the validation of `Person`.
 
-====
-
 === `ConstraintViolationConverter`
 
-By default, a `ConstraintViolationException` is converted into an `McpException` with JSON-RPC error code `-32602` (invalid params) and the message contains `ConstraintViolation#getPropertyPath()` and `ConstraintViolation#getMessage()` for each violation.
+By default, a `ConstraintViolationException` is converted into:
+
+1. A `ToolCallException` for tools.
+2. An `McpException` with JSON-RPC error code `-32602` (invalid params) for all other features.
+
+The message contains `ConstraintViolation#getPropertyPath()` and `ConstraintViolation#getMessage()` for each violation.
+
 However, it possible to implement a custom CDI bean that implements the `io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter` interface and supply some custom logic.
 
 [source,java]
@@ -91,9 +117,9 @@ public MyConstraintViolationConverter implements ConstraintViolationConverter {
 
    @Override
    public Exception convert(ConstraintViolationException exception) {
-      return new ToolCallException(exception); <2>
+      return new ToolCallException("Something went wrong!"); <2>
    }
 }
 ----
 <1> Use the `@Singleton` scope to define a bean.
-<2> Turn the `ConstraintViolationException` into a business error.
+<2> Turn the `ConstraintViolationException` into a business error with the specified message.
