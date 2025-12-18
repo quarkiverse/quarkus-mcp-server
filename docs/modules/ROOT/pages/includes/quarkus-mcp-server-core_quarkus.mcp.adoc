@@ -803,6 +803,32 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error[`quarkus.mcp.server.tools.input-validation-error`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.input-validation-error+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".tools.input-validation-error`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.input-validation-error+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The strategy used for input validation errors.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_INPUT_VALIDATION_ERROR+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_INPUT_VALIDATION_ERROR+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`protocol`, `tool`
+|`+++tool+++`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]
