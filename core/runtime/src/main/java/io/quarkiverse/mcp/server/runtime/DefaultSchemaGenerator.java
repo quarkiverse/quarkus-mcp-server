@@ -44,26 +44,49 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     @Override
     public InputSchema generate(ToolInfo tool) {
         Class<?> holder = toolArgumentHolders.get(tool.name());
-        Object properties;
+
         if (holder != null) {
-            properties = generateSchema(holder, tool.arguments());
-        } else {
-            JsonObject props = new JsonObject();
+            JsonNode jsonNode = generateSchema(holder, tool.arguments());
+            JsonObject schema = new JsonObject(jsonNode.toString());
+
+            JsonArray required = new JsonArray();
             for (ToolArgument a : tool.arguments()) {
-                props.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
+                if (a.required()) {
+                    required.add(a.name());
+                }
             }
-            properties = props;
-        }
-        JsonArray required = new JsonArray();
-        for (ToolArgument a : tool.arguments()) {
-            if (a.required()) {
-                required.add(a.name());
+
+            if (!required.isEmpty()) {
+                JsonArray existingRequired = schema.getJsonArray("required");
+                if (existingRequired == null) {
+                    schema.put("required", required);
+                } else {
+                    for (Object o : required) {
+                        if (!existingRequired.contains(o)) {
+                            existingRequired.add(o);
+                        }
+                    }
+                }
             }
+            return new InputSchemaImpl(schema);
+
+        } else {
+            // Fallback for individual primitives (no complex recursive types expected here)
+            JsonObject properties = new JsonObject();
+            for (ToolArgument a : tool.arguments()) {
+                properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
+            }
+            JsonArray required = new JsonArray();
+            for (ToolArgument a : tool.arguments()) {
+                if (a.required()) {
+                    required.add(a.name());
+                }
+            }
+            return new InputSchemaImpl(new JsonObject()
+                    .put("type", "object")
+                    .put("properties", properties)
+                    .put("required", required));
         }
-        return new InputSchemaImpl(new JsonObject()
-                .put("type", "object")
-                .put("properties", properties)
-                .put("required", required));
     }
 
     record InputSchemaImpl(JsonObject value) implements InputSchema {
@@ -90,17 +113,21 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
         return new SchemaGenerator(configBuilder.build());
     }
 
-    Object generateSchema(Class<?> holderClass, List<ToolArgument> toolArguments) {
+    JsonNode generateSchema(Class<?> holderClass, List<ToolArgument> toolArguments) {
         JsonNode jsonNode = schemaGenerator.generateSchema(holderClass);
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
-            for (ToolArgument arg : toolArguments) {
-                JsonNode node = objectNode.get(arg.name());
-                if (node != null) {
-                    postProcessJsonNode(node, arg.type(), arg.description(), arg.defaultValue());
+            JsonNode propertiesNode = objectNode.get("properties");
+            if (propertiesNode != null && propertiesNode.isObject()) {
+                ObjectNode propertiesObj = (ObjectNode) propertiesNode;
+                for (ToolArgument arg : toolArguments) {
+                    JsonNode node = propertiesObj.get(arg.name());
+                    if (node != null) {
+                        postProcessJsonNode(node, arg.type(), arg.description(), arg.defaultValue());
+                    }
                 }
             }
-            return objectNode.get("properties");
+            return objectNode;
         }
         return jsonNode;
     }
