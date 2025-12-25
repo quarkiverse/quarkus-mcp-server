@@ -12,7 +12,7 @@
     <name>Quarkus MCP Server Transport - HTTP - Deployment</name>
     
     <properties>
-        <version.langchain4j>1.9.1</version.langchain4j>
+        <version.langchain4j>1.10.0</version.langchain4j>
         <version.assertj>3.27.6</version.assertj>
     </properties>
 
