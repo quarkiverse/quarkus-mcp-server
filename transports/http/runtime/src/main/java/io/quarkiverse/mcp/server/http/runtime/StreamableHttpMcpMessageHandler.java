@@ -552,12 +552,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
             messageSent(message);
             if (sse.get()) {
+                // Forced SSE mode, such as @Tool method with "Sampling" param
                 // "write" is async and synchronized over http connection, and should be thread-safe
                 return response.write("event: message\ndata: " + message.encode() + "\n\n");
             } else {
-                if (response.ended()) {
+                if (!Messages.isResponse(message)) {
                     // Try to use a subsidiary SSE
-                    LOG.debugf("HTTP response ended, try to use a subsidiary SSE channel instead");
+                    LOG.debugf("Not a response - try to use a subsidiary SSE channel instead");
                     return connection().send(message);
                 } else {
                     response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
