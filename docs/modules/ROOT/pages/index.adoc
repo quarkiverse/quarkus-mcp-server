@@ -1335,26 +1335,25 @@ It's a Node.js app that can be run locally:
 $ npx @modelcontextprotocol/inspector
 ----
 
-The UI is then available at `locahost:5173` by default.
+NOTE: If using the `Connection Type: Direct` you'll need to configure the Quarkus CORS filter first and also expose the `mcp-session-Id` header with `quarkus.http.cors.exposed-headers=mcp-session-Id`.
 
 If you don't have the `npx` command installed locally you can also use the official Node.js Docker image.
 Linux developers will need to add the `--network=host` option because the inspector app needs to access your MCP server running on the localhost:
 
 [source,console]
 ----
-$ docker run --rm --network=host node:18 npx @modelcontextprotocol/inspector
+$ docker run --rm --network=host node:22 npx @modelcontextprotocol/inspector
 ----
 
 However, `--network=host` does not work for Mac and Windows.
-Mac and Windows developers will need to export the default MCP inspector port (`5137`) and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
-
-
-TIP: When inspecting a server that uses the "Streamable HTTP" or HTTP/SSE transport, you need to configure the proper path in the MCP inspector. The path should be  `${quarkus.mcp.server.sse.root-path}` for "Streamable HTTP" and `${quarkus.mcp.server.sse.root-path}/sse` for HTTP/SSE; i.e. `/mcp` and `/mcp/sse` by default.
+Mac and Windows developers will need to export the default MCP inspector port and use the `host.docker.internal` special DNS name instead of `localhost` in the Server connection pane UI.
 
 [source,console]
 ----
-$ docker run --rm -p 5173:5173 node:18 npx @modelcontextprotocol/inspector
+$ docker run --rm -p 5173:5173 node:22 npx @modelcontextprotocol/inspector
 ----
+
+TIP: When inspecting a server that uses the "Streamable HTTP" or HTTP/SSE transport, you need to configure the proper path in the MCP inspector. The path should be  `${quarkus.mcp.server.sse.root-path}` for "Streamable HTTP" and `${quarkus.mcp.server.sse.root-path}/sse` for HTTP/SSE; i.e. `/mcp` and `/mcp/sse` by default.
 
 == Testing
 
