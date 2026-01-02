@@ -216,8 +216,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     ctx.response().setStatusCode(500).end();
                 }
             }
+
             // Make sure the dummy connection is removed
-            if (DUMMY_INIT_IMPL_NAME.equals(connection.initialRequest().implementation().name())
+            if (connection.initialRequest() != null
+                    && DUMMY_INIT_IMPL_NAME.equals(connection.initialRequest().implementation().name())
                     && connectionManager.remove(connection.id())) {
                 LOG.debugf("Dummy session removed [%s]", connection.id());
             }

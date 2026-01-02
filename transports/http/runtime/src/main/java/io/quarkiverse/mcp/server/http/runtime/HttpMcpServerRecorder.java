@@ -65,7 +65,9 @@ public class HttpMcpServerRecorder {
                 } else if (HttpMethod.DELETE.equals(method)) {
                     handler.terminateSession(ctx);
                 } else {
-                    throw new IllegalArgumentException("Unexpected HTTP method: " + method);
+                    LOG.debugf("Invalid HTTP method %s [server: %s]", method, serverName);
+                    ctx.response().putHeader(HttpHeaders.ALLOW, "GET, POST, DELETE");
+                    ctx.fail(405);
                 }
             }
         };
