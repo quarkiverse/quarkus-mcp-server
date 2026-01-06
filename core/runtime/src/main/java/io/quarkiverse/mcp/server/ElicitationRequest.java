@@ -7,6 +7,7 @@ import java.util.Map;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -92,7 +93,10 @@ public interface ElicitationRequest {
 
     }
 
-    record BooleanSchema(String title, String description, Boolean defaultValue, boolean required)
+    record BooleanSchema(String title,
+            String description,
+            Boolean defaultValue,
+            boolean required)
             implements
                 PrimitiveSchema {
 
@@ -122,9 +126,18 @@ public interface ElicitationRequest {
 
     }
 
-    record NumberSchema(String title, String description, Number maximum, Number minimum, boolean required)
+    record NumberSchema(String title,
+            String description,
+            Number maximum,
+            Number minimum,
+            boolean required,
+            Number defaultValue)
             implements
                 PrimitiveSchema {
+
+        public NumberSchema(String title, String description, Number maximum, Number minimum, boolean required) {
+            this(title, description, maximum, minimum, required, null);
+        }
 
         public NumberSchema() {
             this(null, null, null, null, false);
@@ -150,14 +163,29 @@ public interface ElicitationRequest {
             if (minimum != null) {
                 ret.put("minimum", minimum);
             }
+            if (defaultValue != null) {
+                ret.put("default", defaultValue);
+            }
             return ret;
         }
 
     }
 
-    record EnumSchema(String title, String description, List<String> enumValues, List<String> enumNames, boolean required)
+    /**
+     * {@code LegacyTitledEnumSchema}
+     */
+    record EnumSchema(String title,
+            String description,
+            List<String> enumValues,
+            List<String> enumNames,
+            boolean required,
+            String defaultValue)
             implements
                 PrimitiveSchema {
+
+        public EnumSchema(String title, String description, List<String> enumValues, List<String> enumNames, boolean required) {
+            this(title, description, enumValues, enumNames, required, null);
+        }
 
         public EnumSchema(List<String> enumValues) {
             this(null, null, enumValues, null, false);
@@ -185,19 +213,165 @@ public interface ElicitationRequest {
                 ret.put("title", title);
             }
             if (description != null) {
-                ret.put("description", title);
+                ret.put("description", description);
             }
             if (enumNames != null) {
                 ret.put("enumNames", enumNames);
+            }
+            if (defaultValue != null) {
+                ret.put("default", defaultValue);
             }
             return ret;
         }
 
     }
 
-    record StringSchema(String title, String description, Integer maxLength, Integer minLength, Format format, boolean required)
+    /**
+     * {@code SingleSelectEnumSchema}
+     */
+    record SingleSelectEnumSchema(String title,
+            String description,
+            List<String> enumValues,
+            List<String> enumTitles,
+            boolean required,
+            String defaultValue)
             implements
                 PrimitiveSchema {
+
+        public SingleSelectEnumSchema(List<String> enumValues) {
+            this(null, null, enumValues, null, false, null);
+        }
+
+        public SingleSelectEnumSchema(List<String> enumValues, List<String> enumTitles) {
+            this(null, null, enumValues, enumTitles, false, null);
+        }
+
+        public SingleSelectEnumSchema(List<String> enumValues, String defaultValue) {
+            this(null, null, enumValues, null, false, defaultValue);
+        }
+
+        public SingleSelectEnumSchema {
+            if (enumValues == null) {
+                throw new IllegalArgumentException("enumValues must not be null");
+            }
+            if (enumTitles != null && enumTitles.size() != enumValues.size()) {
+                throw new IllegalArgumentException("enumValues and enumTitles must contain the same number of elements");
+            }
+        }
+
+        @Override
+        public JsonObject asJson() {
+            JsonObject ret = new JsonObject()
+                    .put("type", "string");
+            if (title != null) {
+                ret.put("title", title);
+            }
+            if (description != null) {
+                ret.put("description", description);
+            }
+            if (enumTitles == null) {
+                // UntitledSingleSelectEnumSchema
+                ret.put("enum", enumValues);
+            } else {
+                // TitledSingleSelectEnumSchema
+                JsonArray oneOf = new JsonArray();
+                for (int i = 0; i < enumValues.size(); i++) {
+                    oneOf.add(new JsonObject()
+                            .put("const", enumValues.get(i))
+                            .put("title", enumTitles.get(i)));
+                }
+                ret.put("oneOf", oneOf);
+            }
+            if (defaultValue != null) {
+                ret.put("default", defaultValue);
+            }
+            return ret;
+        }
+
+    }
+
+    /**
+     * {@code MultiSelectEnumSchema}
+     */
+    record MultiSelectEnumSchema(String title,
+            String description,
+            List<String> enumValues,
+            List<String> enumTitles,
+            Integer minItems,
+            Integer maxItems,
+            boolean required,
+            List<String> defaultValues)
+            implements
+                PrimitiveSchema {
+
+        public MultiSelectEnumSchema(List<String> enumValues) {
+            this(null, null, enumValues, null, null, null, false, null);
+        }
+
+        public MultiSelectEnumSchema {
+            if (enumValues == null) {
+                throw new IllegalArgumentException("enumValues must not be null");
+            }
+            if (enumTitles != null && enumTitles.size() != enumValues.size()) {
+                throw new IllegalArgumentException("enumValues and enumTitles must contain the same number of elements");
+            }
+        }
+
+        @Override
+        public JsonObject asJson() {
+            JsonObject ret = new JsonObject()
+                    .put("type", "array");
+            if (title != null) {
+                ret.put("title", title);
+            }
+            if (description != null) {
+                ret.put("description", description);
+            }
+            if (minItems != null) {
+                ret.put("minItems", minItems);
+            }
+            if (maxItems != null) {
+                ret.put("maxItems", maxItems);
+            }
+            if (enumTitles == null) {
+                // UntitledMultiSelectEnumSchema
+                ret.put("items", new JsonObject()
+                        .put("type", "string")
+                        .put("enum", enumValues));
+            } else {
+                // TitledMultiSelectEnumSchema
+                JsonObject items = new JsonObject();
+                JsonArray anyOf = new JsonArray();
+                for (int i = 0; i < enumValues.size(); i++) {
+                    anyOf.add(new JsonObject()
+                            .put("const", enumValues.get(i))
+                            .put("title", enumTitles.get(i)));
+                }
+                items.put("anyOf", anyOf);
+                ret.put("items", items);
+            }
+            if (defaultValues != null) {
+                ret.put("default", defaultValues);
+            }
+            return ret;
+        }
+
+    }
+
+    record StringSchema(String title,
+            String description,
+            Integer maxLength,
+            Integer minLength,
+            Format format,
+            boolean required,
+            String defaultValue)
+            implements
+                PrimitiveSchema {
+
+        public StringSchema(String title, String description, Integer maxLength, Integer minLength, Format format,
+                boolean required) {
+            this(title, description, maxLength, minLength, format, required, null);
+        }
 
         public StringSchema() {
             this(null, null, null, null, null, false);
@@ -239,6 +413,9 @@ public interface ElicitationRequest {
             }
             if (format != null) {
                 ret.put("format", format.asJsonString());
+            }
+            if (defaultValue != null) {
+                ret.put("default", defaultValue);
             }
             return ret;
         }
