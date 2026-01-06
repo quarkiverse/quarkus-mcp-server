@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -108,6 +109,15 @@ public class ElicitationRequestImpl implements ElicitationRequest {
         @Override
         public String getString(String key) {
             return json.getString(key);
+        }
+
+        @Override
+        public List<String> getStrings(String key) {
+            JsonArray value = json.getJsonArray(key);
+            if (value != null) {
+                return value.stream().map(Object::toString).toList();
+            }
+            return null;
         }
 
         @Override
