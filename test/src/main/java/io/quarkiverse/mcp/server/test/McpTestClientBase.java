@@ -18,6 +18,7 @@ import java.util.function.Function;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
@@ -61,9 +62,14 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected final AtomicBoolean connected;
     protected volatile InitResult initResult;
 
+    protected String title;
+    protected String description;
+    protected String websiteUrl;
+    protected Set<Icon> icons;
+
     McpTestClientBase(String name, String version, String protocolVersion, Set<ClientCapability> clientCapabilities,
-            Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, BasicAuth clientBasicAuth) {
-        super();
+            Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, BasicAuth clientBasicAuth,
+            String title, String description, String websiteUrl, Set<Icon> icons) {
         this.name = name;
         this.version = version;
         this.protocolVersion = protocolVersion;
@@ -72,6 +78,10 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         this.autoPong = autoPong;
         this.clientBasicAuth = clientBasicAuth;
         this.connected = new AtomicBoolean();
+        this.title = title;
+        this.description = description;
+        this.websiteUrl = websiteUrl;
+        this.icons = icons != null ? icons : Set.of();
     }
 
     @Override
@@ -219,10 +229,38 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     @Override
     public JsonObject newInitMessage() {
         JsonObject initMessage = newRequest("initialize");
+        JsonObject clientInfo = new JsonObject()
+                .put("name", name)
+                .put("version", version);
+        if (title != null) {
+            clientInfo.put("title", title);
+        }
+        if (description != null) {
+            clientInfo.put("description", description);
+        }
+        if (websiteUrl != null) {
+            clientInfo.put("websiteUrl", websiteUrl);
+        }
+        if (!this.icons.isEmpty()) {
+            JsonArray icons = new JsonArray();
+            for (Icon icon : this.icons) {
+                JsonObject i = new JsonObject()
+                        .put("src", icon.src());
+                if (icon.mimeType() != null) {
+                    i.put("mimeType", icon.mimeType());
+                }
+                if (icon.theme() != null) {
+                    i.put("theme", icon.theme().toString().toLowerCase());
+                }
+                if (!icon.sizes().isEmpty()) {
+                    i.put("sizes", icon.sizes());
+                }
+                icons.add(i);
+            }
+            clientInfo.put("icons", icons);
+        }
         JsonObject params = new JsonObject()
-                .put("clientInfo", new JsonObject()
-                        .put("name", name)
-                        .put("version", version))
+                .put("clientInfo", clientInfo)
                 .put("protocolVersion", protocolVersion);
         if (!clientCapabilities.isEmpty()) {
             JsonObject capabilities = new JsonObject();

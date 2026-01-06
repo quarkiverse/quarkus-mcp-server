@@ -10,6 +10,8 @@ import java.util.function.Function;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -236,6 +238,34 @@ public class McpAssured {
              * @return self
              */
             BUILDER setProtocolVersion(String protocolVersion);
+
+            /**
+             *
+             * @param title
+             * @return self
+             */
+            BUILDER setTitle(String title);
+
+            /**
+             *
+             * @param description
+             * @return self
+             */
+            BUILDER setDescription(String description);
+
+            /**
+             *
+             * @param icons
+             * @return self
+             */
+            BUILDER setIcons(Icon... icons);
+
+            /**
+             *
+             * @param websiteUrl
+             * @return self
+             */
+            BUILDER setWebsiteUrl(String websiteUrl);
 
             /**
              *
@@ -1281,8 +1311,10 @@ public class McpAssured {
 
     }
 
-    public record InitResult(String protocolVersion, String serverName, String serverTitle, String serverVersion,
-            List<ServerCapability> capabilities, String instructions) {
+    public record InitResult(String protocolVersion,
+            // Keep serverName, serverTitle and serverVersion for backwards compatibility
+            String serverName, String serverTitle, String serverVersion,
+            List<ServerCapability> capabilities, String instructions, Implementation implementation) {
 
     }
 

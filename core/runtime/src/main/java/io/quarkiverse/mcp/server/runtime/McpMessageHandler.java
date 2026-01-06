@@ -29,6 +29,8 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.Icon;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.ServerInfo;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
 import io.quarkus.runtime.LaunchMode;
@@ -543,8 +545,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
-        Implementation implementation = new Implementation(clientInfo.getString("name"), clientInfo.getString("version"),
-                clientInfo.getString("title"));
+        Implementation implementation = Messages.decodeImplementation(clientInfo);
         String protocolVersion = params.getString("protocolVersion");
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         JsonObject capabilities = params.getJsonObject("capabilities");
@@ -557,7 +558,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
-    protected static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of("2025-06-18", "2025-03-26", "2024-11-05");
+    public static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of(
+            "2025-11-25",
+            "2025-06-18",
+            "2025-03-26",
+            "2024-11-05");
 
     private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest) {
         Map<String, Object> info = new HashMap<>();
@@ -569,15 +574,41 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         info.put("protocolVersion", version);
 
-        McpServerRuntimeConfig serverConfig = serverConfig(mcpRequest);
-        String serverName = serverConfig.serverInfo().name()
+        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
+        JsonObject implementation = new JsonObject();
+        String serverName = serverInfo.name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
                         .orElse("N/A"));
-        String serverVersion = serverConfig.serverInfo().version()
+        implementation.put("name", serverName);
+        implementation.put("version", serverInfo.version()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
-                        .orElse("N/A"));
-        String serverTitle = serverConfig.serverInfo().title().orElse(serverName);
-        info.put("serverInfo", Map.of("name", serverName, "version", serverVersion, "title", serverTitle));
+                        .orElse("N/A")));
+        implementation.put("title", serverInfo.title().orElse(serverName));
+        if (serverInfo.description().isPresent()) {
+            implementation.put("description", serverInfo.description().get());
+        }
+        if (serverInfo.websiteUrl().isPresent()) {
+            implementation.put("websiteUrl", serverInfo.websiteUrl().get());
+        }
+        if (!serverInfo.icons().isEmpty()) {
+            JsonArray icons = new JsonArray();
+            for (Icon icon : serverInfo.icons()) {
+                JsonObject i = new JsonObject()
+                        .put("src", icon.src());
+                if (icon.mimeType().isPresent()) {
+                    i.put("mimeType", icon.mimeType().get());
+                }
+                if (icon.theme().isPresent()) {
+                    i.put("theme", icon.theme().get().toString().toLowerCase());
+                }
+                if (!icon.sizes().isEmpty()) {
+                    i.put("sizes", icon.sizes());
+                }
+                icons.add(i);
+            }
+            implementation.put("icons", icons);
+        }
+        info.put("serverInfo", implementation);
 
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
         if (promptManager.hasInfos(mcpRequest)) {
@@ -596,8 +627,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         capabilities.put("logging", Map.of());
         info.put("capabilities", capabilities);
-        if (serverConfig.serverInfo().instructions().isPresent()) {
-            info.put("instructions", serverConfig.serverInfo().instructions().get());
+        if (serverInfo.instructions().isPresent()) {
+            info.put("instructions", serverInfo.instructions().get());
         }
         return info;
     }

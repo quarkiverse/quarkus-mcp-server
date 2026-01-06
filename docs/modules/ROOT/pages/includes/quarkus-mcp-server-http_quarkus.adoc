@@ -62,5 +62,38 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-http-streamable-dummy-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-http-streamable-dummy-init[`quarkus.http.streamable.dummy-init`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.http.streamable.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus."server-name".http.streamable.dummy-init`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus."server-name".http.streamable.dummy-init+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then the server performs a dummy initialization when the first message from the client is not
+`initialize`. A new MCP session is created for each request. The capability negotiation and protocol version
+agreement is completely skipped, so the dummy client supports no capabilities.
+
+Dummy initialization can be used to simulate stateless communication. However, it's not efficient and some
+features may not work properly.
+
+This config property will be deprecated once the stateless mode is codified in the MCP specification.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_HTTP_STREAMABLE_DUMMY_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_HTTP_STREAMABLE_DUMMY_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
 |===
 

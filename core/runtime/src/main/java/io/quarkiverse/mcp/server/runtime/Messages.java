@@ -1,9 +1,15 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class Messages {
@@ -119,6 +125,42 @@ public class Messages {
 
     public static boolean isResourceRef(String referenceType) {
         return RESOURCE_REF.equals(referenceType);
+    }
+
+    public static Implementation decodeImplementation(JsonObject implementation) {
+        return new Implementation(implementation.getString("name"), implementation.getString("version"),
+                implementation.getString("title"), decodeIcons(implementation), implementation.getString("description"),
+                implementation.getString("websiteUrl"));
+    }
+
+    private static List<Icon> decodeIcons(JsonObject implementation) {
+        JsonArray icons = implementation.getJsonArray("icons");
+        if (icons != null) {
+            List<Icon> ret = new ArrayList<>();
+            for (int i = 0; i < icons.size(); i++) {
+                JsonObject icon = icons.getJsonObject(i);
+                if (icon != null) {
+                    ret.add(new Icon(icon.getString("src"),
+                            icon.getString("mimeType"),
+                            decodeIconSizes(icon),
+                            Icon.Theme.from(icon.getString("theme"))));
+                }
+            }
+            return List.copyOf(ret);
+        }
+        return List.of();
+    }
+
+    private static List<String> decodeIconSizes(JsonObject icon) {
+        JsonArray sizes = icon.getJsonArray("sizes");
+        if (sizes != null) {
+            List<String> ret = new ArrayList<>();
+            for (int i = 0; i < sizes.size(); i++) {
+                ret.add(sizes.getString(i));
+            }
+            return List.copyOf(ret);
+        }
+        return List.of();
     }
 
 }

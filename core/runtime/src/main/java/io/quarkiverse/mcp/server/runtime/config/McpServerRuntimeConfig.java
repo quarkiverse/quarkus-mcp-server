@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.runtime.config;
 
+import java.net.URL;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
@@ -126,9 +128,51 @@ public interface McpServerRuntimeConfig {
         Optional<String> title();
 
         /**
+         * The set of icons.
+         */
+        List<Icon> icons();
+
+        /**
+         * The human-readable description of the server.
+         */
+        Optional<String> description();
+
+        /**
+         * The URL of the website for this implementation.
+         */
+        Optional<URL> websiteUrl();
+
+        /**
          * The instructions describing how to use the server and its features. These are hints for the clients.
          */
         Optional<String> instructions();
+
+    }
+
+    /**
+     * An icon.
+     */
+    interface Icon {
+
+        /**
+         * The URI pointing to an icon resource.
+         */
+        String src();
+
+        /**
+         * The mime type.
+         */
+        Optional<String> mimeType();
+
+        /**
+         * The list of sizes in WxH format.
+         */
+        List<String> sizes();
+
+        /**
+         * The theme.
+         */
+        Optional<io.quarkiverse.mcp.server.Icon.Theme> theme();
 
     }
 

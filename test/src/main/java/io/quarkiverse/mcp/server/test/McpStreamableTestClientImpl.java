@@ -7,17 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.net.URI;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableAssert;
@@ -42,7 +39,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private McpStreamableTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
         this.openSubsidiarySse = builder.openSubsidiarySse;
@@ -94,11 +91,14 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 capabilities.add(new ServerCapability(capability, initCapabilities.getJsonObject(capability).getMap()));
             }
         }
-        InitResult r = new InitResult(initResult.getString("protocolVersion"), serverInfo.getString("name"),
-                serverInfo.getString("title"),
-                serverInfo.getString("version"),
+        Implementation implementation = Messages.decodeImplementation(serverInfo);
+        InitResult r = new InitResult(initResult.getString("protocolVersion"),
+                implementation.name(),
+                implementation.title(),
+                implementation.version(),
                 capabilities,
-                serverInfo.getString("instructions"));
+                serverInfo.getString("instructions"),
+                implementation);
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
@@ -268,58 +268,15 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     }
 
-    static class BuilderImpl implements McpStreamableTestClient.Builder {
+    static class BuilderImpl extends McpTestClientBuilder<McpStreamableTestClient.Builder>
+            implements McpStreamableTestClient.Builder {
 
-        private String name = "test-client";
-        private String version = "1.0";
-        private String protocolVersion = "2025-06-18";
         private String mcpPath = "/mcp";
-        private Set<ClientCapability> clientCapabilities = Set.of();
         private URI baseUri = McpAssured.baseUri;
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
-        private boolean autoPong = true;
         private BasicAuth basicAuth;
         private boolean openSubsidiarySse = false;
         private boolean expectConnectFailure = false;
-
-        @Override
-        public McpStreamableTestClient.Builder setName(String clientName) {
-            if (clientName == null) {
-                throw mustNotBeNull("clientName");
-            }
-            this.name = clientName;
-            return this;
-        }
-
-        @Override
-        public McpStreamableTestClient.Builder setVersion(String clientVersion) {
-            if (clientVersion == null) {
-                throw mustNotBeNull("clientVersion");
-            }
-            this.version = clientVersion;
-            return this;
-        }
-
-        @Override
-        public McpStreamableTestClient.Builder setProtocolVersion(String protocolVersion) {
-            if (protocolVersion == null) {
-                throw mustNotBeNull("protocolVersion");
-            }
-            this.protocolVersion = protocolVersion;
-            return this;
-        }
-
-        @Override
-        public McpStreamableTestClient.Builder setClientCapabilities(ClientCapability... capabilities) {
-            this.clientCapabilities = new HashSet<>(Arrays.asList(capabilities));
-            return this;
-        }
-
-        @Override
-        public McpStreamableTestClient.Builder setAutoPong(boolean val) {
-            this.autoPong = val;
-            return this;
-        }
 
         @Override
         public McpStreamableTestClient.Builder setBaseUri(URI baseUri) {
