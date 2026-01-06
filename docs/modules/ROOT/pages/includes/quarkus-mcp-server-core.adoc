@@ -566,6 +566,162 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-src]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-src[`quarkus.mcp.server.server-info.icons.src`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons.src+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.icons.src`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.src+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The URI pointing to an icon resource.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SRC+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SRC+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|required icon:exclamation-circle[title=Configuration property is required]
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-mime-type]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-mime-type[`quarkus.mcp.server.server-info.icons.mime-type`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons.mime-type+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.icons.mime-type`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.mime-type+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The mime type.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_MIME_TYPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_MIME_TYPE+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-sizes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-sizes[`quarkus.mcp.server.server-info.icons.sizes`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons.sizes+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.icons.sizes`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.sizes+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The list of sizes in WxH format.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SIZES+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SIZES+++`
+endif::add-copy-button-to-env-var[]
+--
+|list of string
+|required icon:exclamation-circle[title=Configuration property is required]
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-theme]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-theme[`quarkus.mcp.server.server-info.icons.theme`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons.theme+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.icons.theme`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.theme+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The theme.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_THEME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_THEME+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`light`, `dark`
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-description]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-description[`quarkus.mcp.server.server-info.description`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.description+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.description`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.description+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The human-readable description of the server.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_DESCRIPTION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_DESCRIPTION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url[`quarkus.mcp.server.server-info.website-url`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.website-url+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".server-info.website-url`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.website-url+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The URL of the website for this implementation.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_WEBSITE_URL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_WEBSITE_URL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URL.html[URL]
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions[`quarkus.mcp.server.server-info.instructions`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.instructions+++[]

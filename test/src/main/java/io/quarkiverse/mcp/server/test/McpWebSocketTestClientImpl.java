@@ -5,12 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketAssert;
@@ -35,7 +34,7 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
     McpWebSocketTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, null,
-                builder.autoPong, builder.basicAuth);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
         this.endpointUri = createEndpointUri(builder.baseUri, builder.endpointPath);
         LOG.debugf("McpWebSocketTestClient created with WebSocket endpoint: %s", endpointUri);
     }
@@ -89,11 +88,14 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
                 capabilities.add(new ServerCapability(capability, initCapabilities.getJsonObject(capability).getMap()));
             }
         }
-        InitResult r = new InitResult(initResult.getString("protocolVersion"), serverInfo.getString("name"),
-                serverInfo.getString("title"),
-                serverInfo.getString("version"),
+        Implementation implementation = Messages.decodeImplementation(serverInfo);
+        InitResult r = new InitResult(initResult.getString("protocolVersion"),
+                implementation.name(),
+                implementation.title(),
+                implementation.version(),
                 capabilities,
-                initResult.getString("instructions"));
+                initResult.getString("instructions"),
+                implementation);
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
@@ -165,48 +167,12 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
     }
 
-    static class BuilderImpl implements McpWebSocketTestClient.Builder {
+    static class BuilderImpl extends McpTestClientBuilder<McpWebSocketTestClient.Builder>
+            implements McpWebSocketTestClient.Builder {
 
-        private String name = "test-client";
-        private String version = "1.0";
-        private String protocolVersion = "2025-06-18";
         private String endpointPath = "/mcp/ws";
-        private Set<ClientCapability> clientCapabilities = Set.of();
         private URI baseUri = McpAssured.baseUri;
-        private boolean autoPong = true;
         private BasicAuth basicAuth;
-
-        @Override
-        public McpWebSocketTestClient.Builder setName(String clientName) {
-            this.name = clientName;
-            return this;
-        }
-
-        @Override
-        public McpWebSocketTestClient.Builder setVersion(String clientVersion) {
-            this.version = clientVersion;
-            return this;
-        }
-
-        @Override
-        public McpWebSocketTestClient.Builder setProtocolVersion(
-                String protocolVersion) {
-            this.protocolVersion = protocolVersion;
-            return this;
-        }
-
-        @Override
-        public McpWebSocketTestClient.Builder setClientCapabilities(
-                ClientCapability... capabilities) {
-            this.clientCapabilities = Set.of(capabilities);
-            return this;
-        }
-
-        @Override
-        public McpWebSocketTestClient.Builder setAutoPong(boolean val) {
-            this.autoPong = val;
-            return this;
-        }
 
         @Override
         public McpWebSocketTestClient.Builder setBasicAuth(String username,

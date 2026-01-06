@@ -14,13 +14,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +28,7 @@ import java.util.function.Function;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.ClientCapability;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.HttpResponse;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
@@ -56,7 +53,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     McpSseTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
         this.sseEndpoint = createEndpointUri(builder.baseUri, builder.ssePath);
         this.expectSseConnectionFailure = builder.expectSseConnectionFailure;
         this.httpClient = HttpClient.newHttpClient();
@@ -123,7 +120,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         JsonObject initMessage = newInitMessage();
         HttpResponse response = sendSync(initMessage, additionalHeaders.apply(initMessage), clientBasicAuth);
-        assertEquals(200, response.statusCode());
+        assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
 
         JsonObject initResponse = client.state.waitForResponse(initMessage);
         JsonObject initResult = assertResultResponse(initMessage, initResponse);
@@ -137,11 +134,14 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 capabilities.add(new ServerCapability(capability, initCapabilities.getJsonObject(capability).getMap()));
             }
         }
-        InitResult r = new InitResult(initResult.getString("protocolVersion"), serverInfo.getString("name"),
-                serverInfo.getString("title"),
-                serverInfo.getString("version"),
+        Implementation implementation = Messages.decodeImplementation(serverInfo);
+        InitResult r = new InitResult(initResult.getString("protocolVersion"),
+                implementation.name(),
+                implementation.title(),
+                implementation.version(),
                 capabilities,
-                initResult.getString("instructions"));
+                initResult.getString("instructions"),
+                implementation);
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
@@ -299,57 +299,13 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     }
 
-    static class BuilderImpl implements McpSseTestClient.Builder {
+    static class BuilderImpl extends McpTestClientBuilder<McpSseTestClient.Builder> implements McpSseTestClient.Builder {
 
-        private String name = "test-client";
-        private String version = "1.0";
-        private String protocolVersion = "2024-11-05";
         private String ssePath = "/mcp/sse";
-        private Set<ClientCapability> clientCapabilities = Set.of();
         private URI baseUri = McpAssured.baseUri;
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
-        private boolean autoPong = true;
         private BasicAuth basicAuth;
         private boolean expectSseConnectionFailure;
-
-        @Override
-        public McpSseTestClient.Builder setName(String clientName) {
-            if (clientName == null) {
-                throw mustNotBeNull("clientName");
-            }
-            this.name = clientName;
-            return this;
-        }
-
-        @Override
-        public McpSseTestClient.Builder setVersion(String clientVersion) {
-            if (clientVersion == null) {
-                throw mustNotBeNull("clientVersion");
-            }
-            this.version = clientVersion;
-            return this;
-        }
-
-        @Override
-        public McpSseTestClient.Builder setProtocolVersion(String protocolVersion) {
-            if (protocolVersion == null) {
-                throw mustNotBeNull("protocolVersion");
-            }
-            this.protocolVersion = protocolVersion;
-            return this;
-        }
-
-        @Override
-        public McpSseTestClient.Builder setClientCapabilities(ClientCapability... capabilities) {
-            this.clientCapabilities = new HashSet<>(Arrays.asList(capabilities));
-            return this;
-        }
-
-        @Override
-        public McpSseTestClient.Builder setAutoPong(boolean val) {
-            this.autoPong = val;
-            return this;
-        }
 
         @Override
         public McpSseTestClient.Builder setBaseUri(URI baseUri) {
