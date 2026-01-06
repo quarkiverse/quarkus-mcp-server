@@ -5,6 +5,8 @@ import java.util.function.Function;
 
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ContentEncoder;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
@@ -17,6 +19,8 @@ import io.smallrye.mutiny.Uni;
 
 @Singleton
 public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, ContentEncoder<?>, ToolResponse> {
+
+    private static final Logger LOG = Logger.getLogger(EncoderResultMapper.class);
 
     @All
     List<ToolResponseEncoder<?>> toolResponseEncoders;
@@ -64,8 +68,9 @@ public class ToolEncoderResultMapper extends ListEncoderResultMapper<Content, Co
                 try {
                     encoded = encoder.encode(cast(obj));
                 } catch (Exception e) {
-                    throw new McpException("Unable to encode object of type " + type + " with " + encoder.getClass().getName(),
-                            JsonRpcErrorCodes.INTERNAL_ERROR);
+                    String msg = "Unable to encode object of type " + type + " with " + encoder.getClass().getName();
+                    LOG.error(msg, e);
+                    throw new McpException(msg, e, JsonRpcErrorCodes.INTERNAL_ERROR);
                 }
                 return encoded;
             }

@@ -3,6 +3,8 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.List;
 import java.util.function.Function;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.mcp.server.Encoder;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
@@ -19,6 +21,8 @@ import io.smallrye.mutiny.Uni;
  */
 abstract class EncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>, RESPONSE>
         implements EncoderMapper<Object, RESPONSE> {
+
+    private static final Logger LOG = Logger.getLogger(EncoderResultMapper.class);
 
     @All
     List<ENCODER> encoders;
@@ -54,8 +58,9 @@ abstract class EncoderResultMapper<ENCODED, ENCODER extends Encoder<?, ENCODED>,
                 try {
                     encoded = encoder.encode(cast(obj));
                 } catch (Exception e) {
-                    throw new McpException("Unable to encode object of type " + type + " with " + encoder.getClass().getName(),
-                            e, JsonRpcErrorCodes.INTERNAL_ERROR);
+                    String msg = "Unable to encode object of type " + type + " with " + encoder.getClass().getName();
+                    LOG.error(msg, e);
+                    throw new McpException(msg, e, JsonRpcErrorCodes.INTERNAL_ERROR);
                 }
                 return encoded;
             }

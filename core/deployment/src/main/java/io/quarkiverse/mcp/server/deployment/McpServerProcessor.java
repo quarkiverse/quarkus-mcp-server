@@ -835,28 +835,25 @@ class McpServerProcessor {
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
             BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies) {
-        // FIXME this is not ideal, JsonObject.encode() may use Jackson under the hood which requires reflection
+        // JsonObject.encode() may use Jackson under the hood which requires reflection
         for (FeatureMethodBuildItem m : featureMethods) {
+            org.jboss.jandex.Type returnType = m.getMethod().returnType();
+            if (DotNames.UNI.equals(returnType.name()) && returnType.kind() == Kind.PARAMETERIZED_TYPE) {
+                returnType = returnType.asParameterizedType().arguments().get(0);
+            }
+            if (DotNames.LIST.equals(returnType.name()) && returnType.kind() == Kind.PARAMETERIZED_TYPE) {
+                returnType = returnType.asParameterizedType().arguments().get(0);
+            }
+            if (isReturnTypeReflectionNeeded(returnType.name())) {
+                reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(m.getMethod().returnType()).build());
+            }
             for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
-                if (paramType.kind() == Kind.PRIMITIVE
-                        || paramType.name().equals(DotNames.STRING)
-                        || paramType.name().equals(DotNames.MCP_CONNECTION)
-                        || paramType.name().equals(DotNames.MCP_LOG)
-                        || paramType.name().equals(DotNames.REQUEST_ID)
-                        || paramType.name().equals(DotNames.REQUEST_URI)
-                        || paramType.name().equals(DotNames.PROGRESS)
-                        || paramType.name().equals(DotNames.ROOTS)
-                        || paramType.name().equals(DotNames.SAMPLING)
-                        || paramType.name().equals(DotNames.CANCELLATION)
-                        || paramType.name().equals(DotNames.COMPLETE_CONTEXT)
-                        || paramType.name().equals(DotNames.RAW_MESSAGE)
-                        || paramType.name().equals(DotNames.META)
-                        || paramType.name().equals(DotNames.ELICITATION)) {
-                    continue;
+                if (isParamTypeReflectionNeeded(paramType)) {
+                    reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
                 }
-                reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
             }
         }
+
         // Register all default value converters
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(defaultValueConverters.stream()
                 .map(DefaultValueConverterBuildItem::getClassName).toList().toArray(String[]::new))
@@ -1524,6 +1521,39 @@ class McpServerProcessor {
         }
         builder.append(')');
         return builder.toString();
+    }
+
+    private static boolean isReturnTypeReflectionNeeded(DotName returnTypeName) {
+        return !isNameInTypes(returnTypeName, TOOL_TYPES)
+                && !isNameInTypes(returnTypeName, PROMPT_TYPES)
+                && !isNameInTypes(returnTypeName, RESOURCE_TYPES)
+                && !isNameInTypes(returnTypeName, COMPLETE_TYPES);
+    }
+
+    private static boolean isNameInTypes(DotName name, Set<org.jboss.jandex.Type> types) {
+        for (org.jboss.jandex.Type type : types) {
+            if (name.equals(type.name())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isParamTypeReflectionNeeded(org.jboss.jandex.Type paramType) {
+        return paramType.kind() != Kind.PRIMITIVE
+                && !paramType.name().equals(DotNames.STRING)
+                && !paramType.name().equals(DotNames.MCP_CONNECTION)
+                && !paramType.name().equals(DotNames.MCP_LOG)
+                && !paramType.name().equals(DotNames.REQUEST_ID)
+                && !paramType.name().equals(DotNames.REQUEST_URI)
+                && !paramType.name().equals(DotNames.PROGRESS)
+                && !paramType.name().equals(DotNames.ROOTS)
+                && !paramType.name().equals(DotNames.SAMPLING)
+                && !paramType.name().equals(DotNames.CANCELLATION)
+                && !paramType.name().equals(DotNames.COMPLETE_CONTEXT)
+                && !paramType.name().equals(DotNames.RAW_MESSAGE)
+                && !paramType.name().equals(DotNames.META)
+                && !paramType.name().equals(DotNames.ELICITATION);
     }
 
 }
