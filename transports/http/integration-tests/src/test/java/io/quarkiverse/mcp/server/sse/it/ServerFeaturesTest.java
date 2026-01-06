@@ -41,17 +41,21 @@ class ServerFeaturesTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsList(p -> {
-                    assertEquals(1, p.size());
+                    assertEquals(2, p.size());
                     JsonObject schema = p.findByName("toLowerCase").inputSchema();
                     JsonObject properties = schema.getJsonObject("properties");
                     assertEquals(1, properties.size());
                     JsonObject valueProperty = properties.getJsonObject("value");
                     assertNotNull(valueProperty);
                     assertEquals("string", valueProperty.getString("type"));
+                    assertNotNull(p.findByName("answer"));
 
                 })
                 .toolsCall("toLowerCase", Map.of("value", "LooP"), r -> {
                     assertEquals("loop", r.content().get(0).asText().text());
+                })
+                .toolsCall("answer", Map.of("question", "Are you ok?"), r -> {
+                    assertEquals("{\"value\":\"are you ok?\"}", r.content().get(0).asText().text());
                 })
                 .thenAssertResults();
     }

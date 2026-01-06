@@ -31,4 +31,12 @@ public class ServerFeatures {
         return BlobResourceContents.create(uri.value(), "data".getBytes());
     }
 
+    @Tool
+    Answer answer(String question) {
+        return new Answer(question.toLowerCase());
+    }
+
+    public record Answer(String value) {
+    }
+
 }
