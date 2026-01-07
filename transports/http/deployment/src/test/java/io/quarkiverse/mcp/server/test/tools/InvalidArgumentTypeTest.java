@@ -31,17 +31,17 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                 .toolsCall("bravo", Map.of("price", true, "timeUnit", TimeUnit.DAYS, "isActive", true), toolResponse -> {
                     assertTrue(toolResponse.isError());
                     String text = toolResponse.content().get(0).asText().text();
-                    assertEquals("Invalid argument [price] - value does not match int", text);
+                    assertEquals("Invalid argument [price] - value does not match the expected JSON type: number", text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", "hello"), toolResponse -> {
                     assertTrue(toolResponse.isError());
                     String text = toolResponse.content().get(0).asText().text();
-                    assertEquals("Invalid argument [isActive] - value does not match java.lang.Boolean", text);
+                    assertEquals("Invalid argument [isActive] - value does not match the expected JSON type: boolean", text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", "AGES", "isActive", true), toolResponse -> {
                     assertTrue(toolResponse.isError());
                     String text = toolResponse.content().get(0).asText().text();
-                    assertEquals("Invalid argument [timeUnit] - AGES is not an enum constant of java.util.concurrent.TimeUnit",
+                    assertEquals("Invalid argument [timeUnit] - AGES is not an expected enum constant",
                             text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", true),
@@ -49,7 +49,7 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                             assertTrue(toolResponse.isError());
                             String text = toolResponse.content().get(0).asText().text();
                             assertEquals(
-                                    "Invalid argument [pojo] - value does not match io.quarkiverse.mcp.server.test.tools.InvalidArgumentTypeTest$MyPojo",
+                                    "Invalid argument [pojo] - value does not match the expected JSON type: object",
                                     text);
                         })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", new MyPojo("foo")),
@@ -60,7 +60,7 @@ public class InvalidArgumentTypeTest extends McpServerTest {
                     assertTrue(toolResponse.isError());
                     String text = toolResponse.content().get(0).asText().text();
                     assertEquals(
-                            "Invalid argument [pojos] - unable to convert JSON array to java.util.List<io.quarkiverse.mcp.server.test.tools.InvalidArgumentTypeTest$MyPojo>",
+                            "Invalid argument [pojos] - unable to convert JSON array",
                             text);
                 })
                 .thenAssertResults();

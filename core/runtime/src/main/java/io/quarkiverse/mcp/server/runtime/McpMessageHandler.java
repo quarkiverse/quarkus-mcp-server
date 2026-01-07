@@ -180,8 +180,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             case NEW -> initializeNew(message, mcpRequest);
             case INITIALIZING -> initializing(message, mcpRequest);
             case IN_OPERATION -> operation(message, mcpRequest);
-            case CLOSED -> mcpRequest.sender().send(
-                    Messages.newError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR, "Connection is closed"));
+            case CLOSED -> mcpRequest.sender().sendError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR,
+                    "Connection is closed");
         };
     }
 
@@ -303,8 +303,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         } else if (PING.equals(method)) {
             return ping(message, mcpRequest);
         } else {
-            return mcpRequest.sender().send(Messages.newError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR,
-                    "Client not initialized yet [" + mcpRequest.connection().id() + "]"));
+            return mcpRequest.sender().sendError(message.getValue("id"), JsonRpcErrorCodes.INTERNAL_ERROR,
+                    "Client not initialized yet [" + mcpRequest.connection().id() + "]");
         }
     }
 
@@ -413,9 +413,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case Q_CLOSE -> close(message, mcpRequest);
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
-                default -> mcpRequest.sender().send(
-                        Messages.newError(message.getValue("id"), JsonRpcErrorCodes.METHOD_NOT_FOUND,
-                                "Unsupported method: " + method));
+                default -> mcpRequest.sender().sendError(message.getValue("id"), JsonRpcErrorCodes.METHOD_NOT_FOUND,
+                        "Unsupported method: " + method);
             };
             future.onComplete(r -> {
                 mcpRequest.contextEnd();
