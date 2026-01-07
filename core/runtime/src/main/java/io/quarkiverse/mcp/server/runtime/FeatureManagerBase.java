@@ -188,7 +188,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }
         } else if (!arg.isValid(val)) {
             throw invalidArgument(metadata,
-                    "Invalid argument [%s] - value does not match %s".formatted(arg.name(), arg.type().getTypeName()));
+                    "Invalid argument [%s] - value does not match the expected JSON type: %s".formatted(arg.name(),
+                            arg.expectedJsonType().toString().toLowerCase()));
         } else {
             if (val instanceof Map map) {
                 // json object
@@ -197,8 +198,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                     val = mapper.convertValue(map, javaType);
                 } catch (IllegalArgumentException e) {
                     throw invalidArgument(metadata,
-                            "Invalid argument [%s] - unable to convert JSON object to %s".formatted(arg.name(),
-                                    arg.type().getTypeName()));
+                            "Invalid argument [%s] - unable to convert JSON object".formatted(arg.name()));
                 }
             } else if (val instanceof List list) {
                 // json array
@@ -207,16 +207,14 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                     val = mapper.convertValue(list, javaType);
                 } catch (IllegalArgumentException e) {
                     throw invalidArgument(metadata,
-                            "Invalid argument [%s] - unable to convert JSON array to %s".formatted(arg.name(),
-                                    arg.type().getTypeName()));
+                            "Invalid argument [%s] - unable to convert JSON array".formatted(arg.name()));
                 }
             } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
                 try {
                     val = Enum.valueOf(clazz, val.toString());
                 } catch (IllegalArgumentException e) {
                     throw invalidArgument(metadata,
-                            "Invalid argument [%s] - %s is not an enum constant of %s".formatted(arg.name(), val,
-                                    clazz.getName()));
+                            "Invalid argument [%s] - %s is not an expected enum constant".formatted(arg.name(), val));
                 }
             } else if (val instanceof Number num) {
                 val = coerceNumber(num, arg.type());
