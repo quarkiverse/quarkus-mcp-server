@@ -91,12 +91,11 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
-
         ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), id, resourceUri,
                 mcpRequest.sender(), Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
-                    new FeatureExecutionContext(argProviders, mcpRequest));
+                    new FeatureExecutionContext(message, mcpRequest, argProviders));
             return fu.compose(resourceResponse -> {
                 if (resourceResponse == null) {
                     return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND,

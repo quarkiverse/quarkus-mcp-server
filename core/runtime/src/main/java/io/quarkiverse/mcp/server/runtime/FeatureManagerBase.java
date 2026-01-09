@@ -1,8 +1,12 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
+import static io.quarkiverse.mcp.server.runtime.Messages.getProgressToken;
+
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
@@ -46,6 +51,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.FeatureInfo> {
 
@@ -74,17 +80,51 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
         FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest());
         if (invoker != null) {
-            return execute(invoker.executionModel(), executionContext, new Callable<Uni<RESULT>>() {
+            return execute(invoker.executionModel(), new Callable<Uni<RESULT>>() {
                 @Override
                 public Uni<RESULT> call() throws Exception {
-                    return invoker.call(executionContext.argProviders());
+                    return invoker.beforeCall(executionContext)
+                            .chain(args -> {
+                                ArgumentProviders p = executionContext.argumentProviders();
+                                if (p == null) {
+                                    p = argProviders(executionContext.message(), executionContext.mcpRequest(), args);
+                                }
+                                return invoker.call(p);
+                            })
+                            .chain(result -> invoker.afterCall(executionContext, result));
                 }
             });
         }
         throw notFound(id);
     }
 
-    record FeatureExecutionContext(ArgumentProviders argProviders, McpRequest mcpRequest) {
+    protected JsonObject getArguments(JsonObject message) {
+        JsonObject params = getParams(message);
+        return params != null ? Messages.getArguments(params) : null;
+    }
+
+    protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments) {
+        Object id = message.getValue("id");
+        Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
+        return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
+                mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName());
+    }
+
+    record FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders) {
+
+        public FeatureExecutionContext(JsonObject message, McpRequest mcpRequest) {
+            this(message, mcpRequest, null);
+        }
+
+        FeatureExecutionContext {
+            if (message == null) {
+                throw new IllegalArgumentException("message must not be null");
+            }
+            if (mcpRequest == null) {
+                throw new IllegalArgumentException("mcpRequest must not be null");
+            }
+        }
+
     }
 
     protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
@@ -248,8 +288,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected abstract McpException notFound(String id);
 
-    protected Future<RESULT> execute(ExecutionModel executionModel, FeatureExecutionContext executionContext,
-            Callable<Uni<RESULT>> action) {
+    protected Future<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();
         if (executionModel == ExecutionModel.VIRTUAL_THREAD) {
             VirtualThreadsRecorder.getCurrent().execute(new Runnable() {
@@ -305,7 +344,19 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         ExecutionModel executionModel();
 
+        default Uni<JsonObject> beforeCall(FeatureExecutionContext context) {
+            JsonObject params = getParams(context.message());
+            if (params == null) {
+                return Uni.createFrom().nullItem();
+            }
+            return Uni.createFrom().item(Messages.getArguments(params));
+        }
+
         Uni<R> call(ArgumentProviders argProviders);
+
+        default Uni<R> afterCall(FeatureExecutionContext context, R result) {
+            return Uni.createFrom().item(result);
+        }
 
     }
 

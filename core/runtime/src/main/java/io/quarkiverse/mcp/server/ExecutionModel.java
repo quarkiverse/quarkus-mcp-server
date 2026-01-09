@@ -1,4 +1,4 @@
-package io.quarkiverse.mcp.server.runtime;
+package io.quarkiverse.mcp.server;
 
 public enum ExecutionModel {
 
