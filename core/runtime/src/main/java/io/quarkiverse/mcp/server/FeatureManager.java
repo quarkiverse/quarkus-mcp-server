@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
-import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
@@ -52,6 +51,11 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
         }
 
         JsonObject asJson();
+
+        /**
+         * @return the execution model
+         */
+        ExecutionModel executionModel();
 
     }
 

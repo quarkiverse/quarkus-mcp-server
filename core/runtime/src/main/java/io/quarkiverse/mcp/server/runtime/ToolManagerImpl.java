@@ -1,7 +1,11 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
+
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +18,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
@@ -29,12 +34,16 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Meta;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
+import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolFilter;
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
@@ -67,6 +76,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final McpServersBuildTimeConfig buildTimeConfig;
 
+    final Instance<ToolInputGuardrail> inputGuardrails;
+    final Instance<ToolOutputGuardrail> outputGuardrails;
+
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
@@ -74,6 +86,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
             @All List<ToolFilter> filters,
+            @Any Instance<ToolInputGuardrail> inputGuardrails,
+            @Any Instance<ToolOutputGuardrail> outputGuardrails,
             GlobalInputSchemaGenerator globalInputSchemaGenerator,
             GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
             Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
@@ -82,9 +96,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             McpServersRuntimeConfig config) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.tools = new ConcurrentHashMap<>();
-        for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
-            this.tools.put(f.info().name(), new ToolMethod(f));
-        }
+        this.inputGuardrails = inputGuardrails;
+        this.outputGuardrails = outputGuardrails;
         this.globalInputSchemaGenerator = globalInputSchemaGenerator;
         this.globalOutputSchemaGenerator = globalOutputSchemaGenerator;
         this.outputSchemaGenerator = outputSchemaGenerator;
@@ -93,6 +106,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.filters = filters;
         this.buildTimeConfig = buildTimeConfig;
         this.config = config;
+        for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
+            this.tools.put(f.info().name(), new ToolMethod(f));
+        }
     }
 
     @Override
@@ -189,8 +205,153 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     class ToolMethod extends FeatureMetadataInvoker<ToolResponse> implements ToolManager.ToolInfo {
 
+        private final List<ToolInputGuardrail> input;
+
+        private final List<ToolOutputGuardrail> output;
+
+        @SuppressWarnings("unchecked")
         private ToolMethod(FeatureMetadata<ToolResponse> metadata) {
             super(metadata);
+            List<ToolInputGuardrail> input = new ArrayList<>();
+            for (Class<?> clazz : metadata.info().inputGuardrails()) {
+                Instance<ToolInputGuardrail> child = (Instance<ToolInputGuardrail>) inputGuardrails
+                        .select((Class<? extends ToolInputGuardrail>) clazz);
+                if (child.isResolvable()) {
+                    input.add(child.get());
+                } else {
+                    try {
+                        input.add((ToolInputGuardrail) clazz.getConstructor().newInstance());
+                    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                            | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+                        LOG.errorf(e, "Unable to instantiate input guardrail: %s", input);
+                    }
+                }
+            }
+            this.input = input;
+            List<ToolOutputGuardrail> output = new ArrayList<>();
+            for (Class<?> clazz : metadata.info().outputGuardrails()) {
+                Instance<ToolOutputGuardrail> child = (Instance<ToolOutputGuardrail>) outputGuardrails
+                        .select((Class<? extends ToolOutputGuardrail>) clazz);
+                if (child.isResolvable()) {
+                    output.add(child.get());
+                } else {
+                    try {
+                        output.add((ToolOutputGuardrail) clazz.getConstructor().newInstance());
+                    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                            | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+                        LOG.errorf(e, "Unable to instantiate output guardrail: %s", input);
+                    }
+                }
+            }
+            this.output = output;
+        }
+
+        abstract class ToolContext {
+
+            private final ToolInfo tool;
+            private final JsonObject message;
+            private final McpRequest request;
+
+            ToolContext(ToolInfo tool, JsonObject message, McpRequest request) {
+                this.tool = tool;
+                this.message = message;
+                this.request = request;
+            }
+
+            public ToolInfo getTool() {
+                return tool;
+            }
+
+            public McpConnection getConnection() {
+                return request.connection();
+            }
+
+            public RequestId getRequestId() {
+                return new RequestId(message.getValue("id"));
+            }
+
+            public Meta getMeta() {
+                return MetaImpl.from(Messages.getParams(message));
+            }
+
+        }
+
+        class ToolInputContextImpl extends ToolContext implements ToolInputGuardrail.ToolInputContext {
+
+            private final AtomicReference<JsonObject> arguments;
+
+            ToolInputContextImpl(ToolInfo tool, JsonObject message, McpRequest request) {
+                super(tool, message, request);
+                this.arguments = new AtomicReference<>();
+                setArguments(Messages.getArguments(getParams(message)));
+            }
+
+            @Override
+            public JsonObject getArguments() {
+                return arguments.get();
+            }
+
+            @Override
+            public void setArguments(JsonObject arguments) {
+                JsonObject newArgs = new JsonObject(Map.copyOf(arguments.getMap()));
+                this.arguments.set(newArgs);
+            }
+
+        }
+
+        class ToolOutputContextImpl extends ToolContext implements ToolOutputGuardrail.ToolOutputContext {
+
+            private final AtomicReference<ToolResponse> response;
+
+            ToolOutputContextImpl(ToolInfo tool, JsonObject message, McpRequest request, ToolResponse response) {
+                super(tool, message, request);
+                this.response = new AtomicReference<>();
+                setResponse(response);
+            }
+
+            @Override
+            public ToolResponse getResponse() {
+                return response.get();
+            }
+
+            @Override
+            public void setResponse(ToolResponse response) {
+                this.response.set(response);
+            }
+
+        }
+
+        @Override
+        public Uni<JsonObject> beforeCall(FeatureExecutionContext context) {
+            if (input.isEmpty()) {
+                return super.beforeCall(context);
+            }
+            ToolInputContextImpl inputContext = new ToolInputContextImpl(this, context.message(), context.mcpRequest());
+            Iterator<ToolInputGuardrail> it = input.iterator();
+            ToolInputGuardrail first = it.next();
+            Uni<Void> uni = first.applyAsync(inputContext);
+            while (it.hasNext()) {
+                ToolInputGuardrail next = it.next();
+                uni = uni.chain(args -> next.applyAsync(inputContext));
+            }
+            return uni.replaceWith(() -> inputContext.getArguments());
+        }
+
+        @Override
+        public Uni<ToolResponse> afterCall(FeatureExecutionContext context, ToolResponse response) {
+            if (output.isEmpty()) {
+                return Uni.createFrom().item(response);
+            }
+            ToolOutputContextImpl outputContext = new ToolOutputContextImpl(this, context.message(), context.mcpRequest(),
+                    response);
+            Iterator<ToolOutputGuardrail> it = output.iterator();
+            ToolOutputGuardrail first = it.next();
+            Uni<Void> uni = first.applyAsync(outputContext);
+            while (it.hasNext()) {
+                ToolOutputGuardrail next = it.next();
+                uni = uni.chain(r -> next.applyAsync(outputContext));
+            }
+            return uni.replaceWith(() -> outputContext.getResponse());
         }
 
         @Override

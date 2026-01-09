@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Response to a {@code tools/call} request from the client.
@@ -80,6 +81,13 @@ public record ToolResponse(boolean isError,
         if (content == null && structuredContent == null) {
             throw new IllegalArgumentException("content must not be null");
         }
+    }
+
+    public Content firstContent() {
+        if (content.isEmpty()) {
+            throw new NoSuchElementException();
+        }
+        return content.get(0);
     }
 
 }

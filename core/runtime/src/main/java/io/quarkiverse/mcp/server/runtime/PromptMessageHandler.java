@@ -1,6 +1,5 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.jboss.logging.Logger;
@@ -61,15 +60,9 @@ class PromptMessageHandler extends MessageHandler {
         JsonObject params = message.getJsonObject("params");
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
-
-        Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap() : Map.of();
-        ArgumentProviders argProviders = new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
-                mcpRequest.sender(),
-                Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
-
         try {
             Future<PromptResponse> fu = manager.execute(promptName,
-                    new FeatureExecutionContext(argProviders, mcpRequest));
+                    new FeatureExecutionContext(message, mcpRequest));
             return fu.compose(promptResponse -> {
                 JsonObject result = new JsonObject();
                 if (promptResponse.description() != null) {

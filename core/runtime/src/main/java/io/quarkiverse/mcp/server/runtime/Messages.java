@@ -98,8 +98,16 @@ public class Messages {
         return Cursor.FIRST_PAGE;
     }
 
+    public static JsonObject getParams(JsonObject message) {
+        return message.getJsonObject("params");
+    }
+
+    public static JsonObject getArguments(JsonObject params) {
+        return params.getJsonObject("arguments");
+    }
+
     static Object getProgressToken(JsonObject message) {
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = getParams(message);
         if (params != null) {
             JsonObject meta = params.getJsonObject("_meta");
             if (meta != null) {

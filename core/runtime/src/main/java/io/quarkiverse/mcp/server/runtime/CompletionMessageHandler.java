@@ -19,7 +19,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
         this.responseHandlers = responseHandlers;
     }
 
-    protected abstract Future<CompletionResponse> execute(String key, ArgumentProviders argProviders,
+    protected abstract Future<CompletionResponse> execute(String key, JsonObject message, ArgumentProviders argProviders,
             McpRequest mcpRequest) throws McpException;
 
     protected String referenceName(JsonObject ref) {
@@ -30,7 +30,6 @@ public abstract class CompletionMessageHandler extends MessageHandler {
             McpRequest mcpRequest) {
         String referenceName = referenceName(ref);
         String argumentName = argument.getString("name");
-
         LOG.debugf("Complete %s for argument %s [id: %s]", referenceName, argumentName, id);
 
         String key = referenceName + "_" + argumentName;
@@ -40,7 +39,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                 Messages.getProgressToken(message), responseHandlers, mcpRequest.serverName());
 
         try {
-            Future<CompletionResponse> fu = execute(key, argProviders, mcpRequest);
+            Future<CompletionResponse> fu = execute(key, message, argProviders, mcpRequest);
             return fu.compose(completionResponse -> {
                 JsonObject result = new JsonObject();
                 JsonObject completion = new JsonObject()

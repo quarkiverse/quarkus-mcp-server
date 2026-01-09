@@ -6,6 +6,7 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 class PromptCompleteMessageHandler extends CompletionMessageHandler {
 
@@ -17,9 +18,10 @@ class PromptCompleteMessageHandler extends CompletionMessageHandler {
     }
 
     @Override
-    protected Future<CompletionResponse> execute(String key, ArgumentProviders argProviders, McpRequest mcpRequest)
+    protected Future<CompletionResponse> execute(String key, JsonObject message, ArgumentProviders argProviders,
+            McpRequest mcpRequest)
             throws McpException {
-        return manager.execute(key, new FeatureExecutionContext(argProviders, mcpRequest));
+        return manager.execute(key, new FeatureExecutionContext(message, mcpRequest, argProviders));
     }
 
 }

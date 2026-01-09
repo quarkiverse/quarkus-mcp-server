@@ -23,9 +23,10 @@ class ResourceTemplateCompleteMessageHandler extends CompletionMessageHandler {
     }
 
     @Override
-    protected Future<CompletionResponse> execute(String key, ArgumentProviders argProviders, McpRequest mcpRequest)
+    protected Future<CompletionResponse> execute(String key, JsonObject message, ArgumentProviders argProviders,
+            McpRequest mcpRequest)
             throws McpException {
-        return manager.execute(key, new FeatureExecutionContext(argProviders, mcpRequest));
+        return manager.execute(key, new FeatureExecutionContext(message, mcpRequest, argProviders));
     }
 
 }
