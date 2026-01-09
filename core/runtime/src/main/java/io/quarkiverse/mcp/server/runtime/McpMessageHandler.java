@@ -288,12 +288,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                         .filter(n -> n.type() == Type.INITIALIZED).toList();
                 if (!infos.isEmpty()) {
-                    ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null,
-                            null,
-                            // For notifications/initialized we always use the connection as a sender
-                            mcpRequest.connection(),
-                            null, responseHandlers, mcpRequest.serverName());
-                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
+                    FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(message, mcpRequest);
                     for (NotificationManager.NotificationInfo notification : infos) {
                         callNotification(notification, featureExecutionContext, mcpRequest);
                     }
@@ -436,9 +431,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         List<NotificationManager.NotificationInfo> infos = notificationManager.infosForRequest(mcpRequest)
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
         if (!infos.isEmpty()) {
-            ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null, null,
-                    mcpRequest.sender(), null, responseHandlers, mcpRequest.serverName());
-            FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(argProviders, mcpRequest);
+            FeatureExecutionContext featureExecutionContext = new FeatureExecutionContext(message, mcpRequest);
             for (NotificationManager.NotificationInfo notification : infos) {
                 callNotification(notification, featureExecutionContext);
             }

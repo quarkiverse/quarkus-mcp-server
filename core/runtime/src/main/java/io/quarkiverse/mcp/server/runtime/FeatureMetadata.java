@@ -5,6 +5,7 @@ import java.util.function.Function;
 
 import jakarta.enterprise.invoke.Invoker;
 
+import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.Json;

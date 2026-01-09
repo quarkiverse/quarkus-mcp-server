@@ -1,7 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.util.HashMap;
-import java.util.Map;
+import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
+
 import java.util.Objects;
 
 import org.jboss.logging.Logger;
@@ -67,18 +67,12 @@ class ToolMessageHandler extends MessageHandler {
 
     Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = getParams(message);
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
-
-        Map<String, Object> args = params.containsKey("arguments") ? params.getJsonObject("arguments").getMap()
-                : new HashMap<>();
-        ArgumentProviders argProviders = new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
-                mcpRequest.sender(), Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName());
-
         try {
             Future<ToolResponse> fu = manager.execute(toolName,
-                    new FeatureExecutionContext(argProviders, mcpRequest));
+                    new FeatureExecutionContext(message, mcpRequest));
             return fu.compose(toolResponse -> mcpRequest.sender().sendResult(id, toolResponse), cause -> {
                 if (cause instanceof ToolCallException tce) {
                     // Business logic error should result in ToolResponse with isError:true

@@ -363,6 +363,78 @@ While the specification says _SHOULD_, some MCP clients actually expect the JSON
 To address this compatibility point, the configuration property `quarkus.mcp.server.tools.structured-content.compatibility-mode` enables the backward compatibility mode, in either a global manner or by MCP server as needed.
 ====
 
+=== Guardrails
+
+WARNING: This API is experimental and may change in the future.
+
+The guardrails can be applied to safeguard a tool call.
+Input guardrails can be used to validate and/or transform the arguments of a `tools/call`.
+Output guardrails, on the other hand, can be used to validate and/or transform the result of a call.
+
+.`ToolInputGuardrail` Example
+[source,java]
+----
+import java.util.regex.Pattern;
+import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+
+public class EmailFormatValidator implements ToolInputGuardrail { <1>
+
+   private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
+   @Override
+   public void apply(ToolInputContext context) { <2>
+      String email = context.getArguments().getString("to");
+      if (!EMAIL_PATTERN.matcher(email).matches()) {
+         throw new ToolCallException("Invalid email format: " + email); <3>
+      }
+   }
+}
+----
+<1> Guardrails implementations must be CDI beans, or declare a public no-args constructor.
+<2> The container always calls the non-blocking `ToolInputGuardrail#applyAsync(ToolInputContext)` that delegates to the blocking `ToolInputGuardrail#apply(ToolInputContext)}` by default.
+<3> An implementation should throw `ToolCallException` or return a `Uni` that emits a `ToolCallException` failure if the validation fails.
+
+The `@io.quarkiverse.mcp.server.ToolGuardrails` annotation is used to associate guardrails with a specific `@Tool` method.
+
+.`@ToolGuardrails` Example
+[source,java]
+----
+public class MyTools {
+
+   @ToolGuardrails(input = EmailFormatValidator.class) <1>
+   @Tool
+   String sendMail(String to, String body) {
+      return "Mail sent to: " + to;
+   }
+}
+----
+<1> The guardrails are executed in the specified order before a tool call.
+
+An guardrail implementation class can be annotated with `@io.quarkiverse.mcp.server.SupportedExecutionModels` to supply the list of supported execution models.
+If a tool declares a guardrail with unsupported execution model then the build fails.
+Unless annotated with `@SupportedExecutionModels` a guardrail should support all execution models.
+
+[source,java]
+----
+@SupportedExecutionModels(WORKER_THREAD) <1>
+public class MyOutputGuardrail implements ToolOutputGuardrail {
+
+   @Override
+   public Uni<Void> applyAsync(ToolOutputContext context) {
+      // ...
+      return Uni.createFrom().voidItem();
+   }
+}
+----
+<1> This guardrail may not be used for a tool that is considered non-blocking and is executed on an event loop thread.
+
+Execution of a guardrail must not block the caller thread unless blocking is allowed.
+An guardrail implementation can inspect the execution model of the current tool with `ToolInfo#executionModel()`, or use
+`io.quarkus.runtime.BlockingOperationControl#isBlockingAllowed()` to detect if blocking is allowed on the current thread.
+If blocking is not allowed but an implementation still needs to perform a blocking operation then it has to offload the execution on a worker thread.
+
+TIP: Guardrails can be also applied to a tool that is registered programmatically with the `ToolManager` API. More specifically, the guardrails can be associated with `ToolDefinition#setInputGuardrails()` and `ToolDefinition#setOutputGuardrails()` methods.  
 
 == Prompts
 

@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -54,6 +55,17 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             return fi;
         }
         return null;
+    }
+
+    @Override
+    protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments) {
+        Sender sender = mcpRequest.sender();
+        if (McpMessageHandler.NOTIFICATIONS_INITIALIZED.equals(message.getString("method"))) {
+            // For notifications/initialized we always use the connection as a sender
+            sender = mcpRequest.connection();
+        }
+        return new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null, null,
+                sender, null, responseHandlers, mcpRequest.serverName());
     }
 
     @Override
