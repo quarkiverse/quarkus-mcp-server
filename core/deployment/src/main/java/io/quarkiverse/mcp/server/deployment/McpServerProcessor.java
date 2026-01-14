@@ -798,6 +798,7 @@ class McpServerProcessor {
                     .build();
             for (MethodParameterInfo param : serializedArguments) {
                 FieldCreator paramField = argumentsHolder.getFieldCreator(param.name(), param.type().name().toString());
+                paramField.setModifiers(Modifier.PUBLIC);
                 setSignature(paramField, param.type());
                 param.declaredAnnotations().forEach(paramField::addAnnotation);
             }

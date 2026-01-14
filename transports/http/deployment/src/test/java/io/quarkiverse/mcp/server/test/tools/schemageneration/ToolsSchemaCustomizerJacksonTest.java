@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
 public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusUnitTest config = defaultConfig(2000)
             .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithJacksonAnnotatedType.class));
@@ -37,25 +37,35 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
                 .build()
                 .connect();
         client.when().toolsList(page -> {
-            assertEquals(1, page.tools().size());
+            assertEquals(2, page.tools().size());
+
             ToolInfo addProducts = page.findByName("add-products");
-            JsonObject schema = addProducts.inputSchema();
-            assertHasPropertyWithNameTypeDescription(schema, "products", "array", "The products to add to the catalog");
-            assertHasPropertyCount(schema, 1);
-            assertHasRequiredProperties(schema, Set.of("products"));
-            JsonObject properties = schema.getJsonObject("properties");
+            JsonObject addProductsSchema = addProducts.inputSchema();
+            assertHasPropertyWithNameTypeDescription(addProductsSchema, "products", "array",
+                    "The products to add to the catalog");
+            assertHasPropertyCount(addProductsSchema, 1);
+            assertHasRequiredProperties(addProductsSchema, Set.of("products"));
+            JsonObject properties = addProductsSchema.getJsonObject("properties");
             JsonObject productsProperty = properties.getJsonObject("products");
-            JsonObject productType = productsProperty.getJsonObject("items");
-            assertNotNull(productType);
-            assertEquals("object", productType.getString("type"));
-            assertHasRequiredProperties(productType, Set.of("identifier", "name", "price"));
-            assertHasPropertyWithNameTypeDescription(productType, "identifier", "string",
-                    "The unique identifier of the product.");
-            assertHasPropertyWithNameTypeDescription(productType, "name", "string", "The name of the product.");
-            assertHasPropertyWithNameTypeDescription(productType, "description", "string", null);
-            assertHasPropertyWithNameTypeDescription(productType, "price", "number", null);
-            assertHasPropertyCount(productType, 4);
+            assertProductType(productsProperty.getJsonObject("items"));
+
+            ToolInfo addProduct = page.findByName("addProduct");
+            JsonObject addProductSchema = addProduct.inputSchema();
+            assertProductType(addProductSchema.getJsonObject("properties").getJsonObject("product"));
+
         }).thenAssertResults();
+    }
+
+    private void assertProductType(JsonObject productType) {
+        assertNotNull(productType);
+        assertEquals("object", productType.getString("type"));
+        assertHasRequiredProperties(productType, Set.of("identifier", "name", "price"));
+        assertHasPropertyWithNameTypeDescription(productType, "identifier", "string",
+                "The unique identifier of the product.");
+        assertHasPropertyWithNameTypeDescription(productType, "name", "string", "The name of the product.");
+        assertHasPropertyWithNameTypeDescription(productType, "description", "string", null);
+        assertHasPropertyWithNameTypeDescription(productType, "price", "number", null);
+        assertHasPropertyCount(productType, 4);
     }
 
     private void assertHasPropertyWithNameTypeDescription(JsonObject typeObject, String name, String expectedType,
@@ -86,6 +96,11 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
         public String addProducts(
                 @ToolArg(name = "products", description = "The products to add to the catalog") List<Product> products) {
             return "ok";
+        }
+
+        @Tool
+        String addProduct(Product product) {
+            return "yes";
         }
     }
 
