@@ -12,6 +12,10 @@ import java.util.List;
  */
 public record Icon(String src, String mimeType, List<String> sizes, Theme theme) {
 
+    public Icon(String src, String mimeType) {
+        this(src, mimeType, null, null);
+    }
+
     public Icon {
         if (src == null) {
             throw new IllegalArgumentException("src must not be null");

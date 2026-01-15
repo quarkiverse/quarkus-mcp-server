@@ -105,6 +105,12 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
         THIS setAsyncHandler(Function<ARGUMENTS, Uni<RESPONSE>> fun);
 
         /**
+         * @param icons
+         * @return self
+         */
+        THIS setIcons(Icon... icons);
+
+        /**
          * Registers the resulting info and sends notifications to all connected clients.
          *
          * @return the info

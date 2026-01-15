@@ -1323,6 +1323,34 @@ class Tools {
 
 NOTE: Meta field names and prefixes must meet certain restrictions. For example, a name must begin and end with an alphanumeric character (`[a-z0-9A-Z]`). A prefix must always end with slash `/`, and so on. Please consult the MCP specification for more details.
 
+=== Icons
+
+To add feature icons (like `@Tool`) in the response to a list request (e.g., `tools/list`), use the `@io.quarkiverse.mcp.server.Icons` annotation.
+This annotation accepts a class that implements `io.quarkiverse.mcp.server.IconsProvider`.
+The `IconsProvider#get()` method is called at runtime to supply icons for a specific feature.
+Implementations must be CDI beans, or declare a public no-args constructor.
+
+[source,java]
+----
+class Tools {
+
+   @Icons(ToLowerCaseIcons.class) <1>
+   @Tool(description = "Converts the string value to lower case") String toLowerCase(String value) {
+      return value.toLowerCase();
+   }
+}
+
+class ToLowerCaseIcons implements IconsProvider {
+
+   @Override
+   public List<Icon> get(FeatureInfo feature) {
+      return List.of(new Icon("https://some/foo", "image/png")); <2>
+   }
+}
+----
+<1> Associate an `IconsProvider` with the feature.
+<2> This method is called every time a JSON representation of `Tools#toLowerCase()` is needed.
+
 == Security
 
 In case of using the HTTP transport, you can secure MCP Streamable HTTP and SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].

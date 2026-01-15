@@ -1033,7 +1033,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         private ResourceInfo parseResource(JsonObject resource) {
             return new ResourceInfo(resource.getString("uri"), resource.getString("mimeType"), resource.getString("name"),
                     resource.getString("title"), resource.getString("description"), resource.getInteger("size"),
-                    Contents.parseAnnotations(resource), resource.getJsonObject("_meta"));
+                    Contents.parseAnnotations(resource), resource.getJsonObject("_meta"), resource.getJsonArray("icons"));
         }
     }
 
@@ -1060,7 +1060,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                     resource.getString("title"),
                     resource.getString("description"),
                     Contents.parseAnnotations(resource),
-                    resource.getJsonObject("_meta"));
+                    resource.getJsonObject("_meta"), resource.getJsonArray("icons"));
         }
     }
 
@@ -1094,7 +1094,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 }
             }
             return new PromptInfo(prompt.getString("name"), prompt.getString("title"),
-                    prompt.getString("description"), promptArgs, prompt.getJsonObject("_meta"));
+                    prompt.getString("description"), promptArgs, prompt.getJsonObject("_meta"), prompt.getJsonArray("icons"));
         }
     }
 
@@ -1178,7 +1178,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                     tool.getJsonObject("inputSchema"),
                     tool.getJsonObject("outputSchema"),
                     toolAnnotations,
-                    tool.getJsonObject("_meta"));
+                    tool.getJsonObject("_meta"),
+                    tool.getJsonArray("icons"));
         }
     }
 

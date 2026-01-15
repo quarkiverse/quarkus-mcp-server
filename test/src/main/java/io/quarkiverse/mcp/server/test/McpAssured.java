@@ -17,6 +17,7 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.vertx.core.MultiMap;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -1369,18 +1370,19 @@ public class McpAssured {
     }
 
     public record ToolInfo(String name, String title, String description, JsonObject inputSchema, JsonObject outputSchema,
-            Optional<ToolAnnotations> annotations, JsonObject meta) {
+            Optional<ToolAnnotations> annotations, JsonObject meta, JsonArray icons) {
     }
 
-    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments, JsonObject meta) {
+    public record PromptInfo(String name, String title, String description, List<PromptArgument> arguments, JsonObject meta,
+            JsonArray icons) {
     }
 
     public record ResourceInfo(String uri, String mimeType, String name, String title, String description, Integer size,
-            Content.Annotations annotations, JsonObject meta) {
+            Content.Annotations annotations, JsonObject meta, JsonArray icons) {
     }
 
     public record ResourceTemplateInfo(String uriTemplate, String mimeType, String name, String title, String description,
-            Content.Annotations annotations, JsonObject meta) {
+            Content.Annotations annotations, JsonObject meta, JsonArray icons) {
     }
 
     public record PromptArgument(String name, String title, String description, boolean required) {

@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
@@ -25,6 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
@@ -58,6 +61,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     final List<ResourceFilter> filters;
 
+    final Instance<IconsProvider> iconsProviders;
+
     ResourceManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
@@ -65,17 +70,19 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
-            @All List<ResourceFilter> filters) {
+            @All List<ResourceFilter> filters,
+            @Any Instance<IconsProvider> iconsProviders) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.resourceTemplateManager = resourceTemplateManager;
         this.uriToResource = new ConcurrentHashMap<>();
         this.resourceNames = Collections.synchronizedSet(new HashSet<>());
         this.uriToSubscribers = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
-            this.uriToResource.put(f.info().uri(), new ResourceMethod(f));
+            this.uriToResource.put(f.info().uri(), new ResourceMethod(f, iconsProviders));
             this.resourceNames.add(f.info().name());
         }
         this.filters = filters;
+        this.iconsProviders = iconsProviders;
     }
 
     @Override
@@ -218,8 +225,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     class ResourceMethod extends FeatureMetadataInvoker<ResourceResponse> implements ResourceManager.ResourceInfo {
 
-        private ResourceMethod(FeatureMetadata<ResourceResponse> metadata) {
-            super(metadata);
+        private ResourceMethod(FeatureMetadata<ResourceResponse> metadata, Instance<IconsProvider> iconsProviders) {
+            super(metadata, iconsProviders);
         }
 
         @Override
@@ -276,7 +283,16 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
         @Override
         public JsonObject asJson() {
-            return metadata.asJson();
+            JsonObject resource = metadata.asJson();
+            if (iconsProvider != null) {
+                try {
+                    List<Icon> icons = iconsProvider.get(this);
+                    resource.put("icons", icons);
+                } catch (Exception e) {
+                    LOG.errorf(e, "Unable to get icons for %s", name());
+                }
+            }
+            return resource;
         }
 
         @Override
@@ -299,8 +315,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private ResourceDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+                String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uri = uri;
             this.mimeType = mimeType;
@@ -362,6 +378,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     meta.put(e.getKey().toString(), e.getValue());
                 }
                 ret.put("_meta", meta);
+            }
+            if (icons != null) {
+                ret.put("icons", icons);
             }
             return ret;
         }
@@ -460,6 +479,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public ResourceInfo register() {
             validate();
+            if (uri == null) {
+                throw new IllegalStateException("uri must be set");
+            }
             ResourceInfo newValue = uriToResource.compute(uri, (uri, old) -> {
                 if (old != null) {
                     throw resourceWithUriAlreadyExists(uri);
@@ -469,7 +491,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 }
                 resourceNames.add(name);
                 return new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                        runOnVirtualThread, uri, mimeType, size, annotations, metadata);
+                        runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
             });
             if (newValue != null) {
                 notifyConnections(McpMessageHandler.NOTIFICATIONS_RESOURCES_LIST_CHANGED);

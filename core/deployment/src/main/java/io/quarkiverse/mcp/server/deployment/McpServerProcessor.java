@@ -433,6 +433,16 @@ class McpServerProcessor {
                         }
                     }
 
+                    // Icons
+                    DotName iconsProvider = null;
+                    AnnotationInstance icons = method.declaredAnnotation(DotNames.ICONS);
+                    if (icons != null) {
+                        AnnotationValue value = icons.value();
+                        if (value != null) {
+                            iconsProvider = value.asClass().name();
+                        }
+                    }
+
                     OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
                             : OptionalInt.empty();
                     if (nameMaxLength.isPresent()
@@ -444,7 +454,8 @@ class McpServerProcessor {
                         FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
                                 title, description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
                                 outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
-                                inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations));
+                                inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
+                                iconsProvider);
                         features.produce(fm);
                         found.compute(feature, (f, list) -> {
                             if (list == null) {
@@ -1366,11 +1377,18 @@ class McpServerProcessor {
             }
         }
 
+        ResultHandle iconsProvider;
+        if (featureMethod.getIconsProvider() != null) {
+            iconsProvider = metaMethod.loadClass(featureMethod.getIconsProvider().toString());
+        } else {
+            iconsProvider = metaMethod.loadNull();
+        }
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
                         Content.Annotations.class, String.class,
-                        Class.class, Class.class, Class.class, Map.class, List.class, List.class),
+                        Class.class, Class.class, Class.class, Map.class, List.class, List.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
@@ -1385,7 +1403,7 @@ class McpServerProcessor {
                         : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()),
                 featureMethod.getInputSchemaGenerator() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()),
-                meta, inputGuardrails, outputGuardrails);
+                meta, inputGuardrails, outputGuardrails, iconsProvider);
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
         ResultHandle executionModel = metaMethod.load(featureMethod.getExecutionModel());

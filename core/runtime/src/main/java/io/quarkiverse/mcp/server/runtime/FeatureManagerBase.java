@@ -32,6 +32,8 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
@@ -54,6 +56,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.FeatureInfo> {
+
+    private static final Logger LOG = Logger.getLogger(FeatureManagerBase.class);
 
     protected final Vertx vertx;
 
@@ -366,9 +370,14 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         private final Instant createdAt;
 
-        FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata) {
+        private final Instance<IconsProvider> iconsProviders;
+        protected final IconsProvider iconsProvider;
+
+        FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata, Instance<IconsProvider> iconsProviders) {
             this.metadata = metadata;
             this.createdAt = nextTimestamp();
+            this.iconsProviders = iconsProviders;
+            this.iconsProvider = initIconsProvider(metadata.info().iconsProvider());
         }
 
         @Override
@@ -394,6 +403,23 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }
         }
 
+        protected IconsProvider initIconsProvider(Class<? extends IconsProvider> clazz) {
+            if (clazz == null || iconsProviders == null) {
+                return null;
+            }
+            Instance<? extends IconsProvider> child = iconsProviders.select(clazz);
+            if (child.isResolvable()) {
+                return child.get();
+            } else {
+                try {
+                    return clazz.getConstructor().newInstance();
+                } catch (Exception e) {
+                    LOG.errorf(e, "Unable to instantiate icons provider: %s", clazz);
+                    return null;
+                }
+            }
+        }
+
     }
 
     protected static abstract class FeatureDefinitionBase<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinitionBase<INFO, ARGUMENTS, RESPONSE, THIS>> {
@@ -404,6 +430,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected boolean runOnVirtualThread;
         protected String serverName;
+        protected List<Icon> icons = List.of();
 
         protected FeatureDefinitionBase(String name) {
             this.name = Objects.requireNonNull(name);
@@ -436,6 +463,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return self();
         }
 
+        public THIS setIcons(Icon... icons) {
+            this.icons = List.of(icons);
+            return self();
+        }
+
         protected void validate() {
             validate(true);
         }
@@ -464,10 +496,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected final Function<ARGUMENTS, RESPONSE> fun;
         protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected final boolean runOnVirtualThread;
+        protected final List<Icon> icons;
 
         protected FeatureDefinitionInfoBase(String name, String description, String serverName,
                 Function<ARGUMENTS, RESPONSE> fun,
-                Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread) {
+                Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread, List<Icon> icons) {
             this.name = name;
             this.description = description;
             this.serverName = serverName;
@@ -475,6 +508,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             this.fun = fun;
             this.asyncFun = asyncFun;
             this.runOnVirtualThread = runOnVirtualThread;
+            this.icons = icons;
         }
 
         @Override

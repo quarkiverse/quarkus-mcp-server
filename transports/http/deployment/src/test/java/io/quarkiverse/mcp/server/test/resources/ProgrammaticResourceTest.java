@@ -52,6 +52,7 @@ public class ProgrammaticResourceTest extends McpServerTest {
 
         myResources.register("alpha", "2");
         assertThrows(IllegalArgumentException.class, () -> myResources.register("alpha", "2"));
+        assertThrows(IllegalStateException.class, () -> myResources.registerNoUri("alphas"));
         assertThrows(NullPointerException.class, () -> myResources.register(null, "2"));
 
         List<JsonObject> notifications = client.waitForNotifications(1).notifications();
@@ -113,6 +114,13 @@ public class ProgrammaticResourceTest extends McpServerTest {
 
         @Inject
         ResourceManager manager;
+
+        void registerNoUri(String name) {
+            manager.newResource(name)
+                    .setDescription(name + " description!")
+                    .setHandler(resourceArgs -> null)
+                    .register();
+        }
 
         void register(String name, String result) {
             manager.newResource(name)
