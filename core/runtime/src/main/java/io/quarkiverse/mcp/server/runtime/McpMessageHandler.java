@@ -196,7 +196,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> initializeNew(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = message.getValue("id");
         String method = message.getString("method");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
 
         if (!INITIALIZE.equals(method)) {
             // Normally the first message must be "initialize"
@@ -441,7 +441,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> cancelRequest(JsonObject message, McpRequest mcpRequest) {
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         if (params != null) {
             Object requestId = params.getValue("requestId");
             // Unknown, completed and invalid requests should be just ignored
@@ -473,7 +473,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> setLogLevel(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         String level = params.getString("level");
         if (level == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Log level not set");
@@ -492,7 +492,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> complete(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         JsonObject ref = params.getJsonObject("ref");
         if (ref == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Reference not found");

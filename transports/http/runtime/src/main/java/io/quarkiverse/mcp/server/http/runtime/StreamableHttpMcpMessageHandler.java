@@ -388,7 +388,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (method != null
                 && Messages.isRequest(message)
                 && FORCE_SSE_REQUESTS.contains(method)) {
-            JsonObject params = message.getJsonObject("params");
+            JsonObject params = Messages.getParams(message);
             if (params != null) {
                 return switch (method) {
                     case TOOLS_CALL -> forceSseTool(params);

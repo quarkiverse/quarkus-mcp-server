@@ -31,7 +31,7 @@ class ResourceMessageHandler extends MessageHandler {
 
     Future<Void> resourcesSubscribe(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
@@ -44,7 +44,7 @@ class ResourceMessageHandler extends MessageHandler {
 
     Future<Void> resourcesUnsubscribe(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
@@ -85,7 +85,7 @@ class ResourceMessageHandler extends MessageHandler {
 
     Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
