@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
@@ -25,6 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
@@ -53,20 +56,24 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     final List<ResourceTemplateFilter> filters;
 
+    final Instance<IconsProvider> iconsProviders;
+
     ResourceTemplateManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
-            @All List<ResourceTemplateFilter> filters) {
+            @All List<ResourceTemplateFilter> filters,
+            @Any Instance<IconsProvider> iconsProviders) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
             this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
-                    new ResourceTemplateMethod(fm)));
+                    new ResourceTemplateMethod(fm, iconsProviders)));
         }
         this.filters = filters;
+        this.iconsProviders = iconsProviders;
     }
 
     @Override
@@ -244,8 +251,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     class ResourceTemplateMethod extends FeatureMetadataInvoker<ResourceResponse>
             implements ResourceTemplateManager.ResourceTemplateInfo {
 
-        private ResourceTemplateMethod(FeatureMetadata<ResourceResponse> metadata) {
-            super(metadata);
+        private ResourceTemplateMethod(FeatureMetadata<ResourceResponse> metadata, Instance<IconsProvider> iconsProviders) {
+            super(metadata, iconsProviders);
         }
 
         @Override
@@ -297,7 +304,16 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
         @Override
         public JsonObject asJson() {
-            return metadata.asJson();
+            JsonObject resourceTemplate = metadata.asJson();
+            if (iconsProvider != null) {
+                try {
+                    List<Icon> icons = iconsProvider.get(this);
+                    resourceTemplate.put("icons", icons);
+                } catch (Exception e) {
+                    LOG.errorf(e, "Unable to get icons for %s", name());
+                }
+            }
+            return resourceTemplate;
         }
 
     }
@@ -315,8 +331,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private ResourceTemplateDefinitionInfo(String name, String title, String description, String serverName,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
@@ -367,6 +383,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                     meta.put(e.getKey().toString(), e.getValue());
                 }
                 ret.put("_meta", meta);
+            }
+            if (icons != null) {
+                ret.put("icons", icons);
             }
             return ret;
         }
@@ -462,8 +481,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         public ResourceTemplateInfo register() {
             validate();
+            if (uriTemplate == null) {
+                throw new IllegalStateException("uriTemplate must be set");
+            }
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverName,
-                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata);
+                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));
             if (existing != null) {

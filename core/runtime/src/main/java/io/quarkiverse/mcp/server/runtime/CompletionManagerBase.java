@@ -76,7 +76,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     class CompletionMethod extends FeatureMetadataInvoker<CompletionResponse> implements CompletionManager.CompletionInfo {
 
         CompletionMethod(FeatureMetadata<CompletionResponse> metadata) {
-            super(metadata);
+            super(metadata, null);
         }
 
         @Override
@@ -151,7 +151,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
                 Function<CompletionArguments, CompletionResponse> fun,
                 Function<CompletionArguments, Uni<CompletionResponse>> asyncFun, boolean runOnVirtualThread,
                 String argumentName) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, null);
             this.argumentName = argumentName;
         }
 

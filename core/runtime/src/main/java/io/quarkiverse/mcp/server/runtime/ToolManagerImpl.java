@@ -29,6 +29,8 @@ import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.InputSchemaGenerator;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -79,6 +81,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final Instance<ToolInputGuardrail> inputGuardrails;
     final Instance<ToolOutputGuardrail> outputGuardrails;
+    final Instance<IconsProvider> iconsProviders;
 
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
@@ -89,6 +92,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             @All List<ToolFilter> filters,
             @Any Instance<ToolInputGuardrail> inputGuardrails,
             @Any Instance<ToolOutputGuardrail> outputGuardrails,
+            @Any Instance<IconsProvider> iconsProviders,
             GlobalInputSchemaGenerator globalInputSchemaGenerator,
             GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
             Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
@@ -99,6 +103,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.tools = new ConcurrentHashMap<>();
         this.inputGuardrails = inputGuardrails;
         this.outputGuardrails = outputGuardrails;
+        this.iconsProviders = iconsProviders;
         this.globalInputSchemaGenerator = globalInputSchemaGenerator;
         this.globalOutputSchemaGenerator = globalOutputSchemaGenerator;
         this.outputSchemaGenerator = outputSchemaGenerator;
@@ -108,7 +113,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.buildTimeConfig = buildTimeConfig;
         this.config = config;
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
-            this.tools.put(f.info().name(), new ToolMethod(f));
+            this.tools.put(f.info().name(), new ToolMethod(f, iconsProviders));
         }
     }
 
@@ -207,11 +212,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     class ToolMethod extends FeatureMetadataInvoker<ToolResponse> implements ToolManager.ToolInfo {
 
         private final List<ToolInputGuardrail> input;
-
         private final List<ToolOutputGuardrail> output;
 
-        private ToolMethod(FeatureMetadata<ToolResponse> metadata) {
-            super(metadata);
+        private ToolMethod(FeatureMetadata<ToolResponse> metadata, Instance<IconsProvider> iconsProviders) {
+            super(metadata, iconsProviders);
             this.input = initInputGuardrails(cast(metadata.info().inputGuardrails()));
             this.output = initOutputGuardrails(cast(metadata.info().outputGuardrails()));
         }
@@ -315,6 +319,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 }
                 tool.put("outputSchema", outputSchema);
             }
+
+            if (iconsProvider != null) {
+                try {
+                    List<Icon> icons = iconsProvider.get(this);
+                    tool.put("icons", icons);
+                } catch (Exception e) {
+                    LOG.errorf(e, "Unable to get icons for %s", name());
+                }
+            }
+
             return tool;
         }
 
@@ -569,7 +583,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
-                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails));
+                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons);
             ToolInfo existing = tools.putIfAbsent(name, ret);
             if (existing != null) {
                 throw toolAlreadyExists(name);
@@ -610,8 +624,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
                 Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata, List<ToolInputGuardrail> input,
-                List<ToolOutputGuardrail> output) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+                List<ToolOutputGuardrail> output, List<Icon> icons) {
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
@@ -672,6 +686,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                     meta.put(e.getKey().toString(), e.getValue());
                 }
                 tool.put("_meta", meta);
+            }
+            if (icons != null) {
+                tool.put("icons", icons);
             }
             return tool;
         }

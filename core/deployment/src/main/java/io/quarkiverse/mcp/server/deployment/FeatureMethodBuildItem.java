@@ -50,6 +50,8 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final List<DotName> inputGuardrails;
     private final List<DotName> outputGuardrails;
 
+    private final DotName iconsProvider;
+
     // Server config name
     private final String server;
 
@@ -64,7 +66,8 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
             Map<String, String> metadata,
             List<DotName> inputGuardrails,
             List<DotName> outputGuardrails,
-            ExecutionModel executionModel) {
+            ExecutionModel executionModel,
+            DotName iconsProvider) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -86,6 +89,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.inputGuardrails = inputGuardrails;
         this.outputGuardrails = outputGuardrails;
         this.executionModel = executionModel;
+        this.iconsProvider = iconsProvider;
     }
 
     BeanInfo getBean() {
@@ -160,16 +164,20 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return metadata;
     }
 
-    public List<DotName> getInputGuardrails() {
+    List<DotName> getInputGuardrails() {
         return inputGuardrails;
     }
 
-    public List<DotName> getOutputGuardrails() {
+    List<DotName> getOutputGuardrails() {
         return outputGuardrails;
     }
 
-    public ExecutionModel getExecutionModel() {
+    ExecutionModel getExecutionModel() {
         return executionModel;
+    }
+
+    DotName getIconsProvider() {
+        return iconsProvider;
     }
 
     boolean isTool() {

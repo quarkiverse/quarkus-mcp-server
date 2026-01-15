@@ -50,6 +50,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
 
         myTemplates.register("alpha");
         assertThrows(IllegalArgumentException.class, () -> myTemplates.register("alpha"));
+        assertThrows(IllegalStateException.class, () -> myTemplates.registerNoUriTemplate("alphas"));
         assertThrows(NullPointerException.class, () -> myTemplates.register(null));
 
         client.when()
@@ -89,6 +90,13 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
 
         @Inject
         ResourceTemplateManager manager;
+
+        void registerNoUriTemplate(String name) {
+            manager.newResourceTemplate(name)
+                    .setDescription(name + " description!")
+                    .setHandler(args -> null)
+                    .register();
+        }
 
         void register(String name) {
             manager.newResourceTemplate(name)

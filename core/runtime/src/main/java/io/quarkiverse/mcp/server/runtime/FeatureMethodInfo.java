@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.InputSchemaGenerator;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -25,7 +26,8 @@ public record FeatureMethodInfo(String name,
         // meta key (prefix + name) -> json
         Map<String, String> metadata,
         List<Class<?>> inputGuardrails,
-        List<Class<?>> outputGuardrails) {
+        List<Class<?>> outputGuardrails,
+        Class<? extends IconsProvider> iconsProvider) {
 
     public List<FeatureArgument> serializedArguments() {
         if (arguments == null) {

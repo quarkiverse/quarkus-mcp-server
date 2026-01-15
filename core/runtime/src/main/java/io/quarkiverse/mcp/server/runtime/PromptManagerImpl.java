@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
@@ -20,6 +21,8 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
@@ -46,19 +49,23 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     final List<PromptFilter> filters;
 
+    final Instance<IconsProvider> iconsProviders;
+
     PromptManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
-            @All List<PromptFilter> filters) {
+            @All List<PromptFilter> filters,
+            @Any Instance<IconsProvider> iconsProviders) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
-            this.prompts.put(f.info().name(), new PromptMethod(f));
+            this.prompts.put(f.info().name(), new PromptMethod(f, iconsProviders));
         }
         this.filters = filters;
+        this.iconsProviders = iconsProviders;
     }
 
     @Override
@@ -137,8 +144,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     class PromptMethod extends FeatureMetadataInvoker<PromptResponse> implements PromptManager.PromptInfo {
 
-        private PromptMethod(FeatureMetadata<PromptResponse> metadata) {
-            super(metadata);
+        private PromptMethod(FeatureMetadata<PromptResponse> metadata, Instance<IconsProvider> iconsProviders) {
+            super(metadata, iconsProviders);
         }
 
         @Override
@@ -182,7 +189,16 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
         @Override
         public JsonObject asJson() {
-            return metadata.asJson();
+            JsonObject prompt = metadata.asJson();
+            if (iconsProvider != null) {
+                try {
+                    List<Icon> icons = iconsProvider.get(this);
+                    prompt.put("icons", icons);
+                } catch (Exception e) {
+                    LOG.errorf(e, "Unable to get icons for %s", name());
+                }
+            }
+            return prompt;
         }
 
     }
@@ -223,7 +239,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         public PromptInfo register() {
             validate();
             PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverName, fun, asyncFun,
-                    runOnVirtualThread, arguments, metadata);
+                    runOnVirtualThread, arguments, metadata, icons);
             PromptInfo existing = prompts.putIfAbsent(name, ret);
             if (existing != null) {
                 throw promptWithNameAlreadyExists(name);
@@ -244,8 +260,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         private PromptDefinitionInfo(String name, String title, String description, String serverName,
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
-                List<PromptArgument> arguments, Map<MetaKey, Object> metadata) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+                List<PromptArgument> arguments, Map<MetaKey, Object> metadata, List<Icon> icons) {
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.metadata = Map.copyOf(metadata);
@@ -307,6 +323,9 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                     meta.put(e.getKey().toString(), e.getValue());
                 }
                 prompt.put("_meta", meta);
+            }
+            if (icons != null) {
+                prompt.put("icons", icons);
             }
             return prompt;
         }

@@ -97,7 +97,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         private final Notification.Type type;
 
         private NotificationMethod(FeatureMetadata<Void> metadata) {
-            super(metadata);
+            super(metadata, null);
             this.type = Notification.Type
                     .valueOf(metadata.info().description());
         }
@@ -177,7 +177,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         private NotificationDefinitionInfo(String name, String description, String serverName,
                 Function<NotificationArguments, Void> fun,
                 Function<NotificationArguments, Uni<Void>> asyncFun, boolean runOnVirtualThread, Notification.Type type) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread);
+            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, null);
             this.type = type;
         }
 
