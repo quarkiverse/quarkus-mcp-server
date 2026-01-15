@@ -57,7 +57,7 @@ class PromptMessageHandler extends MessageHandler {
 
     Future<Void> promptsGet(JsonObject message, McpRequest mcpRequest) {
         Object id = message.getValue("id");
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
         try {

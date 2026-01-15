@@ -176,18 +176,19 @@ TIP: There is a default content encoder registered; it encodes the returned valu
 
 === Method parameters
 
-A `@Tool` method may accept parameters that represent Tool arguments.
+A `@Tool` method may accept parameters that represent tool arguments.
 However, it may also accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 TIP: If you need to validate the parameters of a `@Tool` method then the xref:hibernate-validator.adoc[Hibernate Validator integration] fits perfectly.
 
@@ -478,15 +479,16 @@ However, the annotated method can also return other types that are converted acc
 A `@Prompt` method must only accept `String` parameters that represent Prompt arguments.
 However, it may also accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 === Completion API
 
@@ -530,15 +532,16 @@ However, the annotated method can also return other types that are converted acc
 A `@CompletePrompt` method must only accept a single `String` parameter that represents a completed Prompt argument.
 However, it may also accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 === Programmatic API
 
@@ -618,16 +621,17 @@ TIP: There is a default resource contents encoder registered; it encodes the ret
 
 A `@Resource` method may accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.RequestUri`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.RequestUri`::  The requested URI.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 === Programmatic API
 
@@ -726,16 +730,17 @@ However, the annotated method can also return other types that are converted acc
 A `@ResourceTemplate` method must only accept `String` parameters that represent template variables.
 However, it may also accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.RequestUri`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.RequestUri`::  The requested URI.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 === Completion API
 
@@ -778,16 +783,17 @@ However, the annotated method can also return other types that are converted acc
 A `@CompleteResourceTemplate` method must only accept a single `String` parameter that represents a completed Resource template variable.
 However, it may also accept the following parameters:
 
-* `io.quarkiverse.mcp.server.McpConnection`
-* `io.quarkiverse.mcp.server.McpLog`
-* `io.quarkiverse.mcp.server.RequestId`
-* `io.quarkiverse.mcp.server.Progress`
-* `io.quarkiverse.mcp.server.RequestUri`
-* `io.quarkiverse.mcp.server.Roots`
-* `io.quarkiverse.mcp.server.Sampling`
-* `io.quarkiverse.mcp.server.Elicitation`
-* `io.quarkiverse.mcp.server.Cancellation`
-* `io.quarkiverse.mcp.server.RawMessage`
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.RequestUri`::  The requested URI.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 
 === Programmatic API
 
@@ -1292,7 +1298,31 @@ public class MyFilters implements ToolFilter, PromptFilter {
    }
 }
 ----
+
+=== Metadata fields
+
+If you need to provide additional metadata in the `_meta` object of a feature definition (such as `@Tool`) included in the response to the list request (e.g. `tools/list`), use the `@io.quarkiverse.mcp.server.MetaField` annotation.
+The annotation is repeatable.
+`@Tool`, `@Prompt`, `@Resource` and `@ResourceTemplate` methods can be annotated, e.g.:
  
+[source,java]
+----
+class Tools {
+
+   @MetaField(name = "priceLevel", value = "high") <1>
+   @MetaField(name = "price", type = Type.INT, value = "100") <2>
+   @MetaField(prefix = "foo/", name = "active", type = Type.BOOLEAN, value = "true") <3>
+   @Tool(description = "Converts the string value to lower case") String toLowerCase(String value) {
+      return value.toLowerCase();
+   }
+}
+----
+<1> Adds the field with key `priceLevel` of type string and value `"high"` to the `_meta` of the corresponding tool.
+<2> Adds the field with key `price` of type integer and value `100` (stored as a JSON number) to the `_meta` of the corresponding tool.
+<3> Adds the field with key `foo/active` of type boolean and value `true` (stored as a JSON number) to the `_meta` of the corresponding tool.
+
+NOTE: Meta field names and prefixes must meet certain restrictions. For example, a name must begin and end with an alphanumeric character (`[a-z0-9A-Z]`). A prefix must always end with slash `/`, and so on. Please consult the MCP specification for more details.
+
 == Security
 
 In case of using the HTTP transport, you can secure MCP Streamable HTTP and SSE endpoints using the https://quarkus.io/guides/security-authorize-web-endpoints-reference[Quarkus web security layer].

@@ -202,7 +202,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case CANCELLATION -> CancellationImpl.from(argProviders);
                 case RAW_MESSAGE -> RawMessageImpl.from(argProviders);
                 case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
-                case META -> MetaImpl.from(argProviders.rawMessage().getJsonObject("params"));
+                case META -> MetaImpl.from(Messages.getParams(argProviders.rawMessage()));
                 case ELICITATION -> ElicitationImpl.from(argProviders);
                 case PARAMS -> handleParam(metadata, arg, argProviders.getArg(arg.name()));
                 default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
@@ -630,7 +630,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         @Override
         public Meta meta() {
-            return MetaImpl.from(argProviders.rawMessage().getJsonObject("params"));
+            return MetaImpl.from(Messages.getParams(argProviders.rawMessage()));
         }
 
     }

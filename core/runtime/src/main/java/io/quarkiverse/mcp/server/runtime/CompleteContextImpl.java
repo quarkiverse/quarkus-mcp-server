@@ -12,11 +12,11 @@ class CompleteContextImpl implements CompleteContext {
     static CompleteContextImpl from(ArgumentProviders argumentProviders) {
         JsonObject message = argumentProviders.rawMessage();
         Map<String, String> arguments = Map.of();
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = Messages.getParams(message);
         if (params != null) {
             JsonObject context = params.getJsonObject("context");
             if (context != null) {
-                arguments = context.getJsonObject("arguments")
+                arguments = Messages.getArguments(context)
                         .getMap()
                         .entrySet()
                         .stream()
