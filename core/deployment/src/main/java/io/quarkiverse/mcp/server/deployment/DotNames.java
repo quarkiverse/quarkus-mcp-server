@@ -44,10 +44,12 @@ import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SupportedExecutionModels;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolGuardrails;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.common.annotation.Blocking;
@@ -115,5 +117,7 @@ class DotNames {
     static final DotName ELICITATION = DotName.createSimple(Elicitation.class);
     static final DotName META_FIELD = DotName.createSimple(MetaField.class);
     static final DotName META_FIELDS = DotName.createSimple(MetaField.MetaFields.class);
+    static final DotName TOOL_GUARDRAILS = DotName.createSimple(ToolGuardrails.class);
+    static final DotName SUPPORTED_EXEC_MODELS = DotName.createSimple(SupportedExecutionModels.class);
 
 }

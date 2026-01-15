@@ -1,13 +1,16 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
@@ -17,6 +20,7 @@ import io.quarkus.builder.item.MultiBuildItem;
 final class FeatureMethodBuildItem extends MultiBuildItem {
 
     private final Feature feature;
+    private final ExecutionModel executionModel;
 
     // Invocation info
     private final BeanInfo bean;
@@ -43,6 +47,9 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final Type outputSchemaGenerator;
     private final Type inputSchemaGenerator;
 
+    private final List<DotName> inputGuardrails;
+    private final List<DotName> outputGuardrails;
+
     // Server config name
     private final String server;
 
@@ -54,7 +61,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
             String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
             Type inputSchemaGenerator,
             Content.Annotations resourceAnnotations,
-            Map<String, String> metadata) {
+            Map<String, String> metadata,
+            List<DotName> inputGuardrails,
+            List<DotName> outputGuardrails,
+            ExecutionModel executionModel) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -73,6 +83,9 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.inputSchemaGenerator = inputSchemaGenerator;
         this.resourceAnnotations = resourceAnnotations;
         this.metadata = Objects.requireNonNull(metadata);
+        this.inputGuardrails = inputGuardrails;
+        this.outputGuardrails = outputGuardrails;
+        this.executionModel = executionModel;
     }
 
     BeanInfo getBean() {
@@ -145,6 +158,18 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Map<String, String> getMetadata() {
         return metadata;
+    }
+
+    public List<DotName> getInputGuardrails() {
+        return inputGuardrails;
+    }
+
+    public List<DotName> getOutputGuardrails() {
+        return outputGuardrails;
+    }
+
+    public ExecutionModel getExecutionModel() {
+        return executionModel;
     }
 
     boolean isTool() {

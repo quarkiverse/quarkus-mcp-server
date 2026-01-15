@@ -52,6 +52,7 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.ImageContent;
@@ -80,7 +81,6 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
 import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
-import io.quarkiverse.mcp.server.runtime.ExecutionModel;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -113,12 +113,15 @@ import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InstanceHandle;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
+import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
+import io.quarkus.arc.deployment.ValidationPhaseBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.Annotations;
+import io.quarkus.arc.processor.BeanDeploymentValidator.ValidationContext;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.InjectionPointInfo;
@@ -143,6 +146,7 @@ import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
 import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
+import io.quarkus.gizmo.Gizmo.JdkList.JdkListInstance;
 import io.quarkus.gizmo.Gizmo.JdkMap.JdkMapInstance;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
@@ -249,10 +253,14 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    void collectFeatureMethods(McpServersBuildTimeConfig config, BeanDiscoveryFinishedBuildItem beanDiscovery,
+    void collectFeatureMethods(McpServersBuildTimeConfig config,
+            BeanDiscoveryFinishedBuildItem beanDiscovery,
             InvokerFactoryBuildItem invokerFactory,
-            List<DefaultValueConverterBuildItem> defaultValueConverters, CombinedIndexBuildItem combinedIndex,
-            FeatureAnnotationsBuildItem featureAnnotations, BuildProducer<FeatureMethodBuildItem> features,
+            List<DefaultValueConverterBuildItem> defaultValueConverters,
+            CombinedIndexBuildItem combinedIndex,
+            TransformedAnnotationsBuildItem transformedAnnotations,
+            FeatureAnnotationsBuildItem featureAnnotations,
+            BuildProducer<FeatureMethodBuildItem> features,
             BuildProducer<ValidationErrorBuildItem> errors) {
 
         List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, featureAnnotations, errors);
@@ -402,6 +410,29 @@ class McpServerProcessor {
                         }
                     }
 
+                    // Input/output guardrails
+                    List<DotName> inputGuardrails = List.of();
+                    List<DotName> outputGuardrails = List.of();
+                    if (feature == TOOL) {
+                        AnnotationInstance guardrails = method.declaredAnnotation(DotNames.TOOL_GUARDRAILS);
+                        if (guardrails != null) {
+                            AnnotationValue input = guardrails.value("input");
+                            if (input != null) {
+                                inputGuardrails = new ArrayList<>();
+                                for (org.jboss.jandex.Type clazz : input.asClassArray()) {
+                                    inputGuardrails.add(clazz.name());
+                                }
+                            }
+                            AnnotationValue output = guardrails.value("output");
+                            if (output != null) {
+                                outputGuardrails = new ArrayList<>();
+                                for (org.jboss.jandex.Type clazz : output.asClassArray()) {
+                                    outputGuardrails.add(clazz.name());
+                                }
+                            }
+                        }
+                    }
+
                     OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
                             : OptionalInt.empty();
                     if (nameMaxLength.isPresent()
@@ -412,7 +443,8 @@ class McpServerProcessor {
                     } else {
                         FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
                                 title, description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata);
+                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
+                                inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations));
                         features.produce(fm);
                         found.compute(feature, (f, list) -> {
                             if (list == null) {
@@ -510,6 +542,63 @@ class McpServerProcessor {
         }
     }
 
+    @BuildStep
+    void validateGuardrails(BeanArchiveIndexBuildItem beanArchiveIndex,
+            List<FeatureMethodBuildItem> featureMethods,
+            ValidationPhaseBuildItem validationPhase,
+            BuildProducer<ValidationErrorBuildItem> validationErrors,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        for (FeatureMethodBuildItem featureMethod : featureMethods) {
+            if (featureMethod.isTool()) {
+                for (DotName inputGuardRail : featureMethod.getInputGuardrails()) {
+                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, inputGuardRail, validationPhase.getContext(),
+                            validationErrors, reflectiveClasses);
+                }
+                for (DotName outputGuardRail : featureMethod.getOutputGuardrails()) {
+                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, outputGuardRail, validationPhase.getContext(),
+                            validationErrors, reflectiveClasses);
+                }
+            }
+        }
+    }
+
+    private void validateGuardrail(IndexView index, FeatureMethodBuildItem featureMethod, DotName guardrailClazzName,
+            ValidationContext validationContext, BuildProducer<ValidationErrorBuildItem> errors,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        ClassInfo clazz = index.getClassByName(guardrailClazzName);
+        List<BeanInfo> beans = validationContext.beans().withBeanType(guardrailClazzName).collect();
+        if (beans.size() > 1) {
+            String message = String.format(
+                    "There must be exactly one bean that matches the guardrail: \"%s\" declared on: %s; beans: %s",
+                    guardrailClazzName,
+                    featureMethod.getMethod().declaringClass().name() + "#" + featureMethod.getMethod().name() + "()", beans);
+            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+        } else if (beans.isEmpty()) {
+            if (clazz != null) {
+                MethodInfo noArgsConstructor = clazz.method("<init>");
+                if (noArgsConstructor == null || !Modifier.isPublic(noArgsConstructor.flags())) {
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                            "Guardrail implementations must be CDI beans, or declare a public no-args constructor: " + clazz)));
+                } else {
+                    reflectiveClasses
+                            .produce(ReflectiveClassBuildItem.builder(guardrailClazzName.toString()).constructors().build());
+                }
+            }
+        }
+        AnnotationInstance supportedExecutionModels = clazz.declaredAnnotation(DotNames.SUPPORTED_EXEC_MODELS);
+        if (supportedExecutionModels != null) {
+            for (String supportedModel : supportedExecutionModels.value().asEnumArray()) {
+                if (supportedModel.equals(featureMethod.getExecutionModel().toString())) {
+                    return;
+                }
+            }
+            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                    "Guardrail %s does not support the execution model %s of %s#%s()".formatted(guardrailClazzName,
+                            featureMethod.getExecutionModel(), featureMethod.getMethod().declaringClass(),
+                            featureMethod.getMethod().name()))));
+        }
+    }
+
     private void addMetaField(Map<String, String> metadata, AnnotationInstance metaEntry) {
         AnnotationValue prefixValue = metaEntry.value("prefix");
         String name = metaEntry.value("name").asString();
@@ -604,7 +693,6 @@ class McpServerProcessor {
             RecorderContext recorderContext,
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             List<FeatureMethodBuildItem> featureMethods,
-            TransformedAnnotationsBuildItem transformedAnnotations,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             List<ServerNameBuildItem> serverNames,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
@@ -661,7 +749,7 @@ class McpServerProcessor {
         MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
         ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
         for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
-            processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts, transformedAnnotations,
+            processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts,
                     DotNames.PROMPT_ARG);
         }
         promptsMethod.returnValue(retPrompts);
@@ -672,7 +760,6 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem promptCompletion : featureMethods.stream().filter(FeatureMethodBuildItem::isPromptComplete)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, promptCompletionsMethod, promptCompletion, retPromptCompletions,
-                    transformedAnnotations,
                     DotNames.COMPLETE_ARG);
         }
         promptCompletionsMethod.returnValue(retPromptCompletions);
@@ -681,7 +768,7 @@ class McpServerProcessor {
         MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
         ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
-            processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools, transformedAnnotations,
+            processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools,
                     tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL) ? DotNames.LANGCHAIN4J_P
                             : DotNames.TOOL_ARG);
         }
@@ -691,7 +778,7 @@ class McpServerProcessor {
         MethodCreator resourcesMethod = metadataCreator.getMethodCreator("resources", List.class);
         ResultHandle retResources = Gizmo.newArrayList(resourcesMethod);
         for (FeatureMethodBuildItem resource : featureMethods.stream().filter(FeatureMethodBuildItem::isResource).toList()) {
-            processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources, transformedAnnotations,
+            processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources,
                     null);
         }
         resourcesMethod.returnValue(retResources);
@@ -702,7 +789,6 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
                 .filter(FeatureMethodBuildItem::isResourceTemplate).toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplatesMethod, resourceTemplate, retResourceTemplates,
-                    transformedAnnotations,
                     DotNames.RESOURCE_TEMPLATE_ARG);
         }
         resourceTemplatesMethod.returnValue(retResourceTemplates);
@@ -716,7 +802,6 @@ class McpServerProcessor {
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplateCompletionsMethod, resourceTemplateCompletion,
                     retResourceTemplateCompletions,
-                    transformedAnnotations,
                     DotNames.COMPLETE_ARG);
         }
         resourceTemplateCompletionsMethod.returnValue(retResourceTemplateCompletions);
@@ -727,7 +812,6 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem notification : featureMethods.stream().filter(FeatureMethodBuildItem::isNotification)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
-                    transformedAnnotations,
                     null);
         }
         notificationsMethod.returnValue(retNotifications);
@@ -1150,7 +1234,7 @@ class McpServerProcessor {
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
             FeatureMethodBuildItem featureMethod, ResultHandle retList,
-            TransformedAnnotationsBuildItem transformedAnnotations, DotName argAnnotationName) {
+            DotName argAnnotationName) {
         String methodName = "meta$" + counter.incrementAndGet();
         MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
 
@@ -1261,11 +1345,32 @@ class McpServerProcessor {
             }
         }
 
+        ResultHandle inputGuardrails;
+        if (featureMethod.getInputGuardrails().isEmpty()) {
+            inputGuardrails = Gizmo.listOperations(metaMethod).of();
+        } else {
+            inputGuardrails = Gizmo.newArrayList(metaMethod);
+            JdkListInstance list = Gizmo.listOperations(metaMethod).on(inputGuardrails);
+            for (DotName clazzName : featureMethod.getInputGuardrails()) {
+                list.add(metaMethod.loadClass(clazzName.toString()));
+            }
+        }
+        ResultHandle outputGuardrails;
+        if (featureMethod.getOutputGuardrails().isEmpty()) {
+            outputGuardrails = Gizmo.listOperations(metaMethod).of();
+        } else {
+            outputGuardrails = Gizmo.newArrayList(metaMethod);
+            JdkListInstance list = Gizmo.listOperations(metaMethod).on(outputGuardrails);
+            for (DotName clazzName : featureMethod.getOutputGuardrails()) {
+                list.add(metaMethod.loadClass(clazzName.toString()));
+            }
+        }
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
                         Content.Annotations.class, String.class,
-                        Class.class, Class.class, Class.class, Map.class),
+                        Class.class, Class.class, Class.class, Map.class, List.class, List.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
                 metaMethod.load(featureMethod.getDescription()),
@@ -1280,10 +1385,10 @@ class McpServerProcessor {
                         : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()),
                 featureMethod.getInputSchemaGenerator() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()),
-                meta);
+                meta, inputGuardrails, outputGuardrails);
         ResultHandle invoker = metaMethod
                 .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
-        ResultHandle executionModel = metaMethod.load(executionModel(featureMethod.getMethod(), transformedAnnotations));
+        ResultHandle executionModel = metaMethod.load(featureMethod.getExecutionModel());
         ResultHandle resultMapper = getMapper(metaMethod, featureMethod);
         ResultHandle metadata = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMetadata.class, Feature.class, FeatureMethodInfo.class, Invoker.class,

@@ -23,7 +23,9 @@ public record FeatureMethodInfo(String name,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator,
         Class<? extends InputSchemaGenerator<?>> inputSchemaGenerator,
         // meta key (prefix + name) -> json
-        Map<String, String> metadata) {
+        Map<String, String> metadata,
+        List<Class<?>> inputGuardrails,
+        List<Class<?>> outputGuardrails) {
 
     public List<FeatureArgument> serializedArguments() {
         if (arguments == null) {

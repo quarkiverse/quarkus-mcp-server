@@ -123,6 +123,18 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         ToolDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
+         * @param inputGuardrails
+         * @return self
+         */
+        ToolDefinition setInputGuardrails(List<Class<? extends ToolInputGuardrail>> inputGuardrails);
+
+        /**
+         * @param outputGuardrails
+         * @return self
+         */
+        ToolDefinition setOutputGuardrails(List<Class<? extends ToolOutputGuardrail>> outputGuardrails);
+
+        /**
          * @return the tool info
          * @throws IllegalArgumentException if a tool with the given name already exits
          */
