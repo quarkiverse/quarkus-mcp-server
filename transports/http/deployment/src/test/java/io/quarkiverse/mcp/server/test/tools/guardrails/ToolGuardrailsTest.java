@@ -42,7 +42,7 @@ public class ToolGuardrailsTest extends McpServerTest {
     ToolManager toolManager;
 
     @Test
-    public void testContents() {
+    public void testGuardrails() {
         toolManager.newTool("charlie")
                 .setDescription("Charlie tool")
                 .addArgument("age", "Age", true, int.class)
@@ -131,10 +131,13 @@ public class ToolGuardrailsTest extends McpServerTest {
 
         @Override
         public void apply(ToolOutputContext context) {
-            if (fail) {
-                throw new ToolCallException("FAIL!");
+            if (!context.getResponse().isError()) {
+                if (fail) {
+                    context.setResponse(ToolResponse.error("FAIL!"));
+                } else {
+                    context.setResponse(ToolResponse.success("ok:" + context.getResponse().firstContent().asText().text()));
+                }
             }
-            context.setResponse(ToolResponse.success("ok:" + context.getResponse().firstContent().asText().text()));
         }
 
     }
@@ -145,7 +148,9 @@ public class ToolGuardrailsTest extends McpServerTest {
 
         @Override
         public Uni<Void> applyAsync(ToolOutputContext context) {
-            context.setResponse(ToolResponse.success("ko:" + context.getResponse().firstContent().asText().text()));
+            if (!context.getResponse().isError()) {
+                context.setResponse(ToolResponse.success("ko:" + context.getResponse().firstContent().asText().text()));
+            }
             return Uni.createFrom().voidItem();
         }
 

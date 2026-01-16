@@ -7,7 +7,6 @@ import java.util.Objects;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpException;
-import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
@@ -73,15 +72,9 @@ class ToolMessageHandler extends MessageHandler {
         try {
             Future<ToolResponse> fu = manager.execute(toolName,
                     new FeatureExecutionContext(message, mcpRequest));
-            return fu.compose(toolResponse -> mcpRequest.sender().sendResult(id, toolResponse), cause -> {
-                if (cause instanceof ToolCallException tce) {
-                    // Business logic error should result in ToolResponse with isError:true
-                    return mcpRequest.sender().sendResult(id, ToolResponse.error(tce.getMessage()));
-                } else {
-                    return handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
-                            "Unable to call tool %s", toolName);
-                }
-            });
+            return fu.compose(toolResponse -> mcpRequest.sender().sendResult(id, toolResponse),
+                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+                            "Unable to call tool %s", toolName));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }

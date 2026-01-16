@@ -87,19 +87,38 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return execute(invoker.executionModel(), new Callable<Uni<RESULT>>() {
                 @Override
                 public Uni<RESULT> call() throws Exception {
-                    return invoker.beforeCall(executionContext)
+                    Uni<RESULT> ret = invoker.beforeCall(executionContext)
                             .chain(args -> {
                                 ArgumentProviders p = executionContext.argumentProviders();
                                 if (p == null) {
                                     p = argProviders(executionContext.message(), executionContext.mcpRequest(), args);
                                 }
                                 return invoker.call(p);
-                            })
-                            .chain(result -> invoker.afterCall(executionContext, result));
+                            });
+                    if (transformsExecutionFailure()) {
+                        return ret.onItemOrFailure().transformToUni((r, f) -> {
+                            if (f == null) {
+                                return invoker.afterCall(executionContext, r);
+                            } else {
+                                return transformExecutionFailure(f)
+                                        .chain(result -> invoker.afterCall(executionContext, result));
+                            }
+                        });
+                    } else {
+                        return ret.chain(result -> invoker.afterCall(executionContext, result));
+                    }
                 }
             });
         }
         throw notFound(id);
+    }
+
+    protected boolean transformsExecutionFailure() {
+        return false;
+    }
+
+    protected Uni<RESULT> transformExecutionFailure(Throwable failure) {
+        return Uni.createFrom().failure(failure);
     }
 
     protected JsonObject getArguments(JsonObject message) {

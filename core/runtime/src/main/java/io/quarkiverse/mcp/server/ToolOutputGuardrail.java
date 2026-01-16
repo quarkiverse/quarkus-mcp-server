@@ -33,13 +33,16 @@ public interface ToolOutputGuardrail {
      * {@link #apply(ToolOutputContext)} by default.
      *
      * @param context
-     * @see ToolCallException
      */
     default void apply(ToolOutputContext context) {
     }
 
     /**
      * An implemetation can replace the current response with {@link ToolOutputContext#setResponse(ToolResponse)}.
+     * <p>
+     * If any {@link ToolInputGuardrail} or the tool itself throws a {@link ToolCallException} then the exception instance is
+     * converted to a failed {@link ToolResponse} before any {@link ToolOutputGuardrail} is executed. The converted response is
+     * used as the input the for the first {@link ToolOutputGuardrail} in the chain.
      *
      * @param context
      * @return the uni
