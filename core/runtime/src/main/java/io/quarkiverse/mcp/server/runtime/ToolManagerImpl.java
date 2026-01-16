@@ -171,6 +171,20 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     @Override
+    protected boolean transformsExecutionFailure() {
+        return true;
+    }
+
+    @Override
+    protected Uni<ToolResponse> transformExecutionFailure(Throwable failure) {
+        if (failure instanceof ToolCallException tce) {
+            // Business logic error should result in ToolResponse with isError:true
+            return Uni.createFrom().item(ToolResponse.error(tce.getMessage()));
+        }
+        return super.transformExecutionFailure(failure);
+    }
+
+    @Override
     protected McpException notFound(String id) {
         return new McpException("Invalid tool name: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
@@ -458,7 +472,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         ToolInputContextImpl inputContext = new ToolInputContextImpl(tool, context.message(), context.mcpRequest());
         Iterator<ToolInputGuardrail> it = input.iterator();
         ToolInputGuardrail first = it.next();
-        Uni<Void> uni = first.applyAsync(inputContext);
+        Uni<Void> uni;
+        try {
+            uni = first.applyAsync(inputContext);
+        } catch (Exception e) {
+            return Uni.createFrom().failure(e);
+        }
         while (it.hasNext()) {
             ToolInputGuardrail next = it.next();
             uni = uni.chain(args -> next.applyAsync(inputContext));
@@ -472,7 +491,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 response);
         Iterator<ToolOutputGuardrail> it = output.iterator();
         ToolOutputGuardrail first = it.next();
-        Uni<Void> uni = first.applyAsync(outputContext);
+        Uni<Void> uni;
+        try {
+            uni = first.applyAsync(outputContext);
+        } catch (Exception e) {
+            return Uni.createFrom().failure(e);
+        }
         while (it.hasNext()) {
             ToolOutputGuardrail next = it.next();
             uni = uni.chain(r -> next.applyAsync(outputContext));
