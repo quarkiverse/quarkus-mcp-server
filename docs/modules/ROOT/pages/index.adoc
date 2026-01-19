@@ -18,6 +18,7 @@ The following features are not supported:
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#resumability-and-redelivery[Streamable HTTP - Resumability and Redelivery] (optional feature)
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks[Tasks] (experimental feature)
 - https://modelcontextprotocol.io/specification/2025-11-25/client/sampling#sampling-with-tools[Sampling with Tools]
+- https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation#url-mode-flow[Elicitation - URL Mode] 
 
 If you encounter a problem or discrepancy, feel free to https://github.com/quarkiverse/quarkus-mcp-server/issues[file a new issue]. 
 
