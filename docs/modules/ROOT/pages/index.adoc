@@ -8,6 +8,19 @@ This extension provides declarative and programmatic APIs that enable developers
 
 NOTE: The https://github.com/langchain4j/langchain4j[LangChain4j] project provides the MCP client functionality, either as a low-level programmatic API or as a full-fledged integration into AI-infused applications.
 
+== Specification and known limitations
+
+`quarkus-mcp-server` aims to support the `2025-11-25` version of the MCP specification.
+However, the absence of a "Compliance Test Suite" (in the Java world we often use the term TCK) makes it really difficult to verify the compliance.
+
+The following features are not supported:
+
+- https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#resumability-and-redelivery[Streamable HTTP - Resumability and Redelivery] (optional feature)
+- https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks[Tasks] (experimental feature)
+- https://modelcontextprotocol.io/specification/2025-11-25/client/sampling#sampling-with-tools[Sampling with Tools]
+
+If you encounter a problem or discrepancy, feel free to https://github.com/quarkiverse/quarkus-mcp-server/issues[file a new issue]. 
+
 == Supported transports
 
 The MCP specification currently defines two standard transports for client-server communication.
