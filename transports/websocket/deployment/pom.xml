@@ -71,4 +71,38 @@
             </plugin>
         </plugins>
     </build>
+    
+    <profiles>
+        <profile>
+            <id>test-coverage</id>
+            <activation>
+                <property>
+                    <name>jacoco</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-jacoco-deployment</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <quarkus.jacoco.instrument-artifacts.core.group-id>io.quarkiverse.mcp</quarkus.jacoco.instrument-artifacts.core.group-id>
+                                <quarkus.jacoco.instrument-artifacts.core.artifact-id>quarkus-mcp-server-core</quarkus.jacoco.instrument-artifacts.core.artifact-id>
+                                <quarkus.jacoco.instrument-artifacts.websocket.group-id>io.quarkiverse.mcp</quarkus.jacoco.instrument-artifacts.websocket.group-id>
+                                <quarkus.jacoco.instrument-artifacts.websocket.artifact-id>quarkus-mcp-server-websocket</quarkus.jacoco.instrument-artifacts.websocket.artifact-id>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
 </project>
