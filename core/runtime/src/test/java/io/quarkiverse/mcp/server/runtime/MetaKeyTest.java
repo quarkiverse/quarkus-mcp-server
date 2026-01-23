@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,16 @@ public class MetaKeyTest {
         assertEquals("name", MetaKey.of("name").toString());
         assertEquals("foo.bar/name", new MetaKey("foo.bar/", "name").toString());
         assertEquals("foo.bar/name", MetaKey.of("name", "foo", "bar").toString());
+    }
+
+    @Test
+    public void testIllegalArguments() {
+        assertEquals("name must not be null",
+                assertThrows(IllegalArgumentException.class, () -> new MetaKey("foo.bar/", null)).getMessage());
+        assertEquals("name -foo is not valid",
+                assertThrows(IllegalArgumentException.class, () -> new MetaKey("foo.bar/", "-foo")).getMessage());
+        assertEquals("prefix 1foo is not valid",
+                assertThrows(IllegalArgumentException.class, () -> new MetaKey("1foo", "foo")).getMessage());
     }
 
 }
