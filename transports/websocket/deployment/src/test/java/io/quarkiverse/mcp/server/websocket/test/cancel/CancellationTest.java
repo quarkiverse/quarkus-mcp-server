@@ -108,12 +108,13 @@ public class CancellationTest extends McpServerTest {
             BRAVO_LATCH.countDown();
             int c = 0;
             while (c++ < 20) {
-                Result r = cancellation.check();
-                if (r.isRequested()
-                        && r.reason().isPresent()
-                        && r.reason().get().equals("No reason at all")) {
+                try {
+                    // Just ignore the reason
+                    cancellation.skipProcessingIfCancelled();
+                } catch (OperationCancellationException e) {
+                    // Set status and rethrow
                     CANCELLED.set(true);
-                    throw new OperationCancellationException();
+                    throw e;
                 }
                 TimeUnit.MILLISECONDS.sleep(500);
             }

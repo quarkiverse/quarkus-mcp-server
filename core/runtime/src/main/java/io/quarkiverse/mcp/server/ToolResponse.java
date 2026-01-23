@@ -84,7 +84,7 @@ public record ToolResponse(boolean isError,
     }
 
     public Content firstContent() {
-        if (content.isEmpty()) {
+        if (content == null || content.isEmpty()) {
             throw new NoSuchElementException();
         }
         return content.get(0);
