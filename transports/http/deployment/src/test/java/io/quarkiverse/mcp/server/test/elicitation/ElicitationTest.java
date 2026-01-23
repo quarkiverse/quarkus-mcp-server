@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
+import io.quarkiverse.mcp.server.ElicitationRequest.BooleanSchema;
+import io.quarkiverse.mcp.server.ElicitationRequest.NumberSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.MetaKey;
@@ -29,7 +31,7 @@ import io.vertx.core.json.JsonObject;
 public class ElicitationTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusUnitTest config = defaultConfig(2000)
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
@@ -54,6 +56,16 @@ public class ElicitationTest extends McpServerTest {
         JsonObject schemaProperties = schema.getJsonObject("properties");
         assertEquals("string", schemaProperties.getJsonObject("username").getString("type"));
         assertEquals("username", schema.getJsonArray("required").getString(0));
+        assertEquals("string", schemaProperties.getJsonObject("username2").getString("type"));
+        assertEquals("string", schemaProperties.getJsonObject("username3").getString("type"));
+        assertEquals("string", schemaProperties.getJsonObject("username4").getString("type"));
+        assertEquals("boolean", schemaProperties.getJsonObject("active1").getString("type"));
+        assertEquals("boolean", schemaProperties.getJsonObject("active2").getString("type"));
+        assertEquals("boolean", schemaProperties.getJsonObject("active3").getString("type"));
+        assertEquals("number", schemaProperties.getJsonObject("num1").getString("type"));
+        assertEquals("number", schemaProperties.getJsonObject("num2").getString("type"));
+        assertEquals("number", schemaProperties.getJsonObject("num3").getString("type"));
+
         Long id = er.getLong("id");
         JsonObject response = new JsonObject()
                 .put("jsonrpc", "2.0")
@@ -86,6 +98,17 @@ public class ElicitationTest extends McpServerTest {
                 ElicitationRequest request = elicitation.requestBuilder()
                         .setMessage("What's your github account?")
                         .addSchemaProperty("username", new StringSchema(true))
+                        .addSchemaProperty("username2", new StringSchema())
+                        .addSchemaProperty("username3",
+                                new StringSchema("title", "desc", 1, 10, StringSchema.Format.DATE_TIME, false))
+                        .addSchemaProperty("username4",
+                                new StringSchema("title", "desc", 1, 10, StringSchema.Format.DATE_TIME, false, "default"))
+                        .addSchemaProperty("active1", new BooleanSchema(false))
+                        .addSchemaProperty("active2", new BooleanSchema())
+                        .addSchemaProperty("active3", new BooleanSchema("title", "desc", false, false))
+                        .addSchemaProperty("num1", new NumberSchema(false))
+                        .addSchemaProperty("num2", new NumberSchema("title", "desc", 1, 2, false, 1))
+                        .addSchemaProperty("num3", new NumberSchema())
                         .build();
                 return request.send().map(response -> {
                     if (response.actionAccepted()

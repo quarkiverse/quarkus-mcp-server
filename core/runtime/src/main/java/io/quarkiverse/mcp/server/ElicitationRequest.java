@@ -381,7 +381,7 @@ public interface ElicitationRequest {
             this(null, null, null, null, null, required);
         }
 
-        enum Format {
+        public enum Format {
             URI,
             EMAIL,
             DATE,
