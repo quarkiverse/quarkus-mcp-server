@@ -9,7 +9,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -27,6 +29,23 @@ public class LoggingSetLevelTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
 
         client.when()
+                .message(client.newRequest(McpMessageHandler.LOGGING_SET_LEVEL)
+                        .put("params", new JsonObject()))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
+                    assertEquals("Log level not set", error.message());
+                })
+                .send()
+                .message(client.newRequest(McpMessageHandler.LOGGING_SET_LEVEL)
+                        .put("params", new JsonObject().put("level", "alpha")))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
+                    assertEquals("Invalid log level set: alpha", error.message());
+                })
+                .send()
+                .thenAssertResults();
+
+        client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
                     assertEquals("monday:INFO", response.content().get(0).asText().text());
                 })
@@ -36,7 +55,7 @@ public class LoggingSetLevelTest extends McpServerTest {
 
         assertLog(notifications.get(0), LogLevel.INFO, "tool:charlie", "Charlie does not work on MONDAY");
 
-        JsonObject setLogLevelMessage = client.newRequest("logging/setLevel")
+        JsonObject setLogLevelMessage = client.newRequest(McpMessageHandler.LOGGING_SET_LEVEL)
                 .put("params", new JsonObject()
                         .put("level", LogLevel.CRITICAL.toString().toLowerCase()));
         client.when()

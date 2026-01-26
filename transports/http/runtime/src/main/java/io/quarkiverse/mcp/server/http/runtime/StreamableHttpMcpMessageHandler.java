@@ -444,6 +444,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         String resourceUri = params.getString("uri");
         FeatureMetadata<?> fm = metadata.resources().stream().filter(m -> m.info().uri().equals(resourceUri))
                 .findFirst().orElse(null);
+        if (fm == null) {
+            // Also try resource templates
+            ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
+            if (rti != null && rti.isMethod()) {
+                fm = McpMetadata.findFeatureByName(metadata.resourceTemplates(), rti.name());
+            }
+        }
         if (fm != null) {
             for (FeatureArgument a : fm.info().arguments()) {
                 if (FORCE_SSE_PROVIDERS.contains(a.provider())) {

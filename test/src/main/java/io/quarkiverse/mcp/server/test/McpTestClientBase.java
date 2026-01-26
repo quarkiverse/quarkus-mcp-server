@@ -201,7 +201,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected JsonObject newCompleteMessage(String refType, String refName, String argumentName, String argumentValue,
-            Map<String, String> contextArgs) {
+            Map<String, String> contextArgs, Map<String, Object> meta) {
         return newRequest(McpAssured.COMPLETION_COMPLETE, p -> {
             JsonObject ref = new JsonObject().put("type", refType);
             if (Messages.isPromptRef(refType)) {
@@ -209,6 +209,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             } else if (Messages.isResourceRef(refType)) {
                 ref.put("uri", refName);
             }
+            addMeta(p, meta);
             p.put("ref", ref);
             p.put("argument", new JsonObject()
                     .put("name", argumentName)
@@ -626,6 +627,15 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             }
 
             @Override
+            public PromptsCompleteMessage<ASSERT> withMetadata(Map<String, Object> meta) {
+                if (meta == null) {
+                    throw mustNotBeNull("meta");
+                }
+                this.meta = meta;
+                return this;
+            }
+
+            @Override
             public PromptsCompleteMessage<ASSERT> withContext(Map<String, String> arguments) {
                 this.contextArguments = arguments;
                 return this;
@@ -652,7 +662,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newCompleteMessage(Messages.PROMPT_REF, name, argumentName, argumentValue,
-                        contextArguments);
+                        contextArguments, meta);
                 doSend(message);
                 if (assertFunction != null) {
                     asserts.add(new PromptsCompleteAssert(message, assertFunction));
@@ -672,6 +682,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             protected Map<String, String> contextArguments;
             protected Consumer<CompletionResponse> assertFunction;
             protected Consumer<McpError> errorAssertFunction;
+            protected Map<String, Object> meta = Map.of();
 
             CompleteMessageImpl(String name) {
                 this.name = name;
@@ -680,6 +691,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
         class ResourceTemplateCompleteMessageImpl extends CompleteMessageImpl
                 implements ResourceTemplateCompleteMessage<ASSERT> {
+
+            private Map<String, Object> meta = Map.of();
 
             ResourceTemplateCompleteMessageImpl(String uriTemplate) {
                 super(uriTemplate);
@@ -695,6 +708,15 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 }
                 this.argumentName = name;
                 this.argumentValue = value;
+                return this;
+            }
+
+            @Override
+            public ResourceTemplateCompleteMessage<ASSERT> withMetadata(Map<String, Object> meta) {
+                if (meta == null) {
+                    throw mustNotBeNull("meta");
+                }
+                this.meta = meta;
                 return this;
             }
 
@@ -725,7 +747,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newCompleteMessage(Messages.RESOURCE_REF, name, argumentName, argumentValue,
-                        contextArguments);
+                        contextArguments, meta);
                 doSend(message);
                 if (assertFunction != null) {
                     asserts.add(new PromptsCompleteAssert(message, assertFunction));
@@ -955,7 +977,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
             @Override
             public GenericMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction) {
-                if (assertFunction == null) {
+                if (errorAssertFunction == null) {
                     throw mustNotBeNull("errorAssertFunction");
                 }
                 this.errorAssertFunction = errorAssertFunction;
