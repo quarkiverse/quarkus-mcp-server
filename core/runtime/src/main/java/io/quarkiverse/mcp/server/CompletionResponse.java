@@ -17,6 +17,14 @@ public record CompletionResponse(List<String> values, Integer total, Boolean has
      * @param values
      * @return a new completion response
      */
+    public static CompletionResponse create(String... values) {
+        return create(List.of(values));
+    }
+
+    /**
+     * @param values
+     * @return a new completion response
+     */
     public static CompletionResponse create(List<String> values) {
         return new CompletionResponse(values, null, null);
     }

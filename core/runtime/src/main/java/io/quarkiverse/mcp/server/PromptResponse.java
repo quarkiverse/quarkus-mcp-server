@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Response to a {@code prompts/get} request from the client.
@@ -36,6 +37,13 @@ public record PromptResponse(String description, List<PromptMessage> messages, M
         if (messages == null) {
             throw new IllegalArgumentException("messages must not be null");
         }
+    }
+
+    public PromptMessage firstMessage() {
+        if (messages == null || messages.isEmpty()) {
+            throw new NoSuchElementException();
+        }
+        return messages.get(0);
     }
 
 }

@@ -1029,6 +1029,12 @@ public class McpAssured {
             PromptsCompleteMessage<ASSERT> withArgument(String name, String value);
 
             /**
+             * @param meta
+             * @return self
+             */
+            PromptsCompleteMessage<ASSERT> withMetadata(Map<String, Object> meta);
+
+            /**
              * @param arguments
              * @return self
              */
@@ -1070,6 +1076,12 @@ public class McpAssured {
              * @return self
              */
             ResourceTemplateCompleteMessage<ASSERT> withArgument(String name, String value);
+
+            /**
+             * @param meta
+             * @return self
+             */
+            ResourceTemplateCompleteMessage<ASSERT> withMetadata(Map<String, Object> meta);
 
             /**
              * @param arguments
