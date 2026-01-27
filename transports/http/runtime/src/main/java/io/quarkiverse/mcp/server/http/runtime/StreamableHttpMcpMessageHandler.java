@@ -404,18 +404,20 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean forceSseTool(JsonObject params) {
         String name = params.getString("name");
-        var fm = McpMetadata.findFeatureByName(metadata.tools(), name);
-        if (fm != null) {
-            for (FeatureArgument a : fm.info().arguments()) {
-                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+        if (name != null) {
+            var fm = McpMetadata.findFeatureByName(metadata.tools(), name);
+            if (fm != null) {
+                for (FeatureArgument a : fm.info().arguments()) {
+                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+                        return true;
+                    }
+                }
+            } else {
+                ToolInfo info = toolManager.getTool(name);
+                if (info != null && !info.isMethod()) {
+                    // Always force SSE init for a tool added programatically
                     return true;
                 }
-            }
-        } else {
-            ToolInfo info = toolManager.getTool(name);
-            if (info != null && !info.isMethod()) {
-                // Always force SSE init for a tool added programatically
-                return true;
             }
         }
         return false;
@@ -423,18 +425,20 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean forceSsePrompt(JsonObject params) {
         String name = params.getString("name");
-        var fm = McpMetadata.findFeatureByName(metadata.prompts(), name);
-        if (fm != null) {
-            for (FeatureArgument a : fm.info().arguments()) {
-                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+        if (name != null) {
+            var fm = McpMetadata.findFeatureByName(metadata.prompts(), name);
+            if (fm != null) {
+                for (FeatureArgument a : fm.info().arguments()) {
+                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+                        return true;
+                    }
+                }
+            } else {
+                PromptInfo info = promptManager.getPrompt(name);
+                if (info != null && !info.isMethod()) {
+                    // Always force SSE init for a prompt added programatically
                     return true;
                 }
-            }
-        } else {
-            PromptInfo info = promptManager.getPrompt(name);
-            if (info != null && !info.isMethod()) {
-                // Always force SSE init for a prompt added programatically
-                return true;
             }
         }
         return false;
@@ -442,33 +446,35 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean forceSseResource(JsonObject params) {
         String resourceUri = params.getString("uri");
-        FeatureMetadata<?> fm = metadata.resources().stream().filter(m -> m.info().uri().equals(resourceUri))
-                .findFirst().orElse(null);
-        if (fm == null) {
-            // Also try resource templates
-            ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
-            if (rti != null && rti.isMethod()) {
-                fm = McpMetadata.findFeatureByName(metadata.resourceTemplates(), rti.name());
-            }
-        }
-        if (fm != null) {
-            for (FeatureArgument a : fm.info().arguments()) {
-                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                    return true;
-                }
-            }
-        } else {
-            ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri);
-            if (info != null) {
-                if (!info.isMethod()) {
-                    // Always force SSE init for a resource added programatically
-                    return true;
-                }
-            } else {
+        if (resourceUri != null) {
+            FeatureMetadata<?> fm = metadata.resources().stream().filter(m -> m.info().uri().equals(resourceUri))
+                    .findFirst().orElse(null);
+            if (fm == null) {
                 // Also try resource templates
                 ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
-                if (rti != null && !rti.isMethod()) {
-                    return true;
+                if (rti != null && rti.isMethod()) {
+                    fm = McpMetadata.findFeatureByName(metadata.resourceTemplates(), rti.name());
+                }
+            }
+            if (fm != null) {
+                for (FeatureArgument a : fm.info().arguments()) {
+                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+                        return true;
+                    }
+                }
+            } else {
+                ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri);
+                if (info != null) {
+                    if (!info.isMethod()) {
+                        // Always force SSE init for a resource added programatically
+                        return true;
+                    }
+                } else {
+                    // Also try resource templates
+                    ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
+                    if (rti != null && !rti.isMethod()) {
+                        return true;
+                    }
                 }
             }
         }
