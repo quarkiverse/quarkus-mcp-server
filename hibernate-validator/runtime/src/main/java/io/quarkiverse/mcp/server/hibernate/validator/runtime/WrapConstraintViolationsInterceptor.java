@@ -12,7 +12,6 @@ import jakarta.validation.ConstraintViolationException;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Prompt;
-import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
@@ -63,11 +62,10 @@ public class WrapConstraintViolationsInterceptor {
             return Feature.TOOL;
         } else if (m.isAnnotationPresent(Prompt.class)) {
             return Feature.PROMPT;
-        } else if (m.isAnnotationPresent(Resource.class)) {
-            return Feature.RESOURCE;
         } else if (m.isAnnotationPresent(ResourceTemplate.class)) {
             return Feature.RESOURCE_TEMPLATE;
         }
+        // Note that @Resouce does not make sense because it may only accept built-in params
         throw new IllegalStateException("Unsupported feature on: " + m);
     }
 
