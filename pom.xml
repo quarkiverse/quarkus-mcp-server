@@ -41,6 +41,8 @@
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.230.2</sundrio.version>
         <swagger-annotations.version>2.2.42</swagger-annotations.version>
+        <!-- TODO: unify the pattern for version properties -->
+        <version.langchain4j>1.10.0</version.langchain4j>
     </properties>
 
     <dependencyManagement>

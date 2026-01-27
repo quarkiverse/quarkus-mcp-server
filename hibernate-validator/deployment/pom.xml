@@ -43,6 +43,13 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Tests for @Tool/@P from Langchain4j -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-core</artifactId>
+            <version>${version.langchain4j}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

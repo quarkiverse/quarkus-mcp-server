@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.hibernate.validator.test;
 
+import static io.quarkiverse.mcp.server.McpServer.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -96,6 +98,7 @@ public class ToolConstraintViolationProtocolErrorTest extends McpServerTest {
             throw new ToolCallException("Business error");
         }
 
+        @McpServer(DEFAULT)
         @Tool
         TextContent delta(@Valid Person person) {
             throw new ToolCallException("Business error");
