@@ -84,6 +84,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
     public static final String DUMMY_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
 
+    private static final InitialRequest DUMMY_INIT_REQUEST = new InitialRequest(
+            new Implementation(DUMMY_INIT_IMPL_NAME, "1", null), SUPPORTED_PROTOCOL_VERSIONS.get(0),
+            List.of(), Transport.STREAMABLE_HTTP);
+
     private final McpMetadata metadata;
 
     private final CurrentVertxRequest currentVertxRequest;
@@ -285,8 +289,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     protected InitialRequest dummyInitialRequest(HttpMcpRequest mcpRequest) {
         McpHttpServerRuntimeConfig config = httpConfig.servers().get(mcpRequest.serverName());
         if (config != null && config.http().streamable().dummyInit()) {
-            return new InitialRequest(new Implementation(DUMMY_INIT_IMPL_NAME, "1", null), SUPPORTED_PROTOCOL_VERSIONS.get(0),
-                    List.of(), transport());
+            return DUMMY_INIT_REQUEST;
         }
         return null;
     }
