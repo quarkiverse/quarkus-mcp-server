@@ -23,7 +23,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
     }
 
     Future<Void> resourceTemplatesList(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
             return Future.succeededFuture();
@@ -39,7 +39,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
 
         JsonArray templates = new JsonArray();
         JsonObject result = new JsonObject().put("resourceTemplates", templates);
-        Page<ResourceTemplateManager.ResourceTemplateInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
+        Page<ResourceTemplateManager.ResourceTemplateInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize, message);
         for (ResourceTemplateManager.ResourceTemplateInfo info : page) {
             templates.add(info.asJson());
         }

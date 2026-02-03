@@ -7,14 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.FilterContext;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
@@ -41,12 +40,12 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 
-public class FilterTest extends McpServerTest {
+public class FilterContextTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig(2000)
             .withApplicationRoot(
-                    root -> root.addClasses(MyFeatures.class, MyFilter.class, AnotherFilter.class));
+                    root -> root.addClasses(MyFeatures.class, MyFilter.class));
 
     @Inject
     ResourceTemplateManager resourceTemplateManager;
@@ -55,7 +54,9 @@ public class FilterTest extends McpServerTest {
     public void testToolFilter() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
-                .toolsList(page -> {
+                .toolsList()
+                .withMetadata(Map.of("foo", true))
+                .withAssert(page -> {
                     assertEquals(1, page.tools().size());
                     io.quarkiverse.mcp.server.test.McpAssured.ToolInfo tool = page.tools().get(0);
                     assertEquals("bravo", tool.name());
@@ -66,6 +67,7 @@ public class FilterTest extends McpServerTest {
                     assertNotNull(priceProperty);
                     assertEquals("integer", priceProperty.getString("type"));
                 })
+                .send()
                 .toolsCall("alpha")
                 .withArguments(Map.of("price", 10))
                 .withErrorAssert(error -> {
@@ -83,9 +85,12 @@ public class FilterTest extends McpServerTest {
     public void testPromptFilter() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
-                .promptsList(page -> {
+                .promptsList()
+                .withMetadata(Map.of("foo", true))
+                .withAssert(page -> {
                     assertEquals(0, page.size());
                 })
+                .send()
                 .promptsGet("charlie")
                 .withErrorAssert(error -> assertEquals("Invalid prompt name: charlie", error.message()))
                 .send()
@@ -104,9 +109,12 @@ public class FilterTest extends McpServerTest {
 
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
-                .resourcesTemplatesList(page -> {
+                .resourcesTemplatesList()
+                .withMetadata(Map.of("foo", true))
+                .withAssert(page -> {
                     assertEquals(1, page.size());
                 })
+                .send()
                 .resourcesRead("file:///foxtrot/1")
                 .withErrorAssert(error -> assertEquals("Resource not found: file:///foxtrot/1", error.message()))
                 .send()
@@ -121,9 +129,12 @@ public class FilterTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
                 .addHeader("test-header", "foo")
-                .resourcesList(page -> {
+                .resourcesList()
+                .withMetadata(Map.of("foo", true))
+                .withAssert(page -> {
                     assertEquals(1, page.size());
                 })
+                .send()
                 .resourcesRead("file:///project/delta", response -> {
                     assertEquals("3", response.contents().get(0).asText().text());
                 })
@@ -172,36 +183,35 @@ public class FilterTest extends McpServerTest {
         HttpServerRequest request;
 
         @Override
-        public boolean test(PromptInfo prompt, McpConnection connection) {
-            return connection.initialRequest().supportsSampling();
+        public boolean test(PromptInfo prompt, FilterContext context) {
+            return context.connection().initialRequest().supportsSampling()
+                    && context.meta().asJsonObject().getBoolean("foo")
+                    && context.requestId() != null
+                    && (context.method() == McpMethod.PROMPTS_GET || context.method() == McpMethod.PROMPTS_LIST);
         }
 
         @Override
-        public boolean test(ToolInfo tool, McpConnection connection) {
-            return tool.name().equals("bravo");
+        public boolean test(ToolInfo tool, FilterContext context) {
+            return tool.name().equals("bravo")
+                    && context.meta().asJsonObject().getBoolean("foo")
+                    && (context.method() == McpMethod.TOOLS_CALL || context.method() == McpMethod.TOOLS_LIST);
         }
 
         @Override
-        public boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection) {
+        public boolean test(ResourceTemplateInfo resourceTemplate, FilterContext context) {
             // Skip templates registered programmatically
-            return resourceTemplate.isMethod();
+            return resourceTemplate.isMethod()
+                    && context.meta().asJsonObject().getBoolean("foo")
+                    && (context.method() == McpMethod.RESOURCE_TEMPLATES_LIST
+                            || context.method() == McpMethod.RESOURCES_READ);
         }
 
         @Override
-        public boolean test(ResourceInfo resource, McpConnection connection) {
-            return request.getHeader("test-header") != null;
-        }
-
-    }
-
-    @Singleton
-    @Priority(100)
-    public static class AnotherFilter implements PromptFilter {
-
-        @Override
-        public boolean test(PromptInfo promptInfo, McpConnection connection) {
-            // doesn't matter since MyFilter#test() returns false
-            return true;
+        public boolean test(ResourceInfo resource, FilterContext context) {
+            return request.getHeader("test-header") != null
+                    && context.meta().asJsonObject().getBoolean("foo")
+                    && (context.method() == McpMethod.RESOURCES_LIST
+                            || context.method() == McpMethod.RESOURCES_READ);
         }
 
     }

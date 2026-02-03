@@ -123,7 +123,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     void removeCancellationRequest(JsonObject request) {
         if (!cancellationRequests.isEmpty()) {
-            cancellationRequests.remove(new RequestId(request.getValue("id")));
+            cancellationRequests.remove(new RequestId(Messages.getId(request)));
         }
     }
 

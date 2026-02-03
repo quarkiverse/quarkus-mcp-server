@@ -10,8 +10,8 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -36,7 +36,7 @@ public class CloseTest extends McpServerTest {
 
         // Send "q/close"
         client.when()
-                .message(client.newRequest(McpMessageHandler.Q_CLOSE))
+                .message(client.newRequest(McpMethod.Q_CLOSE.jsonRpcName()))
                 .send()
                 .thenAssertResults();
 

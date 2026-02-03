@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -30,7 +31,7 @@ class McpLogImpl implements McpLog {
     @Override
     public void send(LogLevel level, Object data) {
         if (isEnabled(Objects.requireNonNull(level))) {
-            sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+            sender.send(Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                     Messages.newLog(level, mcpLoggerName, encode(data))));
         }
     }
@@ -38,7 +39,7 @@ class McpLogImpl implements McpLog {
     @Override
     public void send(LogLevel level, String format, Object... params) {
         if (isEnabled(Objects.requireNonNull(level))) {
-            sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+            sender.send(Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                     Messages.newLog(level, mcpLoggerName, format.formatted(params))));
         }
     }

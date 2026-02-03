@@ -16,11 +16,27 @@ public interface ToolFilter {
 
     /**
      * Returns {@code true} if the given tool should be considered visible/accesible for a specific MCP client.
+     * <p>
+     * Note that the container always calls {@link ToolFilter#test(ToolInfo, FilterContext)} that delegates
+     * to {@link #test(ToolInfo, McpConnection)} by default.
      *
      * @param tool (must not be {@code null})
      * @param connection (must not be {@code null})
      * @return {@code true} if visible/accesible, {@code false} otherwise
      */
-    boolean test(ToolInfo tool, McpConnection connection);
+    default boolean test(ToolInfo tool, McpConnection connection) {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if the given tool should be considered visible/accesible for a specific MCP client.
+     *
+     * @param tool (must not be {@code null})
+     * @param context (must not be {@code null})
+     * @return {@code true} if visible/accesible, {@code false} otherwise
+     */
+    default boolean test(ToolInfo tool, FilterContext context) {
+        return test(tool, context.connection());
+    }
 
 }

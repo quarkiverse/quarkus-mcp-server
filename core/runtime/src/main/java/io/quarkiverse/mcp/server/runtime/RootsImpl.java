@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Root;
 import io.quarkiverse.mcp.server.Roots;
 import io.smallrye.mutiny.TimeoutException;
@@ -68,7 +69,7 @@ class RootsImpl implements Roots {
                 future.complete(list);
             });
             id.set(requestId);
-            sender.send(Messages.newRequest(requestId, McpMessageHandler.ROOTS_LIST));
+            sender.send(Messages.newRequest(requestId, McpMethod.ROOTS_LIST.jsonRpcName()));
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {

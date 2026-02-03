@@ -7,8 +7,8 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -27,7 +27,7 @@ public class FirstMessageMustBeInitTest extends McpServerTest {
     public void testFailures() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         URI mcpEndpoint = client.mcpEndpoint();
-        JsonObject toolsCallMessage = client.newRequest(McpMessageHandler.TOOLS_CALL);
+        JsonObject toolsCallMessage = client.newRequest(McpMethod.TOOLS_CALL);
         JsonObject params = new JsonObject()
                 .put("price", 10);
         toolsCallMessage.put("params", params);
