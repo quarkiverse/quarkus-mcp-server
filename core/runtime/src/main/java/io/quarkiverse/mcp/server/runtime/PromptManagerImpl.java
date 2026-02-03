@@ -21,12 +21,13 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
@@ -74,8 +75,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     }
 
     @Override
-    Stream<PromptInfo> filter(Stream<PromptInfo> infos, McpConnection connection) {
-        return infos.filter(p -> test(p, connection));
+    Stream<PromptInfo> filter(Stream<PromptInfo> infos, FilterContext filterContext) {
+        return infos.filter(p -> test(p, filterContext));
+    }
+
+    @Override
+    protected McpMethod mcpListMethod() {
+        return McpMethod.PROMPTS_GET;
     }
 
     @Override
@@ -97,7 +103,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         prompts.computeIfPresent(name, (key, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections("notifications/prompts/list_changed");
+                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
                 return null;
             }
             return value;
@@ -116,23 +122,23 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<PromptResponse> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<PromptResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         PromptInfo prompt = prompts.get(id);
         if (prompt instanceof FeatureInvoker fi
-                && matches(prompt, mcpRequest)
-                && test(prompt, mcpRequest.connection())) {
+                && matchesServer(prompt, mcpRequest)
+                && test(prompt, FilterContextImpl.of(McpMethod.PROMPTS_GET, message, mcpRequest))) {
             return fi;
         }
         return null;
     }
 
-    private boolean test(PromptInfo prompt, McpConnection connection) {
-        if (filters.isEmpty() || connection == null) {
+    private boolean test(PromptInfo prompt, FilterContext filterContext) {
+        if (filters.isEmpty()) {
             return true;
         }
         for (PromptFilter filter : filters) {
             try {
-                if (!filter.test(prompt, connection)) {
+                if (!filter.test(prompt, filterContext)) {
                     return false;
                 }
             } catch (RuntimeException e) {
@@ -244,7 +250,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             if (existing != null) {
                 throw promptWithNameAlreadyExists(name);
             } else {
-                notifyConnections(McpMessageHandler.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
             }
             return ret;
         }

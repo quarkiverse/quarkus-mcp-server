@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
@@ -50,7 +51,7 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
             }
         }
         if (sse == null) {
-            Object id = message.getValue("id");
+            Object id = Messages.getId(message);
             String method = message.getString("method");
             LOG.warnf("Discarding message [id=%s,method=%s] - no 'subsidiary' SSE streams open yet", id, method);
             return Future.succeededFuture();

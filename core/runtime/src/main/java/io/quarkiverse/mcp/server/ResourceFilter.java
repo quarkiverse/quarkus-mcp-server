@@ -16,11 +16,27 @@ public interface ResourceFilter {
 
     /**
      * Returns {@code true} if the given resource should be considered visible/accesible for a specific MCP client.
+     * <p>
+     * Note that the container always calls {@link ResourceFilter#test(ResourceInfo, FilterContext)} that delegates
+     * to {@link #test(ResourceInfo, McpConnection)} by default.
      *
      * @param resource (must not be {@code null})
      * @param connection (must not be {@code null})
      * @return {@code true} if visible/accesible, {@code false} otherwise
      */
-    boolean test(ResourceInfo resource, McpConnection connection);
+    default boolean test(ResourceInfo resource, McpConnection connection) {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if the given resource should be considered visible/accesible for a specific MCP client.
+     *
+     * @param resource (must not be {@code null})
+     * @param context (must not be {@code null})
+     * @return {@code true} if visible/accesible, {@code false} otherwise
+     */
+    default boolean test(ResourceInfo resource, FilterContext context) {
+        return test(resource, context.connection());
+    }
 
 }

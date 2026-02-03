@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
-import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -26,8 +25,7 @@ public class LoggingTest extends McpServerTest {
     @Test
     public void testLog() {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
-
-        Snapshot snapshot = client.when()
+        client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.TUESDAY), response -> {
                     assertEquals("tuesday:INFO", response.content().get(0).asText().text());
                 })

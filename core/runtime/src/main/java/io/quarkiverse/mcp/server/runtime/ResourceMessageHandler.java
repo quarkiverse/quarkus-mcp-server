@@ -30,7 +30,7 @@ class ResourceMessageHandler extends MessageHandler {
     }
 
     Future<Void> resourcesSubscribe(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
@@ -43,7 +43,7 @@ class ResourceMessageHandler extends MessageHandler {
     }
 
     Future<Void> resourcesUnsubscribe(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
@@ -56,7 +56,7 @@ class ResourceMessageHandler extends MessageHandler {
     }
 
     Future<Void> resourcesList(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
             return Future.succeededFuture();
@@ -72,7 +72,7 @@ class ResourceMessageHandler extends MessageHandler {
 
         JsonArray resources = new JsonArray();
         JsonObject result = new JsonObject().put("resources", resources);
-        Page<ResourceInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
+        Page<ResourceInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize, message);
         for (ResourceInfo info : page) {
             resources.add(info.asJson());
         }
@@ -84,7 +84,7 @@ class ResourceMessageHandler extends MessageHandler {
     }
 
     Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {

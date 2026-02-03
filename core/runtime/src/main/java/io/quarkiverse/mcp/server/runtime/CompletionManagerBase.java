@@ -54,10 +54,10 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         CompletionInfo completion = completions.get(id);
         if (completion instanceof FeatureInvoker fi
-                && matches(completion, mcpRequest)) {
+                && matchesServer(completion, mcpRequest)) {
             return fi;
         }
         return null;

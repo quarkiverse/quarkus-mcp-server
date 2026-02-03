@@ -30,7 +30,7 @@ class ToolMessageHandler extends MessageHandler {
     }
 
     Future<Void> toolsList(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
             return Future.succeededFuture();
@@ -46,7 +46,7 @@ class ToolMessageHandler extends MessageHandler {
 
         JsonArray tools = new JsonArray();
         JsonObject result = new JsonObject().put("tools", tools);
-        Page<ToolManager.ToolInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
+        Page<ToolManager.ToolInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize, message);
         for (ToolManager.ToolInfo info : page) {
             try {
                 tools.add(info.asJson());
@@ -65,7 +65,7 @@ class ToolMessageHandler extends MessageHandler {
     }
 
     Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         JsonObject params = getParams(message);
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);

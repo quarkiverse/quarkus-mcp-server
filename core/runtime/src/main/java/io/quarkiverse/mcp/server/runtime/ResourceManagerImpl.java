@@ -26,12 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
@@ -91,8 +92,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     @Override
-    Stream<ResourceInfo> filter(Stream<ResourceInfo> infos, McpConnection connection) {
-        return infos.filter(r -> test(r, connection));
+    Stream<ResourceInfo> filter(Stream<ResourceInfo> infos, FilterContext filterContext) {
+        return infos.filter(r -> test(r, filterContext));
+    }
+
+    @Override
+    protected McpMethod mcpListMethod() {
+        return McpMethod.RESOURCES_LIST;
     }
 
     @Override
@@ -102,7 +108,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     void subscribe(String uri, McpRequest mcpRequest) {
         ResourceInfo info = getResource(uri);
-        if (info == null || !matches(info, mcpRequest)) {
+        if (info == null || !matchesServer(info, mcpRequest)) {
             throw notFound(uri);
         }
         List<String> ids = new CopyOnWriteArrayList<>();
@@ -158,7 +164,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             if (!value.isMethod()) {
                 removed.set(value);
                 resourceNames.remove(value.name());
-                notifyConnections("notifications/resources/list_changed");
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
                 return null;
             }
             return value;
@@ -168,14 +174,14 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         ResourceInfo resource = uriToResource.get(id);
         if (resource instanceof FeatureInvoker fi
-                && matches(resource, mcpRequest)
-                && test(resource, mcpRequest.connection())) {
+                && matchesServer(resource, mcpRequest)
+                && test(resource, FilterContextImpl.of(McpMethod.RESOURCES_READ, message, mcpRequest))) {
             return fi;
         }
-        return resourceTemplateManager.getInvoker(id, mcpRequest);
+        return resourceTemplateManager.getInvoker(id, mcpRequest, message);
     }
 
     @Override
@@ -207,13 +213,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         return new McpException("Resource not found: " + id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    private boolean test(ResourceInfo resource, McpConnection connection) {
+    private boolean test(ResourceInfo resource, FilterContext filterContext) {
         if (filters.isEmpty()) {
             return true;
         }
         for (ResourceFilter filter : filters) {
             try {
-                if (!filter.test(resource, connection)) {
+                if (!filter.test(resource, filterContext)) {
                     return false;
                 }
             } catch (RuntimeException e) {
@@ -494,7 +500,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                         runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
             });
             if (newValue != null) {
-                notifyConnections(McpMessageHandler.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
             }
             return newValue;
         }
