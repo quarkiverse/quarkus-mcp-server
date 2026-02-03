@@ -41,7 +41,7 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
-import io.quarkiverse.mcp.server.runtime.JsonRPC;
+import io.quarkiverse.mcp.server.runtime.JsonRpc;
 import io.quarkiverse.mcp.server.sse.client.SseClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -228,7 +228,7 @@ public class SseMcpJsonRPCService {
         }
         ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "tools/call")
                 .put("params", new JsonObject()
                         .put("name", name)
@@ -244,7 +244,7 @@ public class SseMcpJsonRPCService {
         }
         ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "prompts/get")
                 .put("params", new JsonObject()
                         .put("name", name)
@@ -261,7 +261,7 @@ public class SseMcpJsonRPCService {
         }
         ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
@@ -282,7 +282,7 @@ public class SseMcpJsonRPCService {
             return new JsonObject().put("error", "Resource uri must be set");
         }
         JsonObject message = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "resources/read")
                 .put("params", new JsonObject()
                         .put("uri", uri));
@@ -298,7 +298,7 @@ public class SseMcpJsonRPCService {
         }
         ServerClient serverClient = serverClients.get(info.serverName());
         JsonObject message = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
                 .put("params", new JsonObject()
                         .put("ref", new JsonObject()
@@ -371,7 +371,7 @@ public class SseMcpJsonRPCService {
 
                     Integer initId = idGenerator.incrementAndGet();
                     JsonObject initMessage = new JsonObject()
-                            .put("jsonrpc", JsonRPC.VERSION)
+                            .put("jsonrpc", JsonRpc.VERSION)
                             .put("id", initId)
                             .put("method", "initialize")
                             .put("params",
@@ -390,7 +390,7 @@ public class SseMcpJsonRPCService {
 
                     // Send "notifications/initialized"
                     JsonObject nofitication = new JsonObject()
-                            .put("jsonrpc", JsonRPC.VERSION)
+                            .put("jsonrpc", JsonRpc.VERSION)
                             .put("method", "notifications/initialized");
                     request = newRequest(bearerToken, nofitication.encode());
                     response = httpClient.send(request, BodyHandlers.discarding());

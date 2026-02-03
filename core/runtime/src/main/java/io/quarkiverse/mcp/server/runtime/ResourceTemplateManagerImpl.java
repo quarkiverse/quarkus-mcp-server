@@ -26,12 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
-import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder;
@@ -82,8 +83,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     @Override
-    Stream<ResourceTemplateInfo> filter(Stream<ResourceTemplateInfo> infos, McpConnection connection) {
-        return infos.filter(rt -> test(rt, connection));
+    Stream<ResourceTemplateInfo> filter(Stream<ResourceTemplateInfo> infos, FilterContext filterContext) {
+        return infos.filter(rt -> test(rt, filterContext));
+    }
+
+    @Override
+    protected McpMethod mcpListMethod() {
+        return McpMethod.RESOURCE_TEMPLATES_LIST;
     }
 
     @Override
@@ -119,13 +125,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         // This method is used by ResourceManager during "resources/read" - the id is a URI
         // We need to iterate over all templates and find the matching URI template
         ResourceTemplateInfo found = findMatching(id);
         if (found instanceof FeatureInvoker fi
-                && matches(found, mcpRequest)
-                && test(found, mcpRequest.connection())) {
+                && matchesServer(found, mcpRequest)
+                && test(found, FilterContextImpl.of(McpMethod.RESOURCES_READ, message, mcpRequest))) {
             return fi;
         }
         return null;
@@ -149,13 +155,13 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     }
 
-    private boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection) {
+    private boolean test(ResourceTemplateInfo resourceTemplate, FilterContext filterContext) {
         if (filters.isEmpty()) {
             return true;
         }
         for (ResourceTemplateFilter filter : filters) {
             try {
-                if (!filter.test(resourceTemplate, connection)) {
+                if (!filter.test(resourceTemplate, filterContext)) {
                     return false;
                 }
             } catch (RuntimeException e) {

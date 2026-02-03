@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -48,10 +49,10 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<Void> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<Void> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         NotificationInfo init = notifications.get(id);
         if (init instanceof FeatureInvoker fi
-                && matches(init, mcpRequest)) {
+                && matchesServer(init, mcpRequest)) {
             return fi;
         }
         return null;
@@ -60,7 +61,8 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     @Override
     protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments) {
         Sender sender = mcpRequest.sender();
-        if (McpMessageHandler.NOTIFICATIONS_INITIALIZED.equals(message.getString("method"))) {
+        McpMethod method = McpMethod.from(message.getString("method"));
+        if (McpMethod.NOTIFICATIONS_INITIALIZED == method) {
             // For notifications/initialized we always use the connection as a sender
             sender = mcpRequest.connection();
         }

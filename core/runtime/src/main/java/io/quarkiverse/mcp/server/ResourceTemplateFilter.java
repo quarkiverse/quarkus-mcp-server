@@ -16,11 +16,27 @@ public interface ResourceTemplateFilter {
 
     /**
      * Returns {@code true} if the given resource template should be considered visible/accesible for a specific MCP client.
+     * <p>
+     * Note that the container always calls {@link ResourceTemplateFilter#test(ResourceTemplateInfo, FilterContext)} that
+     * delegates to {@link #test(ResourceTemplateInfo, McpConnection)} by default.
      *
      * @param resourceTemplate (must not be {@code null})
      * @param connection (must not be {@code null})
      * @return {@code true} if visible/accesible, {@code false} otherwise
      */
-    boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection);
+    default boolean test(ResourceTemplateInfo resourceTemplate, McpConnection connection) {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if the given resource template should be considered visible/accesible for a specific MCP client.
+     *
+     * @param resourceTemplate (must not be {@code null})
+     * @param context (must not be {@code null})
+     * @return {@code true} if visible/accesible, {@code false} otherwise
+     */
+    default boolean test(ResourceTemplateInfo resourceTemplate, FilterContext context) {
+        return test(resourceTemplate, context.connection());
+    }
 
 }

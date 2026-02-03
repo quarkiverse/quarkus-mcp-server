@@ -15,6 +15,7 @@ import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.ElicitationResponse.Action;
 import io.quarkiverse.mcp.server.ElicitationResponse.Content;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
@@ -77,7 +78,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
             }
             schema.put("required", required);
             JsonObject params = new JsonObject().put("message", message).put("requestedSchema", schema);
-            sender.send(Messages.newRequest(id, McpMessageHandler.ELICITATION_CREATE, params));
+            sender.send(Messages.newRequest(id, McpMethod.ELICITATION_CREATE.jsonRpcName(), params));
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {

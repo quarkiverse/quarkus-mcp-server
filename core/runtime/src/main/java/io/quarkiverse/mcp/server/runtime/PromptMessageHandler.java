@@ -28,7 +28,7 @@ class PromptMessageHandler extends MessageHandler {
     }
 
     Future<Void> promptsList(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
             return Future.succeededFuture();
@@ -44,7 +44,7 @@ class PromptMessageHandler extends MessageHandler {
 
         JsonArray prompts = new JsonArray();
         JsonObject result = new JsonObject().put("prompts", prompts);
-        Page<PromptManager.PromptInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize);
+        Page<PromptManager.PromptInfo> page = manager.fetchPage(mcpRequest, cursor, pageSize, message);
         for (PromptManager.PromptInfo info : page) {
             prompts.add(info.asJson());
         }
@@ -56,7 +56,7 @@ class PromptMessageHandler extends MessageHandler {
     }
 
     Future<Void> promptsGet(JsonObject message, McpRequest mcpRequest) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);

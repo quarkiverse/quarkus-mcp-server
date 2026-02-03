@@ -32,12 +32,14 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Meta;
 import io.quarkiverse.mcp.server.Progress;
@@ -82,7 +84,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
-        FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest());
+        FeatureInvoker<RESULT> invoker = getInvoker(id, executionContext.mcpRequest(), executionContext.message());
         if (invoker != null) {
             return execute(invoker.executionModel(), new Callable<Uni<RESULT>>() {
                 @Override
@@ -127,7 +129,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments) {
-        Object id = message.getValue("id");
+        Object id = Messages.getId(message);
         Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
         return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
                 mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName());
@@ -158,16 +160,25 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return infos().sorted().iterator();
     }
 
-    public Page<INFO> fetchPage(McpRequest mcpRequest, Cursor cursor, int pageSize) {
-        long count = infosForRequest(mcpRequest).count();
+    protected McpMethod mcpListMethod() {
+        throw new UnsupportedOperationException();
+    }
+
+    public Page<INFO> fetchPage(McpRequest mcpRequest, Cursor cursor, int pageSize, JsonObject message) {
+        FilterContextImpl filterContext = FilterContextImpl.of(mcpListMethod(), message, mcpRequest);
+        if (pageSize <= 0) {
+            // Pagination is disabled
+            return new Page<>(infosForRequest(filterContext).sorted().toList(), true);
+        }
+        long count = infosForRequest(filterContext).count();
         if (count == 0) {
             return Page.empty();
         }
-        if (pageSize <= 0 || count <= pageSize) {
-            // Pagination is disabled/not needed
-            return new Page<>(infosForRequest(mcpRequest).sorted().toList(), true);
+        if (count <= pageSize) {
+            // Pagination is not needed
+            return new Page<>(infosForRequest(filterContext).sorted().toList(), true);
         }
-        List<INFO> result = infosForRequest(mcpRequest)
+        List<INFO> result = infosForRequest(filterContext)
                 .filter(r -> r.createdAt().isAfter(cursor.createdAt())
                         && (cursor.name() == null
                                 || r.name().compareTo(cursor.name()) > 0))
@@ -181,8 +192,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return new Page<>(result, true);
     }
 
-    Stream<INFO> infosForRequest(McpRequest mcpRequest) {
-        return filter(infos().filter(i -> matches(i, mcpRequest)), mcpRequest.connection());
+    Stream<INFO> infosForRequest(FilterContextImpl filterContext) {
+        return filter(infos().filter(i -> matchesServer(i, filterContext.mcpRequest)), filterContext);
     }
 
     /**
@@ -191,19 +202,15 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
      */
     abstract Stream<INFO> infos();
 
-    /**
-     * @param connection (may be {@code null})
-     * @return the stream of accesible infos
-     */
-    Stream<INFO> filter(Stream<INFO> infos, McpConnection connection) {
+    Stream<INFO> filter(Stream<INFO> infos, FilterContext filterContext) {
         return infos;
     }
 
-    public boolean hasInfos(McpRequest mcpRequest) {
-        return infosForRequest(mcpRequest).count() > 0;
+    boolean hasInfos(FilterContextImpl filterContext) {
+        return infosForRequest(filterContext).count() > 0;
     }
 
-    protected boolean matches(INFO info, McpRequest mcpRequest) {
+    protected boolean matchesServer(INFO info, McpRequest mcpRequest) {
         return info.serverName().equals(mcpRequest.serverName());
     }
 
@@ -307,7 +314,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return num;
     }
 
-    protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpRequest mcpRequest);
+    protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpRequest mcpRequest, JsonObject message);
 
     protected abstract McpException notFound(String id);
 
@@ -356,10 +363,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return metadata.feature().toString().toLowerCase() + ":" + metadata.info().name();
     }
 
-    protected void notifyConnections(String method) {
+    protected void notifyConnections(McpMethod method) {
         // Notify all connections
+        JsonObject notification = Messages.newNotification(method.jsonRpcName());
         for (McpConnectionBase c : connectionManager) {
-            c.send(Messages.newNotification(method));
+            c.send(notification);
         }
     }
 

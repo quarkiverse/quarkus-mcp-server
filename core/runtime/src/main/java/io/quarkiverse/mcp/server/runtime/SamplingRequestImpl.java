@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
@@ -124,7 +125,7 @@ public class SamplingRequestImpl implements SamplingRequest {
                 future.complete(samplingResponse);
             });
             id.set(requestId);
-            sender.send(Messages.newRequest(id, McpMessageHandler.SAMPLING_CREATE_MESSAGE, this));
+            sender.send(Messages.newRequest(id, McpMethod.SAMPLING_CREATE_MESSAGE.jsonRpcName(), this));
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {

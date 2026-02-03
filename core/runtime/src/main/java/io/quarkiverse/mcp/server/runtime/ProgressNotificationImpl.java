@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.ProgressNotification;
 import io.quarkiverse.mcp.server.ProgressToken;
 import io.smallrye.mutiny.Uni;
@@ -66,7 +67,7 @@ class ProgressNotificationImpl implements ProgressNotification {
         if (message != null) {
             notification.put("message", message);
         }
-        return sender.send(Messages.newNotification(McpMessageHandler.NOTIFICATIONS_PROGRESS,
+        return sender.send(Messages.newNotification(McpMethod.NOTIFICATIONS_PROGRESS.jsonRpcName(),
                 notification));
     }
 

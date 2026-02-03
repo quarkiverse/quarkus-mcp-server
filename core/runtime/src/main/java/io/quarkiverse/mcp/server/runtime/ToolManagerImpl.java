@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.Icon;
@@ -36,6 +37,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Meta;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
@@ -123,8 +125,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     @Override
-    Stream<ToolInfo> filter(Stream<ToolInfo> infos, McpConnection connection) {
-        return infos.filter(t -> test(t, connection));
+    Stream<ToolInfo> filter(Stream<ToolInfo> infos, FilterContext filterContext) {
+        return infos.filter(t -> test(t, filterContext));
+    }
+
+    @Override
+    protected McpMethod mcpListMethod() {
+        return McpMethod.TOOLS_LIST;
     }
 
     @Override
@@ -150,7 +157,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         tools.computeIfPresent(name, (key, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections("notifications/tools/list_changed");
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
                 return null;
             }
             return value;
@@ -160,11 +167,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     @SuppressWarnings("unchecked")
     @Override
-    protected FeatureInvoker<ToolResponse> getInvoker(String id, McpRequest mcpRequest) {
+    protected FeatureInvoker<ToolResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         ToolInfo tool = tools.get(id);
         if (tool instanceof FeatureInvoker fi
-                && matches(tool, mcpRequest)
-                && test(tool, mcpRequest.connection())) {
+                && matchesServer(tool, mcpRequest)
+                && test(tool, FilterContextImpl.of(McpMethod.TOOLS_CALL, message, mcpRequest))) {
             return fi;
         }
         return null;
@@ -207,13 +214,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         };
     }
 
-    private boolean test(ToolInfo tool, McpConnection connection) {
-        if (filters.isEmpty() || connection == null) {
+    private boolean test(ToolInfo tool, FilterContext filterContext) {
+        if (filters.isEmpty()) {
             return true;
         }
         for (ToolFilter filter : filters) {
             try {
-                if (!filter.test(tool, connection)) {
+                if (!filter.test(tool, filterContext)) {
                     return false;
                 }
             } catch (RuntimeException e) {
@@ -369,7 +376,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         public RequestId getRequestId() {
-            return new RequestId(message.getValue("id"));
+            return new RequestId(Messages.getId(message));
         }
 
         public Meta getMeta() {
@@ -612,7 +619,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (existing != null) {
                 throw toolAlreadyExists(name);
             } else {
-                notifyConnections(McpMessageHandler.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
             }
             return ret;
         }

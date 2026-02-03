@@ -16,11 +16,27 @@ public interface PromptFilter {
 
     /**
      * Returns {@code true} if the given prompt should be considered visible/accesible for a specific MCP client.
+     * <p>
+     * Note that the container always calls {@link PromptFilter#test(PromptInfo, FilterContext)} that
+     * delegates to {@link #test(PromptInfo, McpConnection)} by default.
      *
      * @param prompt (must not be {@code null})
      * @param connection (must not be {@code null})
      * @return {@code true} if visible/accesible, {@code false} otherwise
      */
-    boolean test(PromptInfo prompt, McpConnection connection);
+    default boolean test(PromptInfo prompt, McpConnection connection) {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if the given prompt should be considered visible/accesible for a specific MCP client.
+     *
+     * @param prompt (must not be {@code null})
+     * @param context (must not be {@code null})
+     * @return {@code true} if visible/accesible, {@code false} otherwise
+     */
+    default boolean test(PromptInfo prompt, FilterContext context) {
+        return test(prompt, context.connection());
+    }
 
 }
