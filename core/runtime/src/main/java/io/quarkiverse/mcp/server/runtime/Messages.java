@@ -18,7 +18,7 @@ public class Messages {
 
     public static JsonObject newResult(Object id, Object result) {
         JsonObject response = new JsonObject();
-        response.put("jsonrpc", JsonRPC.VERSION);
+        response.put("jsonrpc", JsonRpc.VERSION);
         response.put("id", id);
         response.put("result", result);
         return response;
@@ -26,7 +26,7 @@ public class Messages {
 
     public static JsonObject newError(Object id, int code, String message) {
         JsonObject response = new JsonObject();
-        response.put("jsonrpc", JsonRPC.VERSION);
+        response.put("jsonrpc", JsonRpc.VERSION);
         response.put("id", id);
         response.put("error", new JsonObject()
                 .put("code", code)
@@ -36,7 +36,7 @@ public class Messages {
 
     public static JsonObject newNotification(String method, Object params) {
         JsonObject ret = new JsonObject()
-                .put("jsonrpc", JsonRPC.VERSION)
+                .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", method);
         if (params != null) {
             ret.put("params", params);
@@ -58,7 +58,7 @@ public class Messages {
 
     public static JsonObject newRequest(Object id, String method, Object params) {
         JsonObject request = new JsonObject();
-        request.put("jsonrpc", JsonRPC.VERSION);
+        request.put("jsonrpc", JsonRpc.VERSION);
         request.put("id", id);
         request.put("method", method);
         if (params != null) {
@@ -72,15 +72,15 @@ public class Messages {
     }
 
     public static boolean isRequest(JsonObject message) {
-        return !isResponse(message) && message.getValue("id") != null;
+        return !isResponse(message) && getId(message) != null;
     }
 
     public static boolean isNotification(JsonObject message) {
-        return !isResponse(message) && message.getValue("id") == null;
+        return !isResponse(message) && getId(message) == null;
     }
 
     static Cursor getCursor(JsonObject message, Sender sender) {
-        JsonObject params = message.getJsonObject("params");
+        JsonObject params = getParams(message);
         if (params != null) {
             String cursorVal = params.getString("cursor");
             if (cursorVal != null) {
@@ -89,13 +89,17 @@ public class Messages {
                 } catch (Exception e) {
                     // Invalid cursors should result in an error with code -32602 (Invalid params).
                     LOG.warnf("Invalid cursor detected %s: %s", cursorVal, e.toString());
-                    sender.sendError(message.getValue("id"), JsonRpcErrorCodes.INVALID_PARAMS,
+                    sender.sendError(getId(message), JsonRpcErrorCodes.INVALID_PARAMS,
                             "Invalid cursor detected: " + cursorVal);
                     return null;
                 }
             }
         }
         return Cursor.FIRST_PAGE;
+    }
+
+    public static Object getId(JsonObject message) {
+        return message.getValue("id");
     }
 
     public static JsonObject getParams(JsonObject message) {

@@ -26,6 +26,7 @@ import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
@@ -257,7 +258,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         streamableConnection.addSse(sse);
 
         // Send log notification to the client
-        JsonObject log = Messages.newNotification(McpMessageHandler.NOTIFICATIONS_MESSAGE,
+        JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                 Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
                         "Subsidiary SSE opened [%s]".formatted(connection.id())));
 
@@ -346,11 +347,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private static final Set<String> FORCE_SSE_REQUESTS = Set.of(
-            TOOLS_CALL,
-            PROMPTS_GET,
-            RESOURCES_READ,
-            COMPLETION_COMPLETE);
+    private static final Set<McpMethod> FORCE_SSE_REQUESTS = Set.of(
+            McpMethod.TOOLS_CALL,
+            McpMethod.PROMPTS_GET,
+            McpMethod.RESOURCES_READ,
+            McpMethod.COMPLETION_COMPLETE);
 
     private static final Set<FeatureArgument.Provider> FORCE_SSE_PROVIDERS = Set.of(
             PROGRESS,
@@ -387,7 +388,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message) {
-        String method = message.getString("method");
+        McpMethod method = McpMethod.from(message.getString("method"));
         if (method != null
                 && Messages.isRequest(message)
                 && FORCE_SSE_REQUESTS.contains(method)) {

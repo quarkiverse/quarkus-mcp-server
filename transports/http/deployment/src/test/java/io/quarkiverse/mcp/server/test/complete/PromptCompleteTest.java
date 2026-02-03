@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
@@ -33,28 +33,28 @@ public class PromptCompleteTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
 
         client.when()
-                .message(client.newRequest(McpMessageHandler.COMPLETION_COMPLETE)
+                .message(client.newRequest(McpMethod.COMPLETION_COMPLETE)
                         .put("params", new JsonObject()))
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
                     assertEquals("Reference not found", error.message());
                 })
                 .send()
-                .message(client.newRequest(McpMessageHandler.COMPLETION_COMPLETE)
+                .message(client.newRequest(McpMethod.COMPLETION_COMPLETE)
                         .put("params", new JsonObject().put("ref", new JsonObject())))
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
                     assertEquals("Reference type not found", error.message());
                 })
                 .send()
-                .message(client.newRequest(McpMessageHandler.COMPLETION_COMPLETE)
+                .message(client.newRequest(McpMethod.COMPLETION_COMPLETE)
                         .put("params", new JsonObject().put("ref", new JsonObject().put("type", Messages.PROMPT_REF))))
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
                     assertEquals("Argument not found", error.message());
                 })
                 .send()
-                .message(client.newRequest(McpMessageHandler.COMPLETION_COMPLETE)
+                .message(client.newRequest(McpMethod.COMPLETION_COMPLETE)
                         .put("params", new JsonObject()
                                 .put("argument", new JsonObject())
                                 .put("ref", new JsonObject().put("type", "bum"))))

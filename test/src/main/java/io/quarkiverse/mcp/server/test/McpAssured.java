@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.Implementation;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -163,6 +164,15 @@ public class McpAssured {
          * @return a new message
          */
         JsonObject newMessage(String method);
+
+        /**
+         *
+         * @param method
+         * @return a new request message
+         */
+        default JsonObject newRequest(McpMethod method) {
+            return newRequest(method.jsonRpcName());
+        }
 
         /**
          *
