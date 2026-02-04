@@ -1,5 +1,9 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import static io.quarkiverse.mcp.server.McpMethod.LOGGING_SET_LEVEL;
+import static io.quarkiverse.mcp.server.McpMethod.PING;
+import static io.quarkiverse.mcp.server.McpMethod.Q_CLOSE;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,6 +22,7 @@ import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.McpMethod;
@@ -177,10 +182,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
+        McpMethod method = McpMethod.from(message.getString("method"));
         return switch (mcpRequest.connection().status()) {
-            case NEW -> initializeNew(message, mcpRequest);
-            case INITIALIZING -> initializing(message, mcpRequest);
-            case IN_OPERATION -> operation(message, mcpRequest);
+            case NEW -> initializeNew(method, message, mcpRequest);
+            case INITIALIZING -> initializing(method, message, mcpRequest);
+            case IN_OPERATION -> operation(method, message, mcpRequest);
             case CLOSED -> mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.INTERNAL_ERROR,
                     "Connection is closed");
         };
@@ -194,9 +200,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return serverConfig;
     }
 
-    private Future<Void> initializeNew(JsonObject message, MCP_REQUEST mcpRequest) {
+    private Future<Void> initializeNew(McpMethod method, JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
-        McpMethod method = McpMethod.from(message.getString("method"));
         JsonObject params = Messages.getParams(message);
 
         if (McpMethod.INITIALIZE != method) {
@@ -220,7 +225,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     && mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Connection initialized with dummy initial request: %s [%s]", dummy.implementation().name(),
                         mcpRequest.connection().id());
-                return operation(message, mcpRequest);
+                return operation(method, message, mcpRequest);
             }
 
             String msg = "The first message from the client must be \"initialize\": " + message.getString("method");
@@ -280,8 +285,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
     }
 
-    private Future<Void> initializing(JsonObject message, McpRequest mcpRequest) {
-        McpMethod method = McpMethod.from(message.getString("method"));
+    private Future<Void> initializing(McpMethod method, JsonObject message, McpRequest mcpRequest) {
         if (McpMethod.NOTIFICATIONS_INITIALIZED == method) {
             if (mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
@@ -297,12 +301,13 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 }
             }
             return Future.succeededFuture();
-        } else if (McpMethod.PING == method) {
-            return ping(message, mcpRequest);
         } else {
-            return mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.INTERNAL_ERROR,
-                    "Client not initialized yet [" + mcpRequest.connection().id() + "]");
+            return operation(method, message, mcpRequest);
         }
+    }
+
+    static IllegalStateException clientNotInitialized(McpConnection connection) {
+        return new IllegalStateException("Client not initialized yet: " + connection);
     }
 
     private Future<Void> callNotification(NotificationManager.NotificationInfo notification,
@@ -354,7 +359,19 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return ret.future();
     }
 
-    private Future<Void> operation(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> operation(McpMethod method, JsonObject message, McpRequest mcpRequest) {
+        if (method == null) {
+            return unsupportedMethod(message, mcpRequest);
+        }
+        // Few operations do not involve user code
+        // and don't need a new duplicated context
+        if (method == PING) {
+            return ping(message, mcpRequest);
+        } else if (method == Q_CLOSE) {
+            return close(message, mcpRequest);
+        } else if (method == LOGGING_SET_LEVEL) {
+            return setLogLevel(message, mcpRequest);
+        }
         // Create a new duplicated context and process the operation on this context
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -363,28 +380,22 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (ongoingId != null) {
             ongoingRequests.add(ongoingId);
         }
-
         context.runOnContext(v -> {
             mcpRequest.contextStart();
-            McpMethod method = McpMethod.from(message.getString("method"));
             Future<?> future = switch (method) {
                 case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
                 case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest);
                 case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest);
                 case TOOLS_CALL -> toolHandler.toolsCall(message, mcpRequest);
-                case PING -> ping(message, mcpRequest);
                 case RESOURCES_LIST -> resourceHandler.resourcesList(message, mcpRequest);
                 case RESOURCES_READ -> resourceHandler.resourcesRead(message, mcpRequest);
                 case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, mcpRequest);
                 case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, mcpRequest);
                 case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, mcpRequest);
                 case COMPLETION_COMPLETE -> complete(message, mcpRequest);
-                case LOGGING_SET_LEVEL -> setLogLevel(message, mcpRequest);
-                case Q_CLOSE -> close(message, mcpRequest);
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
-                default -> mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.METHOD_NOT_FOUND,
-                        "Unsupported method: " + method);
+                default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
                 mcpRequest.contextEnd();
@@ -400,6 +411,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             });
         });
         return ret.future();
+    }
+
+    private Future<Void> unsupportedMethod(JsonObject message, McpRequest mcpRequest) {
+        return mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.METHOD_NOT_FOUND,
+                "Unsupported method: " + message.getString("method"));
     }
 
     private Future<Void> rootsListChanged(JsonObject message, McpRequest mcpRequest) {

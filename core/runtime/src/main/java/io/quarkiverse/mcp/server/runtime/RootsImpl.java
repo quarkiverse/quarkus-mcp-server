@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Root;
 import io.quarkiverse.mcp.server.Roots;
@@ -22,11 +22,11 @@ class RootsImpl implements Roots {
     private static final Logger LOG = Logger.getLogger(Roots.class);
 
     static RootsImpl from(ArgumentProviders argProviders) {
-        return new RootsImpl(argProviders.connection().initialRequest(), argProviders.sender(),
+        return new RootsImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.responseHandlers(), argProviders.responseHandlers().getRootsTimeout(argProviders.serverName()));
     }
 
-    private final InitialRequest initialRequest;
+    private final McpConnection connection;
 
     private final Sender sender;
 
@@ -34,8 +34,8 @@ class RootsImpl implements Roots {
 
     private final Duration timeout;
 
-    RootsImpl(InitialRequest initialRequest, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
-        this.initialRequest = initialRequest;
+    RootsImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+        this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
@@ -43,14 +43,17 @@ class RootsImpl implements Roots {
 
     @Override
     public boolean isSupported() {
-        return initialRequest.supportsRoots();
+        return connection.initialRequest().supportsRoots();
     }
 
     @Override
     public Uni<List<Root>> list() {
-        if (!initialRequest.supportsRoots()) {
+        if (!connection.status().isClientInitialized()) {
+            throw McpMessageHandler.clientNotInitialized(connection);
+        }
+        if (!isSupported()) {
             throw new IllegalStateException(
-                    "Client " + initialRequest.implementation() + " does not support the `roots` capability");
+                    "Client " + connection.initialRequest().implementation() + " does not support the `roots` capability");
         }
         // Send a "roots/list" message to the client and register a handler
         // that will be called when a response arrives
