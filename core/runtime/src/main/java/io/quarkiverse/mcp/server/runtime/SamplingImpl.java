@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
@@ -18,11 +18,11 @@ import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 class SamplingImpl implements Sampling {
 
     static SamplingImpl from(ArgumentProviders argProviders) {
-        return new SamplingImpl(argProviders.connection().initialRequest(), argProviders.sender(),
+        return new SamplingImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.responseHandlers(), argProviders.responseHandlers().getSamplingTimeout(argProviders.serverName()));
     }
 
-    private final InitialRequest initialRequest;
+    private final McpConnection connection;
 
     private final Sender sender;
 
@@ -30,8 +30,8 @@ class SamplingImpl implements Sampling {
 
     private final Duration timeout;
 
-    SamplingImpl(InitialRequest initialRequest, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
-        this.initialRequest = initialRequest;
+    SamplingImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+        this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
@@ -39,14 +39,17 @@ class SamplingImpl implements Sampling {
 
     @Override
     public boolean isSupported() {
-        return initialRequest.supportsSampling();
+        return connection.initialRequest().supportsSampling();
     }
 
     @Override
     public Builder requestBuilder() {
-        if (!initialRequest.supportsSampling()) {
+        if (!connection.status().isClientInitialized()) {
+            throw McpMessageHandler.clientNotInitialized(connection);
+        }
+        if (!isSupported()) {
             throw new IllegalStateException(
-                    "Client " + initialRequest.implementation() + " does not support the `sampling` capability");
+                    "Client " + connection.initialRequest().implementation() + " does not support the `sampling` capability");
         }
         return new SamplingRequestBuilder();
     }
