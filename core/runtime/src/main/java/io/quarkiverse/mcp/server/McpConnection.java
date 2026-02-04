@@ -45,7 +45,12 @@ public interface McpConnection {
         /**
          * Connection was closed.
          */
-        CLOSED
+        CLOSED;
+
+        public boolean isClientInitialized() {
+            return this == IN_OPERATION;
+        }
+
     }
 
 }

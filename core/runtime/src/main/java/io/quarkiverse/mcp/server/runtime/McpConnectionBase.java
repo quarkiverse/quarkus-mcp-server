@@ -127,4 +127,9 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         }
     }
 
+    @Override
+    public String toString() {
+        return "McpConnection [id=" + id + ", status=" + status + "]";
+    }
+
 }
