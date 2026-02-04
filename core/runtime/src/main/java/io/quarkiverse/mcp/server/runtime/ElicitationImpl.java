@@ -9,17 +9,17 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.Builder;
 import io.quarkiverse.mcp.server.ElicitationRequest.PrimitiveSchema;
-import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.McpConnection;
 
 class ElicitationImpl implements Elicitation {
 
     static ElicitationImpl from(ArgumentProviders argProviders) {
-        return new ElicitationImpl(argProviders.connection().initialRequest(), argProviders.sender(),
+        return new ElicitationImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.responseHandlers(),
                 argProviders.responseHandlers().getElicitationTimeout(argProviders.serverName()));
     }
 
-    private final InitialRequest initialRequest;
+    private final McpConnection connection;
 
     private final Sender sender;
 
@@ -27,8 +27,8 @@ class ElicitationImpl implements Elicitation {
 
     private final Duration defaultTimeout;
 
-    ElicitationImpl(InitialRequest initialRequest, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
-        this.initialRequest = initialRequest;
+    ElicitationImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+        this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.defaultTimeout = timeout;
@@ -36,14 +36,18 @@ class ElicitationImpl implements Elicitation {
 
     @Override
     public boolean isSupported() {
-        return initialRequest.supportsElicitation();
+        return connection.initialRequest().supportsElicitation();
     }
 
     @Override
     public ElicitationRequest.Builder requestBuilder() {
-        if (!initialRequest.supportsElicitation()) {
+        if (!connection.status().isClientInitialized()) {
+            throw McpMessageHandler.clientNotInitialized(connection);
+        }
+        if (!isSupported()) {
             throw new IllegalStateException(
-                    "Client " + initialRequest.implementation() + " does not support the `elicitation` capability");
+                    "Client " + connection.initialRequest().implementation()
+                            + " does not support the `elicitation` capability");
         }
         return new ElicitationRequestBuilder();
     }
