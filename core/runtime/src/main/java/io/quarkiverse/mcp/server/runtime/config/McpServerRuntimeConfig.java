@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.smallrye.config.WithDefault;
+import io.smallrye.config.WithName;
 
 public interface McpServerRuntimeConfig {
 
@@ -82,6 +83,13 @@ public interface McpServerRuntimeConfig {
      */
     @WithDefault("30m")
     Duration connectionIdleTimeout();
+
+    /**
+     * If collection of metrics is enabled when the Micrometer extension is present.
+     */
+    @WithName("metrics.enabled")
+    @WithDefault("false")
+    boolean metricsEnabled();
 
     public interface TrafficLogging {
 

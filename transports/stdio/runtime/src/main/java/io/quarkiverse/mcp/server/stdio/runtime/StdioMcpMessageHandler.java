@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
@@ -25,6 +26,7 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -67,10 +69,11 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             ResponseHandlers responseHandlers,
             @All List<InitialCheck> initialChecks,
             McpMetadata metadata,
-            Vertx vertx) {
+            Vertx vertx,
+            Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
-                initialChecks);
+                initialChecks, metrics.isResolvable() ? metrics.get() : null);
         this.executor = Executors.newSingleThreadExecutor();
         if (config.servers().size() > 1) {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");

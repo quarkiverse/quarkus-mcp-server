@@ -16,6 +16,7 @@ import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -64,10 +65,11 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
-            Vertx vertx) {
+            Vertx vertx,
+            Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
-                initialChecks);
+                initialChecks, metrics.isResolvable() ? metrics.get() : null);
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }

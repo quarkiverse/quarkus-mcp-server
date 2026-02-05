@@ -3,11 +3,13 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
@@ -28,7 +30,7 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
     private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
 
     public ConnectionManager(Vertx vertx, ResponseHandlers responseHandlers, McpServersRuntimeConfig servers,
-            McpMetadata metadata) {
+            McpMetadata metadata, Instance<McpMetrics> metrics) {
         this.vertx = vertx;
         this.responseHandlers = responseHandlers;
         // We use the minimal timeout divided by two to specify the delay to fire the check
@@ -42,6 +44,9 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
                     connections.values().removeIf(ConnectionTimerId::isIdleTimeoutExpired);
                 }
             });
+        }
+        if (metrics.isResolvable()) {
+            metrics.get().createMcpConnectionsGauge(connections, Map::size);
         }
     }
 

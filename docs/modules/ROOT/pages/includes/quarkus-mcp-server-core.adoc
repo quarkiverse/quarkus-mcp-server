@@ -1144,6 +1144,32 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++30M+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled[`quarkus.mcp.server.metrics.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.metrics.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".metrics.enabled`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".metrics.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If collection of metrics is enabled when the Micrometer extension is present.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_METRICS_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_METRICS_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
 |===
 
 ifndef::no-duration-note[]

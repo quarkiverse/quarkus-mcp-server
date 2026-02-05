@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -84,6 +85,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final McpMetadata metadata;
 
+    private final McpMetrics mcpMetrics;
+
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
@@ -92,7 +95,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
-            McpMetadata metadata, Vertx vertx, List<InitialCheck> initialChecks) {
+            McpMetadata metadata, Vertx vertx, List<InitialCheck> initialChecks, McpMetrics mcpMetrics) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -112,6 +115,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.config = config;
         this.metadata = metadata;
         this.vertx = vertx;
+        this.mcpMetrics = mcpMetrics;
         this.ongoingRequests = ConcurrentHashMap.newKeySet();
 
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
@@ -183,13 +187,21 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
         McpMethod method = McpMethod.from(message.getString("method"));
-        return switch (mcpRequest.connection().status()) {
+        long start = System.nanoTime();
+        Future<Void> ret = switch (mcpRequest.connection().status()) {
             case NEW -> initializeNew(method, message, mcpRequest);
             case INITIALIZING -> initializing(method, message, mcpRequest);
             case IN_OPERATION -> operation(method, message, mcpRequest);
             case CLOSED -> mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.INTERNAL_ERROR,
                     "Connection is closed");
         };
+        if (mcpMetrics != null) {
+            ret.onComplete(ar -> {
+                mcpMetrics.mcpRequestCompleted(method, message, mcpRequest,
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start), ar.cause());
+            });
+        }
+        return ret;
     }
 
     private McpServerRuntimeConfig serverConfig(MCP_REQUEST mcpRequest) {

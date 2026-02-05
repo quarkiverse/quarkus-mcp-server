@@ -10,6 +10,7 @@ import org.jboss.jandex.AnnotationInstance;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -89,6 +90,7 @@ public class WebSocketMcpServerProcessor {
                     McpMetadata.class,
                     Vertx.class,
                     List.class,
+                    Instance.class,
                     Instance.class
             };
             MethodCreator constructor = endpointCreator.getConstructorCreator(params);
@@ -110,6 +112,9 @@ public class WebSocketMcpServerProcessor {
                     // Instance<CurrentIdentityAssociation>
                     .addParameterType(Type.parameterizedType(Type.classType(Instance.class),
                             Type.classType(CurrentIdentityAssociation.class)))
+                    // Instance<McpMetrics>
+                    .addParameterType(Type.parameterizedType(Type.classType(Instance.class),
+                            Type.classType(McpMetrics.class)))
                     .build());
             // @All List<InitialCheck>
             constructor.getParameterAnnotations(12).addAnnotation(All.class);
@@ -131,7 +136,8 @@ public class WebSocketMcpServerProcessor {
                     constructor.getMethodParam(10),
                     constructor.getMethodParam(11),
                     constructor.getMethodParam(12),
-                    constructor.getMethodParam(13));
+                    constructor.getMethodParam(13),
+                    constructor.getMethodParam(14));
             constructor.returnVoid();
 
             // WebSocketMcpMessageHandler.serverName()

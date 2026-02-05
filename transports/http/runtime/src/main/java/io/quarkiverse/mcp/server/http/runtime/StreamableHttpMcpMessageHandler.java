@@ -42,6 +42,7 @@ import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
@@ -112,11 +113,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
-            Vertx vertx) {
+            Vertx vertx,
+            Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, responseHandlers, metadata,
                 vertx,
-                initialChecks);
+                initialChecks, metrics.isResolvable() ? metrics.get() : null);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;

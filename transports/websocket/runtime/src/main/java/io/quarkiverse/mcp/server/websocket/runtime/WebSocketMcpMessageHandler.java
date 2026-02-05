@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
+import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -60,10 +61,11 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             McpMetadata metadata,
             Vertx vertx,
             @All List<InitialCheck> initialChecks,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation) {
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
-                initialChecks);
+                initialChecks, metrics.isResolvable() ? metrics.get() : null);
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 
