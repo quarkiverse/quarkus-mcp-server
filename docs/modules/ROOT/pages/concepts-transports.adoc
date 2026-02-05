@@ -1,0 +1,108 @@
+= Transports
+
+include::includes/attributes.adoc[]
+:diataxis-type: concept
+
+This page explains the transport mechanisms available for MCP communication.
+
+== Overview
+
+The MCP specification currently defines two standard transports for client-server communication.
+The `stdio` transport starts an MCP server as a subprocess and communicates over standard `in` and `out`.
+The `HTTP` transports connects to a running HTTP server.
+The `HTTP` transport is defined in two variants: the "Streamable HTTP" variant (introduced in the protocol version 2025-03-26) replaces the "HTTP/SSE" transport (introduced in protocol version 2024-11-05).
+The "HTTP/SSE" transport is considered deprecated, but it's still supported by most clients and servers.
+
+This extension supports the `stdio` transport and both variants of the `HTTP` transport.
+Moreover, it also supports the unofficial `websocket` transport.
+
+== STDIO Transport
+
+If you want to use the `stdio` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-stdio</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output.
+Quarkus console logging is automatically redirected to the standard error.
+And the standard output stream is set to "null" when the app is started by default.
+
+See xref:getting-started-stdio.adoc[Getting Started with STDIO] for a complete tutorial.
+
+== HTTP Transport
+
+If you want to use the `HTTP` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-http` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-http</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+NOTE: The `artifactId` has changed from `quarkus-mcp-server-sse` to `quarkus-mcp-server-http` in version 1.8.0. However, the old `artifactId` should still work because it's relocated.
+
+This artifact contains both versions of the `HTTP` transport.
+// We need to escape the {rootPath}
+// https://github.com/quarkiverse/quarkus-mcp-server/issues/105
+The MCP endpoint (as defined in `2025-03-26`) is exposed at `\{rootPath}`, i.e. `/mcp` by default.
+The SSE endpoint (as defined in `2024-11-05`) is exposed at `\{rootPath}/sse`, i.e. `/mcp/sse` by default.
+The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `quarkus.mcp.server.sse.root-path` configuration property.
+
+NOTE: The https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#resumability-and-redelivery[Resumability and Redelivery] for the Streamable HTTP is not supported yet.
+
+See xref:getting-started-http.adoc[Getting Started with HTTP] for a complete tutorial.
+
+== WebSocket Transport
+
+If you want to use the `WebSocket` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-websocket` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-websocket</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+The WebSocket endpoint is exposed at `\{endpointPath}`.
+The `\{endpointPath}` is set to `/mcp/ws` by default, but it can be changed with the `quarkus.mcp.server.websocket.endpoint-path` configuration property.
+
+== Using the BOM
+
+TIP: You can also use the BOM (Bill Of Materials) to control the versions of all `io.quarkiverse.mcp` dependencies:
++
+[source,xml,subs=attributes+]
+----
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-bom</artifactId>
+            <version>{project-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+----
+
+== See Also
+
+* xref:concepts-mcp-protocol.adoc[MCP Protocol Overview]
+* xref:reference-configuration.adoc[Configuration Reference]
+* xref:reference-security.adoc[Security Reference]
+* xref:getting-started-stdio.adoc[Getting Started with STDIO]
+* xref:getting-started-http.adoc[Getting Started with HTTP]

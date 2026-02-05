@@ -1,0 +1,561 @@
+= Parameter Types Reference
+
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+[[default-value-converters]]
+== Default Value Converters
+
+Default value converters enable you to specify default values for tool and prompt arguments using custom string representations.
+While the MCP server provides built-in converters for common types, you can implement custom converters for complex types or to override the default behavior.
+
+=== How Default Value Converters Work
+
+When you specify a `defaultValue` in a `@ToolArg` or `@PromptArg` annotation, the value is provided as a string.
+The server uses a `DefaultValueConverter` to convert this string into the actual argument type.
+
+[source,java]
+----
+@Tool
+String exampleTool(@ToolArg(defaultValue = "42") int count) {
+    // The string "42" is converted to the integer 42
+    return "Count: " + count;
+}
+----
+
+The conversion process:
+
+1. The server identifies the argument type (e.g., `int`, `Duration`, `MyCustomType`)
+2. It looks for a registered `DefaultValueConverter` for that type
+3. The converter's `convert(String)` method transforms the string into the target type
+4. If no argument value is provided by the client, the converted default value is used
+
+=== Built-in Converters
+
+The Quarkus MCP Server provides built-in converters for common Java types:
+
+[cols="1,2"]
+|===
+|Type |Example Default Value
+
+|`boolean`, `Boolean`
+|`"true"`, `"false"`
+
+|`byte`, `Byte`
+|`"127"`
+
+|`short`, `Short`
+|`"32767"`
+
+|`int`, `Integer`
+|`"42"`
+
+|`long`, `Long`
+|`"9223372036854775807"`
+
+|`float`, `Float`
+|`"3.14"`
+
+|`double`, `Double`
+|`"2.71828"`
+
+|`String`
+|`"any string value"`
+
+|`Enum` types
+|`"ENUM_CONSTANT"` (the enum constant name)
+
+|===
+
+These built-in converters handle the most common use cases and require no additional configuration.
+
+=== Supported Parameter Types
+
+The Quarkus MCP Server supports a wide variety of parameter types for `@ToolArg`, `@PromptArg`, and `@ResourceTemplateArg` annotations.
+Understanding which types are supported helps you design flexible and type-safe server features.
+
+==== Primitive Types
+
+All Java primitive types are supported:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Demonstrates primitive types")
+    String primitiveTypes(
+        boolean flag,       // true or false
+        byte byteVal,       // -128 to 127
+        short shortVal,     // -32768 to 32767
+        int intVal,         // Standard integer
+        long longVal,       // Large integer
+        float floatVal,     // Floating point
+        double doubleVal,   // Double precision
+        char charVal) {     // Single character
+
+        return "Processed primitive values";
+    }
+}
+----
+
+==== Wrapper Types
+
+All primitive wrapper classes are supported, including the ability to be `null`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Demonstrates wrapper types")
+    String wrapperTypes(
+        Boolean flag,       // Boolean object
+        Byte byteVal,       // Byte object
+        Short shortVal,     // Short object
+        Integer intVal,     // Integer object
+        Long longVal,       // Long object
+        Float floatVal,     // Float object
+        Double doubleVal,   // Double object
+        Number numVal) {    // Any numeric type
+
+        return "Processed wrapper values";
+    }
+}
+----
+
+NOTE: The `Number` type can accept any numeric value (Integer, Long, Double, etc.).
+
+==== String Type
+
+Strings are the most common and flexible parameter type:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Processes text data")
+    String processText(String text, String format) {
+        return "Processed: " + text + " in format: " + format;
+    }
+}
+----
+
+==== Enum Types
+
+Any Java enum type is supported. The client provides the enum constant name as a string:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import java.util.concurrent.TimeUnit;
+
+public class MyTools {
+
+    @Tool(description = "Waits for a specified duration")
+    String waitFor(long duration, TimeUnit unit) {
+        // Client sends: {"duration": 5, "unit": "SECONDS"}
+        return "Waiting for " + duration + " " + unit;
+    }
+
+    // Custom enum example
+    enum Priority {
+        LOW, MEDIUM, HIGH, CRITICAL
+    }
+
+    @Tool(description = "Process with priority")
+    String processPriority(String task, Priority priority) {
+        // Client sends: {"task": "backup", "priority": "HIGH"}
+        return "Processing " + task + " with priority: " + priority;
+    }
+}
+----
+
+==== Array Types
+
+Arrays of primitives, wrapper types, strings, and custom objects are supported:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Processes arrays")
+    String processArrays(
+        int[] numbers,          // Array of primitives
+        String[] tags,          // Array of strings
+        MyData[] dataItems) {   // Array of custom objects
+
+        return "Processed " + numbers.length + " numbers, " +
+               tags.length + " tags, and " +
+               dataItems.length + " data items";
+    }
+}
+
+public record MyData(String name, int value) {
+}
+----
+
+==== Collection Types
+
+Generic collections are supported, including `List` and `Set`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+import java.util.Set;
+
+public class MyTools {
+
+    @Tool(description = "Processes lists")
+    String processLists(
+        List<Integer> numbers,      // List of integers
+        List<String> tags,          // List of strings
+        List<MyData> dataItems) {   // List of custom objects
+
+        return "Processed lists with " + numbers.size() + " items";
+    }
+
+    @Tool(description = "Processes sets")
+    String processSets(
+        Set<String> uniqueTags,
+        Set<Integer> uniqueNumbers) {
+
+        return "Processed " + uniqueTags.size() + " unique tags";
+    }
+}
+
+public record MyData(String name, int value) {
+}
+----
+
+==== Optional Types
+
+`Optional` wrapper is supported for parameters that are truly optional:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import java.util.Optional;
+
+public class MyTools {
+
+    @Tool(description = "Search with optional filters")
+    String search(
+        String query,
+        Optional<Integer> limit,
+        Optional<String> category) {
+
+        int resultLimit = limit.orElse(10);
+        String filterCategory = category.orElse("all");
+
+        return "Searching for '" + query +
+               "' with limit " + resultLimit +
+               " in category " + filterCategory;
+    }
+}
+----
+
+TIP: Use `Optional<T>` when a parameter is truly optional and has no sensible default value. For parameters with good defaults, use `@ToolArg(defaultValue = "...")` instead.
+
+==== Custom Object Types (POJOs)
+
+Custom Java objects (Plain Old Java Objects) are supported as long as they follow JavaBean conventions:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Process customer data")
+    String processCustomer(Customer customer) {
+        return "Processing customer: " + customer.getName() +
+               " (email: " + customer.getEmail() + ")";
+    }
+}
+
+// JavaBean-style class with getters and setters
+public class Customer {
+    private String name;
+    private String email;
+    private int age;
+
+    // Default constructor required
+    public Customer() {
+    }
+
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public int getAge() { return age; }
+    public void setAge(int age) { this.age = age; }
+}
+----
+
+Clients send custom objects as JSON:
+
+[source,json]
+----
+{
+  "name": "processCustomer",
+  "arguments": {
+    "customer": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "age": 30
+    }
+  }
+}
+----
+
+TIP: Java records work perfectly as custom object types and are more concise than traditional JavaBeans.
+
+==== Record Types
+
+Java records are fully supported and recommended for immutable data structures:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "Create a user profile")
+    String createProfile(UserProfile profile) {
+        return "Created profile for " + profile.username() +
+               " with " + profile.tags().size() + " tags";
+    }
+}
+
+// Concise record definition
+public record UserProfile(
+    String username,
+    String email,
+    List<String> tags,
+    boolean active) {
+}
+----
+
+Client request:
+
+[source,json]
+----
+{
+  "name": "createProfile",
+  "arguments": {
+    "profile": {
+      "username": "jdoe",
+      "email": "jdoe@example.com",
+      "tags": ["developer", "admin"],
+      "active": true
+    }
+  }
+}
+----
+
+==== Nested Complex Types
+
+Complex nested structures are supported:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "Process order with nested items")
+    String processOrder(Order order) {
+        return "Processing order " + order.id() +
+               " with " + order.items().size() + " items" +
+               " for customer " + order.customer().name();
+    }
+}
+
+public record Order(
+    String id,
+    Customer customer,
+    List<OrderItem> items,
+    double total) {
+}
+
+public record Customer(String name, String email) {
+}
+
+public record OrderItem(String productId, int quantity, double price) {
+}
+----
+
+=== Creating Custom Converters
+
+To create a custom default value converter for your own types:
+
+1. Implement the `DefaultValueConverter<TYPE>` interface
+2. Provide a public no-args constructor
+3. The converter is discovered automatically
+
+==== Basic Custom Converter
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.DefaultValueConverter;
+import java.util.Arrays;
+import java.util.List;
+
+// Custom type
+public record MyConfiguration(int threshold, List<String> tags) {
+}
+
+// Custom converter
+public class MyConfigurationConverter implements DefaultValueConverter<MyConfiguration> {
+
+    @Override
+    public MyConfiguration convert(String defaultValue) {
+        // Parse the string format: "threshold::tag1,tag2,tag3"
+        String[] parts = defaultValue.split("::");
+        int threshold = Integer.parseInt(parts[0]);
+        List<String> tags = Arrays.stream(parts[1].split(",")).toList();
+        return new MyConfiguration(threshold, tags);
+    }
+}
+----
+
+Once defined, you can use it with `@ToolArg`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+
+public class MyTools {
+
+    @Tool(description = "Process data with custom configuration")
+    String processData(
+        @ToolArg(defaultValue = "50::important,urgent,review") MyConfiguration config) {
+        return "Processing with threshold: " + config.threshold() +
+               ", tags: " + config.tags();
+    }
+}
+----
+
+==== Duration Converter Example
+
+Here's a practical example for converting Quarkus-style duration strings:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.DefaultValueConverter;
+import java.time.Duration;
+
+public class DurationConverter implements DefaultValueConverter<Duration> {
+
+    @Override
+    public Duration convert(String defaultValue) {
+        // Supports formats like "5s", "10m", "2h", "PT30S"
+        return io.quarkus.runtime.configuration.DurationConverter
+                .parseDuration(defaultValue);
+    }
+}
+----
+
+Usage:
+
+[source,java]
+----
+@Tool(description = "Wait for a specified duration")
+String waitFor(@ToolArg(defaultValue = "5s") Duration timeout) {
+    return "Waiting for " + timeout.toSeconds() + " seconds";
+}
+----
+
+=== Priority and Overriding Built-in Converters
+
+If multiple converters exist for the same type, the converter with the highest priority is used.
+You can use the `@Priority` annotation to control converter selection:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.DefaultValueConverter;
+import jakarta.annotation.Priority;
+
+@Priority(1) // Higher priority than built-in converters (which have priority 0)
+public class CustomLongConverter implements DefaultValueConverter<Long> {
+
+    @Override
+    public Long convert(String defaultValue) {
+        // Custom logic: interpret "zero" as 0, "one" as 1, etc.
+        return switch (defaultValue.toLowerCase()) {
+            case "zero" -> 0L;
+            case "one" -> 1L;
+            case "two" -> 2L;
+            default -> Long.parseLong(defaultValue);
+        };
+    }
+}
+----
+
+Usage:
+
+[source,java]
+----
+@Tool
+String countItems(@ToolArg(defaultValue = "two") Long count) {
+    // Uses CustomLongConverter, so "two" becomes 2L
+    return "Counted: " + count + " items";
+}
+----
+
+[NOTE]
+====
+Built-in converters have a priority of `0`. To override a built-in converter, use `@Priority(1)` or higher.
+====
+
+=== Programmatic API Support
+
+Default values can also be specified when using the programmatic API:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager;
+
+    @Startup
+    void registerTool() {
+        toolManager.newTool("processWithConfig")
+            .setDescription("Process data with configuration")
+            .addArgument("config", "Configuration settings", false,
+                         AnalysisConfig.class, "100::high,critical")
+            .setHandler(args -> {
+                AnalysisConfig config = (AnalysisConfig) args.args().get("config");
+                return ToolResponse.success("Processing with: " + config);
+            })
+            .register();
+    }
+}
+----
+
+The same `DefaultValueConverter` instances are used for both declarative and programmatic API default values.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:reference-return-types.adoc[Return Types Reference]

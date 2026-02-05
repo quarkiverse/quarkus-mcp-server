@@ -1,0 +1,299 @@
+= Error Handling
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers error handling strategies for MCP server features, including how to handle business logic errors, protocol errors, and automatic error wrapping.
+
+== Overview
+
+The Quarkus MCP Server extension provides several mechanisms for handling errors in your server features:
+
+* **Business Logic Errors**: Using `ToolCallException` for tool-specific errors
+* **Protocol Errors**: Using `McpException` for JSON-RPC protocol errors
+* **Automatic Error Wrapping**: Using `@WrapBusinessError` to automatically convert exceptions
+* **Validation Errors**: Integration with Hibernate Validator (see xref:guides-hibernate-validator.adoc[Hibernate Validator Integration])
+
+== Business Logic Errors
+
+=== ToolCallException
+
+The `io.quarkiverse.mcp.server.ToolCallException` is specifically designed for business logic errors in `@Tool` methods.
+When a tool throws this exception, it's automatically converted to a failed `ToolResponse` with the exception message included in the response content.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolCallException;
+
+public class MyTools {
+
+    @Tool(description = "Calculate the price with discount")
+    String calculatePrice(int price, int discount) {
+        if (discount < 0 || discount > 100) {
+            throw new ToolCallException("Discount must be between 0 and 100"); // <1>
+        }
+        int finalPrice = price - (price * discount / 100);
+        return "Final price: $" + finalPrice;
+    }
+}
+----
+<1> The exception message becomes the text content of the failed tool response.
+
+**When to use ToolCallException**:
+
+* Invalid input parameters (validation failures)
+* Business rule violations
+* Expected error conditions that the client should handle gracefully
+* Any situation where the tool cannot complete successfully, but it's not a protocol error
+
+=== Response Format
+
+When a `ToolCallException` is thrown, the response looks like:
+
+[source,json]
+----
+{
+  "isError": true,
+  "content": [
+    {
+      "type": "text",
+      "text": "Discount must be between 0 and 100"
+    }
+  ]
+}
+----
+
+The client receives a failed tool response (not a JSON-RPC error), allowing them to handle it as a business logic failure.
+
+== Protocol Errors
+
+=== McpException
+
+The `io.quarkiverse.mcp.server.McpException` is used for protocol-level errors that should result in JSON-RPC error responses.
+Unlike `ToolCallException`, which results in a failed tool response, `McpException` results in a JSON-RPC error message.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Access a resource")
+    String accessResource(String resourceId) {
+        if (!resourceExists(resourceId)) {
+            throw new McpException(
+                "Resource not found: " + resourceId,
+                JsonRpcErrorCodes.RESOURCE_NOT_FOUND); // <1>
+        }
+        return loadResource(resourceId);
+    }
+
+    private boolean resourceExists(String id) {
+        // Implementation
+        return false;
+    }
+
+    private String loadResource(String id) {
+        return "Resource content";
+    }
+}
+----
+<1> Use standard JSON-RPC error codes for protocol-level errors.
+
+=== JSON-RPC Error Codes
+
+The extension provides standard JSON-RPC error codes via the `io.quarkiverse.mcp.server.JsonRpcErrorCodes` class:
+
+[cols="1,1,2"]
+|===
+|Code |Constant |Description
+
+|`-32700`
+|`PARSE_ERROR`
+|Invalid JSON was received by the server
+
+|`-32600`
+|`INVALID_REQUEST`
+|The JSON sent is not a valid request object
+
+|`-32601`
+|`METHOD_NOT_FOUND`
+|The method does not exist or is not available
+
+|`-32602`
+|`INVALID_PARAMS`
+|Invalid method parameter(s)
+
+|`-32603`
+|`INTERNAL_ERROR`
+|Internal JSON-RPC error
+
+|`-32002`
+|`RESOURCE_NOT_FOUND`
+|MCP-specific: requested resource not found
+
+|`-32001`
+|`SECURITY_ERROR`
+|MCP-specific: security/authorization error
+|===
+
+**When to use McpException**:
+
+* Resource not found scenarios
+* Protocol-level violations
+* Security/authorization failures (for HTTP transports)
+* Internal server errors that aren't business logic failures
+
+== Automatic Error Wrapping
+
+=== @WrapBusinessError Annotation
+
+The `@io.quarkiverse.mcp.server.WrapBusinessError` annotation automatically wraps exceptions in `ToolCallException`, eliminating the need to manually throw `ToolCallException` for every error condition.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.WrapBusinessError;
+
+public class MyTools {
+
+    @WrapBusinessError // <1>
+    @Tool(description = "Process an order")
+    String processOrder(String orderId) {
+        if (orderId == null || orderId.isEmpty()) {
+            throw new IllegalArgumentException("Order ID cannot be empty"); // <2>
+        }
+        // Process order...
+        return "Order processed";
+    }
+}
+----
+<1> All exceptions from this method will be wrapped in `ToolCallException`.
+<2> This `IllegalArgumentException` will be automatically wrapped and converted to a failed tool response.
+
+The client receives a failed tool response with the message: `"java.lang.IllegalArgumentException: Order ID cannot be empty"`
+
+=== Selective Wrapping
+
+You can specify which exception types to wrap:
+
+[source,java]
+----
+@WrapBusinessError(NullPointerException.class) // <1>
+@Tool
+String processData(String data) {
+    if (data == null) {
+        throw new NullPointerException("Data cannot be null"); // <2>
+    }
+    throw new IllegalStateException("Invalid state"); // <3>
+}
+----
+<1> Only wrap `NullPointerException` and its subclasses.
+<2> This exception is wrapped and becomes a failed tool response.
+<3> This exception is **not** wrapped and propagates as-is (becomes a protocol error).
+
+=== Excluding Specific Exceptions
+
+Use the `unless` parameter to exclude certain exception types from wrapping:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpException;
+
+@WrapBusinessError(unless = McpException.class) // <1>
+@Tool
+String complexOperation() {
+    // Business logic error - will be wrapped
+    if (someCondition) {
+        throw new IllegalArgumentException("Business error");
+    }
+
+    // Protocol error - will NOT be wrapped
+    if (securityViolation) {
+        throw new McpException("Unauthorized", JsonRpcErrorCodes.SECURITY_ERROR); // <2>
+    }
+
+    return "Success";
+}
+----
+<1> Wrap all exceptions except `McpException` and its subclasses.
+<2> This protocol error bypasses the wrapper and becomes a JSON-RPC error.
+
+== Reactive Error Handling
+
+Error handling works seamlessly with reactive return types:
+
+[source,java]
+----
+import io.smallrye.mutiny.Uni;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.WrapBusinessError;
+
+public class MyTools {
+
+    @Tool
+    Uni<String> fetchData(String url) {
+        return httpClient.get(url)
+            .onFailure().transform(e ->
+                new ToolCallException("Failed to fetch data: " + e.getMessage())); // <1>
+    }
+
+    @WrapBusinessError(unless = ToolCallException.class)
+    @Tool
+    Uni<String> processAsync(String input) {
+        return Uni.createFrom().item(() -> {
+            if (input.isEmpty()) {
+                throw new IllegalArgumentException("Input cannot be empty"); // <2>
+            }
+            return process(input);
+        });
+    }
+
+    private String process(String input) {
+        return input.toUpperCase();
+    }
+}
+----
+<1> Manually transform failures to `ToolCallException`.
+<2> Exceptions from reactive pipelines are also automatically wrapped.
+
+== Class-Level Error Wrapping
+
+Apply `@WrapBusinessError` at the class level to cover all tool methods:
+
+[source,java]
+----
+@WrapBusinessError // <1>
+public class MyTools {
+
+    @Tool
+    String tool1() {
+        throw new RuntimeException("Error in tool1"); // <2>
+    }
+
+    @Tool
+    String tool2() {
+        throw new IllegalStateException("Error in tool2"); // <2>
+    }
+
+    @WrapBusinessError(unless = Exception.class) // <3>
+    @Tool
+    String tool3() {
+        throw new RuntimeException("Not wrapped");
+    }
+}
+----
+<1> All tool methods in this class will have errors wrapped by default.
+<2> Both exceptions are automatically wrapped.
+<3> Method-level annotation overrides the class-level annotation.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-using-guardrails.adoc[Using Guardrails]
+* xref:guides-hibernate-validator.adoc[Hibernate Validator Integration]
+* xref:reference-annotations.adoc[Annotations Reference]

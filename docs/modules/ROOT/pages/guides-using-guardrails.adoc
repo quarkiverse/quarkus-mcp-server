@@ -1,0 +1,415 @@
+= Tool Guardrails
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+WARNING: This API is experimental and may change in future releases.
+
+Tool guardrails allow you to intercept and validate or transform tool arguments before they are passed to the tool implementation, or validate and transform the tool response before it's returned to the client.
+This guide shows you how to implement and use guardrails for MCP tools.
+
+== What are Guardrails?
+
+Guardrails provide a way to safeguard tool calls in your MCP server:
+
+* Input Guardrails validate and/or transform the arguments of a `tools/call` request before the tool is executed
+* Output Guardrails validate and/or transform the result of a tool call before it's returned to the client
+
+Common use cases include:
+
+* Validating email formats, phone numbers, or other structured data
+* Sanitizing user input to prevent injection attacks
+* Transforming arguments (e.g., normalizing case, formatting)
+* Enforcing business rules and constraints
+* Filtering or modifying tool responses
+
+== Input Guardrails
+
+Input guardrails are executed before the tool method is invoked. They can validate arguments and throw exceptions to reject invalid calls, or transform arguments before passing them to the tool.
+
+=== Basic Input Guardrail
+
+Here's a simple example that validates email format:
+
+[source,java]
+----
+import java.util.regex.Pattern;
+import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+
+public class EmailFormatValidator implements ToolInputGuardrail { // <1>
+
+   private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
+   @Override
+   public void apply(ToolInputContext context) { // <2>
+      String email = context.getArguments().getString("to");
+      if (!EMAIL_PATTERN.matcher(email).matches()) {
+         throw new ToolCallException("Invalid email format: " + email); // <3>
+      }
+   }
+}
+----
+<1> Guardrail implementations must be CDI beans or declare a public no-args constructor.
+<2> The `apply` method receives the tool input context with access to arguments and tool metadata.
+<3> Throw `ToolCallException` if validation fails. The exception message will be returned to the client.
+
+=== Applying Guardrails to Tools
+
+Use the `@ToolGuardrails` annotation to associate guardrails with a tool:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolGuardrails;
+
+public class MyTools {
+
+   @ToolGuardrails(input = EmailFormatValidator.class) // <1>
+   @Tool
+   String sendMail(String to, String body) {
+      return "Mail sent to: " + to;
+   }
+}
+----
+<1> The guardrail is executed before the tool call. If validation fails, the tool method is not invoked.
+
+=== Transforming Arguments
+
+Input guardrails can also transform arguments:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+import io.vertx.core.json.JsonObject;
+
+public class UpperCaseTransformer implements ToolInputGuardrail {
+
+   @Override
+   public void apply(ToolInputContext context) {
+      String value = context.getArguments().getString("text");
+      context.setArguments(
+         new JsonObject().put("text", value.toUpperCase())); // <1>
+   }
+}
+----
+<1> Use `context.setArguments()` to replace the arguments with transformed values.
+
+=== Multiple Input Guardrails
+
+You can apply multiple input guardrails that execute in order:
+
+[source,java]
+----
+@ToolGuardrails(input = { ValidateInput.class, SanitizeInput.class, TransformInput.class })
+@Tool
+String processData(String data) {
+   return "Processed: " + data;
+}
+----
+
+=== Hibernate Validator Integration
+
+For common validation scenarios, you can use Bean Validation annotations instead of writing custom guardrails:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+public class MyTools {
+
+    @Tool
+    String sendEmail(
+        @ToolArg(description = "Email address")
+        @NotBlank @Email String to, // <1>
+        @ToolArg(description = "Email body")
+        @NotBlank String body) {
+        return "Mail sent to: " + to;
+    }
+}
+----
+<1> Bean Validation annotations like `@NotBlank` and `@Email` provide automatic validation.
+
+The Hibernate Validator integration automatically validates tool arguments and enriches the JSON schema with constraint information.
+
+For more details, see xref:guides-hibernate-validator.adoc[Hibernate Validator Integration].
+
+== Output Guardrails
+
+Output guardrails are executed after the tool method completes. They can validate the response and throw exceptions, or transform the response before it's returned to the client.
+
+=== Basic Output Guardrail
+
+Here's an example that transforms the tool response:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Singleton;
+
+@Singleton // <1>
+public class PrefixOutputGuardrail implements ToolOutputGuardrail {
+
+   @Override
+   public void apply(ToolOutputContext context) {
+      if (!context.getResponse().isError()) { // <2>
+         String originalText = context.getResponse().firstContent().asText().text();
+         context.setResponse(
+            ToolResponse.success("Processed: " + originalText)); // <3>
+      }
+   }
+}
+----
+<1> Output guardrails are typically CDI beans to allow dependency injection.
+<2> Check if the response is not an error before transforming.
+<3> Use `context.setResponse()` to replace the response.
+
+=== Applying Output Guardrails
+
+[source,java]
+----
+@ToolGuardrails(output = { ValidateOutput.class, FormatOutput.class })
+@Tool
+String generateReport(String query) {
+   return "Report data: " + query;
+}
+----
+
+=== Multiple Guardrails
+
+You can apply both input and output guardrails:
+
+[source,java]
+----
+@ToolGuardrails(
+   input = { ValidateEmail.class, SanitizeInput.class },
+   output = { ValidateResponse.class, AuditLog.class }
+)
+@Tool
+String processEmail(String to, String body) {
+   return "Email processed";
+}
+----
+
+== Async Guardrails
+
+For non-blocking operations, guardrails can use the async API:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Singleton;
+
+@Singleton
+public class AsyncOutputGuardrail implements ToolOutputGuardrail {
+
+   @Override
+   public Uni<Void> applyAsync(ToolOutputContext context) { // <1>
+      if (!context.getResponse().isError()) {
+         String text = context.getResponse().firstContent().asText().text();
+         context.setResponse(ToolResponse.success("Async: " + text));
+      }
+      return Uni.createFrom().voidItem(); // <2>
+   }
+}
+----
+<1> Override `applyAsync` for non-blocking execution.
+<2> Return a `Uni<Void>` that completes when processing is done.
+
+NOTE: The container always calls the non-blocking `applyAsync(ToolInputContext)` method, which delegates to the blocking `apply(ToolInputContext)` by default. Override `applyAsync` directly for async implementations.
+
+== Execution Models
+
+Guardrails must respect the execution model of the tool they're applied to.
+
+=== Supported Execution Models
+
+Use the `@SupportedExecutionModels` annotation to declare which execution models a guardrail supports:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.SupportedExecutionModels;
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Singleton;
+
+import static io.quarkiverse.mcp.server.ExecutionModel.WORKER_THREAD;
+
+@SupportedExecutionModels(WORKER_THREAD) // <1>
+@Singleton
+public class BlockingGuardrail implements ToolOutputGuardrail {
+
+   @Override
+   public Uni<Void> applyAsync(ToolOutputContext context) {
+      // This guardrail performs blocking operations
+      return Uni.createFrom().voidItem();
+   }
+}
+----
+<1> This guardrail can only be used with tools that execute on worker threads.
+
+If a tool declares a guardrail with an unsupported execution model, the build fails.
+Unless annotated with `@SupportedExecutionModels`, a guardrail should support all execution models.
+
+IMPORTANT: Execution of a guardrail must not block the caller thread unless blocking is allowed. A guardrail implementation can inspect the execution model of the current tool with `ToolInfo#executionModel()`, or use `io.quarkus.runtime.BlockingOperationControl#isBlockingAllowed()` to detect if blocking is allowed on the current thread. If blocking is not allowed but an implementation needs to perform a blocking operation, it must offload the execution to a worker thread.
+
+== Accessing Tool Information
+
+Guardrails can access tool metadata through the context:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+
+public class ToolInspectorGuardrail implements ToolInputGuardrail {
+
+   @Override
+   public void apply(ToolInputContext context) {
+      String toolName = context.getTool().name(); // <1>
+      String toolDescription = context.getTool().description();
+
+      // Conditional logic based on tool metadata
+      if (toolName.equals("sensitiveOperation")) {
+         // Apply stricter validation
+      }
+   }
+}
+----
+<1> Access tool metadata via `context.getTool()`.
+You can also access the tool metadata (using `ToolInputContext.getMeta()`) and the initial request using `ToolInputContext.getConnection().initialRequest()`.
+
+== Programmatic API
+
+Guardrails can also be applied to tools registered programmatically with the `ToolManager` API:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager;
+
+    @Startup
+    void addTool() {
+       toolManager.newTool("processData")
+          .setDescription("Process data with validation")
+          .addArgument("data", "Data to process", true, String.class)
+          .setInputGuardrails(List.of(ValidateInput.class)) // <1>
+          .setOutputGuardrails(List.of(FormatOutput.class, AuditLog.class)) // <2>
+          .setHandler(args -> ToolResponse.success("Processed: " + args.args().get("data")))
+          .register();
+    }
+}
+----
+<1> Set input guardrails with `setInputGuardrails()`.
+<2> Set output guardrails with `setOutputGuardrails()`.
+
+== Use Cases
+
+=== Email Validation
+
+[source,java]
+----
+import java.util.regex.Pattern;
+import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+
+public class EmailValidator implements ToolInputGuardrail {
+
+   private static final Pattern EMAIL_PATTERN =
+      Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
+   @Override
+   public void apply(ToolInputContext context) {
+      String email = context.getArguments().getString("email");
+      if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+         throw new ToolCallException("Invalid email address: " + email);
+      }
+   }
+}
+----
+
+=== Input Sanitization
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+import io.vertx.core.json.JsonObject;
+
+public class HtmlSanitizer implements ToolInputGuardrail {
+
+   @Override
+   public void apply(ToolInputContext context) {
+      String content = context.getArguments().getString("content");
+
+      // Remove potentially dangerous HTML tags
+      String sanitized = content
+         .replaceAll("<script[^>]*>.*?</script>", "")
+         .replaceAll("<iframe[^>]*>.*?</iframe>", "");
+
+      context.setArguments(
+         new JsonObject().put("content", sanitized));
+   }
+}
+----
+
+=== Response Filtering
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Singleton;
+
+@Singleton
+public class SensitiveDataFilter implements ToolOutputGuardrail {
+
+   @Override
+   public void apply(ToolOutputContext context) {
+      if (!context.getResponse().isError()) {
+         String text = context.getResponse().firstContent().asText().text();
+
+         // Redact sensitive patterns (e.g., SSN, credit cards)
+         String filtered = text.replaceAll("\\d{3}-\\d{2}-\\d{4}", "XXX-XX-XXXX");
+
+         context.setResponse(ToolResponse.success(filtered));
+      }
+   }
+}
+----
+
+=== Argument Transformation
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolInputGuardrail;
+import io.vertx.core.json.JsonObject;
+
+public class AgeDoubler implements ToolInputGuardrail {
+
+   @Override
+   public void apply(ToolInputContext context) {
+      Integer age = context.getArguments().getInteger("age");
+      context.setArguments(
+         new JsonObject().put("age", age * 2));
+   }
+}
+----
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-hibernate-validator.adoc[Hibernate Validator Integration] - Bean validation integration

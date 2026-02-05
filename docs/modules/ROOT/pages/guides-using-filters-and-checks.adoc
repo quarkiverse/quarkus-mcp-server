@@ -1,0 +1,591 @@
+= Using Filters and Initial Checks
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide explains how to use filters and initial checks to control feature visibility and validate connections in your MCP server.
+
+== Overview
+
+Filters and initial checks provide two complementary mechanisms for access control:
+
+* **Filters** - Control which features (tools, resources, prompts) are visible to specific clients
+* **Initial Checks** - Validate connections during the initialization handshake before exposing capabilities
+
+Together, they enable fine-grained control over feature availability based on authentication, authorization, client capabilities, or any other criteria.
+
+== Using Filters
+
+Filters control which MCP features are visible and accessible to specific clients.
+They enable fine-grained control based on connection context, client capabilities, request headers, or any other criteria.
+
+=== Implementing a Filter
+
+Filters are CDI beans that implement one or more filter interfaces:
+
+* `ToolFilter` - Controls tool visibility
+* `ResourceFilter` - Controls resource visibility
+* `ResourceTemplateFilter` - Controls resource template visibility
+* `PromptFilter` - Controls prompt visibility
+
+Each filter implements a `test()` method that returns `true` if the feature should be accessible, `false` otherwise.
+
+Here's a simple filter that only shows tools to clients that support sampling:
+
+[source,java]
+----
+import jakarta.inject.Singleton;
+import io.quarkiverse.mcp.server.ToolFilter;
+import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
+import io.quarkiverse.mcp.server.FilterContext;
+
+@Singleton
+public class SamplingToolFilter implements ToolFilter {
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        // Only show tools if client supports sampling
+        return context.connection().initialRequest().supportsSampling();
+    }
+}
+----
+
+=== How Filters Work
+
+Understanding filter behavior:
+
+* Filters are automatically discovered as CDI beans
+* Multiple filters execute in order of `@Priority` (higher values execute first)
+* A feature is only visible if ALL filters return `true` (logical AND)
+* Filters should be lightweight as they execute on the event loop (no blocking operations)
+* If a filter throws an exception, it's ignored and the next filter executes
+
+For API details on filter interfaces and context objects, see xref:reference-filters-and-checks.adoc[Filters and Checks Reference].
+
+=== Controlling Execution Order
+
+Use `@Priority` to control filter execution order when you have multiple filters:
+
+[source,java]
+----
+@Singleton
+@Priority(1000) // Higher priority - executes first
+public class SecurityFilter implements ToolFilter {
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        // Security check: block admin tools for non-admin clients
+        if (tool.name().startsWith("admin_")) {
+            return isAdmin(context.connection());
+        }
+        return true;
+    }
+
+    private boolean isAdmin(McpConnection connection) {
+        // Check authorization (implementation specific)
+        return false;
+    }
+}
+
+@Singleton
+@Priority(500) // Lower priority - executes second
+public class FeatureFlagFilter implements ToolFilter {
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        // Only show beta features if enabled
+        if (tool.name().startsWith("beta_")) {
+            return isBetaEnabled(context.connection());
+        }
+        return true;
+    }
+
+    private boolean isBetaEnabled(McpConnection connection) {
+        // Check feature flag
+        return false;
+    }
+}
+----
+
+In this example, `SecurityFilter` executes first. If it returns `false`, the feature is blocked regardless of what `FeatureFlagFilter` would return.
+
+=== Request Context Filtering
+
+Filters can access request-scoped beans to make decisions based on HTTP headers, authentication, or other request context:
+
+[source,java]
+----
+@Singleton
+public class HeaderBasedFilter implements ResourceFilter {
+
+    @Inject
+    HttpServerRequest request; // Available for HTTP transports
+
+    @Override
+    public boolean test(ResourceInfo resource, FilterContext context) {
+        // Only show sensitive resources if authenticated
+        if (resource.uri().contains("/sensitive/")) {
+            String authHeader = request.getHeader("Authorization");
+            return authHeader != null && isValidToken(authHeader);
+        }
+        return true;
+    }
+
+    private boolean isValidToken(String token) {
+        // Validate authentication token
+        return false;
+    }
+}
+----
+
+NOTE: Request-scoped dependencies like `HttpServerRequest` are only available for HTTP-based transports (SSE, Streamable, WebSocket), not for STDIO transport.
+
+== Using Initial Checks
+
+Initial checks are validations performed during the MCP connection initialization handshake, before the server sends its capabilities back to the client.
+They provide a way to reject connections that don't meet certain requirements.
+
+=== Implementing an Initial Check
+
+Initial checks are CDI beans that implement the `io.quarkiverse.mcp.server.InitialCheck` interface.
+
+Here's a simple check that requires clients to support sampling:
+
+[source,java]
+----
+import jakarta.inject.Singleton;
+import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
+import io.smallrye.mutiny.Uni;
+
+@Singleton
+public class SamplingRequiredCheck implements InitialCheck {
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        if (!initialRequest.supportsSampling()) {
+            return CheckResult.error("This server requires sampling support");
+        }
+        return CheckResult.success();
+    }
+}
+----
+
+=== How Initial Checks Work
+
+Understanding check behavior:
+
+* Executed during the `initialize` request, before capabilities are sent
+* Failed checks prevent the connection from being established
+* Multiple checks execute sequentially by `@Priority` (higher values first)
+* Returns `Uni<CheckResult>` for async validation
+* First failed check stops execution and returns error to client
+
+When a check fails:
+
+* The connection is not initialized
+* The error message is sent back to the client
+* No `initialized` notification is received
+* No server capabilities are exposed
+
+For API details, see xref:reference-filters-and-checks.adoc#initial-check-interface[InitialCheck Interface].
+
+=== Authentication Check
+
+Validate authentication before allowing connections:
+
+[source,java]
+----
+@Singleton
+public class AuthenticationCheck implements InitialCheck {
+
+    @Inject
+    HttpServerRequest request; // For HTTP transports
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null) {
+            return CheckResult.error("Missing Authorization header");
+        }
+
+        if (!isValidToken(authHeader)) {
+            return CheckResult.error("Invalid authentication token");
+        }
+
+        return CheckResult.success();
+    }
+
+    private boolean isValidToken(String token) {
+        // Validate token (implementation specific)
+        return token.startsWith("Bearer ");
+    }
+}
+----
+
+=== Async/Blocking Checks
+
+For checks that need to perform I/O or blocking operations, use `io.quarkus.vertx.VertxContextSupport`:
+
+[source,java]
+----
+@Singleton
+public class DatabaseAuthCheck implements InitialCheck {
+
+    @Inject
+    VertxContextSupport contextSupport;
+
+    @Inject
+    UserDatabase userDatabase;
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        String clientId = extractClientId(initialRequest);
+
+        // Offload blocking database call to worker thread
+        return contextSupport.executeBlocking(() -> {
+            boolean isAuthorized = userDatabase.isAuthorized(clientId);
+            return isAuthorized
+                ? CheckResult.SUCCESS
+                : new CheckResult(true, "Client not authorized");
+        });
+    }
+
+    private String extractClientId(InitialRequest request) {
+        return request.clientInfo().name();
+    }
+}
+----
+
+=== Priority with Multiple Checks
+
+Use `@Priority` to control the order of check execution:
+
+[source,java]
+----
+@Singleton
+@Priority(1000) // Execute first
+public class RateLimitCheck implements InitialCheck {
+
+    @Inject
+    RateLimiter rateLimiter;
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        String clientId = initialRequest.clientInfo().name();
+
+        if (rateLimiter.isExceeded(clientId)) {
+            return CheckResult.error("Rate limit exceeded");
+        }
+
+        return CheckResult.success();
+    }
+}
+
+@Singleton
+@Priority(500) // Execute second (if first succeeds)
+public class CapabilityCheck implements InitialCheck {
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        // Require at least one client capability
+        if (!initialRequest.supportsSampling() &&
+            !initialRequest.supportsElicitation()) {
+            return CheckResult.error(
+                "Client must support sampling or elicitation");
+        }
+
+        return CheckResult.success();
+    }
+}
+----
+
+In this example:
+
+1. `RateLimitCheck` executes first (priority 1000)
+2. If rate limit is exceeded, connection fails immediately
+3. `CapabilityCheck` only executes if rate limit check passes
+4. Both must succeed for the connection to be established
+
+== Common Use Cases
+
+This section provides practical examples of how to use filters and initial checks to solve common requirements.
+
+=== Multi-Tenant Feature Isolation
+
+Different clients see different features based on their tenant:
+
+[source,java]
+----
+@Singleton
+public class TenantFilter implements ToolFilter, ResourceFilter {
+
+    @Inject
+    HttpServerRequest request;
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        String tenant = request.getHeader("X-Tenant-ID");
+
+        // Admin tools only for admin tenant
+        if (tool.name().startsWith("admin_")) {
+            return "admin".equals(tenant);
+        }
+
+        // Premium tools for premium tenants
+        if (tool.name().startsWith("premium_")) {
+            return isPremiumTenant(tenant);
+        }
+
+        // Standard tools for everyone
+        return true;
+    }
+
+    @Override
+    public boolean test(ResourceInfo resource, FilterContext context) {
+        String tenant = request.getHeader("X-Tenant-ID");
+
+        // Each tenant only sees their own resources
+        return resource.uri().contains("/" + tenant + "/");
+    }
+
+    private boolean isPremiumTenant(String tenant) {
+        // Check tenant subscription level
+        return false;
+    }
+}
+----
+
+=== Role-Based Access Control (RBAC)
+
+Control feature visibility based on user roles:
+
+[source,java]
+----
+@Singleton
+public class RoleBasedFilter implements ToolFilter {
+
+    @Inject
+    SecurityIdentity securityIdentity; // Quarkus security
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        // Read-only tools for everyone
+        if (tool.name().startsWith("read_")) {
+            return true;
+        }
+
+        // Write tools require writer role
+        if (tool.name().startsWith("write_")) {
+            return securityIdentity.hasRole("writer");
+        }
+
+        // Delete tools require admin role
+        if (tool.name().startsWith("delete_")) {
+            return securityIdentity.hasRole("admin");
+        }
+
+        return true;
+    }
+}
+----
+
+=== Feature Flags and A/B Testing
+
+Show experimental features to selected clients:
+
+[source,java]
+----
+@Singleton
+public class FeatureFlagFilter implements ToolFilter, PromptFilter {
+
+    @Inject
+    FeatureFlagService featureFlags;
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        String clientId = context.connection().initialRequest().clientInfo().name();
+
+        // Beta features only if flag enabled for this client
+        if (tool.name().startsWith("beta_")) {
+            return featureFlags.isEnabled("beta-tools", clientId);
+        }
+
+        // Experimental features for internal testing
+        if (tool.name().startsWith("experimental_")) {
+            return featureFlags.isEnabled("experimental", clientId);
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean test(PromptInfo prompt, FilterContext context) {
+        String clientId = context.connection().initialRequest().clientInfo().name();
+
+        // A/B test: show new prompts to 50% of users
+        if (prompt.name().startsWith("new_")) {
+            return featureFlags.isInVariant("new-prompts", clientId, "B");
+        }
+
+        return true;
+    }
+}
+----
+
+=== Connection Quota and Rate Limiting
+
+Limit connections using initial checks:
+
+[source,java]
+----
+@Singleton
+@Priority(2000) // Check this first
+public class ConnectionQuotaCheck implements InitialCheck {
+
+    @Inject
+    ConnectionTracker connectionTracker;
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        String clientId = initialRequest.clientInfo().name();
+
+        // Check concurrent connections
+        int activeConnections = connectionTracker.getActiveConnections(clientId);
+        if (activeConnections >= getMaxConnections(clientId)) {
+            return CheckResult.error(
+                "Maximum concurrent connections reached: " + activeConnections);
+        }
+
+        // Track this connection
+        connectionTracker.addConnection(clientId);
+
+        return CheckResult.success();
+    }
+
+    private int getMaxConnections(String clientId) {
+        // Different limits per client
+        return 10;
+    }
+}
+----
+
+=== Protocol Version Enforcement
+
+Require specific protocol versions or client capabilities:
+
+[source,java]
+----
+@Singleton
+@Priority(1500)
+public class ProtocolVersionCheck implements InitialCheck {
+
+    private static final String MINIMUM_VERSION = "2025-11-25";
+    private static final Set<String> SUPPORTED_VERSIONS =
+        Set.of("2025-11-25", "2025-03-26");
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        String version = initialRequest.protocolVersion();
+
+        // Check if version is supported
+        if (!SUPPORTED_VERSIONS.contains(version)) {
+            return CheckResult.error(
+                "Unsupported protocol version: " + version +
+                ". Minimum required: " + MINIMUM_VERSION);
+        }
+
+        // Require sampling for this server
+        if (!initialRequest.supportsSampling()) {
+            return CheckResult.error(
+                "This server requires sampling capability");
+        }
+
+        return CheckResult.success();
+    }
+}
+----
+
+=== Environment-Based Filtering
+
+Show different features in different environments:
+
+[source,java]
+----
+@Singleton
+public class EnvironmentFilter implements ToolFilter {
+
+    @ConfigProperty(name = "quarkus.profile")
+    String profile;
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        // Debug tools only in dev environment
+        if (tool.name().startsWith("debug_")) {
+            return "dev".equals(profile);
+        }
+
+        // Mock tools only in test environment
+        if (tool.name().startsWith("mock_")) {
+            return "test".equals(profile);
+        }
+
+        // Production tools
+        return true;
+    }
+}
+----
+
+=== Combining Filters and Checks
+
+Use both for comprehensive access control:
+
+[source,java]
+----
+// Initial check validates authentication
+@Singleton
+@Priority(2000)
+public class AuthCheck implements InitialCheck {
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        // Validate token, check license, etc.
+        return CheckResult.success();
+    }
+}
+
+// Filter controls feature visibility based on subscription
+@Singleton
+public class SubscriptionFilter implements ToolFilter {
+
+    @Inject
+    SubscriptionService subscriptionService;
+
+    @Override
+    public boolean test(ToolInfo tool, FilterContext context) {
+        String clientId = context.connection().initialRequest().clientInfo().name();
+        String tier = subscriptionService.getTier(clientId);
+
+        // Basic tier: limited tools
+        if ("basic".equals(tier)) {
+            return tool.name().startsWith("basic_");
+        }
+
+        // Pro tier: all tools
+        return true;
+    }
+}
+----
+
+This combination ensures:
+
+1. Only authenticated clients can connect (initial check)
+2. Connected clients only see features their subscription allows (filter)
+
+== Related Documentation
+
+* xref:reference-filters-and-checks.adoc[Filters and Checks Reference] - API reference for interfaces and context objects
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-using-guardrails.adoc[Using Guardrails]
+* xref:reference-security.adoc[Security Reference]

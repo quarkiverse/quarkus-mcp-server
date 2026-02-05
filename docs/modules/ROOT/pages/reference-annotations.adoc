@@ -1,0 +1,308 @@
+= MCP Annotations
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+MCP annotations provide behavioral hints and metadata to MCP clients about tools and resources.
+These hints help clients make informed decisions about how to interact with server features.
+
+== Tool Annotations
+
+Tool annotations provide behavioral hints to help clients understand what kind of operations a tool performs.
+
+=== title
+
+A human-readable title for the tool, often displayed in user interfaces.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Performs data analysis",
+          annotations = @Annotations(title = "Data Analyzer"))
+    String analyze(String data) {
+        return "Analysis result";
+    }
+}
+----
+
+=== readOnlyHint
+
+Set this _annotation_ to `true` when the tool does not modify its environment (e.g., read operations, queries, searches).
+The default value is `false`, indicating that the tool may perform write operations.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Searches for files matching a pattern",
+          annotations = @Annotations(readOnlyHint = true))
+    String searchFiles(String pattern) {
+        // Only reads files, does not modify anything
+        return "file1.txt, file2.txt";
+    }
+}
+----
+
+=== destructiveHint
+
+Set this _annotation_ to `true` when the tool may perform destructive updates to its environment (e.g., delete operations, overwrites).
+Set this _annotation_ to `false` when the tool performs only additive updates (e.g., creating new files, appending to logs).
+
+The default value is `true`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Deletes a file from the filesystem",
+          annotations = @Annotations(destructiveHint = true))
+    String deleteFile(String filename) {
+        // Permanently removes a file - destructive operation
+        return "File deleted: " + filename;
+    }
+
+    @Tool(description = "Creates a new file",
+          annotations = @Annotations(destructiveHint = false))
+    String createFile(String filename, String content) {
+        // Only adds new files, never overwrites or deletes
+        return "File created: " + filename;
+    }
+}
+----
+
+=== idempotentHint
+
+Set this _annotation_ to `true` when calling the tool repeatedly with the same arguments will have no additional effect on its environment (e.g., set operations, upserts). The default value is `false`, indicating that repeated calls may have cumulative effects (e.g., append operations, increments).
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Sets a configuration value",
+          annotations = @Annotations(idempotentHint = true))
+    String setConfig(String key, String value) {
+        // Setting the same value multiple times has the same effect
+        return "Config updated: " + key + " = " + value;
+    }
+
+    @Tool(description = "Appends a log entry",
+          annotations = @Annotations(idempotentHint = false))
+    String appendLog(String message) {
+        // Each call adds a new log entry
+        return "Log appended";
+    }
+}
+----
+
+=== openWorldHint
+
+Set this _annotation_ to `true` when the tool may interact with an "open world" of external entities (e.g., web APIs, external databases).
+Set this _annotation_ to `false` when the tool's domain of interaction is closed and well-defined (e.g., local files, internal state).
+
+The default value is `true`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Fetches data from external API",
+          annotations = @Annotations(openWorldHint = true))
+    String fetchExternalData(String apiUrl) {
+        // Interacts with external web services
+        return "Data from API";
+    }
+
+    @Tool(description = "Calculates a checksum",
+          annotations = @Annotations(openWorldHint = false))
+    String calculateChecksum(String data) {
+        // Pure computation, no external interaction
+        return "checksum-value";
+    }
+}
+----
+
+=== Combining Multiple Hints
+
+Tool annotations can be combined to accurately describe a tool's behavior:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.Annotations;
+
+public class MyTools {
+
+    @Tool(description = "Gets the current weather from an external API",
+          annotations = @Annotations(
+              title = "Weather Lookup",
+              readOnlyHint = true,      // Does not modify any state
+              destructiveHint = false,   // No destructive operations
+              idempotentHint = true,     // Same query returns same result
+              openWorldHint = true))     // Calls external weather API
+    String getWeather(String location) {
+        // Read-only external API call
+        return "Sunny, 72°F";
+    }
+
+    @Tool(description = "Updates user preferences in local database",
+          annotations = @Annotations(
+              title = "Update Preferences",
+              readOnlyHint = false,      // Modifies state
+              destructiveHint = false,   // Additive updates only
+              idempotentHint = true,     // Setting same value is idempotent
+              openWorldHint = false))    // Local database only
+    String updatePreferences(String key, String value) {
+        // Local state update
+        return "Preferences updated";
+    }
+}
+----
+
+== Resource Annotations
+
+Resource annotations provide metadata about how clients should prioritize and display resources.
+
+=== audience
+
+Set this _annotation_ to specify the intended audience for the resource:
+
+* `Role.USER`: The resource is intended for end users
+* `Role.ASSISTANT`: The resource is intended for AI assistants
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.Resource.Annotations;
+import io.quarkiverse.mcp.server.Role;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+
+public class MyResources {
+
+    @Resource(uri = "file:///docs/user-guide.txt",
+              description = "User documentation",
+              annotations = @Annotations(audience = Role.USER, priority = 1.0))
+    TextResourceContents userGuide(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "User guide content...", "text/plain");
+    }
+
+    @Resource(uri = "file:///system/api-schema.json",
+              description = "API schema for assistant use",
+              annotations = @Annotations(audience = Role.ASSISTANT, priority = 0.8))
+    TextResourceContents apiSchema(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "{\"schema\": \"...\"}", "application/json");
+    }
+}
+----
+
+=== priority
+
+The priority is a value between 0.0 and 1.0 indicating the resource's importance.
+Higher values indicate higher priority.
+Use this to help clients decide which resources to surface or process first.
+
+The default value is `0.5`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.Resource.Annotations;
+import io.quarkiverse.mcp.server.Role;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+
+public class MyResources {
+
+    @Resource(uri = "file:///critical-data.json",
+              description = "Critical system data",
+              annotations = @Annotations(audience = Role.ASSISTANT, priority = 1.0))
+    TextResourceContents criticalData(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "Critical data", "application/json");
+    }
+
+    @Resource(uri = "file:///optional-info.txt",
+              description = "Optional supplementary information",
+              annotations = @Annotations(audience = Role.USER, priority = 0.3))
+    TextResourceContents optionalInfo(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "Optional info", "text/plain");
+    }
+}
+----
+
+=== Resource Template Annotations
+
+Resource templates also support annotations with the same semantics:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.Resource.Annotations;
+import io.quarkiverse.mcp.server.Role;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+
+public class MyResourceTemplates {
+
+    @ResourceTemplate(uriTemplate = "file:///logs/{date}",
+                      description = "Daily log files",
+                      annotations = @Annotations(audience = Role.ASSISTANT, priority = 0.7))
+    TextResourceContents dailyLogs(String date, RequestUri uri) {
+        return new TextResourceContents(uri.value(), "Logs for " + date, "text/plain");
+    }
+}
+----
+
+== Programmatic Annotations
+
+Annotations can also be set programmatically when using the manager APIs:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager;
+
+    @Startup
+    void registerTools() {
+        toolManager.newTool("searchDatabase")
+            .setDescription("Searches the database")
+            .setAnnotations(new ToolAnnotations(
+                "Database Search",  // title
+                true,               // readOnlyHint
+                false,              // destructiveHint
+                true,               // idempotentHint
+                false))             // openWorldHint
+            .setHandler(args -> ToolResponse.success("Search results"))
+            .register();
+    }
+}
+----
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
+* xref:guides-implementing-prompts.adoc[Implementing Prompts]
+* xref:guides-metadata-and-icons.adoc[Metadata and Icons]

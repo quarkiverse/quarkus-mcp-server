@@ -1,0 +1,353 @@
+= Filters and Checks Reference
+
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+This reference documents the APIs for filters and initial checks. For usage examples, see xref:guides-using-filters-and-checks.adoc[Using Filters and Initial Checks].
+
+== Filter Interfaces
+
+All filter interfaces follow the same pattern with a `test()` method that receives the feature information and a `FilterContext`.
+
+=== ToolFilter
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public interface ToolFilter {
+    /**
+     * @param tool The tool being tested
+     * @param context The filter context
+     * @return true if the tool should be visible, false otherwise
+     */
+    boolean test(ToolInfo tool, FilterContext context);
+}
+----
+
+=== ResourceFilter
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public interface ResourceFilter {
+    /**
+     * @param resource The resource being tested
+     * @param context The filter context
+     * @return true if the resource should be visible, false otherwise
+     */
+    boolean test(ResourceInfo resource, FilterContext context);
+}
+----
+
+=== ResourceTemplateFilter
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public interface ResourceTemplateFilter {
+    /**
+     * @param template The resource template being tested
+     * @param context The filter context
+     * @return true if the template should be visible, false otherwise
+     */
+    boolean test(ResourceTemplateInfo template, FilterContext context);
+}
+----
+
+=== PromptFilter
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public interface PromptFilter {
+    /**
+     * @param prompt The prompt being tested
+     * @param context The filter context
+     * @return true if the prompt should be visible, false otherwise
+     */
+    boolean test(PromptInfo prompt, FilterContext context);
+}
+----
+
+== FilterContext
+
+The `FilterContext` object provides access to connection and metadata information during filtering.
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public interface FilterContext {
+    /**
+     * @return The MCP connection for the current request
+     */
+    McpConnection connection();
+
+    /**
+     * @return Metadata about the feature and connection context
+     */
+    Meta meta();
+}
+----
+
+=== McpConnection
+
+The `McpConnection` object provides access to:
+
+[source,java]
+----
+// Get initial request with client info and capabilities
+InitialRequest initialRequest = connection.initialRequest();
+
+// Access client information
+String clientName = initialRequest.clientInfo().name();
+String clientVersion = initialRequest.clientInfo().version();
+
+// Check client capabilities
+boolean supportsSampling = initialRequest.supportsSampling();
+boolean supportsElicitation = initialRequest.supportsElicitation();
+boolean supportsRoots = initialRequest.supportsRoots();
+----
+
+[[initial-check-interface]]
+== InitialCheck Interface
+
+The `InitialCheck` interface is used to validate connections during the initialization handshake.
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+import io.smallrye.mutiny.Uni;
+
+public interface InitialCheck {
+
+    /**
+     * Perform the check.
+     *
+     * @param initialRequest The initialization request from the client
+     * @return A Uni<CheckResult> indicating success or failure
+     */
+    Uni<CheckResult> perform(InitialRequest initialRequest);
+}
+----
+
+== CheckResult
+
+The `CheckResult` class represents the result of an initial check.
+
+[source,java]
+----
+package io.quarkiverse.mcp.server;
+
+public class CheckResult {
+
+    /**
+     * A successful check result (convenience constant)
+     */
+    public static final CheckResult SUCCESS = new CheckResult(false, null);
+
+    /**
+     * Create a successful check result
+     */
+    public static CheckResult success() {
+        return SUCCESS;
+    }
+
+    /**
+     * Create a failed check result with an error message
+     *
+     * @param message The error message to send to the client
+     */
+    public static CheckResult error(String message) {
+        return new CheckResult(true, message);
+    }
+
+    /**
+     * @return true if the check failed
+     */
+    public boolean isError() {
+        // ...
+    }
+
+    /**
+     * @return The error message (null if successful)
+     */
+    public String message() {
+        // ...
+    }
+}
+----
+
+Usage examples:
+
+[source,java]
+----
+// Success
+return CheckResult.success();
+
+// Or using the constant
+return CheckResult.SUCCESS;
+
+// Error with message
+return CheckResult.error("Authentication failed");
+
+// Async success
+return Uni.createFrom().item(CheckResult.SUCCESS);
+
+// Async error
+return Uni.createFrom().item(
+    CheckResult.error("Invalid token")
+);
+----
+
+== InitialRequest
+
+The `InitialRequest` object provides access to client information and capabilities during the initialization handshake.
+
+=== Client Information
+
+[source,java]
+----
+// Get client name and version
+String clientName = initialRequest.clientInfo().name();
+String clientVersion = initialRequest.clientInfo().version();
+
+// Protocol version
+String protocolVersion = initialRequest.protocolVersion();
+----
+
+=== Client Capabilities
+
+Check what capabilities the client supports:
+
+[source,java]
+----
+// Check for sampling support
+boolean supportsSampling = initialRequest.supportsSampling();
+
+// Check for elicitation support
+boolean supportsElicitation = initialRequest.supportsElicitation();
+
+// Check for roots support
+boolean supportsRoots = initialRequest.supportsRoots();
+----
+
+=== Example Usage
+
+[source,java]
+----
+@Override
+public Uni<CheckResult> perform(InitialRequest initialRequest) {
+    // Protocol version
+    String version = initialRequest.protocolVersion();
+
+    // Client information
+    String clientName = initialRequest.clientInfo().name();
+    String clientVersion = initialRequest.clientInfo().version();
+
+    // Client capabilities
+    boolean hasSampling = initialRequest.supportsSampling();
+    boolean hasElicitation = initialRequest.supportsElicitation();
+    boolean hasRoots = initialRequest.supportsRoots();
+
+    // Make decision based on this information
+    if (!hasSampling) {
+        return CheckResult.error("Sampling support required");
+    }
+
+    return CheckResult.success();
+}
+----
+
+== Feature Information Objects
+
+Filter methods receive feature-specific information objects that provide details about the feature being tested.
+
+=== ToolInfo
+
+Provides information about a tool:
+
+[source,java]
+----
+// Get tool name
+String name = tool.name();
+
+// Get tool description
+String description = tool.description();
+
+// Additional metadata available through the feature info API
+----
+
+=== ResourceInfo
+
+Provides information about a resource:
+
+[source,java]
+----
+// Get resource URI
+String uri = resource.uri();
+
+// Get resource name (if available)
+String name = resource.name();
+
+// Get resource description
+String description = resource.description();
+----
+
+=== ResourceTemplateInfo
+
+Provides information about a resource template:
+
+[source,java]
+----
+// Get URI template pattern
+String uriTemplate = template.uriTemplate();
+
+// Get template name
+String name = template.name();
+
+// Get template description
+String description = template.description();
+----
+
+=== PromptInfo
+
+Provides information about a prompt:
+
+[source,java]
+----
+// Get prompt name
+String name = prompt.name();
+
+// Get prompt description
+String description = prompt.description();
+----
+
+== Execution Behavior
+
+=== Filter Execution
+
+* Filters are CDI beans automatically discovered at startup
+* Multiple filters execute in `@Priority` order (higher values first)
+* All filters must return `true` for a feature to be visible (logical AND)
+* Filters execute on the event loop (must be non-blocking)
+* Exceptions in filters are logged and ignored
+
+=== Initial Check Execution
+
+* Checks execute during the MCP `initialize` request
+* Checks execute sequentially by `@Priority` (higher values first)
+* First failed check stops execution and returns error to client
+* Checks can be async (return `Uni<CheckResult>`)
+* Failed checks prevent connection establishment
+
+== Related Documentation
+
+* xref:guides-using-filters-and-checks.adoc[Using Filters and Initial Checks] - Practical guide with examples
+* xref:reference-security.adoc[Security Reference]
+* xref:guides-implementing-tools.adoc[Implementing Tools]

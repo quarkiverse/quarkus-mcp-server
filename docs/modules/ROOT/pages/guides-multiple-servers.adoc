@@ -1,0 +1,337 @@
+= Multiple Server Configurations
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers how to configure and run multiple MCP servers within a single Quarkus application, each with its own endpoint, features, and security policies.
+
+== Overview
+
+The Quarkus MCP Server extension supports running multiple independent MCP server instances in a single application. Each server can have:
+
+* Different root paths for HTTP transports
+* Tools, resources, and prompts specific to each server
+* Different authentication/authorization policies
+* Per-server settings (traffic logging, etc.)
+
+This is useful for:
+
+* To serve different clients with isolated feature sets
+* To handle different security requirements for different APIs
+* To run multiple API versions simultaneously
+* To gather multiple logical services in one deployment
+
+== Default Server
+
+By default, a single MCP server is configured and features are registered to it:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyFeatures {
+
+    @Tool(description = "Default server tool")
+    String defaultTool() {
+        return "Hello from default server";
+    }
+}
+----
+
+This tool is automatically registered to the **default server**, accessible at the default endpoints:
+
+* SSE: `/mcp/sse`
+* Streamable HTTP: `/mcp`
+* WebSocket: `/ws/mcp`
+
+== Configuring Multiple Servers
+
+=== Step 1: Configure Server Endpoints
+
+Define different root paths for each named server in `application.properties`:
+
+[source,properties]
+----
+# Default server (unnamed)
+quarkus.mcp.server.sse.root-path=/mcp
+
+# Named server "bravo"
+quarkus.mcp.server.bravo.sse.root-path=/bravo/mcp
+
+# Named server "charlie"
+quarkus.mcp.server.charlie.sse.root-path=/charlie/mcp
+----
+
+Each server will have its own set of endpoints:
+
+[cols="1,2,2"]
+|===
+|Server |SSE Endpoint |Streamable HTTP Endpoint
+
+|Default
+|`/mcp/sse`
+|`/mcp`
+
+|bravo
+|`/bravo/mcp/sse`
+|`/bravo/mcp`
+
+|charlie
+|`/charlie/mcp/sse`
+|`/charlie/mcp`
+|===
+
+=== Step 2: Bind Features to Servers
+
+Use the `@McpServer` annotation to bind features to specific servers:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.McpServer;
+
+public class MyFeatures {
+
+    @Tool(description = "Tool for default server")
+    String defaultTool() { // <1>
+        return "Default";
+    }
+
+    @McpServer("bravo") // <2>
+    @Tool(description = "Tool for bravo server")
+    String bravoTool() {
+        return "Bravo";
+    }
+
+    @McpServer("charlie") // <3>
+    @Tool(description = "Tool for charlie server")
+    String charlieTool() {
+        return "Charlie";
+    }
+}
+----
+<1> Without `@McpServer`, the tool goes to the default server
+<2> Binds this tool to the "bravo" server
+<3> Binds this tool to the "charlie" server
+
+Now:
+
+* `defaultTool` is available only at `/mcp`
+* `bravoTool` is available only at `/bravo/mcp`
+* `charlieTool` is available only at `/charlie/mcp`
+
+== Using @McpServer Annotation
+
+=== Method-Level Binding
+
+Bind individual features to specific servers:
+
+[source,java]
+----
+public class MultiServerFeatures {
+
+    @Tool
+    String publicTool() {
+        return "Available on default server";
+    }
+
+    @McpServer("admin")
+    @Tool
+    String adminTool() {
+        return "Available on admin server only";
+    }
+
+    @McpServer("api-v2")
+    @Resource(uri = "config://settings")
+    TextResourceContents v2Config() {
+        return TextResourceContents.create(
+            "config://settings",
+            "{\"version\": 2}");
+    }
+}
+----
+
+=== Class-Level Binding
+
+Bind all features in a class to a server by default:
+
+[source,java]
+----
+@McpServer("bravo") // <1>
+public class BravoFeatures {
+
+    @Tool
+    String bravoTool1() { // <2>
+        return "Tool 1 on bravo server";
+    }
+
+    @Tool
+    String bravoTool2() { // <2>
+        return "Tool 2 on bravo server";
+    }
+
+    @McpServer(McpServer.DEFAULT) // <3>
+    @Tool
+    String sharedTool() {
+        return "Override: on default server";
+    }
+}
+----
+<1> Class-level annotation sets default for all methods
+<2> These tools inherit the "bravo" server binding
+<3> Method-level annotation overrides class-level
+
+== Default Server Constant
+
+Use `McpServer.DEFAULT` to explicitly reference the default (unnamed) server:
+
+[source,java]
+----
+import static io.quarkiverse.mcp.server.McpServer.DEFAULT;
+
+@McpServer("special")
+public class SpecialFeatures {
+
+    @Tool
+    String specialTool() {
+        return "On special server"; // <1>
+    }
+
+    @McpServer(DEFAULT) // <2>
+    @Tool
+    String defaultTool() {
+        return "On default server";
+    }
+}
+----
+<1> Inherits "special" from class-level annotation
+<2> Explicitly override to use default server
+
+== Per-Server Configuration
+
+Configure each server independently using the naming pattern:
+
+`quarkus.mcp.server.<server-name>.<property>`
+
+=== Traffic Logging
+
+Enable traffic logging per server:
+
+[source,properties]
+----
+# Enable logging for bravo server only
+quarkus.mcp.server.bravo.traffic-logging.enabled=true
+quarkus.mcp.server.bravo.traffic-logging.text-limit=500
+
+# Default server: no logging
+quarkus.mcp.server.traffic-logging.enabled=false
+----
+
+=== Transport Configuration
+
+Configure transports independently:
+
+[source,properties]
+----
+# Default server: SSE only
+quarkus.mcp.server.sse.root-path=/api/mcp
+
+# Admin server: Different path
+quarkus.mcp.server.admin.sse.root-path=/admin/mcp
+
+# Public server: WebSocket
+quarkus.mcp.server.public.ws.root-path=/public/ws/mcp
+----
+
+== Security Configuration
+
+Each server can have different security policies.
+
+=== Example: Public and Secured Servers
+
+[source,properties]
+----
+# Server endpoints
+quarkus.mcp.server.sse.root-path=/public/mcp
+quarkus.mcp.server.secure.sse.root-path=/secure/mcp
+
+# Secure server requires authentication
+quarkus.http.auth.permission.secure.paths=/secure/mcp/*
+quarkus.http.auth.permission.secure.policy=authenticated
+
+# Public server: no authentication
+quarkus.http.auth.permission.public.paths=/public/mcp/*
+quarkus.http.auth.permission.public.policy=permit
+----
+
+[source,java]
+----
+public class MyFeatures {
+
+    @Tool(description = "Public tool")
+    String publicTool() {
+        return "No authentication required";
+    }
+
+    @McpServer("secure")
+    @Tool(description = "Secured tool")
+    String secureTool() {
+        return "Authentication required";
+    }
+}
+----
+
+== Testing Multiple Servers
+
+Test each server independently using McpAssured:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+
+@Test
+public void testDefaultServer() {
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
+        .setMcpPath("/mcp") // <1>
+        .build()
+        .connect();
+
+    client.when()
+        .toolsCall("defaultTool", response ->
+            assertEquals("Default", response.content().get(0).asText().text()))
+        .toolsCall("bravoTool") // <2>
+        .withErrorAssert(error ->
+            assertEquals("Invalid tool name: bravoTool", error.message()))
+        .send()
+        .thenAssertResults();
+}
+
+@Test
+public void testBravoServer() {
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
+        .setMcpPath("/bravo/mcp") // <3>
+        .build()
+        .connect();
+
+    client.when()
+        .toolsCall("bravoTool", response ->
+            assertEquals("Bravo", response.content().get(0).asText().text()))
+        .toolsCall("defaultTool") // <4>
+        .withErrorAssert(error ->
+            assertEquals("Invalid tool name: defaultTool", error.message()))
+        .send()
+        .thenAssertResults();
+}
+----
+<1> Connect to default server
+<2> Tools from other servers are not available
+<3> Connect to bravo server
+<4> Default server tools are not available here
+
+== See Also
+
+* xref:reference-configuration.adoc[Configuration Reference]
+* xref:reference-security.adoc[Security]
+* xref:reference-annotations.adoc[Annotations Reference]
+* xref:guides-testing.adoc[Testing with McpAssured]

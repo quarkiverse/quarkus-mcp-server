@@ -1,0 +1,85 @@
+= Using the BOM for Dependency Management
+
+include::./includes/attributes.adoc[]
+:diataxis-type: howto
+
+The Quarkus MCP Server provides a Bill of Materials (BOM) to simplify dependency management and ensure version consistency across all MCP Server artifacts.
+
+== What is a BOM?
+
+A BOM (Bill of Materials) is a special Maven POM file that centralizes dependency version management.
+When you import a BOM in your project's `dependencyManagement` section, you can omit version numbers from individual dependencies, and Maven will automatically use the versions defined in the BOM.
+
+== Adding the BOM to Your Project
+
+To use the BOM, add it to the `dependencyManagement` section of your `pom.xml`:
+
+[source,xml,subs=attributes+]
+----
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-bom</artifactId>
+            <version>{project-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+----
+
+Once the BOM is imported, you can add MCP Server dependencies without specifying their versions:
+
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>io.quarkiverse.mcp</groupId>
+        <artifactId>quarkus-mcp-server-http</artifactId>
+        <!-- No version needed, managed by BOM -->
+    </dependency>
+</dependencies>
+----
+
+== Using Multiple MCP Server Dependencies
+
+When your project uses multiple MCP Server artifacts (such as multiple transports or additional modules like Hibernate Validator), the BOM ensures they all use compatible versions:
+
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>io.quarkiverse.mcp</groupId>
+        <artifactId>quarkus-mcp-server-http</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.quarkiverse.mcp</groupId>
+        <artifactId>quarkus-mcp-server-stdio</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.quarkiverse.mcp</groupId>
+        <artifactId>quarkus-mcp-server-hibernate-validator</artifactId>
+    </dependency>
+    <!-- All versions managed by the BOM -->
+</dependencies>
+----
+
+== Creating a New Project with the BOM
+
+If you prefer to use the BOM from the start, create a new Quarkus project without specifying extensions:
+
+[source,bash,subs=attributes+]
+----
+mvn io.quarkus:quarkus-maven-plugin:{quarkus-version}:create \
+    -DprojectGroupId=org.acme \
+    -DprojectArtifactId=my-mcp-server
+cd my-mcp-server
+----
+
+Then add the BOM to your `pom.xml` as shown above, followed by the MCP Server dependencies you need (without versions).
+
+== Related Guides
+
+* xref:getting-started-http.adoc[Getting Started with HTTP Transport]
+* xref:getting-started-stdio.adoc[Getting Started with STDIO Transport]

@@ -1,0 +1,367 @@
+= MCP Protocol Overview
+
+include::includes/attributes.adoc[]
+:diataxis-type: concept
+
+This page provides an overview of the Model Context Protocol (MCP) and how it works.
+
+== What is MCP?
+
+The https://modelcontextprotocol.io/[Model Context Protocol (MCP)] is an open protocol that standardizes how applications provide knowledge and capabilities (context) to Large Language Models (LLMs).
+Created by Anthropic, MCP enables AI assistants like Claude to connect to external data sources and tools in standardized way.
+
+=== The Problem MCP Solves
+
+Before MCP, integrating external data and tools with LLMs faced several challenges:
+
+* Each data source required integration code (HTTP client, database connector, etc.)
+* LLMs were often confined to information available at training time
+* No standard way for tools, databases, and services to expose their capabilities to AI
+
+MCP addresses these issues by providing a universal, open protocol for context exchange.
+
+== Protocol Specification
+
+`quarkus-mcp-server` implements the https://modelcontextprotocol.io/specification/{spec-version}[{spec-version} version] of the MCP specification.
+
+The specification defines:
+
+* How messages are formatted using a JSON-RPC 2.0-based communication
+* How messages are transmitted using various transport such as STDIO and HTTP (with SSE and Streamable variants)
+* How the client and server negotiate capabilities during connection initialization and how this connection is managed throughout its lifecycle
+* The main primitives: Tools, Resources, and Prompts
+* More advanced features such as: Sampling, Elicitation, and Roots
+
+See the https://modelcontextprotocol.io/specification/{spec-version}[official MCP specification] for complete technical details.
+
+=== Compliance and Testing
+
+NOTE: The absence of an official "Compliance Test Suite" (similar to Java's TCK) makes it challenging to verify full specification compliance.
+The `quarkus-mcp-server` implementation is tested against real MCP clients and aims for maximum compatibility.
+If you encounter any issues or discrepancies with the specification, please open an issue on https://github.com/quarkiverse/quarkus-mcp-server/issues.
+
+== Known Limitations
+
+The following MCP features are not currently supported:
+
+* https://modelcontextprotocol.io/specification/{spec-version}/basic/transports#resumability-and-redelivery[Streamable HTTP - Resumability and Redelivery] (optional feature)
+* https://modelcontextprotocol.io/specification/{spec-version}/basic/utilities/tasks[Tasks] (experimental feature)
+* https://modelcontextprotocol.io/specification/{spec-version}/client/elicitation#url-mode-flow[Elicitation - URL Mode]
+
+If you encounter a problem or discrepancy, please https://github.com/quarkiverse/quarkus-mcp-server/issues[file an issue].
+
+== JSON-RPC Layer
+
+MCP uses https://www.jsonrpc.org/specification[JSON-RPC 2.0] as its message format, providing a lightweight and language-agnostic communication layer.
+
+=== Message Types
+
+MCP defines three types of JSON-RPC messages:
+
+**Requests**::
+Messages that expect a response from the receiver. Each request has a unique `id` that the response must reference.
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {}
+}
+----
+
+**Responses**::
+Messages sent in reply to requests, containing either a `result` or an `error`.
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [...]
+  }
+}
+----
+
+**Notifications**::
+One-way messages that do not expect a response. No `id` field is present.
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "abc123",
+    "progress": 50,
+    "total": 100
+  }
+}
+----
+
+=== Bidirectional Communication
+
+Unlike traditional REST APIs, MCP is bidirectional:
+
+* Client-to-Server Requests: Clients invoke server capabilities (e.g., calling tools, reading resources)
+* Server-to-Client Requests: Servers can request services from clients (e.g., LLM sampling, user input via elicitation)
+* Both Directions for Notifications: Progress updates, log messages, and lifecycle events flow in both directions
+
+== Capability Negotiation
+
+MCP uses capability negotiation to establish what features are available between client and server.
+
+=== Initialization Sequence
+
+1. **Client sends `initialize` request**:
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "{spec-version}",
+    "clientInfo": {
+      "name": "my-mcp-client",
+      "version": "1.0.0"
+    },
+    "capabilities": {
+      "sampling": {},
+      "elicitation": {},
+      "roots": { "listChanged": true }
+    }
+  }
+}
+----
+
+2. **Server responds with its capabilities**:
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "{spec-version}",
+    "serverInfo": {
+      "name": "quarkus-mcp-server",
+      "version": "1.0.0"
+    },
+    "capabilities": {
+      "tools": {},
+      "resources": { "subscribe": true },
+      "prompts": {},
+      "logging": {}
+    }
+  }
+}
+----
+
+3. **Client sends `initialized` notification**:
++
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized"
+}
+----
+
+=== Capability Checking
+
+After initialization, both parties know what features are available:
+
+* **Client capabilities** (what the server can request from the client):
+** `sampling`: Allows invoking the client-side LLM from the server side
+** `elicitation`: User input collection (e.g., forms, confirmations)
+** `roots`: Access to client's root directories/contexts
+
+* **Server capabilities** (what the client can request from the server):
+** `tools`: Executable functions
+** `resources`: Readable/subscribable data
+** `prompts`: Reusable prompt templates
+** `logging`: Server-to-client log messages
+
+The Quarkus MCP server automatically includes capabilities in the initialization response based on what features you've implemented (tools, resources, prompts) in your application.
+
+== Connection Lifecycle
+
+Understanding the MCP connection lifecycle helps you manage server state and resources effectively.
+
+=== Lifecycle States
+
+[source,text]
+----
+┌─────────────┐
+│   Created   │  Server process starts
+└──────┬──────┘
+       │
+       │ Client sends 'initialize'
+       ↓
+┌─────────────┐
+│ Initialized │  Capabilities negotiated
+└──────┬──────┘
+       │
+       │ Client sends 'initialized' notification
+       ↓
+┌─────────────┐
+│    Ready    │  Normal operation (tools/call, resources/read, etc.)
+└──────┬──────┘
+       │
+       │ Connection closed or client sends 'shutdown'
+       ↓
+┌─────────────┐
+│  Shutdown   │  Server cleans up and exits
+└─────────────┘
+----
+
+NOTE: The exact sequence is not strictly enforced by the protocol, but this is the typical flow for most clients and servers.
+
+=== Connection Management
+
+**STDIO Transport**::
+* Connection lifecycle tied to process lifecycle
+* Server exits when STDIN closes
+* No explicit shutdown request needed
+
+**HTTP Transports**::
+* Connections are session-based
+* Each session maintains separate state
+* Explicit `shutdown` request recommended for clean termination
+* SSE connections require keep-alive mechanism
+
+**WebSocket Transport** (custom transport)::
+* Bidirectional, persistent connection
+* WebSocket close frame triggers shutdown
+* Supports reconnection with new initialization
+
+=== Handling Initialization Events
+
+The Quarkus MCP server provides annotations to hook into lifecycle events:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
+
+@Notification(Type.INITIALIZED)
+void onInitialized(McpConnection connection) {
+    // Called when client is ready
+    // Initialize per-connection state here
+}
+----
+
+This allows you to perform setup tasks (e.g., loading user-specific data) after capability negotiation completes.
+
+== Core Primitives
+
+MCP defines three primary primitives for exposing functionality to clients.
+
+=== Tools
+
+**Tools** are executable functions that the LLM can invoke to perform actions or retrieve computed information.
+
+* Defined with JSON Schema for input validation
+* Return structured or unstructured results
+* Support both synchronous and asynchronous execution
+* Can report progress and handle cancellation
+
+**Example use cases**: Database queries, API calls, code execution, file operations
+
+See: https://modelcontextprotocol.io/specification/{spec-version}/server/tools[Tools Specification]
+
+=== Resources
+
+**Resources** are data sources that clients can read and optionally subscribe to for updates.
+
+* Identified by URI (e.g., `file:///path/to/file`, `database://table/row`)
+* Support static URIs and URI templates with variables
+* Can be text or binary content
+* Clients can subscribe to receive update notifications
+
+**Example use cases**: File contents, database records, API responses, configuration data
+
+See: https://modelcontextprotocol.io/specification/{spec-version}/server/resources[Resources Specification]
+
+=== Prompts
+
+**Prompts** are reusable templates for LLM interactions, parameterized with arguments.
+
+* Define conversation starters or task templates
+* Support multiple message roles (system, user, assistant)
+* Can include embedded resources
+* Completion API for argument suggestions
+
+**Example use cases**: Code review templates, analysis frameworks, guided workflows
+
+See: https://modelcontextprotocol.io/specification/{spec-version}/server/prompts[Prompts Specification]
+
+== Message Flow Examples
+
+=== Tool Call Flow
+
+[source,text]
+----
+Client                                    Server
+  │                                          │
+  │  1. initialize                           │
+  ├─────────────────────────────────────────>│
+  │                                          │
+  │  2. initialize response (capabilities)   │
+  │<─────────────────────────────────────────┤
+  │                                          │
+  │  3. initialized notification             │
+  ├─────────────────────────────────────────>│
+  │                                          │
+  │  4. tools/list                           │
+  ├─────────────────────────────────────────>│
+  │                                          │
+  │  5. tools/list response                  │
+  │<─────────────────────────────────────────┤
+  │                                          │
+  │  6. tools/call (name: "search")          │
+  ├─────────────────────────────────────────>│
+  │                                          │  [Tool executes]
+  │  7. notifications/progress (optional)    │
+  │<─────────────────────────────────────────┤
+  │                                          │
+  │  8. tools/call response (result)         │
+  │<─────────────────────────────────────────┤
+  │                                          │
+----
+
+=== Server-to-Client Request (Sampling)
+
+[source,text]
+----
+Client                                    Server
+  │                                          │
+  │  tools/call (name: "analyze")            │
+  ├─────────────────────────────────────────>│
+  │                                          │  [Tool starts]
+  │                                          │  [Needs LLM help]
+  │  sampling/createMessage                  │
+  │<─────────────────────────────────────────┤
+  │                                          │
+  │  [Client asks LLM]                       │
+  │                                          │
+  │  sampling/createMessage response         │
+  ├─────────────────────────────────────────>│
+  │                                          │  [Tool continues]
+  │  tools/call response (result)            │
+  │<─────────────────────────────────────────┤
+  │                                          │
+----
+
+
+== See Also
+
+* https://modelcontextprotocol.io/[Model Context Protocol Website]
+* https://modelcontextprotocol.io/specification/{spec-version}[MCP Specification {spec-version}]
+* xref:concepts-architecture.adoc[Architecture] - Quarkus MCP Server architecture
+* xref:concepts-transports.adoc[Transports] - Available transport mechanisms
+* xref:getting-started-stdio.adoc[Getting Started Tutorial]

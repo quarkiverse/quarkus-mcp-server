@@ -1,0 +1,293 @@
+= Implementing Prompts
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+Prompts are predefined templates for LLM interactions that can be filled with variable values and returned to clients.
+MCP provides a standardized way for servers to expose prompt templates to clients.
+This guide shows you how to implement prompts using both declarative annotations and programmatic APIs.
+
+== Basic Prompt Implementation
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.TextContent;
+import jakarta.inject.Inject;
+
+// @Singleton <1>
+public class MyPrompts {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Prompt(description = "Put your description here.") <3>
+    PromptMessage foo(@PromptArg(description = "The name", defaultValue = "Max") String name) { <4>
+        return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyPrompts` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name.
+<4> The `@PromptArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
+
+TIP: Default values are specified as strings and automatically converted to the argument type. For complex types, you can implement custom `DefaultValueConverter` instances. See xref:reference-parameter-types.adoc#default-value-converters[Default Value Converters] for more information.
+
+== Prompt Arguments
+
+Prompt methods accept string parameters representing the prompt arguments. Each argument can be customized with the `@PromptArg` annotation:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.TextContent;
+
+public class CodePrompts {
+
+    @Prompt(description = "Generate code based on requirements")
+    PromptMessage generateCode(
+        @PromptArg(description = "Programming language", defaultValue = "Java") String language,
+        @PromptArg(description = "Code requirements") String requirements,
+        @PromptArg(description = "Code style", defaultValue = "clean") String style) {
+
+        String promptText = String.format(
+            "Generate %s code with %s style for: %s",
+            language, style, requirements
+        );
+
+        return PromptMessage.withUserRole(new TextContent(promptText));
+    }
+}
+----
+
+Arguments without a `defaultValue` are required and must be provided by the client.
+
+== Return Types
+
+The result of a "prompt get" operation is always represented as a `PromptResponse`.
+However, `@Prompt` methods can return other types that are automatically converted.
+
+For details on supported return types and conversion rules, see xref:reference-return-types.adoc#prompt-return-types[Prompt Return Type Conversion].
+
+=== Common Return Type Examples
+
+Return a single message:
+
+[source,java]
+----
+@Prompt(description = "Simple prompt")
+PromptMessage simplePrompt(String input) {
+    return PromptMessage.withUserRole(new TextContent("Process: " + input));
+}
+----
+
+Return multiple messages for conversation context:
+
+[source,java]
+----
+import java.util.List;
+
+@Prompt(description = "Multi-message prompt")
+List<PromptMessage> conversationPrompt(String topic) {
+    return List.of(
+        PromptMessage.withSystemRole(new TextContent("You are a helpful assistant.")),
+        PromptMessage.withUserRole(new TextContent("Tell me about " + topic))
+    );
+}
+----
+
+Return async results with Uni:
+
+[source,java]
+----
+import io.smallrye.mutiny.Uni;
+
+@Prompt(description = "Async prompt")
+Uni<PromptMessage> asyncPrompt(String query) {
+    return fetchDataAsync(query)
+        .map(data -> PromptMessage.withUserRole(new TextContent(data)));
+}
+----
+
+== Method Parameters
+
+A `@Prompt` method must only accept `String` parameters that represent prompt arguments.
+However, it may also accept the following special parameters:
+
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`:: Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
+
+See xref:reference-parameter-types.adoc[Parameter Types Reference] for complete details on supported parameter types.
+
+Example with logging:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+
+@Prompt(description = "Prompt with logging")
+PromptMessage loggedPrompt(String input, McpLog log) {
+    log.info("Processing prompt with input: {}", input);
+    return PromptMessage.withUserRole(new TextContent("Processing: " + input));
+}
+----
+
+== Completion API
+
+Arguments of a `@Prompt` method may be auto-completed through the completion API.
+This allows clients to provide suggestions as users type argument values.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CompleteArg;
+import io.quarkiverse.mcp.server.CompletePrompt;
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.TextContent;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyPrompts {
+
+    @Inject
+    FooService fooService;
+
+    @Prompt(description = "Put your description here.")
+    PromptMessage foo(@PromptArg(description = "The name") String name) {
+        return PromptMessage.withUserRole(new TextContent(fooService.ping(name)));
+    }
+
+    @CompletePrompt("foo") // <1>
+    List<String> completeName(@CompleteArg(name = "name") String val) { // <2> <3>
+        return fooService.getNames().stream()
+            .filter(n -> n.startsWith(val))
+            .toList();
+    }
+
+}
+----
+<1> `"foo"` is the name reference to a prompt. If no such prompt exists, the build fails.
+<2> The method returns a list of matching values.
+<3> The `@CompleteArg` annotation can be used to customize the name of an argument.
+
+=== Completion Context
+
+When implementing completion methods, you may need access to previously completed arguments to provide context-aware suggestions.
+The `CompleteContext` interface provides this capability:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CompleteContext;
+import io.quarkiverse.mcp.server.CompletePrompt;
+import io.quarkiverse.mcp.server.CompleteArg;
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptArg;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.TextContent;
+import java.util.List;
+
+public class SearchPrompts {
+
+    @Prompt(description = "Search for files in a directory")
+    PromptMessage searchFiles(
+        @PromptArg(description = "Directory path") String directory,
+        @PromptArg(description = "File name") String fileName) {
+        return PromptMessage.withUserRole(
+            new TextContent("Searching in " + directory + " for " + fileName));
+    }
+
+    @CompletePrompt("searchFiles")
+    List<String> completeFileName(
+        CompleteContext context, // <1>
+        @CompleteArg(name = "fileName") String fileName) {
+
+        // Access the previously completed directory argument
+        String directory = context.arguments().get("directory"); // <2>
+
+        if (directory == null) {
+            // No directory specified yet, provide generic suggestions
+            return List.of("README.md", "pom.xml", "package.json");
+        }
+
+        // Provide context-aware suggestions based on the directory
+        return getFilesInDirectory(directory).stream()
+            .filter(f -> f.startsWith(fileName))
+            .toList();
+    }
+
+    private List<String> getFilesInDirectory(String dir) {
+        // Implementation to list files in directory
+        return List.of("file1.txt", "file2.txt", "config.json");
+    }
+}
+----
+<1> Inject `CompleteContext` to access previously completed arguments.
+<2> Retrieve the value of a previously completed argument by name.
+
+The `CompleteContext.arguments()` method returns a `Map<String, String>` containing all previously completed argument values.
+
+== Programmatic API
+
+It's also possible to register a prompt programmatically with the `io.quarkiverse.mcp.server.PromptManager` API.
+
+For example, if a prompt is only known at application startup time, it can be added as follows:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyPrompts {
+
+    @Inject
+    PromptManager promptManager; // <1>
+
+    @Inject
+    CodeService codeService;
+
+    @Startup // <2>
+    void addPrompt() {
+       promptManager.newPrompt("code_assist") // <3>
+          .setDescription("Prompt for code assistance")
+          .addArgument("lang", "Programming language", true)
+          .setHandler(
+              a -> PromptResponse.withMessages(
+                         List.of(PromptMessage.withUserRole(
+                             new TextContent(codeService.assist(a.args().get("lang")))))))
+          .register(); // <4>
+    }
+}
+----
+<1> The injected manager can be used to obtain metadata and register a new prompt programmatically.
+<2> Ensure that `addPrompt` is executed when the application starts.
+<3> The `PromptManager#newPrompt(String)` method returns `PromptDefinition`, a builder-like API.
+<4> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
+
+The programmatic API also allows you to remove existing prompts at runtime (using `removePrompt(String name)`), which is not possible with the annotation-based approach.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
+* xref:reference-return-types.adoc[Return Types Reference]
+* xref:reference-parameter-types.adoc[Parameter Types Reference]

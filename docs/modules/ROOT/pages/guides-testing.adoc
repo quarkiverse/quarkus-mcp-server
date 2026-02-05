@@ -1,0 +1,488 @@
+= Testing with McpAssured
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers testing MCP servers using the _McpAssured_ testing utility, which provides a fluent API for writing comprehensive integration tests.
+
+== Overview
+
+`McpAssured` is a testing library designed specifically for MCP servers. It provides:
+
+* Fluent API: Readable, chainable test methods
+* Transport Support: Test SSE, Streamable HTTP, and WebSocket transports
+* Type-Safe Assertions: Strongly-typed response validation
+* Batch Testing: Send multiple requests and validate results together
+* Request/Response Inspection: Access raw JSON-RPC messages for advanced scenarios
+
+== Adding the Dependency
+
+Add the test dependency to your project:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-test</artifactId>
+    <scope>test</scope>
+</dependency>
+----
+
+== Creating Test Clients
+
+McpAssured provides three transport-specific client types.
+
+=== SSE Transport Client
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+
+@Test
+public void testSseTransport() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient(); // <1>
+
+    // Test operations...
+
+    client.disconnect(); // <2>
+}
+----
+<1> Creates and connects a new SSE client with default configuration
+<2> Clean up the connection after testing
+
+=== Streamable HTTP Transport Client
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+
+@Test
+public void testStreamableTransport() {
+    McpStreamableTestClient client =
+        McpAssured.newConnectedStreamableClient(); // <1>
+
+    // Test operations...
+
+    client.disconnect();
+}
+----
+<1> Creates and connects a new Streamable HTTP client
+
+=== WebSocket Transport Client
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketTestClient;
+
+@Test
+public void testWebSocketTransport() {
+    McpWebSocketTestClient client =
+        McpAssured.newConnectedWebSocketClient(); // <1>
+
+    // Test operations...
+
+    client.disconnect();
+}
+----
+<1> Creates and connects a new WebSocket client
+
+== Testing Tools
+
+=== Listing Tools
+
+Test that your tools are registered and exposed correctly:
+
+[source,java]
+----
+import static org.junit.jupiter.api.Assertions.*;
+
+@Test
+public void testToolsList() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsList(page -> {
+            assertEquals(3, page.size()); // <1>
+
+            ToolInfo tool = page.findByName("calculate"); // <2>
+            assertEquals("Perform calculations", tool.description());
+            assertNotNull(tool.inputSchema()); // <3>
+        })
+        .thenAssertResults(); // <4>
+}
+----
+<1> Verify the number of tools
+<2> Find a specific tool by name
+<3> Verify tool metadata (schema, description, etc.)
+<4> Execute assertions
+
+=== Calling Tools
+
+Test tool execution and response validation:
+
+[source,java]
+----
+@Test
+public void testToolCall() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsCall("greet",
+            Map.of("name", "Alice"), // <1>
+            response -> {
+                assertFalse(response.isError()); // <2>
+                TextContent content = response.content().get(0).asText(); // <3>
+                assertEquals("Hello, Alice!", content.text());
+            })
+        .thenAssertResults();
+}
+----
+<1> Pass tool arguments as a Map
+<2> Verify the call succeeded
+<3> Extract and validate response content
+
+=== Testing Tool Errors
+
+Verify error handling in your tools:
+
+[source,java]
+----
+@Test
+public void testToolError() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsCall("divide",
+            Map.of("a", 10, "b", 0), // <1>
+            response -> {
+                assertTrue(response.isError()); // <2>
+                String errorText = response.content().get(0).asText().text();
+                assertTrue(errorText.contains("division by zero")); // <3>
+            })
+        .thenAssertResults();
+}
+----
+<1> Trigger an error condition
+<2> Verify the response indicates an error
+<3> Check the error message content
+
+=== Testing Protocol Errors
+
+Test JSON-RPC protocol errors (McpException):
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+
+@Test
+public void testProtocolError() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsCall("secureOperation")
+        .withErrorAssert(error -> { // <1>
+            assertEquals(JsonRpcErrorCodes.SECURITY_ERROR, error.code()); // <2>
+            assertEquals("Unauthorized", error.message());
+        })
+        .send()
+        .thenAssertResults();
+}
+----
+<1> Use `withErrorAssert` for protocol errors
+<2> Validate the JSON-RPC error code and message
+
+== Testing Resources
+
+=== Listing Resources
+
+[source,java]
+----
+@Test
+public void testResourcesList() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .resourcesList(page -> {
+            assertEquals(2, page.size());
+
+            ResourceInfo resource = page.findByUri("file:///config.json");
+            assertEquals("application/json", resource.mimeType());
+            assertEquals("Configuration", resource.name());
+        })
+        .thenAssertResults();
+}
+----
+
+=== Reading Resources
+
+[source,java]
+----
+@Test
+public void testResourceRead() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .resourcesRead("file:///config.json", response -> {
+            TextResourceContents contents =
+                response.contents().get(0).asText();
+            assertTrue(contents.text().contains("\"enabled\": true"));
+            assertEquals("file:///config.json", contents.uri());
+        })
+        .thenAssertResults();
+}
+----
+
+=== Testing Resource Templates
+
+[source,java]
+----
+@Test
+public void testResourceTemplates() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .resourcesTemplatesList(page -> {
+            ResourceTemplateInfo template =
+                page.findByUriTemplate("file:///{path}");
+            assertEquals("Dynamic file access", template.description());
+        })
+        .resourcesRead("file:///data/users.json", response -> {
+            // Validate templated resource
+            assertFalse(response.contents().isEmpty());
+        })
+        .thenAssertResults();
+}
+----
+
+== Testing Prompts
+
+=== Listing Prompts
+
+[source,java]
+----
+@Test
+public void testPromptsList() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .promptsList(page -> {
+            PromptInfo prompt = page.findByName("code_review");
+            assertEquals("Code Review Assistant", prompt.title());
+
+            // Verify prompt arguments
+            List<PromptArgument> args = prompt.arguments();
+            assertEquals(2, args.size());
+            assertTrue(args.stream()
+                .anyMatch(arg -> arg.name().equals("language")));
+        })
+        .thenAssertResults();
+}
+----
+
+=== Getting Prompts
+
+[source,java]
+----
+@Test
+public void testPromptGet() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .promptsGet("code_review",
+            Map.of("language", "java", "level", "senior"),
+            response -> {
+                assertEquals(1, response.messages().size());
+                PromptMessage message = response.messages().get(0);
+                assertEquals(Role.USER, message.role());
+                String text = message.content().asText().text();
+                assertTrue(text.contains("java"));
+            })
+        .thenAssertResults();
+}
+----
+
+== Batch Testing
+
+Send multiple requests and validate them together:
+
+[source,java]
+----
+@Test
+public void testBatchOperations() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsCall("add", Map.of("a", 5, "b", 3),
+            r -> assertEquals("8", r.content().get(0).asText().text()))
+        .toolsCall("multiply", Map.of("a", 5, "b", 3),
+            r -> assertEquals("15", r.content().get(0).asText().text()))
+        .toolsCall("subtract", Map.of("a", 5, "b", 3),
+            r -> assertEquals("2", r.content().get(0).asText().text()))
+        .thenAssertResults(); // <1>
+}
+----
+<1> All requests are sent and validated together
+
+== Advanced Client Configuration
+
+=== Custom Base URI
+
+[source,java]
+----
+@Test
+public void testCustomUri() {
+    McpSseTestClient client = McpAssured.newSseClient()
+        .setBaseUri(URI.create("http://localhost:8081")) // <1>
+        .build()
+        .connect();
+
+    // Test operations...
+}
+----
+<1> Override the default base URI
+
+=== Client Capabilities
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ClientCapability;
+
+@Test
+public void testClientCapabilities() {
+    McpSseTestClient client = McpAssured.newSseClient()
+        .setClientCapabilities(
+            ClientCapability.SAMPLING, // <1>
+            ClientCapability.ROOTS)
+        .build()
+        .connect();
+
+    // Server will see these capabilities during initialization
+}
+----
+<1> Specify which client capabilities to advertise
+
+=== Custom Headers (HTTP Transports)
+
+[source,java]
+----
+@Test
+public void testCustomHeaders() {
+    McpSseTestClient client = McpAssured.newSseClient()
+        .setAdditionalHeaders(msg -> {
+            MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+            headers.add("X-API-Key", "secret123"); // <1>
+            headers.add("X-Request-ID", UUID.randomUUID().toString());
+            return headers;
+        })
+        .build()
+        .connect();
+}
+----
+<1> Add custom HTTP headers for each request
+
+=== Basic Authentication
+
+[source,java]
+----
+@Test
+public void testBasicAuth() {
+    McpSseTestClient client = McpAssured.newSseClient()
+        .setBasicAuth("username", "password") // <1>
+        .build()
+        .connect();
+}
+----
+<1> Enable HTTP Basic Authentication
+
+== Inspecting Raw Messages
+
+Access raw JSON-RPC messages for advanced testing:
+
+[source,java]
+----
+@Test
+public void testRawMessages() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsCall("echo", Map.of("message", "test"))
+        .send()
+        .thenAssertResults();
+
+    Snapshot snapshot = client.snapshot(); // <1>
+
+    assertEquals(1, snapshot.requests().size()); // <2>
+    JsonObject request = snapshot.requests().get(0);
+    assertEquals("tools/call", request.getString("method"));
+
+    assertEquals(1, snapshot.responses().size()); // <3>
+    JsonObject response = snapshot.responses().get(0);
+    assertNotNull(response.getJsonObject("result"));
+}
+----
+<1> Capture a snapshot of all messages
+<2> Inspect raw request messages
+<3> Inspect raw response messages
+
+== Testing Server Notifications
+
+Wait for and validate server-initiated notifications:
+
+[source,java]
+----
+@Test
+public void testProgressNotifications() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    // Trigger an operation that sends progress notifications
+    client.sendAndForget(
+        client.newRequest("tools/call")
+            .put("params", new JsonObject()
+                .put("name", "long_operation")));
+
+    Snapshot snapshot = client.waitForNotifications(2); // <1>
+
+    assertEquals(2, snapshot.notifications().size());
+    JsonObject notification = snapshot.notifications().get(0);
+    assertEquals("notifications/progress", notification.getString("method")); // <2>
+}
+----
+<1> Wait for expected number of notifications
+<2> Validate notification content
+
+== Testing Metadata
+
+Validate metadata in tools, resources, and responses:
+
+[source,java]
+----
+@Test
+public void testMetadata() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient();
+
+    client.when()
+        .toolsList(page -> {
+            ToolInfo tool = page.findByName("alpha");
+            JsonObject meta = tool.meta(); // <1>
+            assertNotNull(meta);
+            assertEquals("high", meta.getString("priceLevel"));
+            assertEquals(100, meta.getInteger("price"));
+        })
+        .toolsCall("alpha", Map.of("price", 1), response -> {
+            TextContent content = response.content().get(0).asText();
+            assertEquals(1, content._meta().size()); // <2>
+
+            Map<MetaKey, Object> responseMeta = response._meta(); // <3>
+            assertTrue(responseMeta.containsKey(new MetaKey("alpha-foo")));
+        })
+        .thenAssertResults();
+}
+----
+<1> Tool-level metadata
+<2> Content-level metadata
+<3> Response-level metadata
+
+== See Also
+
+* xref:concepts-transports.adoc[Transports]

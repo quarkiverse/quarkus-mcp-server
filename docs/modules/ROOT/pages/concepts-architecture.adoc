@@ -1,0 +1,464 @@
+= Architecture
+
+include::includes/attributes.adoc[]
+:diataxis-type: concept
+
+This page explains the architecture of Quarkus MCP Server and how it integrates with Quarkus.
+
+== Overview
+
+The Quarkus MCP Server extension follows Quarkus' build-time optimization philosophy, processing MCP feature declarations at build time and generating optimized runtime code.
+This results in faster startup, lower memory usage, and better performance compared to reflection-based approaches.
+
+=== Key Architectural Principles
+
+**Build-Time Metadata Processing**::
+Tools, resources, and prompts are discovered and validated during the build, not at runtime.
+JSON schemas, capability declarations, and routing information are pre-computed.
+
+**Transport Independence**::
+Server features (tools, resources, prompts) are declared once using annotations.
+The same code works across STDIO, HTTP (SSE/Streamable), and WebSocket transports without modification.
+
+**CDI Integration**::
+All MCP features are CDI beans, enabling dependency injection, interceptors, and integration with Quarkus ecosystem (database access, REST clients, etc.).
+
+**Reactive Foundation**::
+Built on SmallRye Mutiny and Eclipse Vert.x for non-blocking I/O, supporting both imperative and reactive programming models. Async operations don't block threads.
+The MCP server also support virtual threads when running on Java 21+, allowing for a more traditional blocking programming style without sacrificing scalability.
+
+== CDI Integration
+
+All MCP features are CDI beans, providing powerful integration capabilities.
+
+=== Bean Scopes
+
+MCP feature classes can use any CDI scope:
+
+[source,java]
+----
+@Singleton  // Shared across all connections
+public class MyTools {
+    @Tool
+    String globalTool() { }
+}
+
+@ApplicationScoped  // CDI-managed singleton
+public class MyResources {
+    @Resource(uri = "data://config")
+    TextResourceContents config() { }
+}
+
+@RequestScoped  // New instance per MCP request
+public class MyPrompts {
+    @Prompt
+    PromptMessage contextual() { }
+}
+----
+
+`@Singleton` or `@ApplicationScoped` are the most common scoped for stateless features.
+
+=== Dependency Injection
+
+Features can inject other beans, including Quarkus services:
+
+[source,java]
+----
+@Singleton
+public class DatabaseTools {
+
+    @Inject
+    EntityManager em;  // JPA
+
+    @Inject
+    @RestClient
+    GitHubService github;  // REST Client
+
+    @Inject
+    Vertx vertx;  // Vert.x
+
+    @Tool
+    String queryDatabase(String sql) {
+        return em.createQuery(sql).getResultList().toString();
+    }
+
+    @Tool
+    Uni<String> fetchRepoAsync(String repo) {
+        return github.getRepository(repo)
+            .map(r -> r.description());
+    }
+}
+----
+
+This makes it easy to integrate MCP with databases, REST APIs, messaging systems, etc.
+
+== Feature Managers
+
+Each MCP primitive has a dedicated manager that handles registration and invocation.
+
+=== ToolManager
+
+Manages the lifecycle of tools:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+//...
+@Inject
+ToolManager toolManager;
+
+void addDynamicTool() {
+    toolManager.newTool("greet")
+        .setDescription("Greet someone")
+        .addArgument("name", "Person to greet", true, String.class)
+        .setHandler(args ->
+            ToolResponse.success("Hello, " + args.args().get("name")))
+        .register();
+}
+----
+
+The tool manager:
+
+* Stores tool metadata (name, description, schema)
+* Routes `tools/list` requests
+* Invokes tool handlers for `tools/call` requests
+* Applies guardrails (input/output validation and transformation)
+* Encodes return values to `ToolResponse`
+* Sends notifications (progress, logging)
+
+=== ResourceManager
+
+Manages resources and subscriptions:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ResourceManager;
+
+@Inject
+ResourceManager resourceManager;
+
+void notifySubscribers(String uri) {
+    resourceManager.getResource(uri)
+        .sendUpdateAndForget();  // Notify all subscribers
+}
+----
+
+The resource manager:
+
+* Stores resource metadata (URI, description)
+* Routes `resources/list` and `resources/read` requests
+* Manages subscriptions (`resources/subscribe`, `resources/unsubscribe`)
+* Sends update notifications to subscribers
+* Encodes return values to `ResourceResponse`
+
+=== PromptManager
+
+Manages prompt templates:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.PromptManager;
+
+@Inject
+PromptManager promptManager;
+
+void addTemplate() {
+    promptManager.newPrompt("review")
+        .setDescription("Code review prompt")
+        .addArgument("language", "Programming language", true)
+        .setHandler(args ->
+            PromptResponse.withMessages(
+                List.of(PromptMessage.withUserRole(
+                    "Review this " + args.args().get("language") + " code"))))
+        .register();
+}
+----
+
+The prompt manager:
+
+* Stores prompt metadata (name, description, arguments)
+* Routes `prompts/list` and `prompts/get` requests
+* Invokes prompt handlers
+* Supports completion API (`completion/complete`)
+* Encodes return values to `PromptResponse`
+
+== Execution Model
+
+The Quarkus MCP server supports both imperative (blocking, executed on worker or virtual threads) and reactive code.
+
+=== Supported Execution Models
+
+**Event Loop (Non-blocking)**::
+Default for I/O operations. Tool/resource/prompt methods execute on Vert.x event loop threads unless they perform blocking operations.
+Automatically detected (using method signature) or explicitly declared with `@NonBlocking`.
+
+**Worker Thread (Blocking)**::
+Used when methods perform blocking I/O (database calls, file operations), or computation intensive tasks.
+Automatically detected (using method signature) or explicitly declared with `@Blocking`.
+
+**Virtual Thread (Blocking)**::
+Available on Java 21+. Similar to worker threads but runs blocking operations on virtual threads instead of platform threads.
+Enables high concurrency for I/O-bound workloads with traditional blocking programming style.
+Declared with `@RunOnVirtualThread`.
+
+
+NOTE: Kotlin suspend functions are always considered non-blocking and may not be annotated with `@Blocking`, `@NonBlocking` or `@RunOnVirtualThread` and may not be in a class annotated with `@RunOnVirtualThread`.
+
+
+=== Automatic Detection
+
+[source,java]
+----
+import io.smallrye.mutiny.Uni;
+
+// Method returning Uni<T> is non-blocking by convention
+@Tool
+Uni<String> eventLoopTool() {
+    return Uni.createFrom().item("fast");  // Runs on event loop
+}
+
+
+// Method returning non-Uni type is blocking by convention
+@Tool
+String workerThreadTool() {
+    Thread.sleep(1000);  // Blocking! Automatically offloaded to worker thread
+    return "slow";
+}
+
+// Method annotation with @Blocking or @RunOnVirtualThread overrides automatic detection
+@Tool
+@Blocking  // Explicit declaration
+String explicitlyBlocking() {
+    // Database call
+    return em.createQuery("SELECT ...").getSingleResult();
+}
+
+@Tool
+@RunOnVirtualThread  // Run on virtual thread (Java 21+)
+String virtualThreadTool() {
+    // Blocking I/O on virtual thread - highly scalable
+    return httpClient.blockingRequest();  // Won't tie up platform threads
+}
+----
+
+You can use `io.quarkus.runtime.BlockingOperationControl.isBlockingAllowed` to detect if blocking calls are allowed.
+
+=== Async with Uni
+
+Return `Uni<T>` for truly async operations:
+
+[source,java]
+----
+@Tool
+Uni<String> asyncTool() {
+    return restClient.getData()  // Non-blocking HTTP call
+        .map(data -> process(data))
+        .onFailure().recoverWithItem("fallback");
+}
+----
+
+Async tools don't block threads while waiting for I/O.
+
+=== Choosing the Right Execution Model
+
+Understanding when to use each execution model:
+
+[cols="1,2,2,2"]
+|===
+|Model |Best For |Advantages |Considerations
+
+|**Worker Thread**
+|Blocking I/O when virtual threads unavailable (Java < 21)
+|Simple blocking code, works with legacy APIs
+|Limited by worker thread pool size, higher memory overhead
+
+|**Virtual Thread**
+|Blocking I/O on Java 21+ (database, REST clients, file I/O)
+|Simple blocking code with async-like scalability, no pool limits
+|Requires Java 21+, slight scheduling overhead
+
+|**Event Loop (Uni<T>)**
+|Non-blocking I/O with reactive libraries
+|Maximum throughput, no thread overhead, true async
+|Requires reactive programming, cannot perform blocking operations using `emitOn` or `runSubscriptionOn` to switch execution context
+|===
+
+=== CDI Request Scope
+
+Each feature method execution is associated with a new CDI request context.
+This means that if a client sends a batch of MCP requests (e.g. multiple tools/call messages) then each MCP request (e.g. @Tool method invocation) receives a different instance of a `@RequestScoped` bean.
+However, if the HTTP transport is used then all MCP requests will have the same `io.vertx.core.http.HttpServerRequest` injected.
+
+== Schema Generation
+
+JSON schemas for tools are generated at **runtime**  using the https://github.com/victools/jsonschema-generator[Victools JSON Schema Generator].
+
+
+=== Caching schemas
+
+By default, schemas are not cached.
+This means that every time a client requests the tool list, the server will generate the JSON schema for each tool on the fly. This allows for dynamic schemas that can change based on runtime conditions.
+
+If your application contains a lot of tools with complex input/output schemas it might make sense to cache the generated schemas so that they are not re-generated for each `tools/list` request.
+You can leverage CDI decorators to implement a simple cache:
+
+[source, java]
+----
+import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
+import jakarta.inject.Inject;
+import jakarta.decorator.Decorator;
+import jakarta.decorator.Delegate;
+import jakarta.annotation.Priority;
+
+@Priority(1) <1>
+@Decorator <2>
+public class CachingGlobalSchemaGeneratorDecorator implements GlobalInputSchemaGenerator {
+
+   private final ConcurrentMap<String, InputSchema> cache = new ConcurrentHashMap<>();
+
+   @Inject
+   @Delegate
+   GlobalInputSchemaGenerator delegate; <3>
+
+   @Override
+   public InputSchema generate(ToolInfo tool) {
+      return cache.computeIfAbsent(tool.name(), k -> {
+            return delegate.generate(tool); <4>
+      });
+   }
+}
+----
+1. @Priority enables the decorator. Decorators with smaller priority values are called first.
+2. @Decorator marks a decorator component.
+3. Each decorator must declare exactly one delegate injection point. The decorator applies to beans that are assignable to this delegate injection point.
+4. The decorator may invoke any method of the delegate object. And the container invokes either the next decorator in the chain or the business method of the intercepted instance.
+
+TIP: CDI decorators are similar to CDI interceptors, but because they implement interfaces with business semantics, they are able to implement business logic.
+
+
+
+
+=== Default Schema Generation
+
+For simple types, schemas are generated automatically:
+
+[source,java]
+----
+@Tool
+String search(
+    String query,      // → {"type": "string"}
+    int maxResults,    // → {"type": "number"}
+    boolean caseSensitive  // → {"type": "boolean"}
+) { }
+----
+
+=== Jackson Annotations
+
+If `jsonschema-module-jackson` is on the classpath, Jackson annotations affect schema generation:
+
+[source,java]
+----
+record SearchRequest(
+    @JsonProperty(required = true)
+    String query,
+
+    @JsonPropertyDescription("Maximum number of results")
+    int maxResults,
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    LocalDate since
+) { }
+----
+
+=== Bean Validation
+
+If `jsonschema-module-jakarta-validation` is on the classpath, constraints are included in schemas:
+
+[source,java]
+----
+@Tool
+String process(
+    @NotNull @Email String email,     // → {"type": "string", "format": "email"}
+    @Min(1) @Max(100) int count        // → {"type": "number", "minimum": 1, "maximum": 100}
+) { }
+----
+
+=== Custom Schema Generators
+
+Override default behavior with custom generators:
+
+[source,java]
+----
+@Singleton
+public class MyGlobalSchemaGenerator implements GlobalInputSchemaGenerator {
+    @Override
+    public InputSchema generate(ToolInfo tool) {
+        // Custom schema generation logic
+    }
+}
+----
+
+See xref:guides-implementing-tools.adoc#customizing-json-schema-generation[Customizing JSON Schema Generation] for details.
+
+== Extension Points
+
+The architecture provides several extension points for customization.
+
+=== Custom Encoders
+
+Control how types are converted to MCP responses:
+
+* `ContentEncoder<T>` - Convert objects to `Content`
+* `ToolResponseEncoder<T>` - Convert objects to `ToolResponse`
+* `ResourceContentsEncoder<T>` - Convert objects to `ResourceContents`
+* `PromptResponseEncoder<T>` - Convert objects to `PromptResponse`
+
+See xref:guides-custom-encoders.adoc[Custom Encoders Guide].
+
+=== Guardrails
+
+Intercept and transform tool inputs/outputs:
+
+* `ToolInputGuardrail` - Validate/transform arguments before tool execution
+* `ToolOutputGuardrail` - Validate/transform results after tool execution
+
+See xref:guides-using-guardrails.adoc[Using Guardrails Guide].
+
+=== Lifecycle Hooks
+
+React to MCP lifecycle events:
+
+[source,java]
+----
+@Notification(Type.INITIALIZED)
+void onClientReady(McpConnection connection) {
+    // Initialize per-connection state
+}
+
+@Notification(Type.ROOTS_LIST_CHANGED)
+void onRootsChanged(Roots roots) {
+    // React to client context changes
+}
+----
+
+=== Programmatic Registration
+
+Register features dynamically at runtime:
+
+[source,java]
+----
+@Startup
+void registerDynamicFeatures() {
+    toolManager.newTool("dynamic").setHandler(...).register();
+    resourceManager.newResource("uri").setHandler(...).register();
+    promptManager.newPrompt("template").setHandler(...).register();
+}
+----
+
+== See Also
+
+* xref:concepts-mcp-protocol.adoc[MCP Protocol Overview]
+* xref:concepts-transports.adoc[Transports]
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-custom-encoders.adoc[Custom Encoders]
+* xref:guides-using-guardrails.adoc[Using Guardrails]

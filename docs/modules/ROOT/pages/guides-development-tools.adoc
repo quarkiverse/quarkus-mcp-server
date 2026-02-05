@@ -1,0 +1,237 @@
+= Development Tools
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers the development tools available for building, testing, and debugging MCP servers during development.
+
+== Overview
+
+The Quarkus MCP Server extension provides several tools to help you develop and test your MCP server:
+
+* **Traffic Logging**: Monitor JSON-RPC messages exchanged between client and server
+* **Dev UI**: Test your tools, resources, and prompts directly from the browser during development
+* **MCP Inspector**: External testing tool for comprehensive protocol testing
+
+== Traffic Logging
+
+Traffic logging allows you to monitor all JSON-RPC messages sent and received by your MCP server.
+This is useful for debugging communication issues, understanding the protocol flow, and verifying request/response formats.
+
+=== Enabling Traffic Logging
+
+Enable traffic logging in your `application.properties`:
+
+[source,properties]
+----
+# Enable traffic logging
+quarkus.mcp.server.traffic-logging.enabled=true
+
+# Limit the number of characters logged per message (optional)
+quarkus.mcp.server.traffic-logging.text-limit=1000
+----
+
+CAUTION: Disable traffic logging in production environments as it can significantly impact performance and may expose sensitive data in logs.
+
+=== Configuration Options
+
+[cols="1,2,1"]
+|===
+|Property |Description |Default
+
+|`quarkus.mcp.server.traffic-logging.enabled`
+|Enable or disable traffic logging
+|`false`
+
+|`quarkus.mcp.server.traffic-logging.text-limit`
+|Maximum number of characters to log per text message
+|`200`
+|===
+
+=== Per-Server Traffic Logging
+
+When using multiple servers, you can enable traffic logging for specific servers:
+
+[source,properties]
+----
+# Enable logging for the admin server only
+quarkus.mcp.server.admin.traffic-logging.enabled=true
+quarkus.mcp.server.admin.traffic-logging.text-limit=500
+
+# Default server: no logging
+quarkus.mcp.server.traffic-logging.enabled=false
+----
+
+=== Log Output
+
+When enabled, traffic logging outputs JSON-RPC messages to the application logs:
+
+[source,text]
+----
+2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.tra.TrafficLogger] Received:
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "greet",
+    "arguments": {
+      "name": "Alice"
+    }
+  },
+  "id": 1
+}
+
+2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.tra.TrafficLogger] Sent:
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Hello, Alice!"
+      }
+    ]
+  },
+  "id": 1
+}
+----
+
+== Dev UI
+
+The Quarkus Dev UI provides a web-based interface for testing your MCP server during development.
+It's automatically available when running in dev mode.
+
+=== Accessing Dev UI
+
+Start your application in dev mode:
+
+[source,bash]
+----
+./mvnw quarkus:dev
+----
+
+Open your web browser and navigate to:
+
+[source,text]
+----
+http://localhost:8080/q/dev-ui
+----
+
+=== Testing Tools
+
+The Dev UI allows you to test your MCP tools interactively:
+
+1. In the Dev UI, locate the "MCP Server - HTTP/SSE" card
+2. Click "Tools" to see all registered tools
+3. Click the "Call" button next to any tool
+4. Enter the required arguments in the form
+5. Click "Call" to invoke the tool and see the response
+
+image::devui-mcp-tools.png[MCP Server Tools in Dev UI,align="center"]
+
+image::devui-greet-tool-call.png[Calling the greet tool from Dev UI,align="center"]
+
+=== Features
+
+The Dev UI allows:
+
+* Viewing all registered tools with their descriptions and input schemas
+* Calling tools with custom arguments and see responses immediately
+* Checking input forms are generated from tool schemas (schema validation)
+* Seeing tool execution results and errors
+
+=== Limitations
+
+The Dev UI is only available for HTTP-based transports (SSE, Streamable HTTP, and WebSocket). STDIO transport servers cannot use the Dev UI and should use MCP Inspector instead.
+
+NOTE: Dev UI is automatically disabled in production builds.
+It's only available when running with `quarkus:dev` or when `quarkus.dev-mode.enabled=true`.
+
+== MCP Inspector
+
+The MCP Inspector is an external tool provided by Anthropic for comprehensive MCP server testing.
+It supports all transport types and provides a full-featured client interface.
+
+=== Installation
+
+Follow the instructions from the official MCP Inspector documentation:
+
+https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector Installation Guide]
+
+=== Starting MCP Inspector
+
+Run the MCP Inspector:
+
+[source,bash]
+----
+npx @modelcontextprotocol/inspector
+----
+
+Open the MCP Inspector in your browser using the link with the token shown in the console (typically `http://localhost:5173/?token=<random-token>`).
+
+=== Testing HTTP Transport
+
+To test an MCP server using Streamable HTTP transport:
+
+* 1. Start your Quarkus application in dev mode:
++
+[source,bash]
+----
+./mvnw quarkus:dev
+----
+
+* 2. In the MCP Inspector, configure the server connection:
+   * Transport: Select "Streamable HTTP"
+   * URL: Enter `http://localhost:8080/mcp`
+
+image::mcp-inspector-http-config.png[MCP Inspector HTTP Configuration,align="center"]
+
+* 3. Click "Connect" to establish the connection
+
+* 4. Use the Inspector to:
+   * List and invoke tools
+   * Browse and read resources
+   * Get and test prompts
+   * Monitor protocol messages
+
+image::mcp-inspector-http-greet.png[Invoking the greet tool via HTTP,align="center"]
+
+=== Testing STDIO Transport
+
+To test an MCP server using STDIO transport:
+
+* 1. Build your native executable:
++
+[source,bash]
+----
+./mvnw package -Dnative
+----
+
+* 2. In the MCP Inspector, configure the server connection:
+   * Transport: Select "STDIO"
+   * Command: Enter the absolute path to your native executable
++
+For example: `/Users/username/projects/mcp-server/target/mcp-server-1.0.0-runner`
+
+image::mcp-inspector-config.png[MCP Inspector Configuration,align="center"]
+
+* 3. Click "Connect" to start the server process
+
+* 4. Test your tools, resources, and prompts through the Inspector interface
+
+image::mcp-inspector-greet-tool.png[Invoking the greet tool,align="center"]
+
+=== Testing WebSocket Transport
+
+For WebSocket transport:
+
+* Transport: Select "WebSocket"
+* URL: `ws://localhost:8080/ws/mcp`
+
+== See Also
+
+* xref:guides-testing.adoc[Testing with McpAssured]
+* xref:reference-configuration.adoc[Configuration Reference]
+* xref:concepts-transports.adoc[Transports]
+* xref:getting-started-http.adoc[Getting Started with HTTP Transport]
+* xref:getting-started-stdio.adoc[Getting Started with STDIO Transport]

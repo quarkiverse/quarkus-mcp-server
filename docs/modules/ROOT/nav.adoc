@@ -1,3 +1,41 @@
-* xref:index.adoc[Reference Guide]
-* xref:cli-adapter.adoc[CLI Adapter]
-* xref:hibernate-validator.adoc[Hibernate Validator Integration]
+* xref:index.adoc[Overview]
+
+.Getting Started
+** xref:getting-started-stdio.adoc[Getting Started (STDIO)]
+** xref:getting-started-http.adoc[Getting Started (Streamable HTTP)]
+
+.How-to Guides
+** Project Setup
+*** xref:guides-using-bom.adoc[Using the BOM]
+** Core Features
+*** xref:guides-implementing-tools.adoc[Implementing Tools]
+*** xref:guides-implementing-resources.adoc[Implementing Resources]
+*** xref:guides-implementing-prompts.adoc[Implementing Prompts]
+** Advanced Features
+*** xref:guides-using-guardrails.adoc[Tools Guardrails]
+*** xref:guides-hibernate-validator.adoc[Hibernate Validator]
+*** xref:guides-using-structured-content.adoc[Tools and Structured Content]
+*** xref:guides-custom-encoders.adoc[Custom Encoders]
+*** xref:guides-metadata-and-icons.adoc[Metadata and Icons]
+*** xref:guides-error-handling.adoc[Error Handling]
+*** xref:guides-multiple-servers.adoc[Multiple Servers]
+*** xref:guides-using-filters-and-checks.adoc[Using Filters and Checks]
+** Integration
+*** xref:guides-client-integration.adoc[Client Integration]
+*** xref:guides-logging-progress-cancellation.adoc[Monitoring]
+*** xref:guides-cli-adapter.adoc[CLI Adapter]
+*** xref:guides-development-tools.adoc[Development Tools]
+*** xref:guides-testing.adoc[Testing with McpAssured]
+
+.Reference
+** xref:reference-content-types.adoc[Content Types]
+** xref:reference-annotations.adoc[Annotations]
+** xref:reference-parameter-types.adoc[Parameter Types]
+** xref:reference-return-types.adoc[Return Types]
+** xref:reference-configuration.adoc[Configuration]
+** xref:reference-security.adoc[Security]
+
+.Concepts
+** xref:concepts-mcp-protocol.adoc[MCP Protocol]
+** xref:concepts-architecture.adoc[Architecture]
+** xref:concepts-transports.adoc[Transports]

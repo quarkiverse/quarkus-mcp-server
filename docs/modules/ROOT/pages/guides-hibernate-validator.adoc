@@ -1,6 +1,7 @@
 == Hibernate Validator Integration
 
 include::./includes/attributes.adoc[]
+:diataxis-type: howto
 
 The extension provides integration with Hibernate Validator, a Jakarta Validation implementation.
 First, it adds the `quarkus-hibernate-validator` dependency so that all `@Tool` methods with constraint annotations are validated when executed.

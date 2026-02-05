@@ -1,0 +1,437 @@
+= Implementing Resources
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+Resources in MCP allow servers to expose data, files, or other content that clients can read and subscribe to.
+MCP provides a standardized way for servers to expose resources to clients.
+This guide shows you how to implement resources using both declarative annotations and programmatic APIs.
+
+== Basic Resource Implementation
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.Resource;
+import jakarta.inject.Inject;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+// @Singleton <1>
+public class MyResources {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Resource(uri = "file:///project/alpha") <3>
+    BlobResourceContents alpha() throws Exception {
+        return BlobResourceContents.create(
+            "file:///project/alpha",
+            Files.readAllBytes(Path.of("alpha.txt")));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyResources` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Resource` annotates a business method of a CDI bean that should be exposed as a resource. By default, the name of the resource is derived from the method name.
+
+=== Resource Content Types
+
+Resources can return different types of content:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class FileResources {
+
+    @Resource(uri = "file:///config.json")
+    TextResourceContents configFile() throws Exception {
+        String content = Files.readString(Path.of("config.json"));
+        return TextResourceContents.create(
+            "file:///config.json",
+            content);
+    }
+
+    @Resource(uri = "file:///image.png")
+    BlobResourceContents imageFile() throws Exception {
+        byte[] imageData = Files.readAllBytes(Path.of("image.png"));
+        return BlobResourceContents.create(
+            "file:///image.png",
+            imageData);
+    }
+}
+----
+
+== Resource Templates
+
+Resource templates allow dynamic URI-based resources with variable substitution.
+They use Level 1 URI templates (https://datatracker.ietf.org/doc/html/rfc6570#section-1.2[RFC 6570]) for constructing resource URIs.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.inject.Inject;
+
+// @Singleton <1>
+public class MyResourceTemplates {
+
+    @Inject <2>
+    ProjectService projectService;
+
+    @ResourceTemplate(uriTemplate = "file:///project/{name}") <3> <4>
+    TextResourceContents project(String name, RequestUri uri) { <5>
+        return TextResourceContents.create(
+            uri.value(),
+            projectService.readProject(name));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyResourceTemplates` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@ResourceTemplate` annotates a business method of a CDI bean that should be exposed as a resource template. By default, the name of the resource template is derived from the method name.
+<4> `ResourceTemplate#uriTemplate()` contains a Level 1 URI template that can be used to construct resource URIs.
+<5> The `name` parameter refers to the expression from the URI template. The `uri` parameter refers to the actual resource URI.
+
+=== Multiple Template Variables
+
+Resource templates can have multiple variables:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.inject.Inject;
+
+public class DocumentResources {
+
+    @Inject
+    DocumentService documentService;
+
+    @ResourceTemplate(uriTemplate = "doc:///{category}/{id}")
+    TextResourceContents document(String category, String id, RequestUri uri) {
+        String content = documentService.getDocument(category, id);
+        return TextResourceContents.create(uri.value(), content);
+    }
+}
+----
+
+== Return Types
+
+The result of a "resource read" operation is always represented as a `ResourceResponse`.
+However, `@Resource` and `@ResourceTemplate` methods can return other types that are automatically converted.
+
+For details on supported return types and conversion rules, see xref:reference-return-types.adoc#resource-return-types[Resource Return Type Conversion].
+
+=== Common Return Type Examples
+
+Return a single resource contents:
+
+[source,java]
+----
+@Resource(uri = "file:///data.txt")
+TextResourceContents singleResource() {
+    return TextResourceContents.create("file:///data.txt", "content");
+}
+----
+
+Return multiple resource contents:
+
+[source,java]
+----
+import java.util.List;
+
+@Resource(uri = "file:///combined")
+List<TextResourceContents> multipleResources() {
+    return List.of(
+        TextResourceContents.create("file:///part1.txt", "Part 1"),
+        TextResourceContents.create("file:///part2.txt", "Part 2")
+    );
+}
+----
+
+Return async results with Uni:
+
+[source,java]
+----
+import io.smallrye.mutiny.Uni;
+
+@Resource(uri = "file:///async-data")
+Uni<TextResourceContents> asyncResource() {
+    return fetchDataAsync()
+        .map(data -> TextResourceContents.create("file:///async-data", data));
+}
+----
+
+TIP: There is a default resource contents encoder registered; it encodes the returned value as JSON.
+
+== Method Parameters
+
+A `@Resource` method may accept the following special parameters:
+
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.RequestUri`:: The requested URI.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`:: Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
+
+A `@ResourceTemplate` method must only accept `String` parameters that represent template variables.
+However, it may also accept the same special parameters listed above.
+
+See xref:reference-parameter-types.adoc[Parameter Types Reference] for complete details on supported parameter types.
+
+Example with logging and progress:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.RequestUri;
+
+@Resource(uri = "file:///large-file.dat")
+BlobResourceContents largeFile(McpLog log, Progress progress) throws Exception {
+    // Note this is a very dummy example of the progress API usage, just for demonstration purposes.
+    // In a real implementation, you would typically want to send multiple progress updates during the file reading process.
+
+    log.info("Reading large file");
+    progress.send("Reading file", 0.0);
+
+    byte[] data = Files.readAllBytes(Path.of("large-file.dat"));
+
+    progress.send("File read complete", 1.0);
+    return BlobResourceContents.create("file:///large-file.dat", data);
+}
+----
+
+== Subscriptions
+
+MCP clients can subscribe to a specific resource and receive update notifications.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.inject.Inject;
+
+public class MyResources {
+
+    @Inject
+    ResourceManager resourceManager; // <1>
+
+    @Resource(uri = "file:///status.txt")
+    TextResourceContents status() {
+        return TextResourceContents.create(
+            "file:///status.txt",
+            "Current status: active");
+    }
+
+    void statusUpdated() {
+       resourceManager.getResource("file:///status.txt").sendUpdateAndForget(); // <2>
+    }
+}
+----
+<1> The injected manager can be used to obtain resource info for a specific URI.
+<2> Sends update notifications to all subscribers.
+
+When `sendUpdateAndForget()` is called, all clients that have subscribed to the resource will be notified and can re-fetch the updated content.
+
+== Completion API
+
+Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.
+This allows clients to provide suggestions as users type template variable values.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CompleteResourceTemplate;
+import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyTemplates {
+
+    @Inject
+    ProjectService projectService;
+
+    @ResourceTemplate(uriTemplate = "file:///project/{name}")
+    TextResourceContents project(String name, RequestUri uri) {
+        return TextResourceContents.create(
+            uri.value(),
+            projectService.readProject(name));
+    }
+
+    @CompleteResourceTemplate("project") // <1>
+    List<String> completeName(String name) { // <2>
+        return projectService.getNames().stream()
+            .filter(n -> n.startsWith(name))
+            .toList();
+    }
+
+}
+----
+<1> `"project"` is the name reference to a resource template. If no such resource template exists, the build fails.
+<2> The method returns a list of matching values.
+
+=== Completion Context
+
+When implementing completion methods for resource templates with multiple variables, you may need access to previously completed variables to provide context-aware suggestions.
+The `CompleteContext` interface provides this capability:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CompleteContext;
+import io.quarkiverse.mcp.server.CompleteResourceTemplate;
+import io.quarkiverse.mcp.server.RequestUri;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class DocumentTemplates {
+
+    @Inject
+    DocumentService documentService;
+
+    @ResourceTemplate(uriTemplate = "doc:///{category}/{id}")
+    TextResourceContents document(String category, String id, RequestUri uri) {
+        return TextResourceContents.create(
+            uri.value(),
+            documentService.getDocument(category, id));
+    }
+
+    @CompleteResourceTemplate("document")
+    List<String> completeId(
+        CompleteContext context, // <1>
+        String id) {
+
+        // Access the previously completed category variable
+        String category = context.arguments().get("category"); // <2>
+
+        if (category == null) {
+            // No category specified yet, provide generic suggestions
+            return List.of("doc1", "doc2", "doc3");
+        }
+
+        // Provide context-aware suggestions based on the category
+        return documentService.getDocumentIds(category).stream()
+            .filter(id -> id.startsWith(partial))
+            .toList();
+    }
+}
+----
+<1> Inject `CompleteContext` to access previously completed template variables.
+<2> Retrieve the value of a previously completed variable by name.
+
+The `CompleteContext.arguments()` method returns a `Map<String, String>` containing all previously completed template variable values.
+
+== Programmatic API
+
+It's also possible to register resources and resource templates programmatically.
+
+=== Programmatic Resources
+
+Use the `io.quarkiverse.mcp.server.ResourceManager` API to register resources programmatically:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.ResourceManager;
+import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+public class MyResources {
+
+    @Inject
+    ResourceManager resourceManager; // <1>
+
+    @Startup // <2>
+    void addResource() {
+       resourceManager.newResource("file:///project/alpha") // <3>
+          .setDescription("Alpha resource file")
+          .setHandler(
+              args -> new ResourceResponse(
+                  List.of(BlobResourceContents.create(
+                      args.requestUri().value(),
+                      Files.readAllBytes(Path.of("alpha.txt"))))))
+          .register(); // <4>
+    }
+}
+----
+<1> The injected manager can be used to obtain metadata and register a new resource programmatically.
+<2> Ensure that `addResource` is executed when the application starts.
+<3> The `ResourceManager#newResource(String)` method returns `ResourceDefinition`, a builder-like API.
+<4> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
+
+The programmatic API also allows you to remove existing resources at runtime (using `removeResource(String uri)`), which is not possible with the annotation-based approach.
+
+=== Programmatic Resource Templates
+
+Use the `io.quarkiverse.mcp.server.ResourceTemplateManager` API to register resource templates programmatically:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateManager;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyResourceTemplates {
+
+    @Inject
+    ResourceTemplateManager resourceTemplateManager; // <1>
+
+    @Inject
+    FileService fileService;
+
+    @Startup // <2>
+    void addResourceTemplate() {
+       resourceTemplateManager.newResourceTemplate("alpha") // <3>
+          .setUriTemplate("file:///alpha/{foo}")
+          .setDescription("Alpha file template")
+          .setHandler(
+              rta -> new ResourceResponse(
+                  List.of(BlobResourceContents.create(
+                      rta.requestUri().value(),
+                      fileService.load(rta.args().get("foo"))))))
+          .register(); // <4>
+    }
+}
+----
+<1> The injected manager can be used to obtain metadata and register a new resource template programmatically.
+<2> Ensure that `addResourceTemplate` is executed when the application starts.
+<3> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition`, a builder-like API.
+<4> Registers the resource template definition.
+
+The programmatic API also allows you to remove existing resource templates at runtime (using `removeResourceTemplate(String name)`), which is not possible with the annotation-based approach.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-prompts.adoc[Implementing Prompts]
+* xref:reference-content-types.adoc[Content Types Reference]
+* xref:reference-annotations.adoc[Annotations Reference]
+* xref:reference-return-types.adoc[Return Types Reference]
+* xref:reference-parameter-types.adoc[Parameter Types Reference]

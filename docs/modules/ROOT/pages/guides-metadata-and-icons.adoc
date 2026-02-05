@@ -1,0 +1,489 @@
+= Metadata and Icons
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers adding custom metadata and visual icons to MCP features (tools, resources, prompts, and resource templates).
+
+== Metadata Fields
+
+The `@MetaField` annotation adds custom metadata to features.
+Metadata is included in the `_meta` object of the feature definition and can be used by clients for filtering, categorization, or custom logic.
+
+=== Basic Usage
+
+Add custom metadata fields to any feature method:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.MetaField;
+
+public class MyTools {
+
+    @MetaField(name = "category", value = "data-processing")
+    @MetaField(name = "version", value = "2.1")
+    @Tool(description = "Processes data with advanced algorithms")
+    String processData(String input) {
+        return "Processed: " + input;
+    }
+}
+----
+
+The tool's metadata will include:
+
+[source,json]
+----
+{
+  "_meta": {
+    "category": "data-processing",
+    "version": "2.1"
+  }
+}
+----
+
+=== Metadata Types
+
+`@MetaField` supports multiple value types:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.MetaField.Type;
+
+public class MyTools {
+
+    @MetaField(name = "priceLevel", value = "high")  // <1>
+    @MetaField(name = "price", type = Type.INT, value = "100")  // <2>
+    @MetaField(name = "active", type = Type.BOOLEAN, value = "true")  // <3>
+    @MetaField(name = "tags", type = Type.JSON, value = "[\"premium\", \"fast\"]")  // <4>
+    @MetaField(name = "config", type = Type.JSON, value = "{\"timeout\": 30}")  // <5>
+    @Tool(description = "Premium data service")
+    String premiumService(String query) {
+        return "Result for " + query;
+    }
+}
+----
+<1> String type (default)
+<2> Integer type
+<3> Boolean type
+<4> JSON array
+<5> JSON object
+
+The resulting metadata:
+
+[source,json]
+----
+{
+  "_meta": {
+    "priceLevel": "high",
+    "price": 100,
+    "active": true,
+    "tags": ["premium", "fast"],
+    "config": {"timeout": 30}
+  }
+}
+----
+
+=== Metadata Key Prefixes
+
+Use prefixes to namespace your metadata and avoid conflicts:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.MetaField;
+
+public class MyTools {
+
+    @MetaField(prefix = "mycompany.com/", name = "tier", value = "enterprise")  // <1>
+    @MetaField(prefix = "monitoring.io/", name = "tracked", value = "true")  // <2>
+    @Tool(description = "Enterprise tier tool")
+    String enterpriseTool() {
+        return "Enterprise result";
+    }
+}
+----
+<1> Custom company prefix
+<2> Third-party monitoring prefix
+
+NOTE: Certain prefixes like `modelcontextprotocol.io/` and `tools.mcp.com/` are reserved for the MCP specification.
+
+=== Metadata on Resources
+
+Metadata works the same way on resources:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.MetaField.Type;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+
+public class MyResources {
+
+    @MetaField(name = "cacheTime", type = Type.INT, value = "300")
+    @MetaField(name = "refreshable", type = Type.BOOLEAN, value = "true")
+    @Resource(uri = "data://config", description = "Application configuration")
+    TextResourceContents config(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "{\"setting\": \"value\"}");
+    }
+}
+----
+
+=== Metadata on Prompts
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.MetaField.Type;
+
+public class MyPrompts {
+
+    @MetaField(name = "complexity", value = "advanced")
+    @MetaField(name = "estimatedTokens", type = Type.INT, value = "500")
+    @Prompt(description = "Code review assistant prompt")
+    PromptMessage codeReview() {
+        return PromptMessage.withUserRole("Review this code for best practices...");
+    }
+}
+----
+
+=== Metadata on Resource Templates
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.MetaField;
+import io.quarkiverse.mcp.server.MetaField.Type;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+
+public class MyResourceTemplates {
+
+    @MetaField(name = "format", value = "log")
+    @MetaField(name = "retention", type = Type.INT, value = "7")
+    @ResourceTemplate(uriTemplate = "logs://{date}", description = "Daily log files")
+    TextResourceContents dailyLogs(String date, RequestUri uri) {
+        return new TextResourceContents(uri.value(), "Log data for " + date);
+    }
+}
+----
+
+== Icons
+
+The `@Icons` annotation associates visual icons with features.
+Icons can help users quickly identify tools, resources, or prompts in user interfaces.
+
+=== Basic Usage
+
+Create an `IconsProvider` implementation and reference it with `@Icons`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import java.util.List;
+
+public class MyTools {
+
+    @Icons(DatabaseIcons.class)  // <1>
+    @Tool(description = "Query the database")
+    String queryDatabase(String sql) {
+        return "Query result";
+    }
+
+    public static class DatabaseIcons implements IconsProvider {  // <2>
+
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(
+                new Icon("file://icons/database.png", "image/png")  // <3>
+            );
+        }
+    }
+}
+----
+<1> Reference the icons provider
+<2> Implement `IconsProvider`
+<3> Return a list of icons
+
+=== Icons with Multiple Sizes
+
+Provide icons in different sizes for different display contexts:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import java.util.List;
+
+public class MultiSizeIcons implements IconsProvider {
+
+    @Override
+    public List<Icon> get(FeatureInfo feature) {
+        return List.of(
+            new Icon("file://icons/tool-16.png", "image/png",
+                     List.of("16x16"), null),  // <1>
+            new Icon("file://icons/tool-32.png", "image/png",
+                     List.of("32x32"), null),  // <2>
+            new Icon("file://icons/tool-64.png", "image/png",
+                     List.of("64x64"), null)   // <3>
+        );
+    }
+}
+----
+<1> Small icon for compact displays
+<2> Medium icon
+<3> Large icon for detailed views
+
+=== Icons with Theme Support
+
+Provide different icons for light and dark themes:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.Icon.Theme;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import java.util.List;
+
+public class ThemedIcons implements IconsProvider {
+
+    @Override
+    public List<Icon> get(FeatureInfo feature) {
+        return List.of(
+            new Icon("file://icons/tool-light.png", "image/png",
+                     null, Theme.LIGHT),  // <1>
+            new Icon("file://icons/tool-dark.png", "image/png",
+                     null, Theme.DARK)    // <2>
+        );
+    }
+}
+----
+<1> Icon for light theme
+<2> Icon for dark theme
+
+=== CDI Bean Icons Provider
+
+Icons providers can be CDI beans to access other services:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import java.util.List;
+
+public class MyTools {
+
+    @Icons(DynamicIcons.class)
+    @Tool(description = "Tool with dynamic icons")
+    String myTool() {
+        return "Result";
+    }
+
+    @ApplicationScoped  // <1>
+    public static class DynamicIcons implements IconsProvider {
+
+        @Inject  // <2>
+        ToolManager toolManager;
+
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            if (toolManager.getTool(feature.name()) != null) {
+                return List.of(new Icon("file://icons/active.png", "image/png"));
+            }
+            return List.of(new Icon("file://icons/inactive.png", "image/png"));
+        }
+    }
+}
+----
+<1> Make it a CDI bean
+<2> Inject dependencies
+
+=== Data URIs for Embedded Icons
+
+Use `data:` URIs to embed icon data directly:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import java.util.List;
+
+public class EmbeddedIcons implements IconsProvider {
+
+    private static final String ICON_DATA =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";  // <1>
+
+    @Override
+    public List<Icon> get(FeatureInfo feature) {
+        return List.of(new Icon(ICON_DATA, "image/png"));
+    }
+}
+----
+<1> Base64-encoded image data (should be cached in production)
+
+IMPORTANT: If using `data:` URIs with base64-encoded images, load and cache the data separately rather than generating it on every call. IconsProvider execution must not block the caller thread.
+
+=== Icons on Resources
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.RequestUri;
+import java.util.List;
+
+public class MyResources {
+
+    @Icons(DocumentIcons.class)
+    @Resource(uri = "file:///docs/readme.txt", description = "README file")
+    TextResourceContents readme(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "README content");
+    }
+
+    public static class DocumentIcons implements IconsProvider {
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(new Icon("file://icons/document.png", "image/png"));
+        }
+    }
+}
+----
+
+=== Icons on Prompts
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.PromptMessage;
+import java.util.List;
+
+public class MyPrompts {
+
+    @Icons(ChatIcons.class)
+    @Prompt(description = "Chat assistant prompt")
+    PromptMessage chatPrompt() {
+        return PromptMessage.withUserRole("Hello! How can I help you?");
+    }
+
+    public static class ChatIcons implements IconsProvider {
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(new Icon("file://icons/chat.png", "image/png"));
+        }
+    }
+}
+----
+
+=== Class-Level Icons
+
+Apply icons to all features in a class:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import java.util.List;
+
+@Icons(CommonIcons.class)  // <1>
+public class MyTools {
+
+    @Tool
+    String tool1() {
+        return "Result 1";  // <2>
+    }
+
+    @Tool
+    String tool2() {
+        return "Result 2";  // <2>
+    }
+
+    @Icons(SpecialIcons.class)  // <3>
+    @Tool
+    String specialTool() {
+        return "Special result";
+    }
+
+    public static class CommonIcons implements IconsProvider {
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(new Icon("file://icons/common.png", "image/png"));
+        }
+    }
+
+    public static class SpecialIcons implements IconsProvider {
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(new Icon("file://icons/special.png", "image/png"));
+        }
+    }
+}
+----
+<1> Class-level icons apply to all features
+<2> These use CommonIcons
+<3> Method-level annotation overrides class-level
+
+=== Programmatic Icons
+
+Set icons programmatically using manager APIs:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class DynamicTools {
+
+    @Inject
+    ToolManager toolManager;
+
+    @Startup
+    void registerToolsWithIcons() {
+        toolManager.newTool("searchTool")
+            .setDescription("Search the database")
+            .setIcons(new Icon("file://icons/search.png", "image/png"))  // <1>
+            .setHandler(args -> ToolResponse.success("Search results"))
+            .register();
+    }
+}
+----
+<1> Set icons when registering programmatically
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
+* xref:guides-implementing-prompts.adoc[Implementing Prompts]
+* xref:reference-annotations.adoc[MCP Annotations]
