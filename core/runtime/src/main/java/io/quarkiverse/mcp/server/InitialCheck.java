@@ -30,7 +30,12 @@ public interface InitialCheck {
 
         public static final CheckResult SUCCESS = new CheckResult(false, null);
 
+        @Deprecated
         public static Uni<CheckResult> successs() {
+            return Uni.createFrom().item(SUCCESS);
+        }
+
+        public static Uni<CheckResult> success() {
             return Uni.createFrom().item(SUCCESS);
         }
 
