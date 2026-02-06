@@ -44,14 +44,13 @@ This document outlines the analysis, content strategy, and implementation plan f
 
 ### Content Gaps
 
-| Gap | Impact | Priority |
-|-----|--------|----------|
-| No conceptual introduction to MCP | Users unfamiliar with MCP have no context | High |
-| No quick start tutorial | High barrier to entry for new users | High |
-| No client integration guides | Users don't know how to connect Claude Desktop, VS Code, etc. | High |
-| No deployment guidance | No native compilation, containerization, or cloud deployment info | Medium |
-| No troubleshooting section | Common issues scattered or undocumented | High |
-| No migration guidance | Version changes (e.g., artifactId rename) mentioned but not structured | Low |
+| Gap | Impact | Priority | Notes |
+|-----|--------|----------|-------|
+| No conceptual introduction to MCP | Users unfamiliar with MCP have no context | Low | Link to modelcontextprotocol.io rather than duplicating content |
+| No quick start tutorial | High barrier to entry for new users | High | |
+| No deployment guidance | No native compilation, containerization, or cloud deployment info | Medium | Reference standard Quarkus deployment guides |
+| No troubleshooting section | Common issues scattered or undocumented | High | Content TBD |
+| No migration guidance | Version changes (e.g., artifactId rename) mentioned but not structured | Low | |
 
 ### Existing Content Catalog
 
@@ -87,22 +86,20 @@ This document outlines the analysis, content strategy, and implementation plan f
 
 ### Primary User Jobs
 
-| Job ID | User Job | Priority | Current Coverage |
-|--------|----------|----------|------------------|
-| J1 | Understand what MCP is and why to use Quarkus for it | High | Minimal (2 paragraphs) |
-| J2 | Create my first MCP server quickly | High | None |
-| J3 | Expose tools that AI clients can call | High | Partial (mixed with reference) |
-| J4 | Expose prompt templates for AI clients | Medium | Partial (mixed with reference) |
-| J5 | Expose resources/data to AI clients | Medium | Partial (mixed with reference) |
-| J6 | Connect my server to Claude Desktop | High | None |
-| J7 | Connect my server to VS Code/Cursor | Medium | None |
-| J8 | Secure my MCP server endpoints | High | Partial (in main doc) |
-| J9 | Test my MCP server | Medium | Partial (brief section) |
-| J10 | Debug MCP communication issues | Medium | Partial (traffic logging, inspector) |
-| J11 | Deploy to production (container/native) | Medium | None |
-| J12 | Register features dynamically at runtime | Low | Covered but buried |
-| J13 | Validate tool inputs | Medium | Covered (separate file) |
-| J14 | Handle long-running operations with progress | Low | Covered but buried |
+| Job ID | User Job | Priority | Current Coverage | Notes |
+|--------|----------|----------|------------------|-------|
+| J1 | Understand what MCP is and why to use Quarkus for it | Low | Minimal (2 paragraphs) | Link to modelcontextprotocol.io for MCP concepts |
+| J2 | Create my first MCP server quickly | High | None | |
+| J3 | Expose tools that AI clients can call | High | Partial (mixed with reference) | |
+| J4 | Expose prompt templates for AI clients | Medium | Partial (mixed with reference) | |
+| J5 | Expose resources/data to AI clients | Medium | Partial (mixed with reference) | |
+| J6 | Secure my MCP server endpoints | High | Partial (in main doc) | |
+| J7 | Test my MCP server | Medium | Partial (brief section) | |
+| J8 | Debug MCP communication issues | Medium | Partial (traffic logging, inspector) | |
+| J9 | Deploy to production (container/native) | Medium | None | Reference standard Quarkus deployment guides |
+| J10 | Register features dynamically at runtime | Low | Covered but buried | |
+| J11 | Validate tool inputs | Medium | Covered (separate file) | |
+| J12 | Handle long-running operations with progress | Low | Covered but buried | |
 
 ### Proposed Content Outline
 
@@ -115,8 +112,7 @@ The existing monolithic structure requires significant restructuring. The primar
 ```
 Quarkus MCP Server Documentation
 ├── Getting Started (Assembly) [NEW]
-│   ├── [concept] What is MCP? [EXTRACT from index.adoc]
-│   ├── [concept] Why Quarkus for MCP servers? [NEW]
+│   ├── [concept] Why Quarkus for MCP servers? [NEW] (link to modelcontextprotocol.io for MCP concepts)
 │   └── [procedure] Creating your first MCP server [NEW]
 │
 ├── How-To Guides (Assemblies) [NEW]
@@ -134,11 +130,6 @@ Quarkus MCP Server Documentation
 │   │   ├── [procedure] Creating a static resource [EXTRACT]
 │   │   ├── [procedure] Creating a resource template [EXTRACT]
 │   │   └── [procedure] Handling resource subscriptions [EXTRACT]
-│   │
-│   ├── Client Integration [NEW]
-│   │   ├── [procedure] Connecting to Claude Desktop [NEW]
-│   │   ├── [procedure] Connecting to VS Code extensions [NEW]
-│   │   └── [procedure] Using MCP Inspector for testing [EXTRACT]
 │   │
 │   ├── Security [NEW]
 │   │   ├── [procedure] Securing HTTP endpoints [EXTRACT]
@@ -179,17 +170,11 @@ Quarkus MCP Server Documentation
 | File Name | Type | Source | Action |
 |-----------|------|--------|--------|
 | `assembly-getting-started.adoc` | assembly | New | Create |
-| `con-mcp-overview.adoc` | concept | Extract from index.adoc lines 5-23 | Create |
 | `con-quarkus-mcp-benefits.adoc` | concept | New | Create |
 | `proc-creating-first-mcp-server.adoc` | procedure | New | Create |
 
-**con-mcp-overview.adoc requirements:**
-- Explain MCP protocol purpose
-- Describe the client-server model
-- List supported MCP specification version
-- Note known limitations
-
 **con-quarkus-mcp-benefits.adoc requirements:**
+- Link to modelcontextprotocol.io for MCP protocol concepts (avoid duplicating external docs)
 - CDI integration benefits
 - Build-time optimization
 - Dev mode advantages
@@ -230,21 +215,6 @@ Quarkus MCP Server Documentation
 | `proc-creating-static-resource.adoc` | procedure | Extract from index.adoc | Create |
 | `proc-creating-resource-template.adoc` | procedure | Extract from index.adoc | Create |
 | `proc-handling-resource-subscriptions.adoc` | procedure | Extract from index.adoc | Create |
-
-#### How-To: Client Integration
-
-| File Name | Type | Source | Action |
-|-----------|------|--------|--------|
-| `assembly-client-integration.adoc` | assembly | New | Create |
-| `proc-connecting-claude-desktop.adoc` | procedure | New | Create |
-| `proc-connecting-vscode.adoc` | procedure | New | Create |
-| `proc-using-mcp-inspector.adoc` | procedure | Extract from index.adoc | Create |
-
-**proc-connecting-claude-desktop.adoc requirements:**
-- Claude Desktop MCP configuration file location
-- JSON configuration format
-- stdio vs HTTP transport setup
-- Verification steps
 
 #### How-To: Security
 
@@ -305,7 +275,6 @@ Quarkus MCP Server Documentation
 ** xref:assembly-exposing-tools.adoc[Exposing Tools]
 ** xref:assembly-exposing-prompts.adoc[Exposing Prompts]
 ** xref:assembly-exposing-resources.adoc[Exposing Resources]
-** xref:assembly-client-integration.adoc[Client Integration]
 ** xref:assembly-securing-mcp-server.adoc[Securing Your Server]
 ** xref:assembly-testing-mcp-server.adoc[Testing]
 ** xref:assembly-advanced-features.adoc[Advanced Features]
@@ -319,46 +288,43 @@ Quarkus MCP Server Documentation
 
 ### Priority 1: Getting Started (Critical Path)
 
-1. [ ] Create `con-mcp-overview.adoc` - Extract and expand MCP introduction
-2. [ ] Create `con-quarkus-mcp-benefits.adoc` - New content
-3. [ ] Create `proc-creating-first-mcp-server.adoc` - New tutorial
-4. [ ] Create `assembly-getting-started.adoc` - Combine above modules
+1. [ ] Create `con-quarkus-mcp-benefits.adoc` - New content (link to modelcontextprotocol.io for MCP concepts)
+2. [ ] Create `proc-creating-first-mcp-server.adoc` - New tutorial
+3. [ ] Create `assembly-getting-started.adoc` - Combine above modules
 
 ### Priority 2: Core How-To Guides (High Value)
 
-5. [ ] Create `proc-creating-basic-tool.adoc` - Extract from index.adoc
-6. [ ] Create `proc-connecting-claude-desktop.adoc` - New content (high demand)
-7. [ ] Create `proc-using-mcp-inspector.adoc` - Extract from index.adoc
-8. [ ] Create `assembly-exposing-tools.adoc` - Combine tool procedures
-9. [ ] Create `assembly-client-integration.adoc` - Combine client procedures
+4. [ ] Create `proc-creating-basic-tool.adoc` - Extract from index.adoc
+5. [ ] Create `proc-using-mcp-inspector.adoc` - Extract from index.adoc
+6. [ ] Create `assembly-exposing-tools.adoc` - Combine tool procedures
 
 ### Priority 3: Complete How-To Coverage
 
-10. [ ] Create remaining tool procedures (arguments, structured content, validation)
-11. [ ] Create prompt procedures and assembly
-12. [ ] Create resource procedures and assembly
-13. [ ] Create security procedures and assembly
-14. [ ] Create testing procedures and assembly
+7. [ ] Create remaining tool procedures (arguments, structured content, validation)
+8. [ ] Create prompt procedures and assembly
+9. [ ] Create resource procedures and assembly
+10. [ ] Create security procedures and assembly
+11. [ ] Create testing procedures and assembly
 
 ### Priority 4: Reference Consolidation
 
-15. [ ] Create `ref-method-parameters.adoc` - Consolidate repeated content
-16. [ ] Create `ref-return-type-conversions.adoc` - Consolidate conversion rules
-17. [ ] Create `ref-tool-annotation.adoc` - Extract annotation details
-18. [ ] Create remaining reference modules
-19. [ ] Create `assembly-reference.adoc` - Combine all reference modules
+12. [ ] Create `ref-method-parameters.adoc` - Consolidate repeated content
+13. [ ] Create `ref-return-type-conversions.adoc` - Consolidate conversion rules
+14. [ ] Create `ref-tool-annotation.adoc` - Extract annotation details
+15. [ ] Create remaining reference modules
+16. [ ] Create `assembly-reference.adoc` - Combine all reference modules
 
 ### Priority 5: Advanced Features
 
-20. [ ] Create advanced feature procedures (programmatic API, progress, sampling)
-21. [ ] Create `assembly-advanced-features.adoc`
+17. [ ] Create advanced feature procedures (programmatic API, progress, sampling)
+18. [ ] Create `assembly-advanced-features.adoc`
 
 ### Priority 6: Cleanup
 
-22. [ ] Update `nav.adoc` with new structure
-23. [ ] Deprecate/archive original `index.adoc`
-24. [ ] Rename `cli-adapter.adoc` to `proc-cli-adapter.adoc`
-25. [ ] Review and update cross-references
+19. [ ] Update `nav.adoc` with new structure
+20. [ ] Deprecate/archive original `index.adoc`
+21. [ ] Rename `cli-adapter.adoc` to `proc-cli-adapter.adoc`
+22. [ ] Review and update cross-references
 
 ---
 
@@ -368,7 +334,7 @@ Quarkus MCP Server Documentation
 
 | Prefix | Module Type | Example |
 |--------|-------------|---------|
-| `con-` | Concept | `con-mcp-overview.adoc` |
+| `con-` | Concept | `con-quarkus-mcp-benefits.adoc` |
 | `proc-` | Procedure | `proc-creating-basic-tool.adoc` |
 | `ref-` | Reference | `ref-tool-annotation.adoc` |
 | `assembly-` | Assembly | `assembly-getting-started.adoc` |
@@ -417,7 +383,7 @@ Quarkus MCP Server Documentation
 
 1. **Small documentation set**: Only 3 main pages makes complete restructure feasible
 2. **Monolithic decomposition**: Primary work is splitting `index.adoc` into modules
-3. **New content focus**: Significant new content needed (getting started, client integration)
+3. **New content focus**: Significant new content needed (getting started tutorial)
 4. **Upstream coordination**: Changes should be coordinated with Quarkiverse maintainers
 
 ### Recommended Approach
