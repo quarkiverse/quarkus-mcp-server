@@ -9,7 +9,7 @@
     </parent>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-parent</artifactId>
-    <version>1.9.1</version>
+    <version>999-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Quarkus MCP Server - Parent</name>
 
@@ -33,7 +33,7 @@
         <connection>scm:git:git@github.com:quarkiverse/quarkus-mcp-server.git</connection>
         <developerConnection>scm:git:git@github.com:quarkiverse/quarkus-mcp-server.git</developerConnection>
         <url>https://github.com/quarkiverse/quarkus-mcp-server</url>
-        <tag>1.9.1</tag>
+        <tag>HEAD</tag>
   </scm>
 
     <properties>
