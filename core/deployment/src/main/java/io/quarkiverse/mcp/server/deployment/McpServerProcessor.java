@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -91,6 +92,7 @@ import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpObjectMapperCustomizer;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
+import io.quarkiverse.mcp.server.runtime.MicrometerMcpMetrics;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptEncoderResultMapper;
@@ -138,6 +140,7 @@ import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
+import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.deployment.util.JandexUtil;
 import io.quarkus.gizmo.BytecodeCreator;
@@ -152,6 +155,7 @@ import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.gizmo.SignatureBuilder;
+import io.quarkus.runtime.metrics.MetricsFactory;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 
@@ -570,6 +574,14 @@ class McpServerProcessor {
                             validationErrors, reflectiveClasses);
                 }
             }
+        }
+    }
+
+    @BuildStep
+    void addMetricsSupport(BuildProducer<AdditionalBeanBuildItem> additionalBeans,
+            Optional<MetricsCapabilityBuildItem> metricsCapability) {
+        if (metricsCapability.map(m -> m.metricsSupported(MetricsFactory.MICROMETER)).orElse(false)) {
+            additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(MicrometerMcpMetrics.class));
         }
     }
 

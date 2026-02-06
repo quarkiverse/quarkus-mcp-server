@@ -47,6 +47,12 @@
             <version>${jsonschema-generator.version}</version>
             <optional>true</optional>
         </dependency>
+        <!-- Integration with Micrometer extension -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

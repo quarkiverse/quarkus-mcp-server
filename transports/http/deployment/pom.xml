@@ -99,6 +99,11 @@
             <version>${swagger-annotations.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-micrometer-registry-prometheus-deployment</artifactId>
+          <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
