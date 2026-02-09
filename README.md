@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-14-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-15-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -106,6 +106,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mrecouly"><img src="https://avatars.githubusercontent.com/u/583648?v=4?s=100" width="100px;" alt="Matthieu Recouly"/><br /><sub><b>Matthieu Recouly</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mrecouly" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://wjglerum.nl"><img src="https://avatars.githubusercontent.com/u/7404187?v=4?s=100" width="100px;" alt="Willem Jan Glerum"/><br /><sub><b>Willem Jan Glerum</b></sub></a><br /><a href="#infra-wjglerum" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/SaSteffen"><img src="https://avatars.githubusercontent.com/u/93011641?v=4?s=100" width="100px;" alt="Sascha Steffen"/><br /><sub><b>Sascha Steffen</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=SaSteffen" title="Code">💻</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=SaSteffen" title="Tests">⚠️</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/cescoffier"><img src="https://avatars.githubusercontent.com/u/402301?v=4?s=100" width="100px;" alt="Clement Escoffier"/><br /><sub><b>Clement Escoffier</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=cescoffier" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
