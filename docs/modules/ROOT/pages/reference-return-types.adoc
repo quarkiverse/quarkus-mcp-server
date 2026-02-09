@@ -1,0 +1,327 @@
+= Return Types Reference
+
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+[[return-type-conversion]]
+== Return Type Conversion
+
+The Quarkus MCP Server automatically converts method return types to the appropriate MCP protocol types.
+This section explains the conversion rules for different feature types, eliminating the need to always return the exact protocol type.
+
+=== Common Conversion Patterns
+
+All MCP server features support the following common patterns:
+
+* **Reactive types**: Methods may return `io.smallrye.mutiny.Uni<T>` wrapping any of the supported return types for asynchronous execution
+* **Automatic conversion**: Non-native types are automatically encoded using the appropriate encoder API
+* **Default encoders**: Built-in JSON encoders are registered for common types
+
+=== Tool Return Types
+
+The result of a "tool call" operation is always represented as a `ToolResponse`.
+However, `@Tool` methods can return other types that are automatically converted:
+
+[cols="2,3,2"]
+|===
+|Return Type |Conversion Result |Response Status
+
+|`String`
+|Single `TextContent` object
+|Success
+
+|`Content` implementation
+|Single content object (TextContent, ImageContent, etc.)
+|Success
+
+|`List<Content>` or `List<String>`
+|List of content objects
+|Success
+
+|Any other type `X` or `List<X>`
+|Encoded via `ToolResponseEncoder` → `ContentEncoder`, then rules above apply
+|Success
+
+|`Uni<T>` wrapping any above type
+|Asynchronous execution, unwrapped and converted per rules above
+|Success
+
+|===
+
+TIP: A default content encoder is registered that encodes values as JSON.
+
+**Example conversions:**
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.smallrye.mutiny.Uni;
+
+import java.util.List;
+
+public class MyTools {
+
+    // Returns String - converted to TextContent
+    @Tool
+    String simple(String input) {
+        return "Processed: " + input;
+    }
+
+    // Returns Content - used directly
+    @Tool
+    TextContent withContent(String input) {
+        return new TextContent("Result: " + input);
+    }
+
+    // Returns List<String> - converted to List<TextContent>
+    @Tool
+    List<String> multiple(String input) {
+        return List.of("First: " + input, "Second: " + input);
+    }
+
+    // Returns custom type - encoded via ToolResponseEncoder
+    @Tool
+    MyResult custom(String input) {
+        return new MyResult(input, 42);
+    }
+
+    // Returns Uni - asynchronous conversion
+    @Tool
+    Uni<String> async(String input) {
+        return Uni.createFrom().item("Async result: " + input);
+    }
+
+    // Returns ToolResponse directly - no conversion
+    @Tool
+    ToolResponse explicit(String input) {
+        return ToolResponse.success(new TextContent("Explicit: " + input));
+    }
+}
+
+record MyResult(String text, int count) {
+}
+----
+
+=== Prompt Return Types
+
+The result of a "prompt get" operation is always represented as a `PromptResponse`.
+However, `@Prompt` methods can return other types that are automatically converted:
+
+[cols="2,3"]
+|===
+|Return Type |Conversion Result
+
+|`PromptMessage`
+|Response with no description, single message
+
+|`List<PromptMessage>`
+|Response with no description, list of messages
+
+|Any other type `X`
+|Encoded via `PromptResponseEncoder`
+
+|`Uni<T>` wrapping any above type
+|Asynchronous execution, unwrapped and converted per rules above
+
+|===
+
+**Example conversions:**
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.TextContent;
+import io.smallrye.mutiny.Uni;
+
+import java.util.List;
+
+public class MyPrompts {
+
+    // Returns PromptMessage - converted to PromptResponse
+    @Prompt
+    PromptMessage simple(String topic) {
+        return PromptMessage.withUserRole(new TextContent("Tell me about " + topic));
+    }
+
+    // Returns List<PromptMessage> - converted to PromptResponse
+    @Prompt
+    List<PromptMessage> conversation(String topic) {
+        return List.of(
+            PromptMessage.withUserRole(new TextContent("Question about " + topic)),
+            PromptMessage.withAssistantRole(new TextContent("Here's information about " + topic))
+        );
+    }
+
+    // Returns Uni - asynchronous conversion
+    @Prompt
+    Uni<PromptMessage> async(String topic) {
+        return Uni.createFrom().item(
+            PromptMessage.withUserRole(new TextContent("Async prompt: " + topic))
+        );
+    }
+
+    // Returns PromptResponse directly - no conversion
+    @Prompt
+    PromptResponse explicit(String topic) {
+        return PromptResponse.withMessages(
+            PromptMessage.withUserRole(new TextContent("Explicit: " + topic))
+        );
+    }
+}
+----
+
+=== Resource Return Types
+
+The result of a "resource read" operation is always represented as a `ResourceResponse`.
+However, `@Resource` and `@ResourceTemplate` methods can return other types that are automatically converted:
+
+[cols="2,3"]
+|===
+|Return Type |Conversion Result
+
+|`ResourceContents` implementation
+|Response with single contents object (TextResourceContents, BlobResourceContents)
+
+|`List<ResourceContents>`
+|Response with list of contents objects
+
+|Any other type `X` or `List<X>`
+|Encoded via `ResourceContentsEncoder`, then rules above apply
+
+|`Uni<T>` wrapping any above type
+|Asynchronous execution, unwrapped and converted per rules above
+
+|===
+
+TIP: A default resource contents encoder is registered that encodes values as JSON.
+
+**Example conversions:**
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.RequestUri;
+import io.smallrye.mutiny.Uni;
+
+import java.util.List;
+
+public class MyResources {
+
+    // Returns TextResourceContents - converted to ResourceResponse
+    @Resource(uri = "file:///data.txt")
+    TextResourceContents simple(RequestUri uri) {
+        return new TextResourceContents(uri.value(), "Resource content", "text/plain");
+    }
+
+    // Returns List<ResourceContents> - converted to ResourceResponse
+    @Resource(uri = "file:///multiple.txt")
+    List<TextResourceContents> multiple(RequestUri uri) {
+        return List.of(
+            new TextResourceContents(uri.value(), "Part 1", "text/plain"),
+            new TextResourceContents(uri.value(), "Part 2", "text/plain")
+        );
+    }
+
+    // Returns Uni - asynchronous conversion
+    @ResourceTemplate(uriTemplate = "file:///{path}")
+    Uni<TextResourceContents> async(String path, RequestUri uri) {
+        return Uni.createFrom().item(
+            new TextResourceContents(uri.value(), "Async content", "text/plain")
+        );
+    }
+
+    // Returns ResourceResponse directly - no conversion
+    @Resource(uri = "file:///explicit.txt")
+    ResourceResponse explicit(RequestUri uri) {
+        return new ResourceResponse(
+            List.of(new TextResourceContents(uri.value(), "Explicit", "text/plain"))
+        );
+    }
+}
+----
+
+=== Completion Return Types
+
+Completion methods for prompts and resource templates must return `CompletionResponse`.
+However, `@CompletePrompt` and `@CompleteResourceTemplate` methods can return other types that are automatically converted:
+
+[cols="2,3"]
+|===
+|Return Type |Conversion Result
+
+|`String`
+|Response with single value
+
+|`List<String>`
+|Response with list of values
+
+|`Uni<T>` wrapping any above type
+|Asynchronous execution, unwrapped and converted per rules above
+
+|===
+
+**Example conversions:**
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CompletePrompt;
+import io.quarkiverse.mcp.server.CompleteResourceTemplate;
+import io.quarkiverse.mcp.server.CompletionResponse;
+import io.smallrye.mutiny.Uni;
+
+import java.util.List;
+
+public class MyCompletions {
+
+    // Returns String - converted to CompletionResponse with single value
+    @CompletePrompt("myPrompt")
+    String singleValue(String partial) {
+        return "matched-value";
+    }
+
+    // Returns List<String> - converted to CompletionResponse with values
+    @CompletePrompt("myPrompt")
+    List<String> multipleValues(String partial) {
+        return List.of("option1", "option2", "option3");
+    }
+
+    // Returns Uni - asynchronous conversion
+    @CompleteResourceTemplate("myTemplate")
+    Uni<List<String>> async(String partial) {
+        return Uni.createFrom().item(List.of("async1", "async2"));
+    }
+
+    // Returns CompletionResponse directly - no conversion
+    @CompletePrompt("myPrompt")
+    CompletionResponse explicit(String partial) {
+        return CompletionResponse.create(List.of("explicit1", "explicit2"));
+    }
+}
+----
+
+=== Custom Encoders
+
+When returning custom types, you can provide custom encoders to control the conversion process.
+See the main documentation for details on implementing:
+
+* `ToolResponseEncoder` for tool return types
+* `ContentEncoder` for content encoding
+* `PromptResponseEncoder` for prompt return types
+* `ResourceContentsEncoder` for resource return types
+
+This allows you to return domain objects directly from your methods while controlling how they are serialized for MCP clients.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-prompts.adoc[Implementing Prompts]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
+* xref:reference-parameter-types.adoc[Parameter Types Reference]

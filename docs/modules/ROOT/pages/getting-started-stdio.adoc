@@ -1,0 +1,91 @@
+= Getting Started with STDIO Transport
+
+include::includes/attributes.adoc[]
+:diataxis-type: tutorial
+
+This tutorial guides you through creating your first MCP server using the STDIO transport.
+It uses Quarkus native compilation to create an MCP server that runs as a native executable with fast startup times.
+
+== What You'll Build
+
+You'll create a simple MCP server that:
+
+* Exposes a tool to greet users
+* Runs as a native executable
+* Communicates via STDIO transport
+
+== Prerequisites
+
+* JDK 17 or later
+* Maven 3.9+ or Gradle
+* Mandrel / GraalVM (for native compilation)
+
+== Creating the Project
+
+Create a new Quarkus project with the MCP STDIO extension:
+
+[source,bash,subs=attributes+]
+----
+mvn io.quarkus:quarkus-maven-plugin:{quarkus-version}:create \
+    -DprojectGroupId=org.acme \
+    -DprojectArtifactId=mcp-stdio-quickstart \
+    -Dextensions="io.quarkiverse.mcp:quarkus-mcp-server-stdio:{project-version}"
+cd mcp-stdio-quickstart
+----
+
+== Creating Your First Tool
+
+Create a simple greeting tool:
+
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.Tool;
+
+public class GreetingTools {
+
+    @Tool(description = "Greet a user by name")
+    public String greet(String name) {
+        return "Hello, " + name + "!";
+    }
+}
+----
+
+That's it! The `@Tool` annotation automatically registers this method as an MCP tool.
+
+== Building a Native Executable
+
+Build a native executable for optimal performance:
+
+[source,bash]
+----
+mvn package -Dnative
+----
+
+The native executable will be created in the `target` directory.
+
+== Testing Your MCP Server with the MCP Inspector
+
+The MCP Inspector is a handy tool for testing MCP servers.
+Follow the instructions from https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] to download and run it.
+
+Open the MCP Inspector in your browser (use the link with the token shown in the console) and configure it to connect to your native executable using STDIO transport.
+In the server configuration, set the command to the absolute path of your native executable (e.g., `/path/to/mcp-stdio-quickstart/target/mcp-stdio-quickstart-1.0.0-runner`).
+
+image::mcp-inspector-config.png[MCP Inspector Configuration,align="center"]
+
+Once connected, you can list the tools exposed by the server and invoke the `greet` tool:
+
+image::mcp-inspector-greet-tool.png[Invoking the greet tool,align="center"]
+
+Congratulations! You've successfully invoked your first MCP tool!
+You can now extend your server by adding more tools, prompts, and resources, and connect it to any MCP-compatible client (like Claude or Cursor).
+
+== What's Next?
+
+* xref:guides-implementing-tools.adoc[Learn more about implementing tools]
+* xref:guides-implementing-prompts.adoc[Add prompts to your server]
+* xref:guides-implementing-resources.adoc[Expose resources]
+* xref:concepts-transports.adoc[Understand STDIO transport]
+* xref:guides-using-bom.adoc[Using the BOM for dependency management]

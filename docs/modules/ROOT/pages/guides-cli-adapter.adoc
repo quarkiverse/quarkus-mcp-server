@@ -1,0 +1,362 @@
+= CLI Adapter
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+The CLI adapter enables Quarkus CLI applications to expose their commands as MCP tools automatically.
+This allows existing CLI tools to be integrated into MCP-compatible AI assistants without code changes.
+
+== Overview
+
+The CLI adapter bridges Quarkus CLI commands and MCP by:
+
+* Automatically adding a `--mcp` option to your CLI's `TopCommand`
+* Converting all CLI subcommands into MCP tools
+* Mapping command parameters to tool arguments
+* Handling standard input/output for MCP communication
+
+This means your CLI application can run in two modes:
+- Normal CLI mode: Traditional command-line interface (script, manual invocation)
+- MCP mode: Exposes commands as tools to MCP clients (with `--mcp` flag)
+
+== Getting Started
+
+Add the CLI adapter dependency to your Quarkus CLI project:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-cli-adapter</artifactId>
+    <version>${quarkus-mcp.version}</version>
+</dependency>
+----
+
+That's it! The adapter automatically discovers all commands reachable from your `TopCommand` and exposes them as MCP tools.
+
+== Example
+
+Here's a complete example showing how a simple CLI application becomes MCP-enabled.
+
+=== 1. Create Your CLI Command
+
+Create a standard Quarkus CLI command:
+
+[source,java]
+----
+package com.example;
+
+import java.util.concurrent.Callable;
+
+import jakarta.inject.Inject;
+
+import io.quarkus.picocli.runtime.annotations.TopCommand;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.Parameters;
+
+@TopCommand
+@Command(name = "code-service", description = "Code assistance tool", mixinStandardHelpOptions = true)
+public class CodeServiceCommand implements Callable<Integer> {
+
+    @Inject
+    CodeService codeService;
+
+    @Parameters(defaultValue = "java", description = "The programming language")
+    String language;
+
+    @Override
+    public Integer call() {
+        System.out.println(codeService.assist(language));
+        return 0;
+    }
+}
+----
+
+=== 2. Implement Your Service
+
+[source,java]
+----
+package com.example;
+
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
+public class CodeService {
+
+    public String assist(String language) {
+        return switch (language) {
+            case "java" -> "System.out.println(\"Hello world!\");";
+            case "python" -> "print('Hello world!')";
+            case "javascript" -> "console.log('Hello world!');";
+            default -> "// Language not supported";
+        };
+    }
+}
+----
+
+=== 3. Run as a Traditional CLI
+
+[source,bash]
+----
+# Normal CLI usage
+$ java -jar myapp.jar python
+print('Hello world!')
+
+$ java -jar myapp.jar --help
+Usage: code-service [-hV] [--mcp] [<language>]
+Code assistance tool
+      [<language>]   The programming language
+  -h, --help         Show this help message and exit.
+      --mcp          Start an MCP server for the current CLI.
+  -V, --version      Print version information and exit.
+----
+
+=== 4. Run as an MCP Server
+
+[source,bash]
+----
+# Start as MCP server
+$ java -jar myapp.jar --mcp
+# Server starts and listens on stdin/stdout for MCP messages
+----
+
+=== 5. Use from an MCP Client
+
+The command becomes available as an MCP tool:
+
+[source,json]
+----
+// List available tools
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "id": 1
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "codeservicecommand",
+        "description": "Code assistance tool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string",
+              "description": "The programming language"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+
+// Call the tool
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "id": 2,
+  "params": {
+    "name": "codeservicecommand",
+    "arguments": {
+      "language": "python"
+    }
+  }
+}
+
+// Tool response
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "print('Hello world!')"
+      }
+    ]
+  }
+}
+----
+
+== Under the hood
+
+=== Command to Tool Mapping
+
+[cols="1,1,2"]
+|===
+|CLI Element |MCP Element |Example
+
+|Command name
+|Tool name
+|`code-service` → `codeservicecommand`
+
+|Command description
+|Tool description
+|`"Code assistance tool"`
+
+|`@Parameters`
+|Tool argument (required if no default)
+|`String language` → `"language": {"type": "string"}`
+
+|`@Option`
+|Tool argument
+|`@Option(names = "-f") String format` → `"format": {...}`
+
+|Default value
+|Argument default
+|`defaultValue = "java"` → optional argument
+
+|Parameter description
+|Argument description
+|`description = "The programming language"`
+|===
+
+=== Supported Parameter Types
+
+The adapter supports standard Java types:
+
+* `String`
+* `int`, `Integer`
+* `boolean`, `Boolean`
+* `long`, `Long`
+* `double`, `Double`
+* Arrays and Lists of the above types
+
+== Multiple Commands
+
+For CLI applications with subcommands, all are exposed as separate tools:
+
+[source,java]
+----
+@TopCommand
+@Command(name = "devtools", subcommands = {
+    FormatCommand.class,
+    LintCommand.class,
+    TestCommand.class
+})
+public class DevToolsCommand implements Callable<Integer> {
+    // Top-level command logic
+}
+
+@Command(name = "format", description = "Format source code")
+class FormatCommand implements Callable<Integer> {
+    @Parameters(description = "File to format")
+    String file;
+
+    @Option(names = {"-s", "--style"}, description = "Code style")
+    String style = "google";
+
+    @Override
+    public Integer call() {
+        // Format logic
+    }
+}
+
+@Command(name = "lint", description = "Lint source code")
+class LintCommand implements Callable<Integer> {
+    // Lint logic
+}
+----
+
+Each subcommand becomes an MCP tool:
+- `formatcommand` - Format source code
+- `lintcommand` - Lint source code
+- `testcommand` - Run tests
+
+== Integration with Claude Desktop
+
+Configure Claude Desktop to use your CLI as an MCP server:
+
+[source,json]
+----
+{
+  "mcpServers": {
+    "my-cli-tools": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/path/to/myapp.jar",
+        "--mcp"
+      ]
+    }
+  }
+}
+----
+
+== Best Practices
+
+=== Provide Clear Descriptions
+
+Commands will be discovered by AI based on their descriptions:
+
+[source,java]
+----
+@Command(
+    name = "analyze",
+    description = "Analyze code quality and suggest improvements" // <1>
+)
+----
+<1> Clear, actionable description helps AI choose the right tool.
+
+=== Use Meaningful Parameter Names
+
+Parameter names become argument names in the tool schema:
+
+[source,java]
+----
+@Parameters(description = "Source file to analyze")
+String sourceFile; // <1>
+
+// Not as clear:
+// String file;
+----
+<1> Descriptive names make the tool easier to use.
+
+=== Set Sensible Defaults
+
+Defaults make parameters optional:
+
+[source,java]
+----
+@Option(
+    names = {"-l", "--language"},
+    description = "Programming language",
+    defaultValue = "java" // <1>
+)
+String language;
+----
+<1> With a default, the AI can call the tool without specifying the language.
+
+=== Handle Errors Gracefully
+
+Return meaningful error messages:
+
+[source,java]
+----
+@Override
+public Integer call() {
+    try {
+        // Process
+        return ExitCode.OK;
+    } catch (IllegalArgumentException e) {
+        System.err.println("Error: " + e.getMessage()); // <1>
+        return ExitCode.USAGE;
+    }
+}
+----
+<1> Error messages appear in the tool response.
+
+== Limitations
+
+* STDIO transport only: The CLI adapter uses standard input/output for MCP communication
+* Synchronous execution: Each tool call blocks until the command completes
+* No streaming: Tool responses are returned only after the command finishes
+
+For more advanced MCP server features (HTTP transport, streaming, multiple clients), consider implementing tools directly with the standard MCP server annotations.

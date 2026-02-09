@@ -1,0 +1,360 @@
+= Tools and Structured Content
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+Structured content allows tools to return data in a structured JSON format with a defined schema, enabling clients to parse and process tool responses programmatically.
+
+== What is Structured Content?
+
+Structured content is a way for tools to return data in a structured, machine-readable format instead of plain text.
+When a tool returns structured content:
+
+* The response includes a `structuredContent` field containing the JSON-serialized data
+* An optional output schema describes the structure of the returned data
+* Clients can parse and use the data programmatically without text parsing
+
+This is useful when:
+
+* Returning complex objects with multiple fields
+* Enabling clients to process tool results programmatically
+* Providing type information and validation for tool outputs
+* Building UIs that need structured data rather than text
+
+== Enabling Structured Content
+
+There are two main ways to enable structured content for your tools.
+
+=== Using the structuredContent Attribute
+
+Set `structuredContent = true` on the `@Tool` annotation and return a POJO:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Get user information", structuredContent = true) // <1>
+    User getUserInfo(String username) {
+        User user = new User();
+        user.setName(username);
+        user.setEmail(username + "@example.com");
+        user.setActive(true);
+        return user; // <2>
+    }
+
+    public static class User {
+        private String name;
+        private String email;
+        private boolean active;
+
+        // Getters and setters...
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public boolean isActive() { return active; }
+        public void setActive(boolean active) { this.active = active; }
+    }
+}
+----
+<1> Enable structured content for this tool.
+<2> The returned object is automatically serialized to JSON and set as `structuredContent` in the response.
+
+When `structuredContent = true`, the output schema is automatically generated from the return type.
+
+=== Using ToolResponse.structuredSuccess()
+
+Alternatively, return a `ToolResponse` with structured content explicitly:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Get user information")
+    ToolResponse getUserInfo(String username) {
+        User user = new User();
+        user.setName(username);
+        user.setEmail(username + "@example.com");
+        user.setActive(true);
+        return ToolResponse.structuredSuccess(user); // <1>
+    }
+}
+----
+<1> Use `structuredSuccess()` to return structured content.
+
+This approach is useful when you need to return structured content conditionally or when the output schema needs to be specified explicitly.
+
+=== Async Tools with Structured Content
+
+Structured content works with async tools that return `Uni`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+    @Tool(description = "Fetch user asynchronously", structuredContent = true)
+    Uni<User> fetchUserAsync(String username) {
+        return fetchFromDatabase(username)
+            .map(data -> {
+                User user = new User();
+                user.setName(data.getName());
+                user.setEmail(data.getEmail());
+                return user;
+            });
+    }
+}
+----
+
+== Output Schema
+
+The output schema describes the structure of the data returned by a tool.
+It helps clients understand what data to expect and enables validation.
+
+=== Automatic Schema Generation
+
+When `structuredContent = true`, the schema is generated automatically from the return type:
+
+[source,java]
+----
+@Tool(description = "Get product details", structuredContent = true)
+Product getProduct(String productId) {
+    Product product = new Product();
+    product.setId(productId);
+    product.setPrice(29.99);
+    return product;
+}
+----
+
+The generated schema will include type information for all fields in the `Product` class.
+
+=== Explicit Schema Source
+
+Use `@OutputSchema(from = ...)` to specify which class to generate the schema from:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.OutputSchema;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(outputSchema = @OutputSchema(from = User.class)) // <1>
+    ToolResponse getUserInfo(String username) {
+        User user = new User();
+        user.setName(username);
+        user.setEmail(username + "@example.com");
+        return ToolResponse.structuredSuccess(user);
+    }
+}
+----
+<1> Generate the output schema from the `User` class.
+
+This is necessary when returning `ToolResponse` directly, as the return type doesn't provide schema information.
+
+=== Custom Schema Generator
+
+For more control, implement a custom `OutputSchemaGenerator`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.OutputSchemaGenerator;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.OutputSchema;
+import jakarta.inject.Singleton;
+import io.vertx.core.json.JsonObject;
+import java.util.List;
+
+@Singleton // <1>
+public class CustomSchemaGenerator implements OutputSchemaGenerator {
+
+    @Override
+    public Object generate(Class<?> from) {
+        return new JsonObject()
+            .put("type", "object")
+            .put("properties", new JsonObject()
+                .put("name", new JsonObject()
+                    .put("type", "string")
+                    .put("minLength", 1))
+                .put("email", new JsonObject()
+                    .put("type", "string")
+                    .put("format", "email"))
+                .put("active", new JsonObject()
+                    .put("type", "boolean")))
+            .put("required", List.of("name", "email")); // <2>
+    }
+}
+
+public class MyTools {
+
+    @Tool(
+        description = "Get user with custom schema",
+        structuredContent = true,
+        outputSchema = @OutputSchema(generator = CustomSchemaGenerator.class)) // <3>
+    User getUser(String username) {
+        // ...
+        return user;
+    }
+}
+----
+<1> Schema generators must be CDI beans.
+<2> Return a JSON Schema object. The return value is serialized with Jackson.
+<3> Use the custom generator for this tool.
+
+=== Global Schema Generator
+
+To customize schema generation for all tools, implement `GlobalOutputSchemaGenerator`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
+import jakarta.inject.Singleton;
+import io.vertx.core.json.JsonObject;
+
+@Singleton
+public class MyGlobalSchemaGenerator implements GlobalOutputSchemaGenerator {
+
+    @Override
+    public Object generate(Class<?> from) {
+        // Custom schema generation logic for all tools
+        return new JsonObject()
+            .put("type", "object")
+            .put("properties", generateProperties(from))
+            .put("additionalProperties", false);
+    }
+
+    private JsonObject generateProperties(Class<?> from) {
+        // Introspect the class and generate properties...
+        return new JsonObject();
+    }
+}
+----
+
+The global generator is used for all tools unless a specific generator is provided via `@OutputSchema(generator = ...)`.
+
+=== Programmatic API
+
+When registering tools programmatically, use `generateOutputSchema(Class<?> from)` to set the output schema:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager;
+
+    @Startup
+    void addTool() {
+        toolManager.newTool("getUserInfo")
+            .setDescription("Get user information")
+            .addArgument("username", "The username", true, String.class)
+            .generateOutputSchema(User.class) // <1>
+            .setHandler(args -> {
+                User user = new User();
+                user.setName(args.args().get("username").toString());
+                return ToolResponse.structuredSuccess(user);
+            })
+            .register();
+    }
+}
+----
+<1> Generate the output schema from the `User` class.
+
+Alternatively, provide a schema object directly:
+
+[source,java]
+----
+toolManager.newTool("getUserInfo")
+    .setDescription("Get user information")
+    .setOutputSchema(new JsonObject() // <1>
+        .put("type", "object")
+        .put("properties", new JsonObject()
+            .put("name", new JsonObject().put("type", "string"))))
+    .setHandler(args -> {
+        // ...
+    })
+    .register();
+----
+<1> Set the output schema directly.
+
+== Compatibility Mode
+
+Compatibility mode ensures backwards compatibility with clients that don't support structured content.
+
+When compatibility mode is enabled and a tool returns structured content without text content:
+
+* The JSON representation is automatically added as a `TextContent` item
+* Clients that don't understand structured content can still see the data as text
+* The `structuredContent` field is still populated for modern clients
+
+Enable compatibility mode in `application.properties`:
+
+[source,properties]
+----
+quarkus.mcp.server.tools.structured-content.compatibility-mode=true
+----
+
+Example behavior with compatibility mode enabled:
+
+[source,java]
+----
+@Tool(description = "Get user", structuredContent = true)
+User getUser(String username) {
+    User user = new User();
+    user.setName("John Doe");
+    user.setEmail("john@example.com");
+    return user;
+}
+----
+
+Response without compatibility mode:
+[source,json]
+----
+{
+  "isError": false,
+  "content": [],
+  "structuredContent": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+----
+
+Response with compatibility mode:
+[source,json]
+----
+{
+  "isError": false,
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"name\":\"John Doe\",\"email\":\"john@example.com\"}"
+    }
+  ],
+  "structuredContent": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+----
+
+NOTE: Compatibility mode is disabled by default. Only enable it if you need to support legacy clients.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:reference-content-types.adoc[Content Types Reference]
+* xref:reference-return-types.adoc[Return Types Reference]

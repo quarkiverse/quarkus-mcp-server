@@ -1,0 +1,25 @@
+site:
+  title: Quarkus MCP Server
+  start_page: quarkus-mcp-server:ROOT:index.adoc
+content:
+  sources: 
+  - url: ./../
+    branches: HEAD
+    start_path: docs
+ui: 
+  bundle:
+    url: https://github.com/quarkiverse/antora-ui-quarkiverse/releases/latest/download/ui-bundle.zip
+    snapshot: true
+
+asciidoc:
+  attributes:
+    kroki-fetch-diagram: false
+    page-related-doc-categories: ai,java,ml
+    page-pagination: ''
+    hide-uri-scheme: '@'
+    tabs-sync-option: '@'
+    chomp: 'all'
+    stem: 'asciimath'
+
+output:
+  dir: ./target/site

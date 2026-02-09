@@ -1,0 +1,107 @@
+= Getting Started with HTTP Transport
+
+include::includes/attributes.adoc[]
+:diataxis-type: tutorial
+
+This tutorial guides you through creating your first MCP server using the Streamable HTTP transport.
+
+== What You'll Build
+
+You'll create a simple MCP server that:
+
+* Exposes a tool to greet users
+* Communicates via Streamable HTTP transport
+* Can be accessed by web-based MCP clients
+
+== Prerequisites
+
+* JDK 17 or later
+* Maven 3.9+ or Gradle
+
+== Creating the Project
+
+Create a new Quarkus project with the MCP HTTP extension:
+
+[source,bash,subs=attributes+]
+----
+mvn io.quarkus:quarkus-maven-plugin:{quarkus-version}:create \
+    -DprojectGroupId=org.acme \
+    -DprojectArtifactId=mcp-http-quickstart \
+    -Dextensions="io.quarkiverse.mcp:quarkus-mcp-server-http:{project-version}"
+cd mcp-http-quickstart
+----
+
+== Creating Your First Tool
+
+Create a simple greeting tool:
+
+[source,java]
+----
+package org.acme;
+
+import io.quarkiverse.mcp.server.Tool;
+
+public class GreetingTools {
+
+    @Tool(description = "Greet a user by name")
+    public String greet(String name) {
+        return "Hello, " + name + "!";
+    }
+}
+----
+
+That's it! The `@Tool` annotation automatically registers this method as an MCP tool.
+
+== Running in Development Mode
+
+Start your MCP server in dev mode:
+
+[source,bash]
+----
+mvn quarkus:dev
+----
+
+Your MCP server will be available at:
+
+* Streamable HTTP (2025-03-26): `http://localhost:8080/mcp`
+* HTTP/SSE (2024-11-05): `http://localhost:8080/mcp/sse` (legacy protocol)
+
+== Testing Your Server
+
+=== Testing with Dev UI
+
+When running in dev mode, you can test your MCP server using the Dev UI:
+
+1. Open your web browser and navigate to `http://localhost:8080/q/dev-ui`.
+2. In the "MCP Server - HTTP/SSE" card, click "Tools".
++
+image::devui-mcp-tools.png[MCP Server Tools in Dev UI,align="center"]
+
+3. Find the `greet` tool and click the "Call" button.
+4. Enter a name (e.g., "Quarkus") and click "Call" to see the response.
++
+image::devui-greet-tool-call.png[Calling the greet tool from Dev UI,align="center"]
+
+=== Testing with MCP Inspector
+
+The MCP Inspector is a handy tool for testing MCP servers.
+Follow the instructions from https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] to download and run it.
+
+Open the MCP Inspector in your browser (use the link with the token shown in the console) and configure it to connect to your MCP server using Streamable HTTP transport.
+In the server configuration, set the URL to `http://localhost:8080/mcp`.
+
+image::mcp-inspector-http-config.png[MCP Inspector HTTP Configuration,align="center"]
+
+Once connected, find the `greet` tool and invoke it with a name to see the response.
+
+image::mcp-inspector-http-greet.png[Invoking the greet tool via HTTP,align="center"]
+
+Congratulations! You've successfully created and tested your first MCP server using Streamable HTTP transport.
+
+== What's Next?
+
+* xref:guides-implementing-tools.adoc[Learn more about implementing tools]
+* xref:guides-implementing-prompts.adoc[Add prompts to your server]
+* xref:guides-implementing-resources.adoc[Expose resources]
+* xref:concepts-transports.adoc[Understand HTTP transports]
+* xref:guides-using-bom.adoc[Using the BOM for dependency management]

@@ -1,0 +1,627 @@
+= MCP Client Integration
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers integration with MCP client features like sampling, elicitation, and roots.
+These features allow your MCP server to request services from the client.
+
+== Sampling
+
+Sampling allows the server to request LLM responses from the client.
+This is useful when your server needs to generate text, make decisions, or process information using an LLM.
+
+=== Checking Sampling Support
+
+Before using sampling, check if the client supports it.
+This is negotiated during the MCP connection initialization.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Get AI assistance")
+    String getAssistance(Sampling sampling) {
+        if (sampling.isSupported()) { // <1>
+            // Use sampling
+            return "Sampling is available";
+        } else {
+            return "Sampling not supported by this client";
+        }
+    }
+}
+----
+<1> Check if the client supports the sampling capability.
+
+=== Basic Sampling Request
+
+Request an LLM response from the client:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.SamplingRequest;
+import io.quarkiverse.mcp.server.SamplingResponse;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Ask the AI a question")
+    String askAI(String question, Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return "Sampling not supported";
+        }
+
+        SamplingRequest request = sampling.requestBuilder() // <1>
+            .setMaxTokens(100) // <2>
+            .addMessage(SamplingMessage.withUserRole(question)) // <3>
+            .build();
+
+        SamplingResponse response = request.sendAndAwait(); // <4>
+        return response.content().asText().text(); // <5>
+    }
+}
+----
+<1> Create a new sampling request builder.
+<2> Set the maximum number of tokens to generate (the LLM response).
+<3> Add a message with the user role.
+<4> Send the request and wait for the response (blocking).
+<5> Extract the text content from the response.
+
+=== Async Sampling
+
+For non-blocking operations, use the async API:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+    @Tool(description = "Ask the AI asynchronously")
+    Uni<String> askAIAsync(String question, Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return Uni.createFrom().item("Sampling not supported");
+        }
+
+        return sampling.requestBuilder()
+            .setMaxTokens(100)
+            .addMessage(SamplingMessage.withUserRole(question))
+            .build()
+            .send() // <1>
+            .map(response -> response.content().asText().text()); // <2>
+    }
+}
+----
+<1> Send the request asynchronously, returns a `Uni<SamplingResponse>`.
+<2> Map the response to extract the text content.
+
+=== Advanced Sampling Options
+
+Configure temperature, system prompt, and other parameters:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
+import io.quarkiverse.mcp.server.Tool;
+import java.math.BigDecimal;
+import java.time.Duration;
+
+public class MyTools {
+
+    @Tool(description = "Advanced sampling example")
+    String advancedSampling(Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return "Not supported";
+        }
+
+        return sampling.requestBuilder()
+            .setMaxTokens(200)
+            .setTemperature(BigDecimal.valueOf(0.7)) // <1>
+            .setSystemPrompt("You are a helpful coding assistant.") // <2>
+            .addMessage(SamplingMessage.withUserRole("Explain async programming"))
+            .setIncludeContext(IncludeContext.THIS_SERVER) // <3>
+            .setTimeout(Duration.ofSeconds(30)) // <4>
+            .build()
+            .sendAndAwait()
+            .content().asText().text();
+    }
+}
+----
+<1> Set the temperature for response randomness (0.0-1.0).
+<2> Provide a system prompt to guide the LLM's behavior.
+<3> Include context from this server in the request.
+<4> Set a custom timeout for the request.
+
+=== Multi-turn Conversations
+
+Build conversations with multiple messages:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Multi-turn conversation")
+    String conversation(Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return "Not supported";
+        }
+
+        return sampling.requestBuilder()
+            .setMaxTokens(150)
+            // Recreate the conversation history
+            .addMessage(SamplingMessage.withUserRole("What is Java?")) // <1>
+            .addMessage(SamplingMessage.withAssistantRole(
+                "Java is a popular object-oriented programming language.")) // <2>
+            .addMessage(SamplingMessage.withUserRole(
+                "What are its main features?")) // <3>
+            .build()
+            .sendAndAwait()
+            .content().asText().text();
+    }
+}
+----
+<1> First user message.
+<2> Assistant response to provide context.
+<3> Follow-up user question.
+
+== Elicitation
+
+Elicitation allows the server to request additional information from the client using a form-like interface.
+This is useful for collecting structured input from users.
+
+=== Checking Elicitation Support
+
+Before using elicitation, check if the client supports it.
+This is negotiated during the MCP connection initialization.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Request user input")
+    String requestInfo(Elicitation elicitation) {
+        if (elicitation.isSupported()) { // <1>
+            // Use elicitation
+            return "Elicitation is available";
+        } else {
+            return "Elicitation not supported by this client";
+        }
+    }
+}
+----
+<1> Check if the client supports the elicitation capability.
+
+=== Basic Elicitation Request
+
+Request structured input from the user:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest;
+import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.ElicitationResponse;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Get user information")
+    String getUserInfo(Elicitation elicitation) {
+        if (!elicitation.isSupported()) {
+            return "Elicitation not supported";
+        }
+
+        ElicitationRequest request = elicitation.requestBuilder() // <1>
+            .setMessage("Please provide your information:") // <2>
+            .addSchemaProperty("username", new StringSchema(true)) // <3>
+            .addSchemaProperty("email", new StringSchema(true))
+            .build();
+
+        ElicitationResponse response = request.sendAndAwait(); // <4>
+
+        if (response.actionAccepted()) { // <5>
+            String username = response.content().getString("username"); // <6>
+            String email = response.content().getString("email");
+            return "Hello " + username + " (" + email + ")";
+        } else {
+            return "User cancelled the request";
+        }
+    }
+}
+----
+<1> Create a new elicitation request builder.
+<2> Set the message to display to the user.
+<3> Add schema properties for the fields to collect (true = required).
+<4> Send the request and wait for the response.
+<5> Check if the user accepted or cancelled.
+<6> Extract the values from the response.
+
+=== Schema Types
+
+Elicitation supports various schema types for different input types:
+
+==== String Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+
+// Simple required string
+new StringSchema(true)
+
+// String with constraints
+new StringSchema(
+    "Email Address",           // title
+    "Your email address",      // description
+    50,                        // maxLength
+    5,                         // minLength
+    StringSchema.Format.EMAIL, // format validation
+    true                       // required
+)
+----
+
+==== Number Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.NumberSchema;
+
+// Simple number
+new NumberSchema(true)
+
+// Number with range
+new NumberSchema(
+    "Age",          // title
+    "Your age",     // description
+    120,            // maximum
+    0,              // minimum
+    true            // required
+)
+----
+
+==== Boolean Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.BooleanSchema;
+
+// Simple checkbox
+new BooleanSchema(true)
+
+// Boolean with metadata
+new BooleanSchema(
+    "Subscribe",                    // title
+    "Subscribe to newsletter",      // description
+    true,                          // defaultValue
+    false                          // required
+)
+----
+
+==== Enum/Select Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.SingleSelectEnumSchema;
+import java.util.List;
+
+// Simple dropdown
+new SingleSelectEnumSchema(List.of("small", "medium", "large"))
+
+// Dropdown with titles
+new SingleSelectEnumSchema(
+    List.of("s", "m", "l"),                    // values
+    List.of("Small", "Medium", "Large")        // display titles
+)
+
+// With default value
+new SingleSelectEnumSchema(
+    List.of("red", "green", "blue"),
+    "blue"                                     // default
+)
+----
+
+==== Multi-select Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.MultiSelectEnumSchema;
+import java.util.List;
+
+// Multi-select checkbox group
+new MultiSelectEnumSchema(
+    List.of("java", "python", "javascript", "go")
+)
+----
+
+=== Complete Elicitation Example
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest.*;
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "User registration form")
+    String registerUser(Elicitation elicitation) {
+        if (!elicitation.isSupported()) {
+            return "Not supported";
+        }
+
+        var response = elicitation.requestBuilder()
+            .setMessage("Please fill out the registration form:")
+            .addSchemaProperty("username",
+                new StringSchema("Username", "Your username", 20, 3, null, true))
+            .addSchemaProperty("email",
+                new StringSchema("Email", "Your email", null, null,
+                    StringSchema.Format.EMAIL, true))
+            .addSchemaProperty("age",
+                new NumberSchema("Age", "Your age", 120, 13, true))
+            .addSchemaProperty("newsletter",
+                new BooleanSchema("Newsletter", "Subscribe to updates", false, false))
+            .addSchemaProperty("interests",
+                new MultiSelectEnumSchema(
+                    List.of("coding", "gaming", "music", "sports")))
+            .build()
+            .sendAndAwait();
+
+        if (response.actionAccepted()) {
+            return "Registration successful for " + response.content().getString("username");
+        } else {
+            return "Registration cancelled";
+        }
+    }
+}
+----
+
+=== Async Elicitation
+
+For non-blocking operations:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+    @Tool(description = "Async elicitation")
+    Uni<String> asyncElicitation(Elicitation elicitation) {
+        if (!elicitation.isSupported()) {
+            return Uni.createFrom().item("Not supported");
+        }
+
+        return elicitation.requestBuilder()
+            .setMessage("Enter your name:")
+            .addSchemaProperty("name", new StringSchema(true))
+            .build()
+            .send() // <1>
+            .map(response -> {
+                if (response.actionAccepted()) {
+                    return "Hello " + response.content().getString("name");
+                } else {
+                    return "Cancelled";
+                }
+            });
+    }
+}
+----
+<1> Returns `Uni<ElicitationResponse>` for async processing.
+
+== Roots
+
+Roots allow the server to obtain the list of root directories or locations from the client.
+This is useful for understanding the client's working context.
+
+=== Checking Roots Support
+
+Before using roots, check if the client supports it.
+This is negotiated during the MCP connection initialization.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Check roots support")
+    String checkRoots(Roots roots) {
+        if (roots.isSupported()) { // <1>
+            return "Roots capability is available";
+        } else {
+            return "Roots not supported by this client";
+        }
+    }
+}
+----
+<1> Check if the client supports the roots capability.
+
+=== Listing Roots
+
+Request the list of roots from the client:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Root;
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "Get client roots")
+    String getRoots(Roots roots) {
+        if (!roots.isSupported()) {
+            return "Roots not supported";
+        }
+
+        List<Root> rootList = roots.listAndAwait(); // <1>
+
+        StringBuilder result = new StringBuilder("Client roots:\n");
+        for (Root root : rootList) {
+            result.append("- ").append(root.name())
+                  .append(": ").append(root.uri())
+                  .append("\n"); // <2>
+        }
+        return result.toString();
+    }
+}
+----
+<1> Request and wait for the list of roots (blocking).
+<2> Each root has a name and URI.
+
+=== Async Roots
+
+For non-blocking operations:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Root;
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "Get roots asynchronously")
+    Uni<String> getRootsAsync(Roots roots) {
+        if (!roots.isSupported()) {
+            return Uni.createFrom().item("Not supported");
+        }
+
+        return roots.list() // <1>
+            .map(rootList -> {
+                if (rootList.isEmpty()) {
+                    return "No roots found";
+                }
+                return "First root: " + rootList.get(0).name();
+            });
+    }
+}
+----
+<1> Returns `Uni<List<Root>>` for async processing.
+
+=== Responding to Root Changes
+
+Listen for root change notifications:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.Notification;
+import io.quarkiverse.mcp.server.Notification.Type;
+import io.quarkiverse.mcp.server.Root;
+import io.quarkiverse.mcp.server.Roots;
+import jakarta.inject.Singleton;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Singleton
+public class RootsManager {
+
+    private final Map<String, List<Root>> rootsCache = new ConcurrentHashMap<>();
+
+    @Notification(Type.INITIALIZED) // <1>
+    void onInitialized(McpConnection connection, Roots roots) {
+        if (roots.isSupported()) {
+            List<Root> rootList = roots.listAndAwait();
+            rootsCache.put(connection.id(), rootList); // <2>
+        }
+    }
+
+    @Notification(Type.ROOTS_LIST_CHANGED) // <3>
+    void onRootsChanged(McpConnection connection, Roots roots) {
+        List<Root> updatedRoots = roots.listAndAwait();
+        rootsCache.put(connection.id(), updatedRoots); // <4>
+    }
+
+    public List<Root> getRoots(String connectionId) {
+        return rootsCache.get(connectionId);
+    }
+}
+----
+<1> Called when the connection is initialized.
+<2> Store the initial roots.
+<3> Called when the client's roots change.
+<4> Update the cached roots.
+
+== Configuration
+
+Configure timeouts for client integration features in `application.properties`:
+
+[source,properties]
+----
+# Sampling timeout (default: 30s)
+quarkus.mcp.server.sampling.default-timeout=30s
+
+# Elicitation timeout (default: 5m)
+quarkus.mcp.server.elicitation.default-timeout=5m
+
+# Roots timeout (default: 10s)
+quarkus.mcp.server.roots.default-timeout=10s
+----
+
+== Error Handling
+
+Handle timeouts and errors gracefully:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.TimeoutException;
+
+public class MyTools {
+
+    @Tool(description = "Sampling with error handling")
+    Uni<String> robustSampling(Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return Uni.createFrom().item("Not supported");
+        }
+
+        return sampling.requestBuilder()
+            .setMaxTokens(100)
+            .addMessage(SamplingMessage.withUserRole("Hello"))
+            .build()
+            .send()
+            .map(response -> response.content().asText().text())
+            .onFailure(TimeoutException.class) // <1>
+            .recoverWithItem("Request timed out")
+            .onFailure().recoverWithItem(e -> "Error: " + e.getMessage());  // <2>
+    }
+}
+----
+<1> Handle timeout specifically.
+<2> Handle all other failures.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:reference-parameter-types.adoc[Parameter Types Reference]
+* xref:guides-logging-progress-cancellation.adoc[Monitoring and Logging]

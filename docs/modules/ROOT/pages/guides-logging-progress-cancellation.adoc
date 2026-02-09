@@ -1,0 +1,603 @@
+= Logging, Progress Tracking, and Cancellation
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers logging, progress tracking, and cancellation in MCP servers.
+These features help you build responsive, observable tools that communicate their status to clients.
+
+== Logging
+
+Send log messages to MCP clients to help users understand what your tools are doing.
+The MCP server can send log notifications that the client can display to users.
+
+=== Basic Logging
+
+Inject `McpLog` into your tool methods to send log messages:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Process data with logging")
+    String processData(String input, McpLog log) {
+        log.info("Starting data processing for input: {}", input); // <1>
+
+        // Do some work
+        String result = input.toUpperCase();
+
+        log.debug("Processing complete. Result length: {}", result.length()); // <2>
+
+        return result;
+    }
+}
+----
+<1> Log informational messages that the client can display.
+<2> Debug messages are only sent if the client's log level allows it.
+
+=== Log Levels
+
+MCP supports multiple log levels:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Demonstrate log levels")
+    String demonstrateLevels(McpLog log) {
+        log.debug("Debug information");           // <1>
+        log.info("Informational message");        // <2>
+        log.error("An error occurred");           // <3>
+
+        // Send custom log levels
+        log.send(LogLevel.WARNING, "This is a warning"); // <4>
+        log.send(LogLevel.CRITICAL, "Critical issue");
+
+        return "Check logs for details";
+    }
+}
+----
+<1> Debug-level logging for detailed diagnostics.
+<2> Informational messages about normal operations.
+<3> Error messages for problems.
+<4> Send messages with custom log levels.
+
+=== Error Logging with Exceptions
+
+Log exceptions with stack traces:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Process with error handling")
+    String processWithErrorHandling(String input, McpLog log) {
+        try {
+            return performRiskyOperation(input);
+        } catch (Exception e) {
+            log.error(e, "Failed to process input: {}", input); // <1>
+            return "Processing failed: " + e.getMessage();
+        }
+    }
+
+    private String performRiskyOperation(String input) throws Exception {
+        // Simulated operation that might fail
+        if (input.isEmpty()) {
+            throw new IllegalArgumentException("Input cannot be empty");
+        }
+        return input.toUpperCase();
+    }
+}
+----
+<1> Log the exception with context about what failed.
+
+=== Logger Names
+
+The MCP logger name is automatically derived from the method name.
+For a tool method `myTool()`, the logger name will be `tool:myTool`.
+
+=== Checking Log Level
+
+Check the current log level before expensive logging operations:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Efficient logging")
+    String efficientLogging(McpLog log) {
+        if (log.level().compareTo(LogLevel.DEBUG) <= 0) { // <1>
+            // Only compute expensive debug info if debug is enabled
+            String expensiveDebugInfo = computeExpensiveDebugInfo();
+            log.debug("Debug info: {}", expensiveDebugInfo);
+        }
+
+        return "Processing complete";
+    }
+
+    private String computeExpensiveDebugInfo() {
+        // Expensive computation
+        return "Detailed diagnostic information";
+    }
+}
+----
+<1> Check the log level to avoid expensive operations when debug is disabled.
+
+== Progress Tracking
+
+Report progress for long-running operations so clients can show progress indicators to users.
+Progress tracking requires the client to include a progress token in the request.
+
+=== Using ProgressNotification
+
+For manual progress reporting, use `ProgressNotification`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+    @Tool(description = "Long-running operation with progress")
+    Uni<String> longOperation(Progress progress) {
+        if (progress.token().isEmpty()) { // <1>
+            return Uni.createFrom().item("Progress tracking not available");
+        }
+
+        return Uni.createFrom().item("ok")
+            .onItem().invoke(() -> {
+                for (int i = 1; i <= 10; i++) {
+                    // Perform some work
+                    processStep(i);
+
+                    // Report progress
+                    progress.notificationBuilder() // <2>
+                        .setProgress(i) // <3>
+                        .setTotal(10) // <4>
+                        .setMessage("Processing step " + i + " of 10") // <5>
+                        .build()
+                        .sendAndForget(); // <6>
+                }
+            });
+    }
+
+    private void processStep(int step) {
+        // Simulate work
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+----
+<1> Check if the client provided a progress token.
+<2> Create a new progress notification.
+<3> Set the current progress value.
+<4> Set the expected total value.
+<5> Set a descriptive message for the user.
+<6> Send the notification without waiting for confirmation.
+
+=== Using ProgressTracker
+
+For automatic progress tracking, use `ProgressTracker`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressTracker;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Process with automatic progress tracking")
+    String processWithTracking(Progress progress) {
+        if (progress.token().isEmpty()) {
+            return "Progress tracking not available";
+        }
+
+        ProgressTracker tracker = progress.trackerBuilder() // <1>
+            .setTotal(100) // <2>
+            .setDefaultStep(10) // <3>
+            .setMessageBuilder(current -> "Processed " + current + " items") // <4>
+            .build();
+
+        // Process items and advance progress
+        for (int i = 0; i < 10; i++) {
+            processItems(10);
+            tracker.advanceAndForget(); // <5>
+        }
+
+        return "Processing complete. Total: " + tracker.progress();
+    }
+
+    private void processItems(int count) {
+        // Simulate processing
+    }
+}
+----
+<1> Create a new progress tracker.
+<2> Set the expected total (100 items).
+<3> Set the default step size for `advanceAndForget()`.
+<4> Provide a function to build messages from the current progress.
+<5> Advance by the default step and send notification.
+
+=== Advanced Progress Tracking
+
+Track progress with custom increments:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressTracker;
+import io.quarkiverse.mcp.server.Tool;
+import java.math.BigDecimal;
+
+public class MyTools {
+
+    @Tool(description = "Advanced progress tracking")
+    String advancedProgress(Progress progress) {
+        if (progress.token().isEmpty()) {
+            return "Not available";
+        }
+
+        ProgressTracker tracker = progress.trackerBuilder()
+            .setTotal(100.0)
+            .setMessageBuilder(p -> "Progress: " + p + "%")
+            .build();
+
+        // Different sized steps
+        tracker.advanceAndForget(25); // <1>
+        processLargeChunk();
+
+        tracker.advanceAndForget(15.5); // <2>
+        processMediumChunk();
+
+        tracker.advanceAndForget(BigDecimal.valueOf(59.5)); // <3>
+        processRemainingWork();
+
+        return "Complete at " + tracker.progress() + "%";
+    }
+
+    private void processLargeChunk() { }
+    private void processMediumChunk() { }
+    private void processRemainingWork() { }
+}
+----
+<1> Advance by an integer value.
+<2> Advance by a decimal value.
+<3> Advance by a BigDecimal for precision.
+
+=== Async Progress Tracking
+
+For async operations, use the async API:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressTracker;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+
+public class MyTools {
+
+    @Tool(description = "Async progress tracking")
+    Uni<String> asyncProgress(Progress progress) {
+        if (progress.token().isEmpty()) {
+            return Uni.createFrom().item("Not available");
+        }
+
+        ProgressTracker tracker = progress.trackerBuilder()
+            .setTotal(5)
+            .setDefaultStep(1)
+            .setMessageBuilder(p -> "Step " + p + " complete")
+            .build();
+
+        return processStepAsync(1)
+            .onItem().call(() -> tracker.advance(1)) // <1>
+            .chain(() -> processStepAsync(2))
+            .onItem().call(() -> tracker.advance(1))
+            .chain(() -> processStepAsync(3))
+            .onItem().call(() -> tracker.advance(1))
+            .map(v -> "All steps complete");
+    }
+
+    private Uni<Void> processStepAsync(int step) {
+        return Uni.createFrom().voidItem();
+    }
+}
+----
+<1> Use `advance()` instead of `advanceAndForget()` to wait for the notification to be sent.
+
+=== Progress Without Total
+
+Track progress without a known total:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Progress without total")
+    String progressWithoutTotal(Progress progress) {
+        if (progress.token().isEmpty()) {
+            return "Not available";
+        }
+
+        int itemsProcessed = 0;
+        while (hasMoreItems()) {
+            processItem();
+            itemsProcessed++;
+
+            progress.notificationBuilder()
+                .setProgress(itemsProcessed) // <1>
+                // No total set
+                .setMessage("Processed " + itemsProcessed + " items")
+                .build()
+                .sendAndForget();
+        }
+
+        return "Processed " + itemsProcessed + " items total";
+    }
+
+    private boolean hasMoreItems() { return false; }
+    private void processItem() { }
+}
+----
+<1> Report progress without setting a total when the total is unknown.
+
+== Cancellation
+
+Handle request cancellation from clients, allowing users to stop long-running operations.
+
+=== Basic Cancellation Handling
+
+Check for cancellation during long-running operations:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.Result;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Cancellable operation")
+    String cancellableOperation(Cancellation cancellation) {
+        for (int i = 0; i < 100; i++) {
+            // Check if cancellation was requested
+            Result result = cancellation.check(); // <1>
+
+            if (result.isRequested()) { // <2>
+                String reason = result.reason().orElse("No reason provided");
+                return "Operation cancelled: " + reason;
+            }
+
+            // Perform work
+            processItem(i);
+        }
+
+        return "Operation completed successfully";
+    }
+
+    private void processItem(int item) {
+        // Simulate work
+    }
+}
+----
+<1> Check if the client requested cancellation.
+<2> If cancellation was requested, stop processing and return.
+
+=== Throwing OperationCancellationException
+
+Use the exception-based approach for cleaner code:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.OperationCancellationException;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Operation with cancellation exception")
+    String operationWithException(Cancellation cancellation) {
+        try {
+            for (int i = 0; i < 100; i++) {
+                cancellation.skipProcessingIfCancelled(); // <1>
+                processItem(i);
+            }
+            return "Complete";
+        } catch (OperationCancellationException e) {
+            // Clean up if needed
+            return "Cancelled"; // <2>
+        }
+    }
+
+    private void processItem(int item) {
+        // Simulate work
+    }
+}
+----
+<1> Throws `OperationCancellationException` if cancellation was requested.
+<2> Handle the cancellation exception to perform cleanup.
+
+=== Cancellation with Cleanup
+
+Perform cleanup when an operation is cancelled:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.OperationCancellationException;
+import io.quarkiverse.mcp.server.Cancellation.Result;
+import io.quarkiverse.mcp.server.Tool;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MyTools {
+
+    @Tool(description = "Cancellable with cleanup")
+    String cancellableWithCleanup(Cancellation cancellation) {
+        List<Resource> resources = new ArrayList<>();
+
+        try {
+            for (int i = 0; i < 100; i++) {
+                Result result = cancellation.check();
+                if (result.isRequested()) {
+                    throw new OperationCancellationException();
+                }
+
+                Resource resource = acquireResource(i);
+                resources.add(resource);
+                processResource(resource);
+            }
+
+            return "All resources processed";
+
+        } catch (OperationCancellationException e) {
+            // Clean up acquired resources
+            resources.forEach(this::releaseResource); // <1>
+            return "Cancelled - cleaned up " + resources.size() + " resources";
+        }
+    }
+
+    private Resource acquireResource(int id) { return new Resource(id); }
+    private void processResource(Resource r) { }
+    private void releaseResource(Resource r) { }
+
+    record Resource(int id) { }
+}
+----
+<1> Clean up resources when the operation is cancelled.
+
+=== Checking Cancellation Reason
+
+Access the cancellation reason if provided:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.Result;
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Check cancellation reason")
+    String checkCancellationReason(Cancellation cancellation, McpLog log) {
+        for (int i = 0; i < 100; i++) {
+            Result result = cancellation.check();
+
+            if (result.isRequested()) {
+                if (result.reason().isPresent()) { // <1>
+                    String reason = result.reason().get();
+                    log.info("Cancelled due to: {}", reason);
+                    return "Cancelled: " + reason;
+                } else {
+                    return "Cancelled (no reason provided)";
+                }
+            }
+
+            processItem(i);
+        }
+
+        return "Complete";
+    }
+
+    private void processItem(int item) { }
+}
+----
+<1> Check if a cancellation reason was provided by the client.
+
+== Combining Features
+
+Combine logging, progress, and cancellation for robust long-running operations:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.OperationCancellationException;
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.ProgressTracker;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Robust long-running operation")
+    String robustOperation(McpLog log, Progress progress, Cancellation cancellation) {
+        log.info("Starting operation");
+
+        ProgressTracker tracker = null;
+        if (progress.token().isPresent()) { // <1>
+            tracker = progress.trackerBuilder()
+                .setTotal(100)
+                .setDefaultStep(1)
+                .setMessageBuilder(p -> "Processing: " + p + "%")
+                .build();
+        }
+
+        try {
+            for (int i = 0; i < 100; i++) {
+                // Check for cancellation
+                cancellation.skipProcessingIfCancelled(); // <2>
+
+                // Perform work
+                processItem(i);
+
+                // Update progress
+                if (tracker != null) {
+                    tracker.advanceAndForget(); // <3>
+                }
+
+                // Log every 25%
+                if (i % 25 == 0) {
+                    log.info("Progress: {}%", i); // <4>
+                }
+            }
+
+            log.info("Operation completed successfully");
+            return "Success";
+
+        } catch (OperationCancellationException e) {
+            log.info("Operation cancelled");
+            return "Cancelled";
+        } catch (Exception e) {
+            log.error(e, "Operation failed"); // <5>
+            return "Failed: " + e.getMessage();
+        }
+    }
+
+    private void processItem(int item) { }
+}
+----
+<1> Set up progress tracking if the client provided a token.
+<2> Check for cancellation at each step.
+<3> Report progress updates.
+<4> Log milestones.
+<5> Log errors with full context.
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-client-integration.adoc[Client Integration]
+* xref:reference-parameter-types.adoc[Parameter Types Reference]

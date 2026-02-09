@@ -54,7 +54,7 @@ public record ToolResponse(boolean isError,
     }
 
     /**
-     * @param message
+     * @param structuredContent
      * @return an unsuccessful response with structured content
      */
     public static ToolResponse structuredError(Object structuredContent) {
@@ -62,7 +62,7 @@ public record ToolResponse(boolean isError,
     }
 
     /**
-     * @param message
+     * @param structuredContent
      * @return a successful response with structured content
      */
     public static ToolResponse structuredSuccess(Object structuredContent) {

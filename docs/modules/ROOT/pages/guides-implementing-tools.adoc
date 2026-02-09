@@ -1,0 +1,218 @@
+= Implementing Tools
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+Tools are the primary way to expose functionality through an MCP server.
+MCP provides a standardized way for servers to expose tools that can be invoked by clients.
+This guide shows you how to implement tools using both declarative annotations and programmatic APIs.
+
+IMPORTANT: MCP Tools are not called by the LLM directly.
+It uses the regular function calling mechanism.
+The MCP client is responsible for deciding when to call a tool based on the LLM's output.
+
+== Basic Tool Implementation
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
+import jakarta.inject.Inject;
+
+// @Singleton <1>
+public class MyTools {
+
+    @Inject <2>
+    FooService fooService;
+
+    @Tool(description = "Put your description here.") <3>
+    ToolResponse foo(@ToolArg(description = "The name", defaultValue = "Andy") String name) { <4>
+        return ToolResponse.success(
+                new TextContent(fooService.ping(name)));
+    }
+
+}
+----
+<1> The `@Singleton` scope is added automatically, if needed.
+<2> `MyTools` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
+<3> `@Tool` annotates a business method of a CDI bean that should be exposed as a tool. By default, the name of the tool is derived from the method name.
+<4> The `@ToolArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
+
+TIP: Default values are specified as strings and automatically converted to the argument type. For complex types, you can implement custom `DefaultValueConverter` instances. See xref:reference-parameter-types.adoc#default-value-converters[Default Value Converters] for more information.
+
+TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response is a failed `ToolResponse` and the message of the exception is used as the text of the result content. It is also possible to annotate the method or declaring class with `@io.quarkiverse.mcp.server.WrapBusinessError`. In that case, an exception thrown is wrapped automatically in a `ToolCallException` if it's assignable from any of the specified exception classes.
+
+== Return Types
+
+A result of a "tool call" operation is always represented as a `ToolResponse`.
+However, `@Tool` methods can return other types that are automatically converted.
+
+For details on supported return types and conversion rules, see xref:reference-return-types.adoc[Return Type Conversion].
+
+== Method Parameters
+
+A `@Tool` method can accept parameters with various types. The following additional parameters may also be injected:
+
+`io.quarkiverse.mcp.server.McpConnection`:: The connection from an MCP client.
+`io.quarkiverse.mcp.server.McpLog`:: Used to send log message notifications to the MCP client.
+`io.quarkiverse.mcp.server.RequestId`:: The identifier of the current MCP request.
+`io.quarkiverse.mcp.server.Progress`:: Used to send progress notification messages back to the client.
+`io.quarkiverse.mcp.server.Roots`:: Used to obtain the list of root objects from the MCP client.
+`io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
+`io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
+`io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
+`io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
+
+See xref:reference-parameter-types.adoc[Parameter Types] for complete details on supported parameter types.
+
+== Programmatic API
+
+It's also possible to register a tool programmatically with the `io.quarkiverse.mcp.server.ToolManager` API.
+
+For example, if a tool is only known at application startup time, it can be added as follows:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkus.runtime.Startup;
+import jakarta.inject.Inject;
+
+public class MyTools {
+
+    @Inject
+    ToolManager toolManager; // <1>
+
+    @Startup // <2>
+    void addTool() {
+       toolManager.newTool("toLowerCase") // <3>
+          .setDescription("Converts input string to lower case.")
+          .addArgument("value", "Value to convert", true, String.class)
+          .setHandler(
+              ta -> ToolResponse.success(ta.args().get("value").toString().toLowerCase()))
+          .register(); // <4>
+    }
+}
+----
+<1> The injected manager can be used to obtain metadata and register a new tool programmatically.
+<2> Ensure that `addTool` is executed when the application starts.
+<3> The `ToolManager#newTool(String)` method returns `ToolDefinition`, a builder-like API.
+<4> Registers the tool definition and sends the `notifications/tools/list_changed` notification to all connected clients.
+
+The programmatic API also allows you to remove existing tools at runtime (using `removeTool(String name)`), which is not possible with the annotation-based approach.
+
+== LangChain4j Support
+
+The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.
+This allows you to reuse existing LangChain4j tool definitions in your MCP server.
+
+[source,java]
+----
+import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.Tool;
+import io.quarkiverse.mcp.server.McpConnection;
+import java.time.DayOfWeek;
+
+public class MyTools {
+
+    @Tool(name = "getDayInfo", value = { "Get information about a specific day" }) // <1>
+    String getDayInfo(@P(value = "day") DayOfWeek day, McpConnection connection) { // <2>
+        return DayOfWeek.MONDAY.equals(day)
+            ? "Start of the work week"
+            : "Another day";
+    }
+}
+----
+<1> `@dev.langchain4j.agent.tool.Tool` with `name` and `value` (description) attributes
+<2> `@dev.langchain4j.agent.tool.P` annotates method parameters to specify their description
+
+IMPORTANT: While LangChain4j annotations are supported, keep in mind that semantics may vary and follow the rules defined in this documentation.
+For example, `void` methods are not supported.
+
+TIP: The default behavior can be changed with `quarkus.mcp.server.support-langchain4j-annotations=false`.
+
+== Customizing JSON Schema Generation
+
+By default, the MCP server uses the `com.github.victools:jsonschema-generator` library to generate JSON schemas for tool inputs.
+This library is configurable through modules that process various annotations (e.g., Jackson, Bean Validation) to enrich the generated schemas.
+
+By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the schema generator will be automatically configured to use the Jackson module.
+The same goes for `com.github.victools:jsonschema-module-jakarta-validation` and `com.github.victools:jsonschema-module-swagger-2`.
+See xref:reference-configuration.adoc[Configuration Reference] for relevant configuration properties.
+
+However, it is also possible to override the default behavior.
+First, you can customize the input schema generation on the method level, using a custom `io.quarkiverse.mcp.server.InputSchemaGenerator` together with `Tool.InputSchema#generator()`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.InputSchemaGenerator;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.InputSchema;
+import io.quarkiverse.mcp.server.ToolArg;
+
+public class MyTools {
+
+    @Tool(description = "Put your description here.", inputSchema = @InputSchema(generator = MySchemaGenerator.class)) // <1>
+    String foo(@ToolArg(description = "The name", defaultValue = "Lina") String name) {
+        return "Foo name is " + name;
+    }
+}
+----
+<1> The `MySchemaGenerator` is used to generate the input schema for this `@Tool` method. `InputSchemaGenerator` implementations must be CDI beans. Qualifiers are ignored.
+
+Furthermore, you can also implement a custom `io.quarkiverse.mcp.server.GlobalInputSchemaGenerator`.
+This generator is then used for all `@Tool` methods instead of the built-in implementation.
+
+== Caching Generated JSON Schemas
+
+If your application contains many tools with complex input/output schemas, it might make sense to cache the generated schemas so that they are not regenerated for each `tools/list` request.
+
+You can leverage CDI decorators to implement a simple cache:
+
+[source,java]
+----
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
+import io.quarkiverse.mcp.server.InputSchema;
+import io.quarkiverse.mcp.server.ToolInfo;
+import jakarta.annotation.Priority;
+import jakarta.decorator.Decorator;
+import jakarta.decorator.Delegate;
+import jakarta.inject.Inject;
+
+@Priority(1) // <1>
+@Decorator // <2>
+public class CachingGlobalSchemaGeneratorDecorator implements GlobalInputSchemaGenerator {
+
+   private final ConcurrentMap<String, InputSchema> cache = new ConcurrentHashMap<>();
+
+   @Inject
+   @Delegate
+   GlobalInputSchemaGenerator delegate; // <3>
+
+   @Override
+   public InputSchema generate(ToolInfo tool) {
+      return cache.computeIfAbsent(tool.name(), k -> {
+            return delegate.generate(tool); // <4>
+      });
+   }
+}
+----
+<1> `@Priority` enables the decorator. Decorators with smaller priority values are called first.
+<2> `@Decorator` marks a decorator component.
+<3> Each decorator must declare exactly one delegate injection point. The decorator applies to beans that are assignable to this delegate injection point.
+<4> The decorator may invoke any method of the delegate object. The container invokes either the next decorator in the chain or the business method of the intercepted instance.
+
+TIP: CDI decorators are similar to CDI interceptors, but because they implement interfaces with business semantics, they are able to implement business logic.
+
+== See Also
+
+* xref:reference-content-types.adoc[Content Types Reference]
+* xref:reference-annotations.adoc[Annotations Reference]
+* xref:guides-using-guardrails.adoc[Using Guardrails]
+* xref:guides-using-structured-content.adoc[Using Structured Content]

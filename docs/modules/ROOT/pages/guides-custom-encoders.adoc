@@ -1,0 +1,416 @@
+= Custom Encoders
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+Custom encoders allow you to control how your application's custom types are converted to MCP protocol types.
+This guide covers the three types of encoders and when to use them.
+
+== Overview
+
+The MCP server uses encoders to convert custom return types from your methods into MCP protocol types.
+There are three types of encoders, each serving a specific purpose:
+
+* `ContentEncoder`: Converts objects to `Content` (used by tools and prompts)
+* `ToolResponseEncoder`: Converts objects to `ToolResponse` (used by tools only)
+* `ResourceContentsEncoder`: Converts objects to `ResourceContents` (used by resources)
+
+All encoders must be CDI beans and implement the appropriate encoder interface.
+Higher priority encoders take precedence when multiple encoders support the same type.
+
+== ContentEncoder
+
+`ContentEncoder` converts custom types to `Content` objects like `TextContent`, `ImageContent`, etc.
+This is the most common type of encoder.
+
+=== Basic ContentEncoder
+
+Here's a simple example that encodes a custom object as text:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.ContentEncoder;
+import io.quarkiverse.mcp.server.TextContent;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+
+@Singleton // <1>
+@Priority(1) // <2>
+public class UserEncoder implements ContentEncoder<User> {
+
+    @Override
+    public boolean supports(Class<?> runtimeType) { // <3>
+        return User.class.equals(runtimeType);
+    }
+
+    @Override
+    public Content encode(User user) { // <4>
+        return new TextContent(
+            "User: " + user.name() + " <" + user.email() + ">");
+    }
+}
+----
+<1> Encoder implementations must be CDI beans.
+<2> Use `@Priority` to control precedence. Higher values take priority over lower values.
+<3> The `supports` method determines if this encoder can handle a given type.
+<4> The `encode` method performs the actual conversion.
+
+=== Using the Encoder
+
+Once defined, the encoder is automatically used when a tool or prompt returns the supported type:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Get user information")
+    User getUser(String username) {
+        return new User(username, username + "@example.com"); // <1>
+    }
+}
+
+public record User(String name, String email) {
+}
+----
+<1> The `User` object is automatically encoded using `UserEncoder`.
+
+=== Default ContentEncoder
+
+The MCP server provides a default `ContentEncoder` that serializes objects to JSON:
+
+[source,java]
+----
+@Singleton
+@Priority(0) // <1>
+public class JsonTextContentEncoder implements ContentEncoder<Object> {
+
+    @Inject
+    ObjectMapper mapper;
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return true; // <2>
+    }
+
+    @Override
+    public Content encode(Object value) {
+        return new TextContent(mapper.writeValueAsString(value)); // <3>
+    }
+}
+----
+<1> Priority 0 means custom encoders with higher priority take precedence.
+<2> Supports all types as a fallback.
+<3> Serializes the object to JSON.
+
+Custom encoders should use `@Priority(1)` or higher to override the default behavior.
+
+== ToolResponseEncoder
+
+`ToolResponseEncoder` converts objects directly to `ToolResponse`, giving you complete control over the response including error state and multiple content items.
+
+IMPORTANT: `ToolResponseEncoder` takes precedence over `ContentEncoder` for tool methods. If both exist for a type, the `ToolResponseEncoder` is used.
+
+=== Basic ToolResponseEncoder
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.ToolResponseEncoder;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+
+import java.util.List;
+
+@Singleton
+@Priority(1)
+public class ValidationResultEncoder implements ToolResponseEncoder<ValidationResult> {
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return ValidationResult.class.equals(runtimeType);
+    }
+
+    @Override
+    public ToolResponse encode(ValidationResult result) {
+        if (result.isValid()) {
+            return ToolResponse.success("Validation passed: " + result.message()); // <1>
+        } else {
+            return ToolResponse.error("Validation failed: " + result.message()); // <2>
+        }
+    }
+}
+----
+<1> Return a success response with custom message.
+<2> Return an error response when validation fails.
+
+=== Advanced ToolResponseEncoder
+
+You can return multiple content items or handle different types:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Content;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.ToolResponseEncoder;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+
+import java.util.List;
+
+@Singleton
+@Priority(1)
+public class ReportEncoder implements ToolResponseEncoder<Object> {
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return Report.class.equals(runtimeType)
+            || List.class.isAssignableFrom(runtimeType); // <1>
+    }
+
+    @Override
+    public ToolResponse encode(Object value) {
+        List<Content> content;
+        if (value instanceof Report report) {
+            content = List.of(
+                new TextContent("Title: " + report.title()),
+                new TextContent("Summary: " + report.summary())); // <2>
+        } else if (value instanceof List<?> list) {
+            content = list.stream()
+                .map(item -> new TextContent(item.toString()))
+                .map(Content.class::cast)
+                .toList();
+        } else {
+            throw new IllegalArgumentException("Unsupported type");
+        }
+        return new ToolResponse(false, content); // <3>
+    }
+}
+----
+<1> Can handle multiple types.
+<2> Return multiple content items.
+<3> Create a `ToolResponse` with the content list.
+
+=== When to Use ToolResponseEncoder
+
+Use `ToolResponseEncoder` when you need to:
+
+* Control the error state (`isError` field)
+* Return multiple content items
+* Handle specific types differently than the default JSON encoding
+* Implement custom error handling logic
+
+For simple text conversion, `ContentEncoder` is usually sufficient.
+
+== ResourceContentsEncoder
+
+`ResourceContentsEncoder` converts objects to `ResourceContents` for resource and resource template methods.
+
+=== Basic ResourceContentsEncoder
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ResourceContents;
+import io.quarkiverse.mcp.server.ResourceContentsEncoder;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+
+@Singleton
+@Priority(1)
+public class DocumentEncoder implements ResourceContentsEncoder<Document> {
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return Document.class.equals(runtimeType);
+    }
+
+    @Override
+    public ResourceContents encode(ResourceContentsData<Document> data) { // <1>
+        Document doc = data.data(); // <2>
+        String uri = data.uri().value(); // <3>
+
+        String content = "# " + doc.title() + "\n\n" + doc.content();
+        return TextResourceContents.create(uri, content); // <4>
+    }
+}
+
+public record Document(String title, String content) {
+}
+----
+<1> Takes `ResourceContentsData` which wraps the object and URI.
+<2> Extract the actual data object.
+<3> Access the resource URI from the request.
+<4> Create `ResourceContents` with the URI and encoded content.
+
+=== Using the Encoder
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceTemplate;
+
+public class MyResources {
+
+    @Resource(uri = "file:///readme.md")
+    Document readme() {
+        return new Document("README", "This is the readme file.");
+    }
+
+    @ResourceTemplate(uriTemplate = "doc:///{id}")
+    Document document(String id) {
+        return loadDocumentById(id); // <1>
+    }
+}
+----
+<1> The `Document` object is automatically encoded using `DocumentEncoder`.
+
+=== Default ResourceContentsEncoder
+
+The default encoder serializes objects to JSON as `TextResourceContents`:
+
+[source,java]
+----
+@Singleton
+@Priority(0)
+public class JsonTextResourceContentsEncoder implements ResourceContentsEncoder<Object> {
+
+    @Inject
+    ObjectMapper mapper;
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return true;
+    }
+
+    @Override
+    public ResourceContents encode(ResourceContentsData<Object> data) {
+        return TextResourceContents.create(
+            data.uri().value(),
+            mapper.writeValueAsString(data.data()));
+    }
+}
+----
+
+== PromptResponseEncoder
+
+`PromptResponseEncoder` converts objects to `PromptResponse` for prompt methods.
+
+=== Basic PromptResponseEncoder
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.PromptMessage;
+import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.PromptResponseEncoder;
+import io.quarkiverse.mcp.server.TextContent;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+
+import java.util.List;
+
+@Singleton
+@Priority(1)
+public class TemplateEncoder implements PromptResponseEncoder<Template> {
+
+    @Override
+    public boolean supports(Class<?> runtimeType) {
+        return Template.class.equals(runtimeType);
+    }
+
+    @Override
+    public PromptResponse encode(Template template) {
+        List<PromptMessage> messages = List.of(
+            PromptMessage.withSystemRole(
+                new TextContent("You are a " + template.role())),
+            PromptMessage.withUserRole(
+                new TextContent(template.userMessage()))
+        );
+        return new PromptResponse(null, messages); // <1>
+    }
+}
+
+public record Template(String role, String userMessage) {
+}
+----
+<1> Create a `PromptResponse` with the message list.
+
+=== Using the Encoder
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Prompt;
+
+public class MyPrompts {
+
+    @Prompt(description = "Code review template")
+    Template codeReview(String language) {
+        return new Template(
+            "expert code reviewer",
+            "Review this " + language + " code for best practices.");
+    }
+}
+----
+
+== Priority and Precedence
+
+When multiple encoders support the same type, priority determines which one is used:
+
+* Higher priority values take precedence
+* `@Priority(1)` or higher overrides default encoders (`@Priority(0)`)
+* If priorities are equal, the behavior is undefined
+
+[source,java]
+----
+@Singleton
+@Priority(0)  // Default encoder
+public class DefaultEncoder implements ContentEncoder<Object> {
+    // ...
+}
+
+@Singleton
+@Priority(1)  // Overrides default for specific type
+public class UserEncoder implements ContentEncoder<User> {
+    // ...
+}
+
+@Singleton
+@Priority(10) // Highest priority
+public class SpecialUserEncoder implements ContentEncoder<User> {
+    // ...
+}
+----
+
+In this example, `SpecialUserEncoder` is used for `User` objects because it has the highest priority.
+
+== Encoder Selection for Tools
+
+For tool methods, encoders are selected in this order:
+
+1. `ToolResponseEncoder` - If one exists and supports the type
+2. `ContentEncoder` - If no `ToolResponseEncoder` matches
+3. Default JSON encoder - If no custom encoders match
+
+[source,java]
+----
+// With ToolResponseEncoder<MyObject> and ContentEncoder<MyObject> defined:
+
+@Tool
+MyObject getTool() {
+    return new MyObject(); // <1>
+}
+----
+<1> Uses `ToolResponseEncoder<MyObject>` if it exists, otherwise falls back to `ContentEncoder<MyObject>`.
+
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
+* xref:guides-implementing-prompts.adoc[Implementing Prompts]
+* xref:reference-return-types.adoc[Return Types Reference]
+* xref:reference-content-types.adoc[Content Types Reference]

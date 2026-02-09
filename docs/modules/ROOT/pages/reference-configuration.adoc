@@ -1,0 +1,21 @@
+= Configuration Reference
+
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+[[extension-configuration-reference]]
+== Extension configuration reference
+
+include::includes/quarkus-mcp-server-core.adoc[leveloffset=+1, opts=optional]
+
+== STDIO Transport
+
+include::includes/quarkus-mcp-server-stdio.adoc[leveloffset=+1, opts=optional]
+
+== HTTP Transport
+
+include::includes/quarkus-mcp-server-http.adoc[leveloffset=+1, opts=optional]
+
+== WebSocket Transport
+
+include::includes/quarkus-mcp-server-websocket.adoc[leveloffset=+1, opts=optional]

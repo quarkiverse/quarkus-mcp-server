@@ -1,0 +1,156 @@
+= Content Types Reference
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+== Supported Content Types
+
+According to the https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-result[MCP specification], tool responses can include various content types to provide rich, multimodal results to clients.
+The following content types are supported:
+
+=== TextContent
+
+Text content is the most common content type, containing plain text or formatted text responses.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns a greeting message")
+    ToolResponse greet(String name) {
+        return ToolResponse.success(new TextContent("Hello, " + name + "!"));
+    }
+}
+----
+
+=== ImageContent
+
+Image content allows tools to return images as base64-encoded data with a MIME type.
+
+[source,java]
+----
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
+
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns an image from the filesystem")
+    ToolResponse getImage(String filename) throws Exception {
+        byte[] imageData = Files.readAllBytes(Path.of("images", filename));
+        String base64Image = Base64.getEncoder().encodeToString(imageData);
+        return ToolResponse.success(new ImageContent(base64Image, "image/png"));
+    }
+}
+----
+
+=== AudioContent
+
+Audio content allows tools to return audio data as base64-encoded data with a MIME type.
+
+[source,java]
+----
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
+
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.AudioContent;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns an audio file")
+    ToolResponse getAudio(String filename) throws Exception {
+        byte[] audioData = Files.readAllBytes(Path.of("audio", filename));
+        String base64Audio = Base64.getEncoder().encodeToString(audioData);
+        return ToolResponse.success(new AudioContent(base64Audio, "audio/wav"));
+    }
+}
+----
+
+=== EmbeddedResource
+
+Embedded resource content allows tools to embed resource contents directly in the response.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns a file as an embedded resource")
+    ToolResponse getFileAsResource(String filename) {
+        String content = "File content for: " + filename;
+        return ToolResponse.success(
+            new EmbeddedResource(
+                new TextResourceContents("file:///" + filename, content, "text/plain")));
+    }
+}
+----
+
+=== ResourceLink
+
+Resource link content provides a reference to a resource without embedding its content directly.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ResourceLink;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns a link to a resource")
+    ToolResponse getResourceLink(String resourceName) {
+        String uri = "file:///resources/" + resourceName;
+        return ToolResponse.success(new ResourceLink(uri, "Link to " + resourceName));
+    }
+}
+----
+
+=== Multiple Content Types
+
+A single tool response can include multiple content types:
+
+[source,java]
+----
+import java.util.Base64;
+
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.AudioContent;
+import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.ResourceLink;
+import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolResponse;
+
+public class MyTools {
+
+    @Tool(description = "Returns multiple content types in a single response")
+    ToolResponse getMultipleContents() {
+        return ToolResponse.success(
+            new TextContent("Analysis complete"),
+            new ImageContent(Base64.getEncoder().encodeToString("chart-data".getBytes()), "image/png"),
+            new AudioContent(Base64.getEncoder().encodeToString("audio-data".getBytes()), "audio/wav"),
+            new EmbeddedResource(new TextResourceContents("file:///report.txt", "Report data", "text/plain")),
+            new ResourceLink("file:///full-results.json", "Full analysis results"));
+    }
+}
+----
+
+== See Also
+
+* xref:guides-implementing-tools.adoc[Implementing Tools]
+* xref:guides-implementing-resources.adoc[Implementing Resources]
