@@ -30,6 +30,9 @@ public record BlobResourceContents(String uri, String blob, String mimeType, Map
      * @return a new binary resource contents
      */
     public static BlobResourceContents create(String uri, byte[] blob) {
+        if (blob == null) {
+            throw new IllegalArgumentException("blob must not be null");
+        }
         return new BlobResourceContents(uri, Base64.getMimeEncoder().encodeToString(blob), null, null);
     }
 
