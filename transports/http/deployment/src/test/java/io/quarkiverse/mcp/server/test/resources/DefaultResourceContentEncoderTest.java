@@ -15,7 +15,7 @@ import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
 
-public class ResourceJsonTextContentEncoderTest extends McpServerTest {
+public class DefaultResourceContentEncoderTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
@@ -37,6 +37,14 @@ public class ResourceJsonTextContentEncoderTest extends McpServerTest {
                 })
                 .resourcesRead("file:///uni_list_bravo", r -> {
                     assertEquals("{\"name\":\"foo\",\"sum\":5,\"valid\":true}", r.contents().get(0).asText().text());
+                })
+                .resourcesRead("file:///charlie", r -> {
+                    assertEquals("charlie", r.firstContents().asText().text());
+                    assertEquals("text/plain", r.firstContents().asText().mimeType());
+                })
+                .resourcesRead("file:///delta", r -> {
+                    assertEquals("ZGVsdGE=", r.firstContents().asBlob().blob());
+                    assertEquals("text/plain", r.firstContents().asBlob().mimeType());
                 })
                 .thenAssertResults();
     }
@@ -65,6 +73,16 @@ public class ResourceJsonTextContentEncoderTest extends McpServerTest {
         @Resource(uri = "file:///uni_list_bravo")
         Uni<List<MyObject>> uni_list_bravo() {
             return Uni.createFrom().item(List.of(new MyObject("foo", 5, true)));
+        }
+
+        @Resource(uri = "file:///charlie", mimeType = "text/plain")
+        String charlie() {
+            return "charlie";
+        }
+
+        @Resource(uri = "file:///delta", mimeType = "text/plain")
+        byte[] delta() {
+            return "delta".getBytes();
         }
 
     }

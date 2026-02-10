@@ -35,7 +35,7 @@ import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
-import io.quarkiverse.mcp.server.ResourceContentsEncoder;
+import io.quarkiverse.mcp.server.ResourceContentsEncoder.ResourceContentsData;
 import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
@@ -185,27 +185,29 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     @Override
-    protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
-        if (metadata.resultMapper() instanceof EncoderMapper) {
+    protected Object wrapResult(FeatureInvoker<?> invoker, Object ret, FeatureMetadata<?> metadata,
+            ArgumentProviders argProviders) {
+        if (invoker instanceof ResourceMethod m
+                && metadata.resultMapper() instanceof EncoderMapper) {
             // We need to wrap the returned value with ResourceContentsData
             // Supported variants are Uni<X>, List<X>, Uni<List<X>
             if (ret instanceof Uni<?> uni) {
                 return uni.map(i -> {
                     if (i instanceof List<?> list) {
                         return list.stream().map(
-                                e -> new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), e))
+                                e -> new ResourceContentsData<>(new RequestUri(argProviders.uri()), e, m))
                                 .toList();
                     }
-                    return new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), i);
+                    return new ResourceContentsData<>(new RequestUri(argProviders.uri()), i, m);
                 });
             } else if (ret instanceof List<?> list) {
                 return list.stream()
-                        .map(e -> new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), e))
+                        .map(e -> new ResourceContentsData<>(new RequestUri(argProviders.uri()), e, m))
                         .toList();
             }
-            return new ResourceContentsEncoder.ResourceContentsData<>(new RequestUri(argProviders.uri()), ret);
+            return new ResourceContentsData<>(new RequestUri(argProviders.uri()), ret, m);
         }
-        return super.wrapResult(ret, metadata, argProviders);
+        return super.wrapResult(invoker, ret, metadata, argProviders);
     }
 
     @Override

@@ -33,7 +33,7 @@ public record BlobResourceContents(String uri, String blob, String mimeType, Map
         if (blob == null) {
             throw new IllegalArgumentException("blob must not be null");
         }
-        return new BlobResourceContents(uri, Base64.getMimeEncoder().encodeToString(blob), null, null);
+        return new BlobResourceContents(uri, toBase64(blob), null, null);
     }
 
     public BlobResourceContents(String uri, String blob, String mimeType) {
@@ -57,6 +57,10 @@ public record BlobResourceContents(String uri, String blob, String mimeType, Map
     @Override
     public BlobResourceContents asBlob() {
         return this;
+    }
+
+    public static String toBase64(byte[] blob) {
+        return Base64.getMimeEncoder().encodeToString(blob);
     }
 
 }

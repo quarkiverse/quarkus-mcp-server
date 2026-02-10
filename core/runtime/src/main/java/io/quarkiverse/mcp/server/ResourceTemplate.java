@@ -27,7 +27,9 @@ import io.smallrye.mutiny.Uni;
  * </ul>
  *
  * <p>
- * There is a default resource contents encoder registered; it encodes the returned value as JSON.
+ * There is a default resource contents encoder registered. If the return type is {@link String} then it encodes the returned
+ * value as {@link TextResourceContents}. If the return type is {@code byte[]} then it encodes the returned value as
+ * {@link BlobResourceContents}. Any other return value is serialized to JSON and encoded as {@link TextResourceContents}.
  *
  * <p>
  * If you need to provide additional metadata in the {@code _meta} object of the resource template definition included in the

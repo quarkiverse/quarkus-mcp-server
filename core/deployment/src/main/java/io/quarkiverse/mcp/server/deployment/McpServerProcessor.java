@@ -81,6 +81,7 @@ import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
+import io.quarkiverse.mcp.server.runtime.DefaultResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -88,7 +89,6 @@ import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
-import io.quarkiverse.mcp.server.runtime.JsonTextResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpObjectMapperCustomizer;
 import io.quarkiverse.mcp.server.runtime.McpServerRecorder;
@@ -203,7 +203,7 @@ class McpServerProcessor {
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
                 ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class);
         // Encoders
-        unremovable.addBeanClasses(JsonTextContentEncoder.class, JsonTextResourceContentsEncoder.class);
+        unremovable.addBeanClasses(JsonTextContentEncoder.class, DefaultResourceContentsEncoder.class);
         // Result mappers
         unremovable.addBeanClasses(ToolEncoderResultMapper.class, ResourceContentsEncoderResultMapper.class,
                 PromptEncoderResultMapper.class, ToolStructuredContentResultMapper.class);

@@ -39,10 +39,10 @@ public final class Contents {
     public static ResourceContents parseResourceContents(JsonObject resourceContent) {
         if (resourceContent.containsKey("text")) {
             return new TextResourceContents(resourceContent.getString("uri"), resourceContent.getString("text"),
-                    resourceContent.getString("mime"));
+                    resourceContent.getString("mimeType"), parseMeta(resourceContent));
         } else if (resourceContent.containsKey("blob")) {
             return new BlobResourceContents(resourceContent.getString("uri"), resourceContent.getString("blob"),
-                    resourceContent.getString("mime"));
+                    resourceContent.getString("mimeType"), parseMeta(resourceContent));
         } else {
             throw new IllegalStateException("Unsupported resource content type");
         }
