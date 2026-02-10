@@ -38,7 +38,7 @@
 
     <properties>
         <quarkus.version>3.27.2</quarkus.version>
-        <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
+        <jsonschema-generator.version>5.0.0</jsonschema-generator.version>
         <sundrio.version>0.230.2</sundrio.version>
         <swagger-annotations.version>2.2.42</swagger-annotations.version>
         <!-- TODO: unify the pattern for version properties -->
