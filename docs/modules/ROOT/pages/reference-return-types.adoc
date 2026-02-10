@@ -197,7 +197,13 @@ However, `@Resource` and `@ResourceTemplate` methods can return other types that
 
 |===
 
-TIP: A default resource contents encoder is registered that encodes values as JSON.
+[TIP]
+====
+A default resource contents encoder is registered.
+If the return type is `String` then it encodes the returned value as `TextResourceContents`.
+If the return type is `byte[]` then it encodes the returned value as `BlobResourceContents`.
+Any other return value is serialized to JSON and encoded as `TextResourceContents`.
+====
 
 **Example conversions:**
 
@@ -210,10 +216,24 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.smallrye.mutiny.Uni;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.List;
 
 public class MyResources {
+
+    // Returns TextResourceContents - converted to ResourceResponse
+    @Resource(uri = "file:///data.txt")
+    String simpleText() {
+        return "Resource content";
+    }
+    
+    // Returns BlobResourceContents - converted to ResourceResponse
+    @Resource(uri = "file:///data.bin")
+    byte[] simpleBlob() {
+        return Files.readAllBytes(Path.of("data.bin"));
+    }
 
     // Returns TextResourceContents - converted to ResourceResponse
     @Resource(uri = "file:///data.txt")

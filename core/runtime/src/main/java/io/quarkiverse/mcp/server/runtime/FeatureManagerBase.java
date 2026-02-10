@@ -152,7 +152,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     }
 
-    protected Object wrapResult(Object ret, FeatureMetadata<?> metadata, ArgumentProviders argProviders) {
+    protected Object wrapResult(FeatureInvoker<?> invoker, Object ret, FeatureMetadata<?> metadata,
+            ArgumentProviders argProviders) {
         return ret;
     }
 
@@ -423,7 +424,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             try {
                 Function<Result<Object>, Uni<RESPONSE>> resultMapper = metadata.resultMapper();
                 Object ret = invoker.invoke(null, arguments);
-                ret = wrapResult(ret, metadata, argProviders);
+                ret = wrapResult(this, ret, metadata, argProviders);
                 return resultMapper.apply(new Result<>(ret, argProviders.serverName()));
             } catch (Throwable e) {
                 return Uni.createFrom().failure(e);

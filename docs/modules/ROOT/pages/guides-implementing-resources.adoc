@@ -21,13 +21,11 @@ import java.nio.file.Path;
 public class MyResources {
 
     @Inject <2>
-    FooService fooService;
+    AlphaService service;
 
     @Resource(uri = "file:///project/alpha") <3>
-    BlobResourceContents alpha() throws Exception {
-        return BlobResourceContents.create(
-            "file:///project/alpha",
-            Files.readAllBytes(Path.of("alpha.txt")));
+    byte[] alpha() throws Exception {
+        return service.readAlpha();
     }
 
 }
@@ -172,7 +170,13 @@ Uni<TextResourceContents> asyncResource() {
 }
 ----
 
-TIP: There is a default resource contents encoder registered; it encodes the returned value as JSON.
+[TIP]
+====
+A default resource contents encoder is registered.
+If the return type is `String` then it encodes the returned value as `TextResourceContents`.
+If the return type is `byte[]` then it encodes the returned value as `BlobResourceContents`.
+Any other return value is serialized to JSON and encoded as `TextResourceContents`.
+====
 
 == Method Parameters
 
