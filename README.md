@@ -26,7 +26,7 @@ Add the following dependency to your POM file:
 ```
 
 > [!NOTE]  
-> This dependency includes both the legacy "HTTP/SSE" and the "Streamable HTTP" transport. Use the `quarkus-mcp-server-stdio` artifactId if you want to use the STDIO transport instead. See also the [Supported transports](https://docs.quarkiverse.io/quarkus-mcp-server/dev/#_supported_transports) section in the docs for more information.
+> This dependency includes both the legacy "HTTP/SSE" and the "Streamable HTTP" transport. Use the `quarkus-mcp-server-stdio` artifactId if you want to use the STDIO transport instead. See also the [Transports](https://docs.quarkiverse.io/quarkus-mcp-server/dev/concepts-transports.html) section in the docs for more information.
 
 
 ### Step #2 
@@ -49,7 +49,7 @@ import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 
 // This class is automatically registered as a @Singleton CDI bean
-public class MyServerFeatures {
+public class MyFeatures {
 
     @Inject
     CodeService codeService;
@@ -64,9 +64,9 @@ public class MyServerFeatures {
         return PromptMessage.withUserRole(new TextContent(codeService.assist(language)));
     }
 
-    @Resource(uri = "file:///project/alpha")
-    BlobResourceContents alpha(RequestUri uri) throws IOException{
-        return BlobResourceContents.create(uri.value(), Files.readAllBytes(Path.of("alpha.txt")));
+    @Resource(uri = "file:///project/alpha.txt")
+    byte[] alpha() throws IOException{
+        return Files.readAllBytes(Path.of("alpha.txt"));
     }
 
 }
