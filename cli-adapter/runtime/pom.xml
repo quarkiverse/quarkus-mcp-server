@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.quarkiverse.mcp</groupId>
         <artifactId>quarkus-mcp-server-cli-adapter-parent</artifactId>
-        <version>999-SNAPSHOT</version>
+        <version>1.10.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-cli-adapter</artifactId>
