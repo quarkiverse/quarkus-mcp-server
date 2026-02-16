@@ -40,8 +40,8 @@ public class MyFeatures {
 
 This tool is automatically registered to the **default server**, accessible at the default endpoints:
 
-* SSE: `/mcp/sse`
 * Streamable HTTP: `/mcp`
+* SSE: `/mcp/sse`
 * WebSocket: `/ws/mcp`
 
 == Configuring Multiple Servers
@@ -53,32 +53,32 @@ Define different root paths for each named server in `application.properties`:
 [source,properties]
 ----
 # Default server (unnamed)
-quarkus.mcp.server.sse.root-path=/mcp
+quarkus.mcp.server.http.root-path=/mcp
 
 # Named server "bravo"
-quarkus.mcp.server.bravo.sse.root-path=/bravo/mcp
+quarkus.mcp.server.bravo.http.root-path=/bravo/mcp
 
 # Named server "charlie"
-quarkus.mcp.server.charlie.sse.root-path=/charlie/mcp
+quarkus.mcp.server.charlie.http.root-path=/charlie/mcp
 ----
 
 Each server will have its own set of endpoints:
 
 [cols="1,2,2"]
 |===
-|Server |SSE Endpoint |Streamable HTTP Endpoint
+|Server |Streamable HTTP Endpoint |SSE Endpoint 
 
 |Default
-|`/mcp/sse`
 |`/mcp`
+|`/mcp/sse`
 
 |bravo
-|`/bravo/mcp/sse`
 |`/bravo/mcp`
+|`/bravo/mcp/sse`
 
 |charlie
-|`/charlie/mcp/sse`
 |`/charlie/mcp`
+|`/charlie/mcp/sse`
 |===
 
 === Step 2: Bind Features to Servers
@@ -233,11 +233,11 @@ Configure transports independently:
 
 [source,properties]
 ----
-# Default server: SSE only
-quarkus.mcp.server.sse.root-path=/api/mcp
+# Default server: HTTP only
+quarkus.mcp.server.http.root-path=/api/mcp
 
 # Admin server: Different path
-quarkus.mcp.server.admin.sse.root-path=/admin/mcp
+quarkus.mcp.server.admin.http.root-path=/admin/mcp
 
 # Public server: WebSocket
 quarkus.mcp.server.public.ws.root-path=/public/ws/mcp
@@ -252,8 +252,8 @@ Each server can have different security policies.
 [source,properties]
 ----
 # Server endpoints
-quarkus.mcp.server.sse.root-path=/public/mcp
-quarkus.mcp.server.secure.sse.root-path=/secure/mcp
+quarkus.mcp.server.http.root-path=/public/mcp
+quarkus.mcp.server.secure.http.root-path=/secure/mcp
 
 # Secure server requires authentication
 quarkus.http.auth.permission.secure.paths=/secure/mcp/*
