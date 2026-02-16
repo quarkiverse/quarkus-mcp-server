@@ -141,7 +141,8 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 implementation.version(),
                 capabilities,
                 initResult.getString("instructions"),
-                implementation);
+                implementation,
+                initResult.getJsonObject("_meta"));
         if (assertFunction != null) {
             assertFunction.accept(r);
         }

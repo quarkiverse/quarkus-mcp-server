@@ -9,6 +9,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.http.runtime.SseMcpMessageHandler.SseMcpRequest;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
@@ -62,6 +63,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             NotificationManagerImpl initManager,
             ResponseHandlers serverRequests,
             @All List<InitialCheck> initialChecks,
+            @All List<InitialResponseInfo> initialResponseInfos,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
@@ -69,7 +71,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
-                initialChecks, metrics.isResolvable() ? metrics.get() : null);
+                initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }

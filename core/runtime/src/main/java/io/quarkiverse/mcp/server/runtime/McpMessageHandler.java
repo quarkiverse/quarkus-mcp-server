@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -22,11 +23,13 @@ import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.PromptManager;
@@ -76,6 +79,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final ResponseHandlers responseHandlers;
     private final List<InitialCheck> initialChecks;
+    private final List<InitialResponseInfo> initialResponseInfos;
 
     protected final McpServersRuntimeConfig config;
 
@@ -95,7 +99,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
-            McpMetadata metadata, Vertx vertx, List<InitialCheck> initialChecks, McpMetrics mcpMetrics) {
+            McpMetadata metadata, Vertx vertx,
+            List<InitialCheck> initialChecks,
+            List<InitialResponseInfo> initialResponseInfos,
+            McpMetrics mcpMetrics) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -112,6 +119,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.notificationManager = notificationManager;
         this.responseHandlers = responseHandlers;
         this.initialChecks = initialChecks;
+        this.initialResponseInfos = initialResponseInfos;
         this.config = config;
         this.metadata = metadata;
         this.vertx = vertx;
@@ -265,7 +273,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (mcpRequest.connection().initialize(initialRequest)) {
                 // The server MUST respond with its own capabilities and information
                 afterInitialize(mcpRequest);
-                return mcpRequest.sender().sendResult(id, serverInfo(mcpRequest, initialRequest, message));
+                return mcpRequest.sender().sendResult(id, initResult(mcpRequest, initialRequest, message));
             } else {
                 initializeFailed(mcpRequest);
                 String msg = "Unable to initialize connection [connectionId: " + mcpRequest.connection().id() + "]";
@@ -282,7 +290,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private static Uni<InitialCheck.CheckResult> checkInit(InitialRequest initialRequest, List<InitialCheck> checks, int idx) {
         if (checks.isEmpty()) {
-            return InitialCheck.CheckResult.successs();
+            return InitialCheck.CheckResult.success();
         }
         try {
             return checks.get(idx).perform(initialRequest).chain(res -> {
@@ -560,51 +568,15 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             "2025-03-26",
             "2024-11-05");
 
-    private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
-        Map<String, Object> info = new HashMap<>();
+    private Map<String, Object> initResult(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
+        Map<String, Object> ret = new HashMap<>();
 
         // Note that currently the protocol version does not affect the behavior of the server in any way
         String version = SUPPORTED_PROTOCOL_VERSIONS.get(0);
         if (SUPPORTED_PROTOCOL_VERSIONS.contains(initialRequest.protocolVersion())) {
             version = initialRequest.protocolVersion();
         }
-        info.put("protocolVersion", version);
-
-        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
-        JsonObject implementation = new JsonObject();
-        String serverName = serverInfo.name()
-                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
-                        .orElse("N/A"));
-        implementation.put("name", serverName);
-        implementation.put("version", serverInfo.version()
-                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
-                        .orElse("N/A")));
-        implementation.put("title", serverInfo.title().orElse(serverName));
-        if (serverInfo.description().isPresent()) {
-            implementation.put("description", serverInfo.description().get());
-        }
-        if (serverInfo.websiteUrl().isPresent()) {
-            implementation.put("websiteUrl", serverInfo.websiteUrl().get());
-        }
-        if (!serverInfo.icons().isEmpty()) {
-            JsonArray icons = new JsonArray();
-            for (Icon icon : serverInfo.icons()) {
-                JsonObject i = new JsonObject()
-                        .put("src", icon.src());
-                if (icon.mimeType().isPresent()) {
-                    i.put("mimeType", icon.mimeType().get());
-                }
-                if (icon.theme().isPresent()) {
-                    i.put("theme", icon.theme().get().toString().toLowerCase());
-                }
-                if (!icon.sizes().isEmpty()) {
-                    i.put("sizes", icon.sizes());
-                }
-                icons.add(i);
-            }
-            implementation.put("icons", icons);
-        }
-        info.put("serverInfo", implementation);
+        ret.put("protocolVersion", version);
 
         FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.INITIALIZE, message, mcpRequest);
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
@@ -623,11 +595,77 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
-        info.put("capabilities", capabilities);
-        if (serverInfo.instructions().isPresent()) {
-            info.put("instructions", serverInfo.instructions().get());
+        ret.put("capabilities", capabilities);
+
+        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
+        Optional<Implementation> implementation = Optional.empty();
+        for (InitialResponseInfo info : initialResponseInfos) {
+            Optional<Implementation> impl = info.implementation(mcpRequest.serverName());
+            if (impl != null && impl.isPresent()) {
+                implementation = impl;
+                break;
+            }
         }
-        return info;
+        if (implementation.isPresent()) {
+            ret.put("serverInfo", implementation);
+        } else {
+            JsonObject impl = new JsonObject();
+            String serverName = serverInfo.name()
+                    .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
+                            .orElse("N/A"));
+            impl.put("name", serverName);
+            impl.put("version", serverInfo.version()
+                    .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
+                            .orElse("N/A")));
+            impl.put("title", serverInfo.title().orElse(serverName));
+            if (serverInfo.description().isPresent()) {
+                impl.put("description", serverInfo.description().get());
+            }
+            if (serverInfo.websiteUrl().isPresent()) {
+                impl.put("websiteUrl", serverInfo.websiteUrl().get());
+            }
+            if (!serverInfo.icons().isEmpty()) {
+                JsonArray icons = new JsonArray();
+                for (Icon icon : serverInfo.icons()) {
+                    JsonObject i = new JsonObject()
+                            .put("src", icon.src());
+                    if (icon.mimeType().isPresent()) {
+                        i.put("mimeType", icon.mimeType().get());
+                    }
+                    if (icon.theme().isPresent()) {
+                        i.put("theme", icon.theme().get().toString().toLowerCase());
+                    }
+                    if (!icon.sizes().isEmpty()) {
+                        i.put("sizes", icon.sizes());
+                    }
+                    icons.add(i);
+                }
+                impl.put("icons", icons);
+            }
+            ret.put("serverInfo", impl);
+
+        }
+
+        Optional<String> instructions = serverInfo.instructions();
+        for (InitialResponseInfo info : initialResponseInfos) {
+            Optional<String> instr = info.instructions(mcpRequest.serverName());
+            if (instr != null && instr.isPresent()) {
+                instructions = instr;
+                break;
+            }
+        }
+        if (instructions.isPresent()) {
+            ret.put("instructions", instructions.get());
+        }
+
+        for (InitialResponseInfo info : initialResponseInfos) {
+            Optional<Map<MetaKey, Object>> meta = info.meta(mcpRequest.serverName());
+            if (meta != null && meta.isPresent()) {
+                ret.put("_meta", meta.get());
+                break;
+            }
+        }
+        return ret;
     }
 
     private void validateServerConfigs() {

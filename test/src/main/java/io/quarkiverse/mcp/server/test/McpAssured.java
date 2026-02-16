@@ -1337,7 +1337,7 @@ public class McpAssured {
     public record InitResult(String protocolVersion,
             // Keep serverName, serverTitle and serverVersion for backwards compatibility
             String serverName, String serverTitle, String serverVersion,
-            List<ServerCapability> capabilities, String instructions, Implementation implementation) {
+            List<ServerCapability> capabilities, String instructions, Implementation implementation, JsonObject meta) {
 
     }
 

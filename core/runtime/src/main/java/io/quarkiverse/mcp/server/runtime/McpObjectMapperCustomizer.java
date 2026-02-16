@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.ImageContent;
+import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.ResourceResponse;
@@ -40,7 +41,7 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
         objectMapper.addMixIn(TextContent.class, ResponseMixin.class);
 
         objectMapper.addMixIn(Icon.class, ResponseMixin.class);
-
+        objectMapper.addMixIn(Implementation.class, ResponseMixin.class);
     }
 
     @JsonInclude(Include.NON_NULL)
