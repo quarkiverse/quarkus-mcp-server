@@ -243,6 +243,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             if (dummy != null
                     && mcpRequest.connection().initialize(dummy)
                     && mcpRequest.connection().setInitialized()) {
+                connectionManager.fireInitializing(mcpRequest.connection());
+                connectionManager.fireInitialized(mcpRequest.connection());
                 LOG.debugf("Connection initialized with dummy initial request: %s [%s]", dummy.implementation().name(),
                         mcpRequest.connection().id());
                 return operation(method, message, mcpRequest);
@@ -271,6 +273,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             }
             // Init checks passed - attempt to initialize the connection
             if (mcpRequest.connection().initialize(initialRequest)) {
+                connectionManager.fireInitializing(mcpRequest.connection());
                 // The server MUST respond with its own capabilities and information
                 afterInitialize(mcpRequest);
                 return mcpRequest.sender().sendResult(id, initResult(mcpRequest, initialRequest, message));
@@ -308,6 +311,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> initializing(McpMethod method, JsonObject message, McpRequest mcpRequest) {
         if (McpMethod.NOTIFICATIONS_INITIALIZED == method) {
             if (mcpRequest.connection().setInitialized()) {
+                connectionManager.fireInitialized(mcpRequest.connection());
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
                 // Call init methods asynchronously
                 List<NotificationManager.NotificationInfo> infos = notificationManager

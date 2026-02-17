@@ -9,11 +9,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.McpConnectionEvent;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -27,12 +29,15 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
 
     private final ResponseHandlers responseHandlers;
 
+    private final Event<McpConnectionEvent> connectionEvent;
+
     private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
 
     public ConnectionManager(Vertx vertx, ResponseHandlers responseHandlers, McpServersRuntimeConfig servers,
-            McpMetadata metadata, Instance<McpMetrics> metrics) {
+            McpMetadata metadata, Instance<McpMetrics> metrics, Event<McpConnectionEvent> connectionEvent) {
         this.vertx = vertx;
         this.responseHandlers = responseHandlers;
+        this.connectionEvent = connectionEvent;
         // We use the minimal timeout divided by two to specify the delay to fire the check
         // For example, if there are two server configs; the first defines the timeout 10 mins and the second 30 mins,
         // then we fire the check every 5 mins
@@ -85,9 +90,26 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
             if (connection.timerId() != null) {
                 vertx.cancelTimer(connection.timerId());
             }
+            fireEvent(connection.connection(), McpConnectionEvent.Type.CLOSED);
             return true;
         }
         return false;
+    }
+
+    public void fireInitializing(McpConnectionBase connection) {
+        fireEvent(connection, McpConnectionEvent.Type.INITIALIZING);
+    }
+
+    public void fireInitialized(McpConnectionBase connection) {
+        fireEvent(connection, McpConnectionEvent.Type.INITIALIZED);
+    }
+
+    private void fireEvent(McpConnectionBase connection, McpConnectionEvent.Type type) {
+        try {
+            connectionEvent.fireAsync(new McpConnectionEvent(connection, type));
+        } catch (Exception e) {
+            LOG.errorf(e, "Error firing connection event [type: %s, connectionId: %s]", type, connection.id());
+        }
     }
 
     record ConnectionTimerId(McpConnectionBase connection, Long timerId) {
