@@ -97,7 +97,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 implementation.title(),
                 implementation.version(),
                 capabilities,
-                serverInfo.getString("instructions"),
+                initResult.getString("instructions"),
                 implementation);
         if (assertFunction != null) {
             assertFunction.accept(r);
