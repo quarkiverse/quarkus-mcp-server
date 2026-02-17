@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +14,8 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.ConnectionStore;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpConnectionEvent;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Handler;
@@ -31,13 +32,18 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
 
     private final Event<McpConnectionEvent> connectionEvent;
 
-    private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
+    private final ConnectionStore connectionStore;
+
+    private final ConcurrentMap<String, Long> autoPingTimers = new ConcurrentHashMap<>();
 
     public ConnectionManager(Vertx vertx, ResponseHandlers responseHandlers, McpServersRuntimeConfig servers,
-            McpMetadata metadata, Instance<McpMetrics> metrics, Event<McpConnectionEvent> connectionEvent) {
+            McpMetadata metadata, Instance<McpMetrics> metrics, Event<McpConnectionEvent> connectionEvent,
+            Instance<ConnectionStore> connectionStoreInstance) {
         this.vertx = vertx;
         this.responseHandlers = responseHandlers;
         this.connectionEvent = connectionEvent;
+        this.connectionStore = connectionStoreInstance.isResolvable() ? connectionStoreInstance.get()
+                : new InMemoryConnectionStore();
         // We use the minimal timeout divided by two to specify the delay to fire the check
         // For example, if there are two server configs; the first defines the timeout 10 mins and the second 30 mins,
         // then we fire the check every 5 mins
@@ -46,51 +52,61 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
             vertx.setPeriodic(minConnectionIdleTimeout / 2, new Handler<Long>() {
                 @Override
                 public void handle(Long event) {
-                    connections.values().removeIf(ConnectionTimerId::isIdleTimeoutExpired);
+                    for (McpConnection connection : connectionStore.connections()) {
+                        if (connection instanceof McpConnectionBase base && base.isIdleTimeoutExpired()) {
+                            LOG.debugf("Connection idle timeout expired [%s]", base.id());
+                            remove(base.id());
+                        }
+                    }
                 }
             });
         }
         if (metrics.isResolvable()) {
-            metrics.get().createMcpConnectionsGauge(connections, Map::size);
+            metrics.get().createMcpConnectionsGauge(connectionStore, ConnectionStore::size);
         }
     }
 
     @Override
     public Iterator<McpConnectionBase> iterator() {
-        return connections.values().stream().map(ConnectionTimerId::connection).iterator();
+        return connectionStore.connections().stream()
+                .filter(McpConnectionBase.class::isInstance)
+                .map(McpConnectionBase.class::cast)
+                .iterator();
     }
 
     public boolean has(String id) {
-        return connections.containsKey(id);
+        return connectionStore.contains(id);
     }
 
     public McpConnectionBase get(String id) {
-        ConnectionTimerId connectionTimerId = connections.get(id);
-        return connectionTimerId != null ? connectionTimerId.connection().touch() : null;
+        McpConnection connection = connectionStore.get(id);
+        return connection instanceof McpConnectionBase base ? base.touch() : null;
     }
 
     public void add(McpConnectionBase connection) {
-        Long timerId = null;
         if (connection.autoPingInterval().isPresent()) {
-            timerId = vertx.setPeriodic(connection.autoPingInterval().get().toMillis(), new Handler<Long>() {
+            Long timerId = vertx.setPeriodic(connection.autoPingInterval().get().toMillis(), new Handler<Long>() {
                 @Override
                 public void handle(Long timerId) {
                     connection.send(Messages.newPing(responseHandlers.nextId()));
                 }
             });
+            autoPingTimers.put(connection.id(), timerId);
         }
-        connections.put(connection.id(), new ConnectionTimerId(connection, timerId));
-
+        connectionStore.put(connection);
     }
 
     public boolean remove(String id) {
-        ConnectionTimerId connection = connections.remove(id);
+        McpConnection connection = connectionStore.remove(id);
         if (connection != null) {
-            connection.connection().close();
-            if (connection.timerId() != null) {
-                vertx.cancelTimer(connection.timerId());
+            Long timerId = autoPingTimers.remove(id);
+            if (timerId != null) {
+                vertx.cancelTimer(timerId);
             }
-            fireEvent(connection.connection(), McpConnectionEvent.Type.CLOSED);
+            if (connection instanceof McpConnectionBase base) {
+                base.close();
+                fireEvent(base, McpConnectionEvent.Type.CLOSED);
+            }
             return true;
         }
         return false;
@@ -109,17 +125,6 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
             connectionEvent.fireAsync(new McpConnectionEvent(connection, type));
         } catch (Exception e) {
             LOG.errorf(e, "Error firing connection event [type: %s, connectionId: %s]", type, connection.id());
-        }
-    }
-
-    record ConnectionTimerId(McpConnectionBase connection, Long timerId) {
-
-        boolean isIdleTimeoutExpired() {
-            boolean ret = connection.isIdleTimeoutExpired();
-            if (ret) {
-                LOG.debugf("Connection idle timeout expired [%s]", connection.id());
-            }
-            return ret;
         }
     }
 
