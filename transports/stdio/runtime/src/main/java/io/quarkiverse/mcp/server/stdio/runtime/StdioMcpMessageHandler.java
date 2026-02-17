@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
@@ -68,12 +69,13 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
             ResponseHandlers responseHandlers,
             @All List<InitialCheck> initialChecks,
+            @All List<InitialResponseInfo> initialResponseInfos,
             McpMetadata metadata,
             Vertx vertx,
             Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
-                initialChecks, metrics.isResolvable() ? metrics.get() : null);
+                initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
         this.executor = Executors.newSingleThreadExecutor();
         if (config.servers().size() > 1) {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");

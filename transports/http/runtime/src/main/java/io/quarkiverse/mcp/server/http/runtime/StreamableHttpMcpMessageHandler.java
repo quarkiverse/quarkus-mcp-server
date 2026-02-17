@@ -24,6 +24,7 @@ import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
@@ -110,6 +111,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
             @All List<InitialCheck> initialChecks,
+            @All List<InitialResponseInfo> initialResponseInfos,
             CurrentVertxRequest currentVertxRequest,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
@@ -117,8 +119,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, responseHandlers, metadata,
-                vertx,
-                initialChecks, metrics.isResolvable() ? metrics.get() : null);
+                vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;

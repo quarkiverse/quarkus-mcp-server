@@ -8,8 +8,8 @@ import io.smallrye.mutiny.Uni;
  * the client. If an initial check fails then the connection is not initialized successfully and the error message is sent back
  * to the client.
  * <p>
- * Implementations are CDI beans. Multiple checks are sorted by {@link io.quarkus.arc.InjectableBean#getPriority()} and executed
- * sequentially. Higher priority is executed first.
+ * Implementations are CDI beans. Qualifiers are ignored. Multiple checks are sorted by
+ * {@link io.quarkus.arc.InjectableBean#getPriority()} and executed sequentially. Higher priority is executed first.
  */
 public interface InitialCheck {
 

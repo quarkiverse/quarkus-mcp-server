@@ -155,7 +155,7 @@ public class Messages {
                     ret.add(new Icon(icon.getString("src"),
                             icon.getString("mimeType"),
                             decodeIconSizes(icon),
-                            Icon.Theme.from(icon.getString("theme"))));
+                            icon.containsKey("theme") ? Icon.Theme.from(icon.getString("theme")) : null));
                 }
             }
             return List.copyOf(ret);

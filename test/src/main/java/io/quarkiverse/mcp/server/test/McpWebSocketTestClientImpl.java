@@ -95,7 +95,8 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
                 implementation.version(),
                 capabilities,
                 initResult.getString("instructions"),
-                implementation);
+                implementation,
+                initResult.getJsonObject("_meta"));
         if (assertFunction != null) {
             assertFunction.accept(r);
         }

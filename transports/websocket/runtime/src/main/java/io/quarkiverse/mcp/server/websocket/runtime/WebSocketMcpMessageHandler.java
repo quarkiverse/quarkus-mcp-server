@@ -10,6 +10,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
+import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -61,11 +62,12 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             McpMetadata metadata,
             Vertx vertx,
             @All List<InitialCheck> initialChecks,
+            @All List<InitialResponseInfo> initialResponseInfos,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             Instance<McpMetrics> metrics) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
-                initialChecks, metrics.isResolvable() ? metrics.get() : null);
+                initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 
