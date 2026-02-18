@@ -6,9 +6,20 @@ import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.devui.spi.JsonRPCProvidersBuildItem;
 import io.quarkus.devui.spi.page.CardPageBuildItem;
+import io.quarkus.devui.spi.page.FooterPageBuildItem;
 import io.quarkus.devui.spi.page.Page;
 
 public class HttpMcpDevUIProcessor {
+
+    @BuildStep(onlyIf = IsDevelopment.class)
+    void footerLog(BuildProducer<FooterPageBuildItem> footerProducer) {
+        FooterPageBuildItem footerPageBuildItem = new FooterPageBuildItem();
+        footerPageBuildItem.addPage(Page.webComponentPageBuilder()
+                .title("MCP Server Log")
+                .icon("font-awesome-solid:server")
+                .componentLink("qwc-mcp-log.js"));
+        footerProducer.produce(footerPageBuildItem);
+    }
 
     @BuildStep(onlyIf = IsDevelopment.class)
     void page(BuildProducer<CardPageBuildItem> cardPages) {
