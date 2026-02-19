@@ -39,6 +39,7 @@ import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.EquivalenceKey.TypeEquivalenceKey;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
@@ -1168,7 +1169,9 @@ class McpServerProcessor {
                     } else {
                         argType = p.type();
                     }
-                    if (defaultValueConverters.stream().noneMatch(c -> c.getArgumentType().equals(argType))) {
+                    TypeEquivalenceKey argEquivalenceKey = TypeEquivalenceKey.of(argType);
+                    if (defaultValueConverters.stream()
+                            .noneMatch(c -> TypeEquivalenceKey.of(c.getArgumentType()).equals(argEquivalenceKey))) {
                         throw new IllegalStateException(
                                 "No matching default value converter found for argument type [" + p.type() + "] declared on: "
                                         + p);
