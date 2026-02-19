@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.quarkiverse</groupId>
         <artifactId>quarkiverse-parent</artifactId>
-        <version>20</version>
+        <version>21</version>
     </parent>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-parent</artifactId>
