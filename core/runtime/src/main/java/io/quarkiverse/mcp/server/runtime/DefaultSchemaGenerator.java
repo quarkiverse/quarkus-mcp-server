@@ -56,15 +56,13 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
                 }
             }
 
-            if (!required.isEmpty()) {
-                JsonArray existingRequired = schema.getJsonArray("required");
-                if (existingRequired == null) {
-                    schema.put("required", required);
-                } else {
-                    for (Object o : required) {
-                        if (!existingRequired.contains(o)) {
-                            existingRequired.add(o);
-                        }
+            JsonArray existingRequired = schema.getJsonArray("required");
+            if (existingRequired == null) {
+                schema.put("required", required);
+            } else {
+                for (Object o : required) {
+                    if (!existingRequired.contains(o)) {
+                        existingRequired.add(o);
                     }
                 }
             }

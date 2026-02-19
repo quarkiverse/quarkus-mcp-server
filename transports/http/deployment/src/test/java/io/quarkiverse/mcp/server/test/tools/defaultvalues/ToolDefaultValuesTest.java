@@ -35,7 +35,7 @@ import io.vertx.core.json.JsonObject;
 public class ToolDefaultValuesTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusUnitTest config = defaultConfig(2000)
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyArg.class, LongConverter.class, MyArgConverter.class,
                             DurationConverter.class));
@@ -45,7 +45,7 @@ public class ToolDefaultValuesTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
                 .toolsList(page -> {
-                    assertEquals(2, page.tools().size());
+                    assertEquals(3, page.tools().size());
 
                     ToolInfo alpha = page.findByName("alpha");
                     JsonObject alphaSchema = alpha.inputSchema();
@@ -76,6 +76,15 @@ public class ToolDefaultValuesTest extends McpServerTest {
 
                     assertTrue(bravoSchema.getJsonArray("required").isEmpty());
 
+                    ToolInfo charlie = page.findByName("charlie");
+                    JsonObject charlieSchema = charlie.inputSchema();
+                    JsonObject charlieProperties = charlieSchema.getJsonObject("properties");
+                    assertEquals(1, charlieProperties.size());
+                    JsonObject charlieDoubleVal = charlieProperties.getJsonObject("doubleVal");
+                    assertNotNull(charlieDoubleVal);
+                    assertEquals("number", charlieDoubleVal.getString("type"));
+                    assertEquals(2.1, charlieDoubleVal.getDouble("default"));
+                    assertTrue(alphaSchema.getJsonArray("required").isEmpty());
                 })
                 .toolsCall("alpha", toolResponse -> {
                     assertFalse(toolResponse.isError());
@@ -85,6 +94,10 @@ public class ToolDefaultValuesTest extends McpServerTest {
                 .toolsCall("bravo", toolResponse -> {
                     assertFalse(toolResponse.isError());
                     assertEquals("true", toolResponse.content().get(0).asText().text());
+                })
+                .toolsCall("charlie", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertEquals("2.1", toolResponse.content().get(0).asText().text());
                 })
                 .thenAssertResults();
     }
@@ -120,6 +133,11 @@ public class ToolDefaultValuesTest extends McpServerTest {
                 @ToolArg(defaultValue = "10::foo,bar,baz") MyArg myArg) {
             return "" + boolVal + "::" + shortVal + "::" + intVal + "::" + longVal + "::" + floatVal + "::" + doubleVal + "::"
                     + strVal + "::" + timeUnit + "::" + duration + "::" + myArg;
+        }
+
+        @Tool
+        String charlie(@ToolArg(defaultValue = "2.1") @Positive Double doubleVal) {
+            return "" + doubleVal;
         }
 
         @Priority(1) // higher priority than the built-in converter for Long
