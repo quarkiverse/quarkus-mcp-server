@@ -30,11 +30,11 @@ public interface ToolFilter {
     }
 
     /**
-     * Returns {@code true} if the given tool should be considered visible/accesible for a specific MCP client.
+     * Returns {@code true} if the given tool should be considered visible/accessible for a specific MCP client.
      *
      * @param tool (must not be {@code null})
      * @param context (must not be {@code null})
-     * @return {@code true} if visible/accesible, {@code false} otherwise
+     * @return {@code true} if visible/accessible, {@code false} otherwise
      */
     default boolean test(ToolInfo tool, FilterContext context) {
         return test(tool, context.connection());
