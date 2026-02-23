@@ -30,7 +30,7 @@ public interface McpConnection {
     enum Status {
 
         /**
-         * A new connnection, waiting for the {@code initialize} request from the client.
+         * A new connection, waiting for the {@code initialize} request from the client.
          */
         NEW,
         /**

@@ -21,7 +21,7 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
      *
      * @param name The name must be unique
      * @return a new definition builder
-     * @throws IllegalArgumentException if a resource template with the given name already exits
+     * @throws IllegalArgumentException if a resource template with the given name already exists
      * @see ResourceTemplateDefinition#register()
      */
     ResourceTemplateDefinition newResourceTemplate(String name);
@@ -93,7 +93,7 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
         ResourceTemplateDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
-         * @throws IllegalArgumentException if a resource template with the given name already exits
+         * @throws IllegalArgumentException if a resource template with the given name already exists
          * @return the resource template info
          */
         @Override
