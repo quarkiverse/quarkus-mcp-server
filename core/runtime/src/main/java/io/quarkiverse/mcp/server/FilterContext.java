@@ -1,7 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 /**
- * Filters are used to determine the set of visible/accesible tools for a specific MCP client.
+ * Filters are used to determine the set of visible/accessible tools for a specific MCP client.
  *
  * @see ToolFilter
  * @see PromptFilter
