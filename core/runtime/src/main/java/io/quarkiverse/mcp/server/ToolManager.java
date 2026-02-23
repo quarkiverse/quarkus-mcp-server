@@ -22,7 +22,7 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
      *
      * @param name The name must be unique
      * @return a new definition builder
-     * @throws IllegalArgumentException if a tool with the given name already exits
+     * @throws IllegalArgumentException if a tool with the given name already exists
      * @see ToolDefinition#register()
      */
     ToolDefinition newTool(String name);
@@ -136,7 +136,7 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         /**
          * @return the tool info
-         * @throws IllegalArgumentException if a tool with the given name already exits
+         * @throws IllegalArgumentException if a tool with the given name already exists
          */
         @Override
         ToolInfo register();

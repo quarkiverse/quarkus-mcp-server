@@ -20,8 +20,8 @@ final class DotNames {
     static final DotName COMMAND = DotName.createSimple(Command.class);
     static final DotName QUALIFIER = DotName.createSimple(Qualifier.class);
 
-    static final DotName TOP_COMAMND = DotName.createSimple(TopCommand.class);
-    static final DotName ABSTRACT_MCP_COMAMND = DotName.createSimple(AbstractMcpCommand.class);
+    static final DotName TOP_COMMAND = DotName.createSimple(TopCommand.class);
+    static final DotName ABSTRACT_MCP_COMMAND = DotName.createSimple(AbstractMcpCommand.class);
     static final DotName MCP_ADAPTER = DotName.createSimple(McpAdapter.class);
 
     static final DotName COMMANDLINE = DotName.createSimple(CommandLine.class);

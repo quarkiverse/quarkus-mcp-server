@@ -68,7 +68,7 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
 
         /**
          * @return the completion info
-         * @throws IllegalArgumentException if a completion for the given name reference and agument already exits
+         * @throws IllegalArgumentException if a completion for the given name reference and argument already exists
          */
         @Override
         CompletionInfo register();

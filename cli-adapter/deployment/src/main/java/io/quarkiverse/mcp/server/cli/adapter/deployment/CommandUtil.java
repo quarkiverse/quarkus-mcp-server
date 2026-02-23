@@ -30,7 +30,7 @@ class CommandUtil {
      * @return an {@link Optional} containing the name of the class annotated with {@link TopCommand} if found, empty otherwise
      */
     public static Optional<DotName> findTopCommand(IndexView indexView) {
-        return indexView.getAnnotations(DotNames.TOP_COMAMND)
+        return indexView.getAnnotations(DotNames.TOP_COMMAND)
                 .stream()
                 .filter(ann -> ann.target().kind() == AnnotationTarget.Kind.CLASS)
                 .map(ann -> ann.target().asClass().name())
