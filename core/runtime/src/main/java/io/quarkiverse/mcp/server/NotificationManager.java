@@ -63,7 +63,7 @@ public interface NotificationManager extends FeatureManager<NotificationInfo> {
         /**
          *
          * @return the notification info
-         * @throws IllegalArgumentException if a notification with the given name and type already exits
+         * @throws IllegalArgumentException if a notification with the given name and type already exists
          */
         @Override
         NotificationInfo register();

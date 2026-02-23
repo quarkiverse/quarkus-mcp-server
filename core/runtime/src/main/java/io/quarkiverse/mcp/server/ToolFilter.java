@@ -19,7 +19,6 @@ public interface ToolFilter {
      * <p>
      * Note that the container always calls {@link ToolFilter#test(ToolInfo, FilterContext)} that delegates
      * to {@link #test(ToolInfo, McpConnection)} by default.
-     * Returns {@code true} if the given tool should be considered visible/accessible for a specific MCP client.
      *
      * @param tool (must not be {@code null})
      * @param connection (must not be {@code null})

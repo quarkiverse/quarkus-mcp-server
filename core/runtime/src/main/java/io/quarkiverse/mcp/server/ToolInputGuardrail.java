@@ -40,7 +40,7 @@ public interface ToolInputGuardrail {
     }
 
     /**
-     * An implemetation:
+     * An implementation:
      * <ul>
      * <li>should throw {@link ToolCallException} or return a {@link Uni} that emits a {@link ToolCallException} failure if
      * the validation fails,</li>
