@@ -21,7 +21,7 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
      *
      * @param name The name must be unique
      * @return a new definition builder
-     * @throws IllegalArgumentException if a prompt with the given name already exits
+     * @throws IllegalArgumentException if a prompt with the given name already exists
      * @see PromptDefinition#register()
      */
     PromptDefinition newPrompt(String name);
@@ -29,7 +29,7 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
     /**
      * Removes a prompt previously added with {@link #newPrompt(String)}.
      *
-     * @return the removed prompt or {@code null} if no such tool existed
+     * @return the removed prompt or {@code null} if no such prompt existed
      */
     PromptInfo removePrompt(String name);
 
@@ -103,7 +103,7 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
 
         /**
          * @return the prompt info
-         * @throws IllegalArgumentException if a prompt with the given name already exits
+         * @throws IllegalArgumentException if a prompt with the given name already exists
          */
         @Override
         PromptInfo register();

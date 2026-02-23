@@ -22,7 +22,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      *
      * @param name The name must be unique
      * @return a new definition builder
-     * @throws IllegalArgumentException if a resource with the given name already exits
+     * @throws IllegalArgumentException if a resource with the given name already exists
      * @see ResourceDefinition#register()
      */
     ResourceDefinition newResource(String name);
@@ -77,7 +77,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         /**
          * @param uri
          * @return self
-         * @throws IllegalArgumentException if a resource with the given URI already exits
+         * @throws IllegalArgumentException if a resource with the given URI already exists
          * @see Resource#uri()
          */
         ResourceDefinition setUri(String uri);
@@ -110,7 +110,7 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
         /**
          * @return the resource info
-         * @throws IllegalArgumentException if a resource with the given name or URI already exits
+         * @throws IllegalArgumentException if a resource with the given name or URI already exists
          */
         @Override
         ResourceInfo register();
