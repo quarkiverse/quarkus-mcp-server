@@ -1,8 +1,9 @@
 name: MCP Server - Hibernate Validator
+description: Hibernate Validator integration for the MCP server.
 metadata:
   keywords:
-    - mcp-server, hibernate-validator
-  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html
+    - mcp, hibernate-validator
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "miscellaneous"
-  status: "preview"
+    - "artificial-intelligence"
+  status: "stable"
