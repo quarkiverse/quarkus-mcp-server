@@ -2,9 +2,9 @@ name: MCP Server - Core
 description: This extension enables developers to implement the MCP server features easily.
 metadata:
   keywords:
-    - mcp-server
-#  guide: https://docs.quarkiverse.io/mcp-server/dev/ # To create and publish this guide, see https://github.com/quarkiverse/quarkiverse/wiki#documenting-your-extension
+    - mcp
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "miscellaneous"
-  status: "preview"
+    - "artificial-intelligence"
+  status: "stable"
   unlisted: true
