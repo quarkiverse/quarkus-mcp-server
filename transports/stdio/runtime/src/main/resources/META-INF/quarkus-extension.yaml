@@ -1,8 +1,9 @@
-name: MCP Server - stdio
+name: MCP Server - STDIO
+description: The STDIO transport the MCP server.
 metadata:
   keywords:
-    - mcp-server
-  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html
+    - mcp
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "miscellaneous"
-  status: "preview"
+    - "artificial-intelligence"
+  status: "stable"

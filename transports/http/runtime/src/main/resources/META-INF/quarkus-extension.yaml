@@ -1,9 +1,9 @@
-name: MCP Server - HTTP/SSE
-description: This extension enables developers to implement the MCP server features easily.
+name: MCP Server - HTTP
+description: The HTTP/SSE transport the MCP server.
 metadata:
   keywords:
-    - mcp-server
-  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html
+    - mcp
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "miscellaneous"
-  status: "preview"
+    - "artificial-intelligence"
+  status: "stable"
