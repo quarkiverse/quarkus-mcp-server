@@ -1,14 +1,18 @@
 package io.quarkiverse.mcp.server.websocket.deployment;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Singleton;
 
 import org.jboss.jandex.AnnotationInstance;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
+import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
@@ -37,6 +41,7 @@ import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.SignatureBuilder;
 import io.quarkus.gizmo.Type;
+import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.util.HashUtil;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.websockets.next.InboundProcessingMode;
@@ -60,11 +65,24 @@ public class WebSocketMcpServerProcessor {
     }
 
     @BuildStep
+    void serverNames(McpWebSocketServersBuildTimeConfig config, BuildProducer<ServerNameBuildItem> serverNames) {
+        for (String serverName : config.servers().keySet()) {
+            serverNames.produce(new ServerNameBuildItem(serverName));
+        }
+    }
+
+    @BuildStep
     void generateEndpoints(McpWebSocketServersBuildTimeConfig config, BuildProducer<GeneratedBeanBuildItem> generatedBeans) {
         ClassOutput classOutput = new GeneratedBeanGizmoAdaptor(generatedBeans, name -> false);
 
         // For each WebSocket path we generate a new class that extends WebSocketMcpMessageHandler
+        Set<String> endpointPaths = new HashSet<>();
         for (Entry<String, McpWebSocketServerBuildTimeConfig> e : config.servers().entrySet()) {
+            String endpointPath = e.getValue().websocket().endpointPath();
+            if (!endpointPaths.add(endpointPath)) {
+                throw new IllegalStateException(
+                        "Multiple server configurations define the same endpoint path: " + endpointPath);
+            }
             String endpointClassName = "io.quarkiverse.mcp.server.websocket.runtime.Endpoint" + HashUtil.sha1(e.getKey());
             ClassCreator endpointCreator = ClassCreator.builder().classOutput(classOutput)
                     .className(endpointClassName)
@@ -76,6 +94,9 @@ public class WebSocketMcpServerProcessor {
                             .add("path", e.getValue().websocket().endpointPath())
                             .add("inboundProcessingMode", InboundProcessingMode.CONCURRENT)
                             .build());
+            // @Startup - force eager initialization to trigger server name validation
+            endpointCreator.addAnnotation(Startup.class);
+            endpointCreator.addAnnotation(Singleton.class);
 
             Class<?>[] params = new Class<?>[] {
                     McpServersRuntimeConfig.class,
