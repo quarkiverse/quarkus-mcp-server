@@ -1,0 +1,272 @@
+= Observability and Metrics
+
+include::includes/attributes.adoc[]
+:diataxis-type: reference
+
+This reference documents the observability and metrics capabilities provided by the Quarkus MCP Server extension through https://micrometer.io/[Micrometer] integration.
+
+== Overview
+
+The Quarkus MCP Server extension provides built-in metrics integration when the Quarkus Micrometer extension is present. The feature is disabled by default and must be explicitly enabled through configuration.
+
+Metrics are collected for:
+
+* Active connection counts (gauge)
+* Request durations for all MCP protocol methods (timers)
+* Request success and failure rates (timers with failure tags)
+
+All metrics can be exported to any Micrometer-supported monitoring system including Prometheus, Datadog, Graphite, InfluxDB, and others.
+
+== Prerequisites
+
+The following dependency must be present to enable metrics:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-micrometer</artifactId>
+</dependency>
+----
+
+In general, you also need a Micrometer Registry implementation, such as, for Prometheus:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+</dependency>
+----
+
+See the https://quarkus.io/guides/micrometer[Quarkus Micrometer guide] for other registry implementations.
+
+NOTE: When using a registry, you don't need to declare the dependency on quarkus-micrometer anymore.
+It will be pulled automatically by transitivity.
+
+== Configuration
+
+Metrics collection is controlled by the following configuration property:
+
+[source,properties]
+----
+quarkus.mcp.server.metrics.enabled=true
+----
+
+For multiple servers, you must enable metrics for each server individually:
+
+[source,properties]
+----
+# Enable for default server
+quarkus.mcp.server.metrics.enabled=true
+
+# Enable for specific named servers
+quarkus.mcp.server."main-server".metrics.enabled=true
+quarkus.mcp.server."admin-server".metrics.enabled=true
+----
+
+== Available Metrics
+
+=== Connection Metrics
+
+==== Active Connections Gauge
+
+Tracks the current number of active MCP connections.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.connections.active`
+| Type | Gauge
+| Description | Number of currently active MCP connections
+| Tags | None
+|===
+
+This metric helps you monitor:
+
+* Peak connection usage
+* Connection lifecycle patterns
+* Capacity planning needs
+
+=== Request Metrics
+
+All MCP protocol methods automatically get timer metrics that record request duration in milliseconds. The metric name follows the pattern `mcp.server.requests.<method>` where `<method>` is the JSON-RPC method name with slashes replaced by dots.
+
+For example:
+
+* `prompts/list` → `mcp.server.requests.prompts.list`
+* `tools/call` → `mcp.server.requests.tools.call`
+* `resources/read` → `mcp.server.requests.resources.read`
+
+The most commonly used metrics are documented below.
+
+==== Common Tags
+
+All request timers include these tags:
+
+[cols="1,3"]
+|===
+| Tag | Description
+
+| `mcp.server`
+| The name of the MCP server instance (e.g., "default", or custom server names)
+
+| `failure`
+| Error type if the request failed, or "none" for successful requests. The value is the simple class name of the exception's cause.
+|===
+
+==== Tools Call Timer
+
+Measures the duration of tool execution requests.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.tools.call`
+| Type | Timer
+| Description | Duration of tool execution in milliseconds
+| Specific Tags | `tool.name` - the name of the tool being called
+|===
+
+==== Tools List Timer
+
+Measures the duration of listing available tools.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.tools.list`
+| Type | Timer
+| Description | Duration of tool listing requests in milliseconds
+| Specific Tags | None
+|===
+
+==== Resources Read Timer
+
+Measures the duration of resource read requests.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.resources.read`
+| Type | Timer
+| Description | Duration of resource read operations in milliseconds
+| Specific Tags | `resource.uri` - the URI of the resource being read
+|===
+
+==== Resources List Timer
+
+Measures the duration of listing available resources.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.resources.list`
+| Type | Timer
+| Description | Duration of resource listing requests in milliseconds
+| Specific Tags | None
+|===
+
+==== Resources Templates List Timer
+
+Measures the duration of listing resource templates.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.resources.templates.list`
+| Type | Timer
+| Description | Duration of resource template listing requests in milliseconds
+| Specific Tags | None
+|===
+
+==== Prompts Get Timer
+
+Measures the duration of prompt retrieval requests.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.prompts.get`
+| Type | Timer
+| Description | Duration of prompt retrieval in milliseconds
+| Specific Tags | `prompt.name` - the name of the prompt being retrieved
+|===
+
+==== Prompts List Timer
+
+Measures the duration of listing available prompts.
+
+[cols="1,3"]
+|===
+| Metric Name | `mcp.server.requests.prompts.list`
+| Type | Timer
+| Description | Duration of prompt listing requests in milliseconds
+| Specific Tags | None
+|===
+
+== Accessing Metrics
+
+=== Prometheus Endpoint
+
+With the Prometheus registry enabled, metrics are exposed at:
+
+[source]
+----
+http://localhost:8080/q/metrics
+----
+
+Example Prometheus scrape configuration:
+
+[source,yaml]
+----
+scrape_configs:
+  - job_name: 'quarkus-mcp-server'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['localhost:8080']
+----
+
+=== Programmatic Access
+
+You can also access metrics programmatically by injecting the `MeterRegistry`:
+
+[source,java]
+----
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.inject.Inject;
+
+public class MetricsMonitor {
+
+    @Inject
+    MeterRegistry registry;
+
+    public double getActiveConnections() {
+        return registry.get("mcp.server.connections.active")
+            .gauge()
+            .value();
+    }
+
+    public double getToolCallCount(String toolName) {
+        return registry.get("mcp.server.requests.tools.call")
+            .tag("tool.name", toolName)
+            .timer()
+            .count();
+    }
+}
+----
+
+== Configuration Reference
+
+[cols="1,2,1"]
+|===
+| Property | Description | Default
+
+| `quarkus.mcp.server.metrics.enabled`
+| Enable metrics collection when Micrometer is present
+| `false`
+
+| `quarkus.mcp.server."server-name".metrics.enabled`
+| Enable metrics for a specific server instance
+| Inherits from global setting
+|===
+
+== Related Documentation
+
+
+* xref:guides-multiple-servers.adoc[Multiple Servers] - Managing metrics for multiple server instances
+* xref:reference-configuration.adoc[Configuration Reference] - All configuration options
+* https://quarkus.io/guides/micrometer[Quarkus Micrometer Guide] - Detailed Micrometer configuration
