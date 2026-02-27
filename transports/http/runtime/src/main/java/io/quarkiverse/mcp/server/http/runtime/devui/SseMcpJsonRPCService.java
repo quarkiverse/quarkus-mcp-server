@@ -11,6 +11,8 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +46,8 @@ import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerBuildTimeConfi
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.JsonRpc;
 import io.quarkiverse.mcp.server.sse.client.SseClient;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -59,6 +64,11 @@ public class SseMcpJsonRPCService {
     private final ResourceTemplateCompletionManager resourceTemplateCompletionManager;
 
     private final Map<String, ServerClient> serverClients;
+
+    private final BroadcastProcessor<JsonObject> logBroadcaster = BroadcastProcessor.create();
+    private final List<JsonObject> logHistory = new CopyOnWriteArrayList<>();
+    private static final int MAX_LOG_HISTORY = 100;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     record ServerClient(URI sseEndpoint, DevUIClient client, HttpClient httpClient) {
 
@@ -105,7 +115,7 @@ public class SseMcpJsonRPCService {
                     argJson.put("name", arg.name());
                     argJson.put("description", arg.description());
                     argJson.put("required", arg.required());
-                    argJson.put("type", arg.type().getTypeName());
+                    argJson.put("type", toJsonSchemaType(arg.type()));
                     args.add(argJson);
                 }
                 toolJson.put("args", args);
@@ -116,6 +126,46 @@ public class SseMcpJsonRPCService {
             ret.add(toolJson);
         }
         return ret;
+    }
+
+    /**
+     * Maps a Java type to a JSON Schema type for the Dev UI.
+     */
+    private String toJsonSchemaType(java.lang.reflect.Type type) {
+        if (type instanceof Class<?> clazz) {
+            if (clazz.isPrimitive()) {
+                if (int.class.equals(clazz) || long.class.equals(clazz)
+                        || short.class.equals(clazz) || byte.class.equals(clazz)) {
+                    return "integer";
+                } else if (double.class.equals(clazz) || float.class.equals(clazz)) {
+                    return "number";
+                } else if (boolean.class.equals(clazz)) {
+                    return "boolean";
+                }
+            } else if (String.class.equals(clazz)) {
+                return "string";
+            } else if (Integer.class.equals(clazz) || Long.class.equals(clazz)
+                    || Short.class.equals(clazz) || Byte.class.equals(clazz)) {
+                return "integer";
+            } else if (Double.class.equals(clazz) || Float.class.equals(clazz)
+                    || Number.class.isAssignableFrom(clazz)) {
+                return "number";
+            } else if (Boolean.class.equals(clazz)) {
+                return "boolean";
+            } else if (clazz.isArray()) {
+                return "array";
+            }
+            // Default to object for other classes
+            return "object";
+        } else if (type instanceof ParameterizedType pt) {
+            if (pt.getRawType() instanceof Class<?> clazz && Collection.class.isAssignableFrom(clazz)) {
+                return "array";
+            }
+            return "object";
+        } else if (type instanceof GenericArrayType) {
+            return "array";
+        }
+        return "string";
     }
 
     public JsonArray getPromptsData() {
@@ -227,13 +277,17 @@ public class SseMcpJsonRPCService {
             return new JsonObject().put("error", "Tool not found: " + name);
         }
         ServerClient serverClient = serverClients.get(info.serverName());
+        JsonObject params = new JsonObject()
+                .put("name", name)
+                .put("arguments", args);
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "tools/call")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", args));
-        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+                .put("params", params);
+        logRequest("tools/call", info.serverName(), params);
+        JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+        logResponse("tools/call", info.serverName(), result);
+        return result;
     }
 
     public JsonObject getPrompt(String name, JsonObject args, String bearerToken, boolean forceNewSession)
@@ -243,13 +297,17 @@ public class SseMcpJsonRPCService {
             return new JsonObject().put("error", "Prompt not found: " + name);
         }
         ServerClient serverClient = serverClients.get(info.serverName());
+        JsonObject params = new JsonObject()
+                .put("name", name)
+                .put("arguments", args);
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "prompts/get")
-                .put("params", new JsonObject()
-                        .put("name", name)
-                        .put("arguments", args));
-        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+                .put("params", params);
+        logRequest("prompts/get", info.serverName(), params);
+        JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+        logResponse("prompts/get", info.serverName(), result);
+        return result;
     }
 
     public JsonObject completePrompt(String name, String argumentName, String argumentValue, String bearerToken,
@@ -260,17 +318,21 @@ public class SseMcpJsonRPCService {
             return new JsonObject().put("error", "Prompt completion not found: " + name);
         }
         ServerClient serverClient = serverClients.get(info.serverName());
+        JsonObject params = new JsonObject()
+                .put("ref", new JsonObject()
+                        .put("type", "ref/prompt")
+                        .put("name", name))
+                .put("argument", new JsonObject()
+                        .put("name", argumentName)
+                        .put("value", argumentValue));
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
-                .put("params", new JsonObject()
-                        .put("ref", new JsonObject()
-                                .put("type", "ref/prompt")
-                                .put("name", name))
-                        .put("argument", new JsonObject()
-                                .put("name", argumentName)
-                                .put("value", argumentValue)));
-        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+                .put("params", params);
+        logRequest("completion/complete (prompt)", info.serverName(), params);
+        JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+        logResponse("completion/complete (prompt)", info.serverName(), result);
+        return result;
     }
 
     public JsonObject readResource(String serverName, String uri, String bearerToken, boolean forceNewSession)
@@ -281,12 +343,15 @@ public class SseMcpJsonRPCService {
         if (uri == null || uri.isBlank()) {
             return new JsonObject().put("error", "Resource uri must be set");
         }
+        JsonObject params = new JsonObject().put("uri", uri);
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "resources/read")
-                .put("params", new JsonObject()
-                        .put("uri", uri));
-        return serverClients.get(serverName).client().sendRequest(message, bearerToken, forceNewSession);
+                .put("params", params);
+        logRequest("resources/read", serverName, params);
+        JsonObject result = serverClients.get(serverName).client().sendRequest(message, bearerToken, forceNewSession);
+        logResponse("resources/read", serverName, result);
+        return result;
     }
 
     public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue, String bearerToken,
@@ -297,18 +362,68 @@ public class SseMcpJsonRPCService {
             return new JsonObject().put("error", "Resource template completion not found: " + name);
         }
         ServerClient serverClient = serverClients.get(info.serverName());
+        JsonObject params = new JsonObject()
+                .put("ref", new JsonObject()
+                        .put("type", "ref/resource")
+                        .put("name", name))
+                .put("argument", new JsonObject()
+                        .put("name", argumentName)
+                        .put("value", argumentValue));
         JsonObject message = new JsonObject()
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
-                .put("params", new JsonObject()
-                        .put("ref", new JsonObject()
-                                .put("type", "ref/resource")
-                                .put("name", name))
-                        .put("argument", new JsonObject()
-                                .put("name", argumentName)
-                                .put("value", argumentValue)));
+                .put("params", params);
+        logRequest("completion/complete (resource)", info.serverName(), params);
+        JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+        logResponse("completion/complete (resource)", info.serverName(), result);
+        return result;
+    }
 
-        return serverClient.client().sendRequest(message, bearerToken, forceNewSession);
+    public Multi<JsonObject> streamLog() {
+        // First emit the history, then continue with live updates
+        return Multi.createFrom().iterable(logHistory)
+                .onCompletion().switchTo(logBroadcaster);
+    }
+
+    public JsonArray getLogHistory() {
+        JsonArray ret = new JsonArray();
+        for (JsonObject log : logHistory) {
+            ret.add(log);
+        }
+        return ret;
+    }
+
+    public void clearLog() {
+        logHistory.clear();
+    }
+
+    private void logRequest(String method, String serverName, JsonObject params) {
+        JsonObject logEntry = new JsonObject()
+                .put("timestamp", LocalDateTime.now().format(TIME_FORMATTER))
+                .put("type", "request")
+                .put("method", method)
+                .put("serverName", serverName)
+                .put("params", params);
+        addLogEntry(logEntry);
+    }
+
+    private void logResponse(String method, String serverName, JsonObject response) {
+        JsonObject logEntry = new JsonObject()
+                .put("timestamp", LocalDateTime.now().format(TIME_FORMATTER))
+                .put("type", "response")
+                .put("method", method)
+                .put("serverName", serverName)
+                .put("response", response);
+        addLogEntry(logEntry);
+    }
+
+    private void addLogEntry(JsonObject logEntry) {
+        logHistory.add(logEntry);
+        // Keep history bounded
+        while (logHistory.size() > MAX_LOG_HISTORY) {
+            logHistory.remove(0);
+        }
+        logBroadcaster.onNext(logEntry);
     }
 
     private String pathToAppend(String prev, String path) {

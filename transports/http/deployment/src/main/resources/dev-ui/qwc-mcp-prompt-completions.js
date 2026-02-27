@@ -1,13 +1,19 @@
 
 import { LitElement, html, css } from 'lit';
 import { columnBodyRenderer } from '@vaadin/grid/lit.js';
-import { themeState } from 'theme-state';
-import '@quarkus-webcomponents/codeblock';
-import 'qui/qui-alert.js';
 import '@vaadin/grid';
+import '@vaadin/grid/vaadin-grid-sort-column.js';
 import '@vaadin/text-field';
-import '@vaadin/split-layout';
+import '@vaadin/checkbox';
+import '@vaadin/button';
+import '@vaadin/dialog';
+import '@vaadin/vertical-layout';
+import '@vaadin/icon';
+import { dialogHeaderRenderer, dialogRenderer } from '@vaadin/dialog/lit.js';
+import 'qui-themed-code-block';
+import '@qomponent/qui-badge';
 import { JsonRpc } from 'jsonrpc';
+import { msg, updateWhenLocaleChanges } from 'localization';
 
 /**
  * This component shows the MCP prompt completions.
@@ -22,164 +28,273 @@ export class QwcMcpPromptCompletions extends LitElement {
           flex-direction: column;
           gap: 10px;
         }
-        .prompt-completions-table {
-          padding-bottom: 10px;
-          height: 100%;
-        }
-        .prompt-complete {
-          padding-left: 0.5em;
+        .grid {
+          display: flex;
+          flex-direction: column;
+          padding-left: 5px;
+          padding-right: 5px;
+          max-width: 100%;
         }
         code {
           font-size: 85%;
         }
-        div.buttons {
-          margin-top: 2em;
+        .filterText {
+          width: 100%;
         }
         `;
 
     static properties = {
         _completions: { state: true },
+        _filtered: { state: true, type: Array },
         _selectedCompletion: { state: true },
+        _showInputDialog: { state: true, type: Boolean },
+        _completionResult: { state: true },
+        _searchTerm: { state: true },
+        _forceNewSession: { state: true, type: Boolean },
+        _bearerToken: { state: true, type: String },
+        _argumentValue: { state: true, type: String }
     };
 
     constructor() {
         super();
-        // If not null then show the "complete" form
+        updateWhenLocaleChanges(this);
         this._selectedCompletion = null;
+        this._showInputDialog = false;
+        this._completionResult = null;
+        this._completions = null;
+        this._filtered = null;
+        this._searchTerm = '';
+        this._forceNewSession = false;
+        this._bearerToken = '';
+        this._argumentValue = '';
     }
 
     connectedCallback() {
         super.connectedCallback();
-        this.jsonRpc.getPromptCompletionsData()
-            .then(jsonResponse => {
-                this._completions = jsonResponse.result;
-            });
+        this._loadCompletions();
     }
 
     render() {
-        if (this._selectedCompletion) {
-            return this._renderPromptComplete();
+        if (this._completions) {
+            return html`${this._renderResultDialog()}
+                        ${this._renderInputDialog()}
+                        ${this._renderGrid()}`;
         } else {
-            return this._renderPromptCompletions();
+            return html`
+            <div style="color: var(--lumo-secondary-text-color);width: 95%;">
+                <div>${msg('Fetching prompt completions...', { id: 'mcp-server-fetching-prompt-completions' })}</div>
+                <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+            </div>
+            `;
         }
     }
 
-    _renderPromptComplete() {
-        return html`
-        <div class="prompt-complete">
-        <h3>Complete prompt: ${this._selectedCompletion.name}</h3>
-        <vaadin-split-layout>
-            <master-content style="width: 50%;">
-                <vaadin-checkbox 
-                    id="prompt_force_new_session" 
-                    label="Force new session" 
-                    helper-text="Initialize a new MCP session for the request">
-                </vaadin-checkbox>    
-                <vaadin-text-field 
-                    id="prompt_bearer_token"
-                    label="Bearer Token"
-                    value="" 
-                    clear-button-visible
-                    style="width: 97%;">
-                    <vaadin-tooltip 
-                        slot="tooltip" 
-                        text="The Authorization header with the bearer token is automatically added to the HTTP POST request">
-                    </vaadin-tooltip>
-                </vaadin-text-field>
-                <vaadin-text-field
-                    id="prompt_completion_text"
-                    value=""
-                    label="Argument: ${this._selectedCompletion.argumentName}"
-                    style="font-family: monospace;width: 15em;">
-                </vaadin-text-field>
-            </master-content>
-            <detail-content style="width: 50%;">
-                <qui-code-block id="prompt_completion_response_text" mode='json' showLineNumbers content=''
-                    theme='${themeState.theme.name}'>
-                </qui-code-block>
-            </detail-content>
-        </vaadin-split-layout>
-        <div class="buttons">
-        <vaadin-button @click="${this._completePrompt}" theme="primary">
-           Complete
-        </vaadin-button>
-        <vaadin-button @click="${this._showPromptCompletions}">
-           Back to prompt completions
-        </vaadin-button>
-        </div>
-        </div>
-               `;
+    _renderGrid() {
+        return html`<div class="grid">
+                    ${this._renderFilterTextbar()}
+                    <vaadin-grid .items="${this._filtered}" theme="row-stripes no-border" all-rows-visible
+                        @active-item-changed="${(e) => {
+                            const item = e.detail.value;
+                            if (item) {
+                                this._selectedCompletion = item;
+                                this._argumentValue = '';
+                                this._showInputDialog = true;
+                            }
+                        }}">
+                        <vaadin-grid-sort-column
+                            header="${msg('Prompt', { id: 'mcp-server-col-prompt' })}"
+                            path="name"
+                            auto-width
+                            ${columnBodyRenderer(this._renderName, [])}
+                        ></vaadin-grid-sort-column>
+                        <vaadin-grid-sort-column
+                            header="${msg('Completed argument', { id: 'mcp-server-col-completed-argument' })}"
+                            path="argumentName"
+                            auto-width
+                            ${columnBodyRenderer(this._renderArgName, [])}
+                        ></vaadin-grid-sort-column>
+                        <vaadin-grid-sort-column
+                            header="${msg('MCP Server', { id: 'mcp-server-col-mcp-server' })}"
+                            path="serverName"
+                            auto-width
+                            ${columnBodyRenderer(this._renderServerName, [])}
+                        ></vaadin-grid-sort-column>
+                    </vaadin-grid>
+                </div>`;
     }
 
-    _renderPromptCompletions() {
-        return html`
-                <qui-alert level="success">This view contains all Prompt completions for all MCP server configurations.</qui-alert>
-                <vaadin-grid .items="${this._completions}" class="prompt-completions-table" theme="no-border wrap-cell-content" all-rows-visible>
-                    <vaadin-grid-column auto-width header="Prompt" ${columnBodyRenderer(this._renderName, [])}>
-                    </vaadin-grid-column>
-                    <vaadin-grid-column auto-width header="Completed argument" ${columnBodyRenderer(this._renderArgName, [])}>
-                    </vaadin-grid-column>
-                    <vaadin-grid-column width="10rem" flex-grow="0" header="MCP Server" ${columnBodyRenderer(this._renderServerName, [])}>
-                    </vaadin-grid-column>
-                    <vaadin-grid-column auto-width header="Actions" ${columnBodyRenderer(this._renderActions, [])}>
-                    </vaadin-grid-column>
-                </vaadin-grid>
-                `;
+    _renderFilterTextbar() {
+        return html`<vaadin-text-field class="filterText"
+                            placeholder="${msg('Filter', { id: 'mcp-server-filter' })}"
+                            style="flex: 1;"
+                            @value-changed="${(e) => this._filterTextChanged(e)}">
+                        <vaadin-icon slot="prefix" icon="font-awesome-solid:filter"></vaadin-icon>
+                        <qui-badge slot="suffix"><span>${this._filtered?.length}</span></qui-badge>
+                    </vaadin-text-field>`;
     }
 
-    _renderActions(completion) {
-         return html`
-             <vaadin-button @click=${()=> this._selectCompletion(completion)} theme="primary">
-                 Complete    
-             </vaadin-button>
-         `;
-     }
-    
+    _renderResultDialog() {
+        return html`<vaadin-dialog
+                        header-title="${msg('Completion result', { id: 'mcp-server-completion-result' })}"
+                        .opened="${this._completionResult !== null}"
+                        @opened-changed="${(event) => {
+                            if (!event.detail.value) {
+                                this._completionResult = null;
+                            }
+                        }}"
+                        ${dialogHeaderRenderer(
+                            () => html`
+                              <vaadin-button theme="tertiary" @click="${this._closeDialogs}">
+                                <vaadin-icon icon="font-awesome-solid:xmark"></vaadin-icon>
+                              </vaadin-button>
+                            `,
+                            []
+                        )}
+                        ${dialogRenderer(() => this._renderCompletionResult())}
+                    ></vaadin-dialog>`;
+    }
+
+    _renderInputDialog() {
+        return html`<vaadin-dialog
+                        header-title="${msg('Complete prompt', { id: 'mcp-server-complete-prompt' })}"
+                        .opened="${this._showInputDialog}"
+                        @opened-changed="${(event) => {
+                            if (!event.detail.value) {
+                                this._showInputDialog = false;
+                            }
+                        }}"
+                        ${dialogHeaderRenderer(
+                            () => html`
+                              <vaadin-button theme="tertiary" @click="${this._closeDialogs}">
+                                <vaadin-icon icon="font-awesome-solid:xmark"></vaadin-icon>
+                              </vaadin-button>
+                            `,
+                            []
+                        )}
+                        ${dialogRenderer(() => this._renderCompletionInput())}
+                    ></vaadin-dialog>`;
+    }
+
+    _renderCompletionResult() {
+        return html`<div class="codeBlock">
+                        <qui-themed-code-block
+                            mode='json'
+                            content='${this._completionResult}'
+                            showLineNumbers>
+                        </qui-themed-code-block>
+                    </div>`;
+    }
+
+    _renderCompletionInput() {
+        if (this._selectedCompletion) {
+            const completion = this._selectedCompletion;
+
+            return html`<vaadin-vertical-layout>
+                            <b>${completion.name}</b>
+                            <vaadin-checkbox
+                                id="prompt_force_new_session"
+                                label="${msg('Force new session', { id: 'mcp-server-force-new-session' })}"
+                                helper-text="${msg('Initialize a new MCP session for the request', { id: 'mcp-server-force-new-session-helper' })}"
+                                .checked="${this._forceNewSession}"
+                                @change="${(e) => this._forceNewSession = e.target.checked}">
+                            </vaadin-checkbox>
+                            <vaadin-text-field
+                                label="${msg('Bearer Token', { id: 'mcp-server-bearer-token' })}"
+                                .value="${this._bearerToken}"
+                                clear-button-visible
+                                style="width: 100%;"
+                                helper-text="${msg('The Authorization header with the bearer token is automatically added to the HTTP POST request', { id: 'mcp-server-bearer-token-helper' })}"
+                                @input="${(e) => this._bearerToken = e.target.value}">
+                            </vaadin-text-field>
+                            <vaadin-text-field
+                                label="${completion.argumentName}"
+                                .value="${this._argumentValue}"
+                                style="width: 100%;"
+                                @input="${(e) => this._argumentValue = e.target.value}">
+                            </vaadin-text-field>
+                            <vaadin-button theme="primary" @click="${() => this._completePrompt()}">${msg('Complete', { id: 'mcp-server-complete' })}</vaadin-button>
+                        </vaadin-vertical-layout>`;
+        }
+        return html``;
+    }
+
     _renderName(completion) {
-        return html`
-            ${completion.name}
-        `;
+        return html`<code>${completion.name}</code>`;
     }
-    
-    _renderServerName(completion) {
-            return html`
-                ${completion.serverName}
-            `;
-    }
-    
+
     _renderArgName(completion) {
-        return html`
-            <code>${completion.argumentName}</code>
-        `;
+        return html`<code>${completion.argumentName}</code>`;
     }
 
-    _selectCompletion(completion) {
-        this._selectedCompletion = completion;
+    _renderServerName(completion) {
+        return html`${completion.serverName}`;
     }
 
-    _showPromptCompletions() {
-        this._selectedCompletion = null;
+    _filterTextChanged(e) {
+        this._searchTerm = (e.detail.value || '').trim();
+        return this._filterGrid();
     }
 
-    _completePrompt() {
-        const bearerToken = this.shadowRoot.getElementById('prompt_bearer_token');
-        const forceNewSession = this.shadowRoot.getElementById('prompt_force_new_session');
-        const requestInput = this.shadowRoot.getElementById('prompt_completion_text');
-        const responseTextArea = this.shadowRoot.getElementById('prompt_completion_response_text');
-        const content = requestInput.value;
-        this.jsonRpc.completePrompt({
-            name: this._selectedCompletion.name,
-            argumentName: this._selectedCompletion.argumentName,
-            argumentValue: content,
-            bearerToken: bearerToken.value,
-            forceNewSession: forceNewSession.checked
-        }).then(jsonRpcResponse => {
-            responseTextArea.populatePrettyJson(this._prettyJson(jsonRpcResponse.result.response));
+    _filterGrid() {
+        if (this._searchTerm === '') {
+            this._filtered = this._completions;
+            return;
+        }
+
+        this._filtered = this._completions.filter((completion) => {
+           return this._match(completion.name, this._searchTerm) ||
+                  this._match(completion.argumentName, this._searchTerm) ||
+                  this._match(completion.serverName, this._searchTerm);
         });
     }
 
-    _prettyJson(content) {
-        return JSON.stringify(content, null, 2);
+    _match(value, term) {
+        if (!value) {
+            return false;
+        }
+        return value.toLowerCase().includes(term.toLowerCase());
+    }
+
+    _closeDialogs() {
+        this._completionResult = null;
+        this._showInputDialog = false;
+    }
+
+    _completePrompt() {
+        if (!this._selectedCompletion) return;
+
+        this._showInputDialog = false;
+        const completion = this._selectedCompletion;
+
+        this.jsonRpc.completePrompt({
+            name: completion.name,
+            argumentName: completion.argumentName,
+            argumentValue: this._argumentValue,
+            bearerToken: this._bearerToken,
+            forceNewSession: this._forceNewSession
+        }).then(jsonRpcResponse => {
+            this._setCompletionResult(jsonRpcResponse.result.response);
+        });
+    }
+
+    _setCompletionResult(result) {
+        if (this._isJsonSerializable(result)) {
+            this._completionResult = JSON.stringify(result, null, 2);
+        } else {
+            this._completionResult = result;
+        }
+    }
+
+    _loadCompletions() {
+        this.jsonRpc.getPromptCompletionsData()
+            .then(jsonResponse => {
+                this._completions = jsonResponse.result;
+                this._filtered = this._completions;
+            });
+    }
+
+    _isJsonSerializable(value) {
+        return value !== null && (typeof value === 'object');
     }
 
 }
