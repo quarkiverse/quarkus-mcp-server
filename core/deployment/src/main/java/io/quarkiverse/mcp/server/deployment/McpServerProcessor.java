@@ -1142,7 +1142,8 @@ class McpServerProcessor {
     private static final Set<org.jboss.jandex.Type> TOOL_TYPES = Set.of(ClassType.create(DotNames.TOOL_RESPONSE),
             ClassType.create(DotNames.CONTENT), ClassType.create(DotNames.TEXT_CONTENT),
             ClassType.create(DotNames.IMAGE_CONTENT), ClassType.create(DotNames.EMBEDDED_RESOURCE),
-            ClassType.create(DotNames.RESOURCE_LINK), ClassType.create(DotNames.STRING));
+            ClassType.create(DotNames.AUDIO_CONTENT), ClassType.create(DotNames.RESOURCE_LINK),
+            ClassType.create(DotNames.STRING));
 
     private void validateToolMethod(MethodInfo method, List<DefaultValueConverterBuildItem> defaultValueConverters,
             IndexView index) {
@@ -1593,7 +1594,8 @@ class McpServerProcessor {
                 || DotNames.TEXT_CONTENT.equals(typeName)
                 || DotNames.IMAGE_CONTENT.equals(typeName)
                 || DotNames.EMBEDDED_RESOURCE.equals(typeName)
-                || DotNames.RESOURCE_LINK.equals(typeName);
+                || DotNames.RESOURCE_LINK.equals(typeName)
+                || DotNames.AUDIO_CONTENT.equals(typeName);
     }
 
     private ResultHandle readResultMapper(BytecodeCreator bytecode, String mapperClassSimpleName) {

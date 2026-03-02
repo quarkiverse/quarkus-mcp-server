@@ -54,6 +54,12 @@ public class ToolContentsTest extends McpServerTest {
                         }
                     }
                 })
+                .toolsCall("bravo", toolResponse -> {
+                    Content c = toolResponse.firstContent();
+                    assertEquals(Content.Type.AUDIO, c.type());
+                    assertEquals(Base64.getEncoder().encodeToString("hello".getBytes()), c.asAudio().data());
+                    assertEquals("audio/wav", c.asAudio().mimeType());
+                })
                 .thenAssertResults();
     }
 
@@ -67,6 +73,11 @@ public class ToolContentsTest extends McpServerTest {
                     new EmbeddedResource(new TextResourceContents("file://hi", "hi", null)),
                     new AudioContent(Base64.getEncoder().encodeToString("hello".getBytes()), "audio/wav"),
                     new ResourceLink("file://link", "link"));
+        }
+
+        @Tool
+        AudioContent bravo() {
+            return new AudioContent(Base64.getEncoder().encodeToString("hello".getBytes()), "audio/wav");
         }
 
     }
