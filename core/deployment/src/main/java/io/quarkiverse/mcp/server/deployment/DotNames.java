@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.jboss.jandex.DotName;
 
+import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.CompleteArg;
@@ -61,6 +62,7 @@ import io.smallrye.mutiny.Uni;
 
 class DotNames {
 
+    static final DotName AUDIO_CONTENT = DotName.createSimple(AudioContent.class);
     static final DotName BLOB_RESOURCE_CONTENTS = DotName.createSimple(BlobResourceContents.class);
     static final DotName BLOCKING = DotName.createSimple(Blocking.class);
     static final DotName COMPLETE_ARG = DotName.createSimple(CompleteArg.class);
