@@ -147,10 +147,63 @@ public interface ElicitationRequest {
             this(null, null, null, null, required);
         }
 
+        public NumberSchema(Number defaultValue) {
+            this(null, null, null, null, false, defaultValue);
+        }
+
         @Override
         public JsonObject asJson() {
             JsonObject ret = new JsonObject()
                     .put("type", "number");
+            if (title != null) {
+                ret.put("title", title);
+            }
+            if (description != null) {
+                ret.put("description", description);
+            }
+            if (maximum != null) {
+                ret.put("maximum", maximum);
+            }
+            if (minimum != null) {
+                ret.put("minimum", minimum);
+            }
+            if (defaultValue != null) {
+                ret.put("default", defaultValue);
+            }
+            return ret;
+        }
+
+    }
+
+    record IntegerSchema(String title,
+            String description,
+            Integer maximum,
+            Integer minimum,
+            boolean required,
+            Integer defaultValue)
+            implements
+                PrimitiveSchema {
+
+        public IntegerSchema(String title, String description, Integer maximum, Integer minimum, boolean required) {
+            this(title, description, maximum, minimum, required, null);
+        }
+
+        public IntegerSchema() {
+            this(null, null, null, null, false);
+        }
+
+        public IntegerSchema(boolean required) {
+            this(null, null, null, null, required);
+        }
+
+        public IntegerSchema(int defaultValue) {
+            this(null, null, null, null, false, defaultValue);
+        }
+
+        @Override
+        public JsonObject asJson() {
+            JsonObject ret = new JsonObject()
+                    .put("type", "integer");
             if (title != null) {
                 ret.put("title", title);
             }
@@ -379,6 +432,10 @@ public interface ElicitationRequest {
 
         public StringSchema(boolean required) {
             this(null, null, null, null, null, required);
+        }
+
+        public StringSchema(String defaultValue) {
+            this(null, null, null, null, null, false, defaultValue);
         }
 
         public enum Format {

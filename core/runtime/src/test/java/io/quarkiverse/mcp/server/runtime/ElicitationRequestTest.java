@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.BooleanSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.EnumSchema;
+import io.quarkiverse.mcp.server.ElicitationRequest.IntegerSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.MultiSelectEnumSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.NumberSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.SingleSelectEnumSchema;
@@ -43,6 +44,15 @@ public class ElicitationRequestTest {
         assertEquals(
                 "{\"type\":\"number\",\"title\":\"title\",\"description\":\"desc\",\"maximum\":100,\"minimum\":1,\"default\":10}",
                 numSchema.asJson().encode());
+
+        ElicitationRequest.IntegerSchema intSchema = new IntegerSchema("title", "desc", 100, 1, true, 10);
+        assertTrue(intSchema.required());
+        assertEquals(10, intSchema.defaultValue());
+        assertEquals(1, intSchema.minimum());
+        assertEquals(100, intSchema.maximum());
+        assertEquals(
+                "{\"type\":\"integer\",\"title\":\"title\",\"description\":\"desc\",\"maximum\":100,\"minimum\":1,\"default\":10}",
+                intSchema.asJson().encode());
 
         ElicitationRequest.EnumSchema enumSchema = new EnumSchema("title", "desc", List.of("foo", "bar"), List.of("n1", "n2"),
                 true, "foo");
