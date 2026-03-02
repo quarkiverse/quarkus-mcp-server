@@ -5,6 +5,7 @@ import java.util.Map;
 
 import io.quarkiverse.mcp.server.ElicitationRequest.BooleanSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.EnumSchema;
+import io.quarkiverse.mcp.server.ElicitationRequest.IntegerSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.MultiSelectEnumSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.NumberSchema;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
@@ -64,7 +65,7 @@ public record ElicitationResponse(Action action, Content content, Meta meta) {
          *
          * @param key
          * @return the value or {@code null}
-         * @see NumberSchema
+         * @see IntegerSchema
          */
         Integer getInteger(String key);
 
