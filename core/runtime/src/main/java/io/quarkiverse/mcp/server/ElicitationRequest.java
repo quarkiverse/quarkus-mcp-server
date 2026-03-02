@@ -116,7 +116,7 @@ public interface ElicitationRequest {
                 ret.put("title", title);
             }
             if (description != null) {
-                ret.put("description", title);
+                ret.put("description", description);
             }
             if (defaultValue != null) {
                 ret.put("default", defaultValue);
@@ -155,7 +155,7 @@ public interface ElicitationRequest {
                 ret.put("title", title);
             }
             if (description != null) {
-                ret.put("description", title);
+                ret.put("description", description);
             }
             if (maximum != null) {
                 ret.put("maximum", maximum);
@@ -403,13 +403,13 @@ public interface ElicitationRequest {
                 ret.put("title", title);
             }
             if (description != null) {
-                ret.put("description", title);
+                ret.put("description", description);
             }
             if (maxLength != null) {
                 ret.put("maxLength", maxLength);
             }
             if (minLength != null) {
-                ret.put("minLength", maxLength);
+                ret.put("minLength", minLength);
             }
             if (format != null) {
                 ret.put("format", format.asJsonString());
