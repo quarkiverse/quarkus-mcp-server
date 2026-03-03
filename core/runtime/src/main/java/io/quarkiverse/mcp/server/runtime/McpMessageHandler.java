@@ -282,7 +282,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private static Uni<InitialCheck.CheckResult> checkInit(InitialRequest initialRequest, List<InitialCheck> checks, int idx) {
         if (checks.isEmpty()) {
-            return InitialCheck.CheckResult.successs();
+            return InitialCheck.CheckResult.success();
         }
         try {
             return checks.get(idx).perform(initialRequest).chain(res -> {
@@ -560,6 +560,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             "2025-03-26",
             "2024-11-05");
 
+    private static final Map<String, Object> LIST_CHANGED_PROPERTIES = Map.of("listChanged", true);
+    private static final Map<String, Object> SUBSCRIBE_PROPERTIES = Map.of("subscribe", true);
+
     private Map<String, Object> serverInfo(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
         Map<String, Object> info = new HashMap<>();
 
@@ -609,14 +612,20 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.INITIALIZE, message, mcpRequest);
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
         if (promptManager.hasInfos(filterContext)) {
-            capabilities.put("prompts", metadata.isPromptManagerUsed() ? Map.of("listChanged", true) : Map.of());
+            capabilities.put("prompts", metadata.isPromptManagerUsed() ? LIST_CHANGED_PROPERTIES : Map.of());
         }
         if (toolManager.hasInfos(filterContext)) {
-            capabilities.put("tools", metadata.isToolManagerUsed() ? Map.of("listChanged", true) : Map.of());
+            capabilities.put("tools", metadata.isToolManagerUsed() ? LIST_CHANGED_PROPERTIES : Map.of());
         }
         if (resourceManager.hasInfos(filterContext)
                 || resourceTemplateManager.hasInfos(filterContext)) {
-            capabilities.put("resources", metadata.isResourceManagerUsed() ? Map.of("listChanged", true) : Map.of());
+            var props = SUBSCRIBE_PROPERTIES;
+            if (metadata.isResourceManagerUsed() || metadata.isResourceTemplateManagerUsed()) {
+                props = new HashMap<>();
+                props.putAll(LIST_CHANGED_PROPERTIES);
+                props.putAll(SUBSCRIBE_PROPERTIES);
+            }
+            capabilities.put("resources", props);
         }
         if (promptCompletionManager.hasInfos(filterContext)
                 || resourceTemplateCompletionManager.hasInfos(filterContext)) {
