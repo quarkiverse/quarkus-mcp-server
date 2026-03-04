@@ -4,12 +4,15 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
@@ -21,6 +24,7 @@ import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
+import io.smallrye.config.SmallRyeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpConnection;
@@ -39,25 +43,45 @@ public class HttpMcpServerRecorder {
 
     static final String CONTEXT_KEY = "mcp.http.server-name";
 
-    private final RuntimeValue<McpServersRuntimeConfig> config;
+    private final RuntimeValue<McpServersRuntimeConfig> mcpConfig;
 
-    private final McpHttpServersBuildTimeConfig sseConfig;
+    private final McpHttpServersBuildTimeConfig httpConfig;
 
-    public HttpMcpServerRecorder(RuntimeValue<McpServersRuntimeConfig> config, McpHttpServersBuildTimeConfig sseConfig) {
-        this.config = config;
-        this.sseConfig = sseConfig;
+    public HttpMcpServerRecorder(RuntimeValue<McpServersRuntimeConfig> mcpConfig, McpHttpServersBuildTimeConfig httpConfig) {
+        this.mcpConfig = mcpConfig;
+        this.httpConfig = httpConfig;
     }
 
     public Handler<RoutingContext> createMcpEndpointHandler(String serverName) {
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
         StreamableHttpMcpMessageHandler handler = container.instance(StreamableHttpMcpMessageHandler.class).get();
+
+        SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
+        // Enable DNS rebinding protection for localhost servers
+        boolean checkOrigin = config.getOptionalValue("quarkus.http.host", String.class)
+                .map(LOCAL_HOSTNAMES::contains)
+                .orElse(true);
+
         return new Handler<RoutingContext>() {
 
             @Override
             public void handle(RoutingContext ctx) {
+                HttpServerRequest request = ctx.request();
+                if (checkOrigin) {
+                    // Note that builtin CORS filter does not reject requests for same-origin
+                    String origin = request.getHeader(HttpHeaders.ORIGIN);
+                    if (origin != null && !isLocalhost(origin)) {
+                        LOG.debugf("Non-localhost origin rejected: %s", origin);
+                        HttpServerResponse response = ctx.response();
+                        response.setStatusCode(403);
+                        response.setStatusMessage("Invalid origin");
+                        response.end();
+                        return;
+                    }
+                }
                 ctx.put(CONTEXT_KEY, serverName);
-                HttpMethod method = ctx.request().method();
+                HttpMethod method = request.method();
                 if (HttpMethod.GET.equals(method)) {
                     handler.openSseStream(ctx, connectionManager, serverName);
                 } else if (HttpMethod.POST.equals(method)) {
@@ -75,7 +99,7 @@ public class HttpMcpServerRecorder {
 
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
 
-        McpServerRuntimeConfig serverConfig = config.getValue().servers().get(serverName);
+        McpServerRuntimeConfig serverConfig = mcpConfig.getValue().servers().get(serverName);
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
@@ -113,7 +137,7 @@ public class HttpMcpServerRecorder {
                     endpointPath.append("/");
                 }
                 endpointPath.append("messages/").append(id);
-                if (sseConfig.servers().get(serverName).http().messageEndpoint().includeQueryParams()) {
+                if (httpConfig.servers().get(serverName).http().messageEndpoint().includeQueryParams()) {
                     // Do not use HttpServerRequest#params() as it also contains path params
                     MultiMap queryParams = ctx.queryParams();
                     if (!queryParams.isEmpty()) {
@@ -202,6 +226,27 @@ public class HttpMcpServerRecorder {
                 return new McpServerEndpoints(endpoints);
             }
         };
+    }
+
+    private static final Set<String> LOCAL_HOSTNAMES = Set.of("localhost", "127.0.0.1", "[::1]", "::1");
+    private static final Set<String> ORIGIN_LOCAL_HOSTS;
+
+    static {
+        Set<String> originLocalHosts = new HashSet<String>();
+        for (String hostname : LOCAL_HOSTNAMES) {
+            originLocalHosts.add("http://" + hostname);
+            originLocalHosts.add("https://" + hostname);
+        }
+        ORIGIN_LOCAL_HOSTS = Set.copyOf(originLocalHosts);
+    }
+
+    private boolean isLocalhost(String origin) {
+        for (String host : ORIGIN_LOCAL_HOSTS) {
+            if (origin.startsWith(host)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
