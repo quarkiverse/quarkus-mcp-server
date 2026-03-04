@@ -10,6 +10,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 
 public class DnsRebindingTest extends McpServerTest {
@@ -24,7 +25,8 @@ public class DnsRebindingTest extends McpServerTest {
         URI endpoint = client.mcpEndpoint();
         RestAssured.given()
                 .when()
-                .headers("Host", "evil.example.com", "Origin", "http://evil.example.com")
+                .headers(HttpHeaders.HOST + "", "evil.example.com",
+                        HttpHeaders.ORIGIN, "http://evil.example.com")
                 .body(new JsonObject()
                         .put("jsonrpc", "2.0")
                         .put("method", McpAssured.TOOLS_CALL)
