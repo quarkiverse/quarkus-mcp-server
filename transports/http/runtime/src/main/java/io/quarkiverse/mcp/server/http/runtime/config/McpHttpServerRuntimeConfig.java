@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.http.runtime.config;
 
 import io.smallrye.config.WithDefault;
+import io.smallrye.config.WithName;
 
 public interface McpHttpServerRuntimeConfig {
 
@@ -10,6 +11,13 @@ public interface McpHttpServerRuntimeConfig {
     Http http();
 
     public interface Http {
+
+        /**
+         * Enable DNS rebinding protection for localhost servers.
+         */
+        @WithName("dns-rebinding-check.enabled")
+        @WithDefault("true")
+        boolean dnsRebindingCheckEnabled();
 
         /**
          * Streamable HTTP transport configuration.
