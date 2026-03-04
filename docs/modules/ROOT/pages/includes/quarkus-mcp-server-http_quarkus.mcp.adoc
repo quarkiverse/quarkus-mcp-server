@@ -62,6 +62,32 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled[`quarkus.mcp.server.http.dns-rebinding-check.enabled`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.http.dns-rebinding-check.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`quarkus.mcp.server."server-name".http.dns-rebinding-check.enabled`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".http.dns-rebinding-check.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+Enable DNS rebinding protection for localhost servers.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_HTTP_DNS_REBINDING_CHECK_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_HTTP_DNS_REBINDING_CHECK_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-dummy-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-dummy-init[`quarkus.mcp.server.http.streamable.dummy-init`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.http.streamable.dummy-init+++[]

@@ -16,6 +16,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
+import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -43,13 +44,17 @@ public class HttpMcpServerRecorder {
 
     static final String CONTEXT_KEY = "mcp.http.server-name";
 
-    private final RuntimeValue<McpServersRuntimeConfig> mcpConfig;
+    private final RuntimeValue<McpServersRuntimeConfig> mcpRuntimeConfig;
 
-    private final McpHttpServersBuildTimeConfig httpConfig;
+    private final RuntimeValue<McpHttpServersRuntimeConfig> httpRuntimeConfig;
 
-    public HttpMcpServerRecorder(RuntimeValue<McpServersRuntimeConfig> mcpConfig, McpHttpServersBuildTimeConfig httpConfig) {
-        this.mcpConfig = mcpConfig;
-        this.httpConfig = httpConfig;
+    private final McpHttpServersBuildTimeConfig httpBuildConfig;
+
+    public HttpMcpServerRecorder(RuntimeValue<McpServersRuntimeConfig> mcpRuntimeConfig,
+            RuntimeValue<McpHttpServersRuntimeConfig> httpRuntimeConfig, McpHttpServersBuildTimeConfig httpBuildConfig) {
+        this.mcpRuntimeConfig = mcpRuntimeConfig;
+        this.httpRuntimeConfig = httpRuntimeConfig;
+        this.httpBuildConfig = httpBuildConfig;
     }
 
     public Handler<RoutingContext> createMcpEndpointHandler(String serverName) {
@@ -57,11 +62,12 @@ public class HttpMcpServerRecorder {
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
         StreamableHttpMcpMessageHandler handler = container.instance(StreamableHttpMcpMessageHandler.class).get();
 
-        SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
         // Enable DNS rebinding protection for localhost servers
-        boolean checkOrigin = config.getOptionalValue("quarkus.http.host", String.class)
-                .map(LOCAL_HOSTNAMES::contains)
-                .orElse(true);
+        SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
+        boolean checkOrigin = httpRuntimeConfig.getValue().servers().get(serverName).http().dnsRebindingCheckEnabled()
+                && config.getOptionalValue("quarkus.http.host", String.class)
+                        .map(LOCAL_HOSTNAMES::contains)
+                        .orElse(true);
 
         return new Handler<RoutingContext>() {
 
@@ -99,7 +105,7 @@ public class HttpMcpServerRecorder {
 
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
 
-        McpServerRuntimeConfig serverConfig = mcpConfig.getValue().servers().get(serverName);
+        McpServerRuntimeConfig serverConfig = mcpRuntimeConfig.getValue().servers().get(serverName);
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
@@ -137,7 +143,7 @@ public class HttpMcpServerRecorder {
                     endpointPath.append("/");
                 }
                 endpointPath.append("messages/").append(id);
-                if (httpConfig.servers().get(serverName).http().messageEndpoint().includeQueryParams()) {
+                if (httpBuildConfig.servers().get(serverName).http().messageEndpoint().includeQueryParams()) {
                     // Do not use HttpServerRequest#params() as it also contains path params
                     MultiMap queryParams = ctx.queryParams();
                     if (!queryParams.isEmpty()) {
