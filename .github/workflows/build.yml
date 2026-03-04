@@ -107,3 +107,46 @@ jobs:
       - name: Build sample - ${{ matrix.sample }}
         working-directory: './samples/${{ matrix.sample }}'
         run: mvn -B clean install
+
+  mcp-conformance-tests:
+    name: MCP Conformance Tests / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        java-version: [ 17 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      # MCP conformance tests require 24
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn -B clean install -Dno-format -DskipTests
+             
+      - name: Build test server
+        working-directory: './conformance'
+        run: mvn -B clean install
+        
+      - name: Start test server
+        working-directory: './conformance'
+        run: nohup java -Dquarkus.http.host=localhost -jar target/quarkus-app/quarkus-run.jar & echo $! > app.pid
+        id: start_test_server
+        
+      - name: Run MCP conformance tests
+        working-directory: './conformance'
+        run: npx @modelcontextprotocol/conformance server --url http://localhost:8080/mcp
+
+      - name: Stop test server
+        if: steps.start_test_server.outcome == 'success'
+        working-directory: './conformance'
+        run: kill $(cat app.pid) || true
