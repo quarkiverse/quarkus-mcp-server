@@ -18,6 +18,7 @@ import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog;
@@ -123,5 +124,6 @@ class DotNames {
     static final DotName TOOL_GUARDRAILS = DotName.createSimple(ToolGuardrails.class);
     static final DotName SUPPORTED_EXEC_MODELS = DotName.createSimple(SupportedExecutionModels.class);
     static final DotName ICONS = DotName.createSimple(Icons.class);
+    static final DotName ICONS_PROVIDER = DotName.createSimple(IconsProvider.class);
 
 }

@@ -37,6 +37,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.ClassInfo.NestingType;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.EquivalenceKey.TypeEquivalenceKey;
@@ -559,20 +560,70 @@ class McpServerProcessor {
     }
 
     @BuildStep
-    void validateGuardrails(BeanArchiveIndexBuildItem beanArchiveIndex,
+    void validateGuardrailsAndIconProviders(BeanArchiveIndexBuildItem beanArchiveIndex,
             List<FeatureMethodBuildItem> featureMethods,
             ValidationPhaseBuildItem validationPhase,
-            BuildProducer<ValidationErrorBuildItem> validationErrors,
+            BuildProducer<ValidationErrorBuildItem> errors,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
         for (FeatureMethodBuildItem featureMethod : featureMethods) {
             if (featureMethod.isTool()) {
                 for (DotName inputGuardRail : featureMethod.getInputGuardrails()) {
                     validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, inputGuardRail, validationPhase.getContext(),
-                            validationErrors, reflectiveClasses);
+                            errors, reflectiveClasses);
                 }
                 for (DotName outputGuardRail : featureMethod.getOutputGuardrails()) {
                     validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, outputGuardRail, validationPhase.getContext(),
-                            validationErrors, reflectiveClasses);
+                            errors, reflectiveClasses);
+                }
+            }
+            DotName iconsProviderClazzName = featureMethod.getIconsProvider();
+            if (iconsProviderClazzName != null) {
+                validateBeanOrPublicNoArgsConstructor("IconsProvider", iconsProviderClazzName, featureMethod,
+                        beanArchiveIndex.getIndex(),
+                        validationPhase.getContext(), errors, reflectiveClasses);
+            }
+        }
+    }
+
+    private void validateBeanOrPublicNoArgsConstructor(String componentType,
+            DotName clazzName,
+            FeatureMethodBuildItem featureMethod,
+            IndexView index,
+            ValidationContext validationContext,
+            BuildProducer<ValidationErrorBuildItem> errors,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        ClassInfo clazz = index.getClassByName(clazzName);
+        if (clazz != null) {
+            List<BeanInfo> beans = validationContext.beans().withBeanType(clazzName).collect();
+            if (beans.size() > 1) {
+                String message = String.format(
+                        "There must be exactly one bean that matches %s: \"%s\" declared on: %s; beans: %s",
+                        componentType,
+                        clazzName,
+                        featureMethod.getMethod().declaringClass().name() + "#" + featureMethod.getMethod().name()
+                                + "()",
+                        beans);
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+            } else if (beans.isEmpty()) {
+                if (clazz != null) {
+                    if (clazz.nestingType() == NestingType.INNER && !Modifier.isStatic(clazz.flags())) {
+                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                componentType + " implementations must not be inner classes: "
+                                        + clazz)));
+                    } else {
+                        MethodInfo noArgsConstructor = clazz.method("<init>");
+                        if (noArgsConstructor == null || !Modifier.isPublic(noArgsConstructor.flags())) {
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                    componentType
+                                            + " implementations must be CDI beans, or declare a public no-args constructor: "
+                                            + clazz)));
+                        } else {
+                            // Also register the component for reflection
+                            reflectiveClasses
+                                    .produce(ReflectiveClassBuildItem.builder(clazzName.toString())
+                                            .constructors().build());
+                        }
+                    }
                 }
             }
         }
@@ -589,37 +640,23 @@ class McpServerProcessor {
     private void validateGuardrail(IndexView index, FeatureMethodBuildItem featureMethod, DotName guardrailClazzName,
             ValidationContext validationContext, BuildProducer<ValidationErrorBuildItem> errors,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        validateBeanOrPublicNoArgsConstructor("Guardrail", guardrailClazzName, featureMethod, index,
+                validationContext, errors, reflectiveClasses);
+
         ClassInfo clazz = index.getClassByName(guardrailClazzName);
-        List<BeanInfo> beans = validationContext.beans().withBeanType(guardrailClazzName).collect();
-        if (beans.size() > 1) {
-            String message = String.format(
-                    "There must be exactly one bean that matches the guardrail: \"%s\" declared on: %s; beans: %s",
-                    guardrailClazzName,
-                    featureMethod.getMethod().declaringClass().name() + "#" + featureMethod.getMethod().name() + "()", beans);
-            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
-        } else if (beans.isEmpty()) {
-            if (clazz != null) {
-                MethodInfo noArgsConstructor = clazz.method("<init>");
-                if (noArgsConstructor == null || !Modifier.isPublic(noArgsConstructor.flags())) {
-                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
-                            "Guardrail implementations must be CDI beans, or declare a public no-args constructor: " + clazz)));
-                } else {
-                    reflectiveClasses
-                            .produce(ReflectiveClassBuildItem.builder(guardrailClazzName.toString()).constructors().build());
+        if (clazz != null) {
+            AnnotationInstance supportedExecutionModels = clazz.declaredAnnotation(DotNames.SUPPORTED_EXEC_MODELS);
+            if (supportedExecutionModels != null) {
+                for (String supportedModel : supportedExecutionModels.value().asEnumArray()) {
+                    if (supportedModel.equals(featureMethod.getExecutionModel().toString())) {
+                        return;
+                    }
                 }
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "Guardrail %s does not support the execution model %s of %s#%s()".formatted(guardrailClazzName,
+                                featureMethod.getExecutionModel(), featureMethod.getMethod().declaringClass(),
+                                featureMethod.getMethod().name()))));
             }
-        }
-        AnnotationInstance supportedExecutionModels = clazz.declaredAnnotation(DotNames.SUPPORTED_EXEC_MODELS);
-        if (supportedExecutionModels != null) {
-            for (String supportedModel : supportedExecutionModels.value().asEnumArray()) {
-                if (supportedModel.equals(featureMethod.getExecutionModel().toString())) {
-                    return;
-                }
-            }
-            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
-                    "Guardrail %s does not support the execution model %s of %s#%s()".formatted(guardrailClazzName,
-                            featureMethod.getExecutionModel(), featureMethod.getMethod().declaringClass(),
-                            featureMethod.getMethod().name()))));
         }
     }
 
