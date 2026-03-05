@@ -11,6 +11,8 @@ import java.util.Set;
 
 import jakarta.inject.Singleton;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
 import io.quarkiverse.mcp.server.http.runtime.HttpMcpServerRecorder;
 import io.quarkiverse.mcp.server.http.runtime.McpServerEndpoints;
@@ -34,6 +36,8 @@ import io.quarkus.vertx.http.deployment.spi.RouteBuildItem;
 
 public class HttpMcpServerProcessor {
 
+    private static Logger LOG = Logger.getLogger(HttpMcpServerProcessor.class);
+
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem("mcp-server-http");
@@ -51,8 +55,10 @@ public class HttpMcpServerProcessor {
 
     @BuildStep
     void serverNames(McpHttpServersBuildTimeConfig config, BuildProducer<ServerNameBuildItem> serverNames) {
-        for (String serverName : config.servers().keySet()) {
-            serverNames.produce(new ServerNameBuildItem(serverName));
+        for (Map.Entry<String, McpHttpServerBuildTimeConfig> e : config.servers().entrySet()) {
+            if (e.getValue().http().enabled()) {
+                serverNames.produce(new ServerNameBuildItem(e.getKey()));
+            }
         }
     }
 
@@ -97,6 +103,10 @@ public class HttpMcpServerProcessor {
         Set<String> rootPaths = new HashSet<>();
         for (Map.Entry<String, McpHttpServerBuildTimeConfig> e : config.servers().entrySet()) {
             String serverName = e.getKey();
+            if (!e.getValue().http().enabled()) {
+                LOG.debugf("HTTP transport disabled for server [%s]", serverName);
+                continue;
+            }
             String rootPath = e.getValue().http().rootPath();
             if (!rootPaths.add(rootPath)) {
                 throw new IllegalStateException("Multiple server configurations define the same root path: " + rootPath);

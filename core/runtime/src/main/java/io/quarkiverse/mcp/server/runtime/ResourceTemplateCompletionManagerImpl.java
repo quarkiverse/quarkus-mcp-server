@@ -13,6 +13,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.ResourceTemplateMetadata;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
 
@@ -23,10 +24,15 @@ public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase
 
     private final Map<String, String> nameToUriTemplate;
 
-    ResourceTemplateCompletionManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ConnectionManager connectionManager, ResourceTemplateManagerImpl resourceTemplateManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+    ResourceTemplateCompletionManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            ResourceTemplateManagerImpl resourceTemplateManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            McpServersRuntimeConfig config) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.nameToUriTemplate = metadata.resourceTemplates()
                 .stream().map(FeatureMetadata::info).collect(Collectors.toMap(FeatureMethodInfo::name, FeatureMethodInfo::uri));
         for (FeatureMetadata<CompletionResponse> c : metadata.resourceTemplateCompletions()) {

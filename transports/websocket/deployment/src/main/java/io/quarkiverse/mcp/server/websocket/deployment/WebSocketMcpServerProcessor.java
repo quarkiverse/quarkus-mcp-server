@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.websocket.deployment;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -9,6 +10,7 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
@@ -50,6 +52,8 @@ import io.vertx.core.Vertx;
 
 public class WebSocketMcpServerProcessor {
 
+    private static final Logger LOG = Logger.getLogger(WebSocketMcpServerProcessor.class);
+
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem("mcp-server-websocket");
@@ -66,8 +70,10 @@ public class WebSocketMcpServerProcessor {
 
     @BuildStep
     void serverNames(McpWebSocketServersBuildTimeConfig config, BuildProducer<ServerNameBuildItem> serverNames) {
-        for (String serverName : config.servers().keySet()) {
-            serverNames.produce(new ServerNameBuildItem(serverName));
+        for (Map.Entry<String, McpWebSocketServerBuildTimeConfig> e : config.servers().entrySet()) {
+            if (e.getValue().websocket().enabled()) {
+                serverNames.produce(new ServerNameBuildItem(e.getKey()));
+            }
         }
     }
 
@@ -78,6 +84,10 @@ public class WebSocketMcpServerProcessor {
         // For each WebSocket path we generate a new class that extends WebSocketMcpMessageHandler
         Set<String> endpointPaths = new HashSet<>();
         for (Entry<String, McpWebSocketServerBuildTimeConfig> e : config.servers().entrySet()) {
+            if (!e.getValue().websocket().enabled()) {
+                LOG.debugf("WebSocket transport disabled for server [%s]", e.getKey());
+                continue;
+            }
             String endpointPath = e.getValue().websocket().endpointPath();
             if (!endpointPaths.add(endpointPath)) {
                 throw new IllegalStateException(

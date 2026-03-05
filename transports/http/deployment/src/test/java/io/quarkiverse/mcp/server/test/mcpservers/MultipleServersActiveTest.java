@@ -18,9 +18,9 @@ public class MultipleServersActiveTest extends McpServerTest {
     static final QuarkusUnitTest config = config(500)
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class))
-            .overrideConfigKey("quarkus.mcp.server.sse.root-path", "/alpha/mcp")
-            .overrideConfigKey("quarkus.mcp.server.bravo.sse.root-path", "/bravo/mcp")
-            .overrideConfigKey("quarkus.mcp.server.charlie.sse.root-path", "/charlie/mcp");
+            .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")
+            .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp")
+            .overrideConfigKey("quarkus.mcp.server.charlie.http.root-path", "/charlie/mcp");
 
     static QuarkusUnitTest config(int textLimit) {
         QuarkusUnitTest ret = defaultConfig(500);

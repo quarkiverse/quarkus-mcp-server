@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -49,6 +50,8 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
@@ -71,16 +74,21 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected final CurrentIdentityAssociation currentIdentityAssociation;
 
+    // used to validate server name if InvalidServerNameStrategy.FAIL is set
+    protected final Set<String> serverNames;
+
     final ResponseHandlers responseHandlers;
 
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers,
+            McpServersRuntimeConfig config, McpMetadata metadata) {
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
         this.loggers = new ConcurrentHashMap<>();
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.responseHandlers = responseHandlers;
+        this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
@@ -453,6 +461,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     protected static abstract class FeatureDefinitionBase<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinitionBase<INFO, ARGUMENTS, RESPONSE, THIS>> {
 
         protected final String name;
+        protected final Set<String> serverNames;
         protected String description;
         protected Function<ARGUMENTS, RESPONSE> fun;
         protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
@@ -460,9 +469,10 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected String serverName;
         protected List<Icon> icons = List.of();
 
-        protected FeatureDefinitionBase(String name) {
+        protected FeatureDefinitionBase(String name, Set<String> serverNames) {
             this.name = Objects.requireNonNull(name);
             this.serverName = McpServer.DEFAULT;
+            this.serverNames = serverNames;
         }
 
         @SuppressWarnings("unchecked")
@@ -509,6 +519,10 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }
             if (requireDescription && description == null) {
                 throw new IllegalStateException("Description must be set");
+            }
+            if (serverNames != null && !serverNames.contains(serverName)) {
+                // Validate server name if InvalidServerNameStrategy.FAIL
+                throw new IllegalStateException("Invalid server name: " + serverName);
             }
         }
 
