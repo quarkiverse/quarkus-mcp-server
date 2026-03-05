@@ -10,6 +10,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.PromptCompletionManager;
 import io.quarkiverse.mcp.server.PromptManager;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
 
@@ -18,10 +19,15 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
 
     private final PromptManagerImpl promptManager;
 
-    protected PromptCompletionManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper,
-            ConnectionManager connectionManager, PromptManagerImpl promptManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+    protected PromptCompletionManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            PromptManagerImpl promptManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            McpServersRuntimeConfig config) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.promptManager = promptManager;
         for (FeatureMetadata<CompletionResponse> c : metadata.promptCompletions()) {
             String key = c.info().name() + "_"

@@ -194,6 +194,11 @@ class McpServerProcessor {
     }
 
     @BuildStep
+    void serverNames(BuildProducer<ServerNameBuildItem> serverNames) {
+        serverNames.produce(new ServerNameBuildItem(McpServer.DEFAULT));
+    }
+
+    @BuildStep
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");

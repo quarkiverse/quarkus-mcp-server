@@ -15,6 +15,7 @@ import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -26,9 +27,14 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     // key = reference name + "_" + argument name
     protected final ConcurrentMap<String, CompletionInfo> completions;
 
-    protected CompletionManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+    protected CompletionManagerBase(Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            McpServersRuntimeConfig config,
+            McpMetadata metadata) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.completions = new ConcurrentHashMap<>();
     }
 
@@ -119,7 +125,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         private String argumentName;
 
         private CompletionDefinitionImpl(String name) {
-            super(name);
+            super(name, CompletionManagerBase.this.serverNames);
             setDescription("");
         }
 

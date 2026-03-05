@@ -33,6 +33,7 @@ import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -59,8 +60,9 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
             @All List<PromptFilter> filters,
-            @Any Instance<IconsProvider> iconsProviders) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+            @Any Instance<IconsProvider> iconsProviders,
+            McpServersRuntimeConfig config) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
             this.prompts.put(f.info().name(), new PromptMethod(f, iconsProviders));
@@ -218,7 +220,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         private Map<MetaKey, Object> metadata = Map.of();
 
         PromptDefinitionImpl(String name) {
-            super(name);
+            super(name, PromptManagerImpl.this.serverNames);
             this.arguments = new ArrayList<>();
         }
 

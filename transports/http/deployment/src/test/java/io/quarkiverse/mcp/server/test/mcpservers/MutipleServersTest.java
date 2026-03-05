@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.test.mcpservers;
 import static io.quarkiverse.mcp.server.McpServer.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -50,7 +51,16 @@ public class MutipleServersTest extends McpServerTest {
     ResourceManager resourceManager;
 
     @Test
-    public void testDefaultServer() {
+    public void testServers() {
+        IllegalStateException ise = assertThrows(IllegalStateException.class, () ->
+        // Fail if InvalidServerNameStrategy == FAIL
+        toolManager.newTool("foo")
+                .setServerName("nonexistent")
+                .setDescription("My foo!")
+                .setHandler(ta -> ToolResponse.success("ok"))
+                .register());
+        assertEquals("Invalid server name: nonexistent", ise.getMessage());
+
         ToolManager.ToolInfo bravo = toolManager.getTool("bravo");
         assertNotNull(bravo);
         assertEquals("bravo", bravo.serverName());

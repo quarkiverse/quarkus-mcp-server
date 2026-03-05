@@ -40,6 +40,7 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -66,8 +67,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
             @All List<ResourceTemplateFilter> filters,
-            @Any Instance<IconsProvider> iconsProviders) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+            @Any Instance<IconsProvider> iconsProviders,
+            McpServersRuntimeConfig config) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
             this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
@@ -453,7 +455,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceTemplateDefinitionImpl(String name) {
-            super(name);
+            super(name, ResourceTemplateManagerImpl.this.serverNames);
         }
 
         @Override

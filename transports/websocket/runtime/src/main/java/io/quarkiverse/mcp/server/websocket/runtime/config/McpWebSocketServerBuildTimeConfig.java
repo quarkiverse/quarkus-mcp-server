@@ -12,6 +12,12 @@ public interface McpWebSocketServerBuildTimeConfig {
     public interface WebSocket {
 
         /**
+         * Enable WebSocket transport.
+         */
+        @WithDefault("true")
+        boolean enabled();
+
+        /**
          * The WebSocket MCP endpoint is exposed at `\{endpointPath}`. By default, it's `/mcp/ws`.
          *
          * @asciidoclet

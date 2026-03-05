@@ -101,7 +101,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<OutputSchemaGenerator> outputSchemaGenerator,
             McpServersBuildTimeConfig buildTimeConfig,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.tools = new ConcurrentHashMap<>();
         this.inputGuardrails = inputGuardrails;
         this.outputGuardrails = outputGuardrails;
@@ -525,7 +525,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private List<Class<? extends ToolOutputGuardrail>> outputGuardrails;
 
         private ToolDefinitionImpl(String name) {
-            super(name);
+            super(name, ToolManagerImpl.this.serverNames);
             this.arguments = new ArrayList<>();
         }
 

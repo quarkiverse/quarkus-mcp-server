@@ -21,6 +21,7 @@ import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.NotificationManager.NotificationInfo;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -32,9 +33,14 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     // key = notification type + "::" + name
     final ConcurrentMap<String, NotificationInfo> notifications;
 
-    NotificationManagerImpl(McpMetadata metadata, Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers);
+    NotificationManagerImpl(McpMetadata metadata,
+            Vertx vertx,
+            ObjectMapper mapper,
+            ConnectionManager connectionManager,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation,
+            ResponseHandlers responseHandlers,
+            McpServersRuntimeConfig config) {
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
         this.notifications = new ConcurrentHashMap<>();
         for (FeatureMetadata<Void> notification : metadata.notifications()) {
             NotificationMethod notificationMethod = new NotificationMethod(notification);
@@ -144,7 +150,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         private Notification.Type type;
 
         private NotificationDefinitionImpl(String name) {
-            super(name);
+            super(name, NotificationManagerImpl.this.serverNames);
         }
 
         @Override

@@ -12,6 +12,12 @@ public interface McpHttpServerBuildTimeConfig {
     public interface Http {
 
         /**
+         * Enable HTTP transport.
+         */
+        @WithDefault("true")
+        boolean enabled();
+
+        /**
          * The MCP endpoint (as defined in the specification `2025-03-26`) is exposed at `\{rootPath}`. By default, it's `/mcp`.
          *
          * The SSE endpoint (as defined in the specification `2024-11-05`) is exposed at `\{rootPath}/sse`. By default, it's
