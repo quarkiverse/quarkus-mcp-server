@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -281,8 +282,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -338,11 +339,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final Content.Annotations annotations;
         private final Map<MetaKey, Object> metadata;
 
-        private ResourceTemplateDefinitionInfo(String name, String title, String description, String serverName,
+        private ResourceTemplateDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
@@ -494,7 +495,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             if (uriTemplate == null) {
                 throw new IllegalStateException("uriTemplate must be set");
             }
-            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverName,
+            ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverNames,
                     fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));

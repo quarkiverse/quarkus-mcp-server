@@ -10,8 +10,8 @@ public class SseMcpConnection extends McpConnectionBase {
 
     private final HttpServerResponse response;
 
-    SseMcpConnection(String id, McpServerRuntimeConfig serverConfig, HttpServerResponse response) {
-        super(id, serverConfig);
+    SseMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName, HttpServerResponse response) {
+        super(id, serverConfig, serverName);
         this.response = response;
     }
 

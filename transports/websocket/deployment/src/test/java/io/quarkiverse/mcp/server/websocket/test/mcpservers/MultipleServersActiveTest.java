@@ -18,6 +18,7 @@ public class MultipleServersActiveTest extends McpServerTest {
     static final QuarkusUnitTest config = config(500)
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class))
+            .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "false")
             .overrideConfigKey("quarkus.mcp.server.websocket.endpoint-path", "/alpha/mcp")
             .overrideConfigKey("quarkus.mcp.server.bravo.websocket.endpoint-path", "/bravo/mcp")
             .overrideConfigKey("quarkus.mcp.server.charlie.websocket.endpoint-path", "/charlie/mcp");

@@ -34,7 +34,9 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final ConcurrentMap<RequestId, Optional<String>> cancellationRequests;
 
-    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig) {
+    protected final String serverName;
+
+    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.logLevel = serverConfig.clientLogging().defaultLevel();
@@ -45,6 +47,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.lastUsed = Instant.now().toEpochMilli();
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
         this.cancellationRequests = new ConcurrentHashMap<>();
+        this.serverName = serverName;
     }
 
     @Override
@@ -81,6 +84,11 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     void setLogLevel(LogLevel level) {
         this.logLevel = level;
+    }
+
+    @Override
+    public String serverName() {
+        return serverName;
     }
 
     public boolean setInitialized() {

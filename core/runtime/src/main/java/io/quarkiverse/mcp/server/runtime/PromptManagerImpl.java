@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -172,8 +173,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -246,7 +247,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public PromptInfo register() {
             validate();
-            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverName, fun, asyncFun,
+            PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, metadata, icons);
             PromptInfo existing = prompts.putIfAbsent(name, ret);
             if (existing != null) {
@@ -265,11 +266,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         private final List<PromptArgument> arguments;
         private final Map<MetaKey, Object> metadata;
 
-        private PromptDefinitionInfo(String name, String title, String description, String serverName,
+        private PromptDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
                 List<PromptArgument> arguments, Map<MetaKey, Object> metadata, List<Icon> icons) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.metadata = Map.copyOf(metadata);

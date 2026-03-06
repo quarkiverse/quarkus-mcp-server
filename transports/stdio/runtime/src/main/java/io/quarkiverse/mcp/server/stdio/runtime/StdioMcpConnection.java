@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.stdio.runtime;
 import java.io.PrintStream;
 import java.util.concurrent.Callable;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkus.runtime.BlockingOperationControl;
@@ -18,7 +19,7 @@ public class StdioMcpConnection extends McpConnectionBase {
     private final Vertx vertx;
 
     StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx) {
-        super(id, serverConfig);
+        super(id, serverConfig, McpServer.DEFAULT);
         this.out = out;
         this.vertx = vertx;
     }

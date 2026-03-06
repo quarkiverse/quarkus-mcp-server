@@ -26,6 +26,13 @@ public interface McpServersBuildTimeConfig {
     boolean supportLangchain4jAnnotations();
 
     /**
+     * If set to `true` then it's possible to bind a feature (such as tool or resource) to multiple server configurations.
+     * If set to `false` then only a single binding is allowed.
+     */
+    @WithDefault("true")
+    boolean supportMultiServerBindings();
+
+    /**
      * Server configurations.
      */
     @ConfigDocMapKey("server-name")

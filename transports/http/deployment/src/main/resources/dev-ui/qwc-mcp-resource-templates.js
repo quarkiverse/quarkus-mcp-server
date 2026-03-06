@@ -6,6 +6,7 @@ import '@vaadin/grid/vaadin-grid-sort-column.js';
 import '@vaadin/text-field';
 import '@vaadin/checkbox';
 import '@vaadin/button';
+import '@vaadin/select';
 import '@vaadin/dialog';
 import '@vaadin/vertical-layout';
 import '@vaadin/icon';
@@ -52,7 +53,8 @@ export class QwcMcpResourceTemplates extends LitElement {
         _searchTerm: { state: true },
         _forceNewSession: { state: true, type: Boolean },
         _bearerToken: { state: true, type: String },
-        _editableUri: { state: true, type: String }
+        _editableUri: { state: true, type: String },
+        _selectedServerName: { state: true, type: String }
     };
 
     constructor() {
@@ -67,6 +69,7 @@ export class QwcMcpResourceTemplates extends LitElement {
         this._forceNewSession = false;
         this._bearerToken = '';
         this._editableUri = '';
+        this._selectedServerName = '';
     }
 
     connectedCallback() {
@@ -98,6 +101,8 @@ export class QwcMcpResourceTemplates extends LitElement {
                             if (item) {
                                 this._selectedResourceTemplate = item;
                                 this._editableUri = item.uriTemplate;
+                                const serverNames = item.serverNames || [];
+                                this._selectedServerName = serverNames.length > 0 ? serverNames[0] : '';
                                 this._showInputDialog = true;
                             }
                         }}">
@@ -115,9 +120,9 @@ export class QwcMcpResourceTemplates extends LitElement {
                         ></vaadin-grid-sort-column>
                         <vaadin-grid-sort-column
                             header="${msg('MCP Server', { id: 'mcp-server-col-mcp-server' })}"
-                            path="serverName"
+                            path="serverNames"
                             auto-width
-                            ${columnBodyRenderer(this._renderServerName, [])}
+                            ${columnBodyRenderer(this._renderServerNames, [])}
                         ></vaadin-grid-sort-column>
                         <vaadin-grid-sort-column
                             header="${msg('Description', { id: 'mcp-server-col-description' })}"
@@ -182,7 +187,7 @@ export class QwcMcpResourceTemplates extends LitElement {
                             `,
                             []
                         )}
-                        ${dialogRenderer(() => this._renderResourceTemplateInput())}
+                        ${dialogRenderer(() => this._renderResourceTemplateInput(), [this._selectedServerName])}
                     ></vaadin-dialog>`;
     }
 
@@ -199,9 +204,19 @@ export class QwcMcpResourceTemplates extends LitElement {
     _renderResourceTemplateInput() {
         if (this._selectedResourceTemplate) {
             const template = this._selectedResourceTemplate;
+            const serverNames = template.serverNames || [];
+            const serverItems = serverNames.map(s => ({label: s, value: s}));
 
             return html`<vaadin-vertical-layout>
                             <b>${template.name}</b>
+                            ${serverItems.length > 1 ? html`
+                                <vaadin-select
+                                    label="${msg('MCP Server', { id: 'mcp-server-col-mcp-server' })}"
+                                    .items="${serverItems}"
+                                    .value="${this._selectedServerName}"
+                                    @value-changed="${(e) => this._selectedServerName = e.detail.value}">
+                                </vaadin-select>
+                            ` : ''}
                             <vaadin-checkbox
                                 id="resource_force_new_session"
                                 label="${msg('Force new session', { id: 'mcp-server-force-new-session' })}"
@@ -238,8 +253,9 @@ export class QwcMcpResourceTemplates extends LitElement {
         return html`${resource.name}`;
     }
 
-    _renderServerName(resource) {
-        return html`${resource.serverName}`;
+    _renderServerNames(resource) {
+        const names = resource.serverNames || [];
+        return html`${names.join(', ')}`;
     }
 
     _renderMimeType(resource) {
@@ -260,7 +276,7 @@ export class QwcMcpResourceTemplates extends LitElement {
         this._filtered = this._resourceTemplates.filter((resource) => {
            return this._match(resource.name, this._searchTerm) ||
                   this._match(resource.description, this._searchTerm) ||
-                  this._match(resource.serverName, this._searchTerm) ||
+                  this._matchArray(resource.serverNames, this._searchTerm) ||
                   this._match(resource.uriTemplate, this._searchTerm) ||
                   this._match(resource.mimeType, this._searchTerm);
         });
@@ -271,6 +287,13 @@ export class QwcMcpResourceTemplates extends LitElement {
             return false;
         }
         return value.toLowerCase().includes(term.toLowerCase());
+    }
+
+    _matchArray(values, term) {
+        if (!values || !Array.isArray(values)) {
+            return false;
+        }
+        return values.some(v => this._match(v, term));
     }
 
     _closeResultDialog() {
@@ -287,7 +310,7 @@ export class QwcMcpResourceTemplates extends LitElement {
         const template = this._selectedResourceTemplate;
 
         this.jsonRpc.readResource({
-            serverName: template.serverName,
+            serverName: this._selectedServerName,
             uri: this._editableUri,
             bearerToken: this._bearerToken,
             forceNewSession: this._forceNewSession

@@ -18,7 +18,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
-import io.quarkiverse.mcp.server.CompletionManager;
+import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
@@ -32,11 +32,7 @@ import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
-import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.RequestId;
-import io.quarkiverse.mcp.server.ResourceManager;
-import io.quarkiverse.mcp.server.ResourceTemplateManager;
-import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.Icon;
@@ -681,51 +677,44 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         List<FeatureInfo> invalid = new ArrayList<>();
         Set<String> serverNames = new HashSet<>(metadata.serverNames());
         serverNames.addAll(config.servers().keySet());
-        for (ToolManager.ToolInfo info : toolManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (PromptManager.PromptInfo info : promptManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (ResourceManager.ResourceInfo info : resourceManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (ResourceTemplateManager.ResourceTemplateInfo info : resourceTemplateManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (NotificationManager.NotificationInfo info : notificationManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (CompletionManager.CompletionInfo info : promptCompletionManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
-        for (CompletionManager.CompletionInfo info : resourceTemplateCompletionManager) {
-            if (!serverNames.contains(info.serverName())) {
-                invalid.add(info);
-            }
-        }
+
+        collectFeaturesWithInvalidServerNames(serverNames, toolManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, promptManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, resourceManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, resourceTemplateManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, notificationManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, promptCompletionManager, invalid);
+        collectFeaturesWithInvalidServerNames(serverNames, resourceTemplateCompletionManager, invalid);
 
         if (!invalid.isEmpty()) {
             IllegalStateException ise = new IllegalStateException("Invalid server name");
             for (FeatureInfo info : invalid) {
+                Set<String> invalidServerName = findInvalidServerNames(serverNames, info.serverNames());
                 ise.addSuppressed(new IllegalStateException(
-                        String.format("Invalid server name [%s] used for: %s#%s", info.serverName(),
+                        String.format("Invalid server names [%s] used for: %s#%s", invalidServerName,
                                 info.getClass().getSimpleName(), info.name())));
             }
             throw ise;
         }
+    }
+
+    private <INFO extends FeatureManager.FeatureInfo> void collectFeaturesWithInvalidServerNames(Set<String> knownServerNames,
+            Iterable<INFO> features, List<FeatureInfo> invalid) {
+        for (FeatureInfo feature : features) {
+            if (!findInvalidServerNames(knownServerNames, feature.serverNames()).isEmpty()) {
+                invalid.add(feature);
+            }
+        }
+    }
+
+    private Set<String> findInvalidServerNames(Set<String> knownServerNames, Set<String> serverNames) {
+        Set<String> ret = new HashSet<String>();
+        for (String serverName : serverNames) {
+            if (!knownServerNames.contains(serverName)) {
+                ret.add(serverName);
+            }
+        }
+        return ret;
     }
 
 }

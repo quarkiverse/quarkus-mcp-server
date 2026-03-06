@@ -120,7 +120,8 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
 
     private WebSocketMcpConnection newConnection(WebSocketConnection connection) {
         String id = ConnectionManager.connectionId();
-        WebSocketMcpConnection mcpConnection = new WebSocketMcpConnection(id, config.servers().get(serverName()), connection);
+        WebSocketMcpConnection mcpConnection = new WebSocketMcpConnection(id, config.servers().get(serverName()), serverName(),
+                connection);
         connectionManager.add(mcpConnection);
         LOG.debugf("MCP WebSocket connection initialized [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
         return mcpConnection;
