@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.mcpservers;
 
 import static io.quarkiverse.mcp.server.McpServer.DEFAULT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,6 +38,7 @@ public class MutipleServersTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class, CharlieFeatures.class))
+            .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "false")
             .overrideConfigKey("quarkus.mcp.server.sse.root-path", "/alpha/mcp")
             .overrideConfigKey("quarkus.mcp.server.bravo.sse.root-path", "/bravo/mcp")
             .overrideConfigKey("quarkus.mcp.server.charlie.sse.root-path", "/charlie/mcp");
@@ -63,16 +65,16 @@ public class MutipleServersTest extends McpServerTest {
 
         ToolManager.ToolInfo bravo = toolManager.getTool("bravo");
         assertNotNull(bravo);
-        assertEquals("bravo", bravo.serverName());
+        assertThat(bravo.serverNames()).containsExactly("bravo");
         ToolManager.ToolInfo echo = toolManager.getTool("echo");
         assertNotNull(echo);
-        assertEquals(McpServer.DEFAULT, echo.serverName());
+        assertThat(echo.serverNames()).containsExactly(McpServer.DEFAULT);
         PromptManager.PromptInfo bravoPrompt = promptManager.getPrompt("bravoPrompt");
         assertNotNull(bravoPrompt);
-        assertEquals("bravo", bravoPrompt.serverName());
+        assertThat(bravoPrompt.serverNames()).containsExactly("bravo");
         ResourceManager.ResourceInfo bravoResource = resourceManager.getResource("file://2");
         assertNotNull(bravoResource);
-        assertEquals("bravo", bravoResource.serverName());
+        assertThat(bravoResource.serverNames()).containsExactly("bravo");
 
         // Init client for the default server
         McpSseTestClient client = McpAssured.newSseClient()

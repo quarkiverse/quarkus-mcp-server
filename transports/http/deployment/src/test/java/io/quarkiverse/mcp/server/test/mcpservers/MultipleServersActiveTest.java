@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -18,6 +19,7 @@ public class MultipleServersActiveTest extends McpServerTest {
     static final QuarkusUnitTest config = config(500)
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class))
+            .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "false")
             .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")
             .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp")
             .overrideConfigKey("quarkus.mcp.server.charlie.http.root-path", "/charlie/mcp");
@@ -114,10 +116,10 @@ public class MultipleServersActiveTest extends McpServerTest {
             return "1";
         }
 
-        @McpServer("bravo")
         @Tool
-        String bravo() {
-            return "2";
+        @McpServer("bravo")
+        String bravo(McpConnection connection) {
+            return connection.serverName().equals("bravo") ? "2" : "0";
         }
 
         @Tool

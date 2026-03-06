@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -202,10 +203,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     @Override
-    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String message) {
-        McpServerRuntimeConfig serverConfig = config.servers().get(metadata.info().serverName());
+    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String serverName, String message) {
+        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
         if (serverConfig == null) {
-            throw new IllegalStateException("Server config not found: " + metadata.info().serverName());
+            throw new IllegalStateException("Server config not found: " + serverName);
         }
         return switch (serverConfig.tools().inputValidationError()) {
             case TOOL -> new ToolCallException(message);
@@ -273,8 +274,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -586,10 +587,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public ToolInfo register() {
             validate();
-            OptionalInt nameMaxLength = buildTimeConfig.servers().get(serverName).tools().nameMaxLength();
-            if (nameMaxLength.isPresent() && name.length() > nameMaxLength.getAsInt()) {
-                throw new IllegalStateException("Tool name [%s] exceeds the maximum length of %s characters"
-                        .formatted(name, nameMaxLength.getAsInt()));
+            for (String serverName : serverNames) {
+                OptionalInt nameMaxLength = buildTimeConfig.servers().get(serverName).tools().nameMaxLength();
+                if (nameMaxLength.isPresent() && name.length() > nameMaxLength.getAsInt()) {
+                    throw new IllegalStateException("Tool name [%s] exceeds the maximum length of %s characters"
+                            .formatted(name, nameMaxLength.getAsInt()));
+                }
             }
 
             // Validate supported execution models if needed
@@ -612,7 +615,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 }
             }
 
-            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverName, fun, asyncFun,
+            ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
                     initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons);
             ToolInfo existing = tools.putIfAbsent(name, ret);
@@ -650,13 +653,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolInputGuardrail> input;
         private final List<ToolOutputGuardrail> output;
 
-        private ToolDefinitionInfo(String name, String title, String description, String serverName,
+        private ToolDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
                 Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata, List<ToolInputGuardrail> input,
                 List<ToolOutputGuardrail> output, List<Icon> icons) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);

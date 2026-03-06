@@ -120,6 +120,45 @@ Now:
 * `bravoTool` is available only at `/bravo/mcp`
 * `charlieTool` is available only at `/charlie/mcp`
 
+The `@McpServer` annotation is repeatable which allows you to associate a feature with multiple servers.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.McpServer;
+
+public class MyFeatures {
+
+    @McpServer("bravo") // <1>
+    @Tool(description = "Tool for bravo server")
+    String bravoTool() {
+        return "Bravo";
+    }
+
+    @McpServer("bravo") // <2>
+    @McpServer("charlie") // <3>
+    @Tool(description = "Tool for bravo and charlie servers")
+    String bravoAndCharlieTool() {
+        return "Charlie";
+    }
+}
+----
+<1> Binds this tool to the "bravo" server
+<2> Binds this tool to the "bravo" server
+<3> Binds this tool to the "charlie" server
+
+[IMPORTANT]
+.Backward compatibility
+====
+In versions 1.10 and lower, it was not possible to bind a feature to multiple servers.
+Also a binding declared on a class was applied to all features defined in the class that did not declare the annotation themselves.
+However, this behavior makes no sense anymore.
+Instead, all values declared on a class are now included in the set of servers for a feature.
+If you need to revert to the previous behavior, you can set the `quarkus.mcp.server.support-multi-server-bindings` configuration property to `false`.
+Then the previous rules will apply, and multiple server bindings will then result in a build failure.
+====
+
+
 == Using @McpServer Annotation
 
 === Method-Level Binding
@@ -173,13 +212,13 @@ public class BravoFeatures {
     @McpServer(McpServer.DEFAULT) // <3>
     @Tool
     String sharedTool() {
-        return "Override: on default server";
+        return "Shared tool on bravo and default servers";
     }
 }
 ----
 <1> Class-level annotation sets default for all methods
 <2> These tools inherit the "bravo" server binding
-<3> Method-level annotation overrides class-level
+<3> Class-level and method-level annotations are combined
 
 == Default Server Constant
 

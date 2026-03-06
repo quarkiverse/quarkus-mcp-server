@@ -284,7 +284,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         String id = ConnectionManager.connectionId();
         LOG.debugf("Streamable connection initialized [%s]", id);
         McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-        StreamableHttpMcpConnection conn = new StreamableHttpMcpConnection(id, serverConfig);
+        StreamableHttpMcpConnection conn = new StreamableHttpMcpConnection(id, serverConfig, serverName);
         connectionManager.add(conn);
         return conn;
     }

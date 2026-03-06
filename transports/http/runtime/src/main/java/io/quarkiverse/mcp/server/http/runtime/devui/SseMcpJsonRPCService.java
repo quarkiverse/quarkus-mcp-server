@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -120,7 +121,7 @@ public class SseMcpJsonRPCService {
                 }
                 toolJson.put("args", args);
             }
-            toolJson.put("serverName", tool.serverName());
+            toolJson.put("serverNames", tool.serverNames());
             // The prototype showed in tools/call UI
             toolJson.put("inputPrototype", createInputPrototype(tool));
             ret.add(toolJson);
@@ -176,7 +177,7 @@ public class SseMcpJsonRPCService {
             for (PromptManager.PromptArgument arg : prompt.arguments()) {
                 inputPrototype.put(arg.name(), arg.description());
             }
-            promptJson.put("serverName", prompt.serverName());
+            promptJson.put("serverNames", prompt.serverNames());
             promptJson.put("inputPrototype", inputPrototype);
             ret.add(promptJson);
         }
@@ -189,7 +190,7 @@ public class SseMcpJsonRPCService {
             JsonObject completionJson = new JsonObject();
             completionJson.put("name", completion.name());
             completionJson.put("argumentName", completion.argumentName());
-            completionJson.put("serverName", completion.serverName());
+            completionJson.put("serverNames", completion.serverNames());
             ret.add(completionJson);
         }
         return ret;
@@ -199,7 +200,7 @@ public class SseMcpJsonRPCService {
         JsonArray ret = new JsonArray();
         for (ResourceManager.ResourceInfo resource : resourceManager) {
             ret.add(resource.asJson()
-                    .put("serverName", resource.serverName()));
+                    .put("serverNames", resource.serverNames()));
         }
         return ret;
     }
@@ -208,7 +209,7 @@ public class SseMcpJsonRPCService {
         JsonArray ret = new JsonArray();
         for (ResourceTemplateManager.ResourceTemplateInfo resourceTemplate : resourceTemplateManager) {
             ret.add(resourceTemplate.asJson()
-                    .put("serverName", resourceTemplate.serverName()));
+                    .put("serverNames", resourceTemplate.serverNames()));
         }
         return ret;
     }
@@ -219,7 +220,7 @@ public class SseMcpJsonRPCService {
             JsonObject completionJson = new JsonObject();
             completionJson.put("name", completion.name());
             completionJson.put("argumentName", completion.argumentName());
-            completionJson.put("serverName", completion.serverName());
+            completionJson.put("serverNames", completion.serverNames());
             ret.add(completionJson);
         }
         return ret;
@@ -270,13 +271,14 @@ public class SseMcpJsonRPCService {
         inputPrototype.put(arg.name(), arg.type().getTypeName() + ": " + arg.description());
     }
 
-    public JsonObject callTool(String name, JsonObject args, String bearerToken, boolean forceNewSession)
+    public JsonObject callTool(String name, String serverName, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
         ToolManager.ToolInfo info = toolManager.getTool(name);
         if (info == null) {
             return new JsonObject().put("error", "Tool not found: " + name);
         }
-        ServerClient serverClient = serverClients.get(info.serverName());
+        String resolvedServerName = resolveServerName(serverName, info.serverNames());
+        ServerClient serverClient = serverClients.get(resolvedServerName);
         JsonObject params = new JsonObject()
                 .put("name", name)
                 .put("arguments", args);
@@ -284,19 +286,20 @@ public class SseMcpJsonRPCService {
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "tools/call")
                 .put("params", params);
-        logRequest("tools/call", info.serverName(), params);
+        logRequest("tools/call", resolvedServerName, params);
         JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
-        logResponse("tools/call", info.serverName(), result);
+        logResponse("tools/call", resolvedServerName, result);
         return result;
     }
 
-    public JsonObject getPrompt(String name, JsonObject args, String bearerToken, boolean forceNewSession)
+    public JsonObject getPrompt(String name, String serverName, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
         PromptManager.PromptInfo info = promptManager.getPrompt(name);
         if (info == null) {
             return new JsonObject().put("error", "Prompt not found: " + name);
         }
-        ServerClient serverClient = serverClients.get(info.serverName());
+        String resolvedServerName = resolveServerName(serverName, info.serverNames());
+        ServerClient serverClient = serverClients.get(resolvedServerName);
         JsonObject params = new JsonObject()
                 .put("name", name)
                 .put("arguments", args);
@@ -304,20 +307,21 @@ public class SseMcpJsonRPCService {
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "prompts/get")
                 .put("params", params);
-        logRequest("prompts/get", info.serverName(), params);
+        logRequest("prompts/get", resolvedServerName, params);
         JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
-        logResponse("prompts/get", info.serverName(), result);
+        logResponse("prompts/get", resolvedServerName, result);
         return result;
     }
 
-    public JsonObject completePrompt(String name, String argumentName, String argumentValue, String bearerToken,
-            boolean forceNewSession)
+    public JsonObject completePrompt(String name, String serverName, String argumentName, String argumentValue,
+            String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
         CompletionManager.CompletionInfo info = promptCompletionManager.getCompletion(name, argumentName);
         if (info == null) {
             return new JsonObject().put("error", "Prompt completion not found: " + name);
         }
-        ServerClient serverClient = serverClients.get(info.serverName());
+        String resolvedServerName = resolveServerName(serverName, info.serverNames());
+        ServerClient serverClient = serverClients.get(resolvedServerName);
         JsonObject params = new JsonObject()
                 .put("ref", new JsonObject()
                         .put("type", "ref/prompt")
@@ -329,9 +333,9 @@ public class SseMcpJsonRPCService {
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
                 .put("params", params);
-        logRequest("completion/complete (prompt)", info.serverName(), params);
+        logRequest("completion/complete (prompt)", resolvedServerName, params);
         JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
-        logResponse("completion/complete (prompt)", info.serverName(), result);
+        logResponse("completion/complete (prompt)", resolvedServerName, result);
         return result;
     }
 
@@ -354,14 +358,15 @@ public class SseMcpJsonRPCService {
         return result;
     }
 
-    public JsonObject completeResourceTemplate(String name, String argumentName, String argumentValue, String bearerToken,
-            boolean forceNewSession)
+    public JsonObject completeResourceTemplate(String name, String serverName, String argumentName, String argumentValue,
+            String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
         CompletionManager.CompletionInfo info = resourceTemplateCompletionManager.getCompletion(name, argumentName);
         if (info == null) {
             return new JsonObject().put("error", "Resource template completion not found: " + name);
         }
-        ServerClient serverClient = serverClients.get(info.serverName());
+        String resolvedServerName = resolveServerName(serverName, info.serverNames());
+        ServerClient serverClient = serverClients.get(resolvedServerName);
         JsonObject params = new JsonObject()
                 .put("ref", new JsonObject()
                         .put("type", "ref/resource")
@@ -373,9 +378,9 @@ public class SseMcpJsonRPCService {
                 .put("jsonrpc", JsonRpc.VERSION)
                 .put("method", "completion/complete")
                 .put("params", params);
-        logRequest("completion/complete (resource)", info.serverName(), params);
+        logRequest("completion/complete (resource)", resolvedServerName, params);
         JsonObject result = serverClient.client().sendRequest(message, bearerToken, forceNewSession);
-        logResponse("completion/complete (resource)", info.serverName(), result);
+        logResponse("completion/complete (resource)", resolvedServerName, result);
         return result;
     }
 
@@ -424,6 +429,13 @@ public class SseMcpJsonRPCService {
             logHistory.remove(0);
         }
         logBroadcaster.onNext(logEntry);
+    }
+
+    private String resolveServerName(String serverName, Set<String> serverNames) {
+        if (serverName != null && !serverName.isBlank() && serverNames.contains(serverName)) {
+            return serverName;
+        }
+        return serverNames.iterator().next();
     }
 
     private String pathToAppend(String prev, String path) {
