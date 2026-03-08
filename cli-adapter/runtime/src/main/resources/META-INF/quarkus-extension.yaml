@@ -1,5 +1,5 @@
 name: MCP Server - CLI Adapter
-description: Adpats a Quarkus CLI application to an MCP server
+description: Adapts a Quarkus CLI application to an MCP server
 
 metadata:
   keywords:
