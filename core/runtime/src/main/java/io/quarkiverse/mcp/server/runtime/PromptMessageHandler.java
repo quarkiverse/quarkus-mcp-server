@@ -50,7 +50,7 @@ class PromptMessageHandler extends MessageHandler {
         }
         if (page.hasNextCursor()) {
             PromptManager.PromptInfo last = page.lastInfo();
-            result.put("nextCursor", Cursor.encode(last.createdAt(), last.name()));
+            result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
         return mcpRequest.sender().sendResult(id, result);
     }

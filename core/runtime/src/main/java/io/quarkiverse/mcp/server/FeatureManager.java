@@ -39,7 +39,7 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
         boolean isMethod();
 
         /**
-         * @return the timestamp this feature was registered
+         * @return the timestamp when this feature was registered
          */
         Instant createdAt();
 

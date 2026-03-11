@@ -1,34 +1,36 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Base64;
 
 /**
  * A composite opaque cursor.
  */
-record Cursor(Instant createdAt, String name) {
+record Cursor(Instant createdAt, Instant snapshotTimestamp) {
 
-    static final Cursor FIRST_PAGE = new Cursor(Instant.EPOCH, null);
-
-    static String encode(Instant createdAt, String name) {
-        String value = createdAt + "$$$" + name;
-        return Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    static String encode(Instant createdAt, Instant snapshotTimestamp) {
+        // long|int|long|int
+        ByteBuffer buffer = ByteBuffer.allocate(24);
+        buffer.putLong(createdAt.getEpochSecond());
+        buffer.putInt(createdAt.getNano());
+        buffer.putLong(snapshotTimestamp.getEpochSecond());
+        buffer.putInt(snapshotTimestamp.getNano());
+        return Base64.getEncoder().encodeToString(buffer.array());
     }
 
     static Cursor decode(String value) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Blank cursor value");
         }
-        String decoded = new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
-        String[] parts = decoded.split("\\$\\$\\$");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid parts: " + Arrays.toString(parts));
+        byte[] bytes = Base64.getDecoder().decode(value);
+        if (bytes.length != 24) {
+            throw new IllegalArgumentException("Invalid cursor");
         }
-        Instant createdAt = Instant.parse(parts[0]);
-        String name = parts[1];
-        return new Cursor(createdAt, name);
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        Instant createdAt = Instant.ofEpochSecond(buffer.getLong(), buffer.getInt());
+        Instant snapshotTimestamp = Instant.ofEpochSecond(buffer.getLong(), buffer.getInt());
+        return new Cursor(createdAt, snapshotTimestamp);
     }
 
 }
