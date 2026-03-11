@@ -10,14 +10,15 @@ public class CursorTest {
 
     @Test
     public void testEncode() {
-        assertEquals("MjAyNS0wMi0xN1QxNzowNzoyNi4xMzgxNjM5MTNaJCQkNg==",
-                Cursor.encode(Instant.parse("2025-02-17T17:07:26.138163913Z"), "6"));
+        assertEquals("AAAAAGezbM4IPDbJAAAAAGezbQoIPDbJ",
+                Cursor.encode(Instant.parse("2025-02-17T17:07:26.138163913Z"),
+                        Instant.parse("2025-02-17T17:08:26.138163913Z")));
     }
 
     @Test
     public void testDecode() {
-        Cursor cursor = Cursor.decode("MjAyNS0wMi0xN1QxNzowNzoyNi4xMzgxNjM5MTNaJCQkNg==");
-        assertEquals("6", cursor.name());
+        Cursor cursor = Cursor.decode("AAAAAGezbM4IPDbJAAAAAGezbQoIPDbJ");
+        assertEquals(Instant.parse("2025-02-17T17:08:26.138163913Z"), cursor.snapshotTimestamp());
         assertEquals(Instant.parse("2025-02-17T17:07:26.138163913Z"), cursor.createdAt());
     }
 
