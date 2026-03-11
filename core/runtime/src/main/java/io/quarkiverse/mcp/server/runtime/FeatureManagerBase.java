@@ -175,8 +175,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         if (count == 0) {
             return Page.empty();
         }
-        if (count <= pageSize) {
-            // Pagination is not needed
+        if (count <= pageSize && cursor.isInitial()) {
+            // Pagination is not needed for the initial request
             return new Page<>(infosForRequest(filterContext).sorted().toList(), true);
         }
         List<INFO> result = infosForRequest(filterContext)
