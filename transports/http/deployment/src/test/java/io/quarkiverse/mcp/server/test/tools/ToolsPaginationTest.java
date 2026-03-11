@@ -31,10 +31,9 @@ public class ToolsPaginationTest extends McpServerTest {
 
     @Test
     public void testTools() {
-        int loop = 8;
-        for (int i = 1; i <= loop; i++) {
-            String name = i + "";
-            addTool(name);
+        String[] names = { "foo", "bar", "baz", "alpha", "bravo", "charlie", "delta", "echo" };
+        for (int i = 0; i < names.length; i++) {
+            addTool(names[i]);
         }
 
         Instant lastCreatedAt = Instant.EPOCH;
@@ -50,14 +49,48 @@ public class ToolsPaginationTest extends McpServerTest {
                 .toolsList(page -> {
                     cursor.set(page.nextCursor());
                     assertEquals(3, page.size());
-                    assertEquals("1", page.tools().get(0).name());
-                    assertEquals("2", page.tools().get(1).name());
-                    assertEquals("3", page.tools().get(2).name());
+                    assertEquals(names[0], page.tools().get(0).name());
+                    assertEquals(names[1], page.tools().get(1).name());
+                    assertEquals(names[2], page.tools().get(2).name());
+                }).thenAssertResults();
+
+        client.when()
+                .toolsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals(names[3], page.tools().get(0).name());
+                    assertEquals(names[4], page.tools().get(1).name());
+                    assertEquals(names[5], page.tools().get(2).name());
+                })
+                .send()
+                .thenAssertResults();
+        client.when()
+                .toolsList()
+                .withCursor(cursor.get())
+                .withAssert(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(2, page.size());
+                    assertEquals(names[6], page.tools().get(0).name());
+                    assertEquals(names[7], page.tools().get(1).name());
+                })
+                .send()
+                .thenAssertResults();
+
+        // start again
+        client.when()
+                .toolsList(page -> {
+                    cursor.set(page.nextCursor());
+                    assertEquals(3, page.size());
+                    assertEquals(names[0], page.tools().get(0).name());
+                    assertEquals(names[1], page.tools().get(1).name());
+                    assertEquals(names[2], page.tools().get(2).name());
                 })
                 .thenAssertResults();
 
         // remove tool from the first page
-        manager.removeTool("2");
+        manager.removeTool(names[1]);
         // add tool "0" - this one should not be visible at all
         addTool("0");
 
@@ -67,9 +100,9 @@ public class ToolsPaginationTest extends McpServerTest {
                 .withAssert(page -> {
                     cursor.set(page.nextCursor());
                     assertEquals(3, page.size());
-                    assertEquals("4", page.tools().get(0).name());
-                    assertEquals("5", page.tools().get(1).name());
-                    assertEquals("6", page.tools().get(2).name());
+                    assertEquals(names[3], page.tools().get(0).name());
+                    assertEquals(names[4], page.tools().get(1).name());
+                    assertEquals(names[5], page.tools().get(2).name());
                 })
                 .send()
                 .thenAssertResults();
@@ -79,8 +112,8 @@ public class ToolsPaginationTest extends McpServerTest {
                 .withCursor(cursor.get())
                 .withAssert(page -> {
                     assertEquals(2, page.size());
-                    assertEquals("7", page.tools().get(0).name());
-                    assertEquals("8", page.tools().get(1).name());
+                    assertEquals(names[6], page.tools().get(0).name());
+                    assertEquals(names[7], page.tools().get(1).name());
                 })
                 .send()
                 .thenAssertResults();
