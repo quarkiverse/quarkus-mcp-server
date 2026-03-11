@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -95,7 +96,7 @@ public class Messages {
                 }
             }
         }
-        return Cursor.FIRST_PAGE;
+        return new Cursor(Instant.EPOCH, Instant.now());
     }
 
     public static Object getId(JsonObject message) {

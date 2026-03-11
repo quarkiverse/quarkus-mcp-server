@@ -180,9 +180,14 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return new Page<>(infosForRequest(filterContext).sorted().toList(), true);
         }
         List<INFO> result = infosForRequest(filterContext)
-                .filter(r -> r.createdAt().isAfter(cursor.createdAt())
-                        && (cursor.name() == null
-                                || r.name().compareTo(cursor.name()) > 0))
+                .filter(r -> {
+                    if (r.createdAt().isAfter(cursor.createdAt())
+                            && r.createdAt().isBefore(cursor.snapshotTimestamp())) {
+                        return true;
+                    }
+                    LOG.debugf("Skip %s [%s] for %s", r.getClass().getSimpleName(), r.name(), cursor);
+                    return false;
+                })
                 .sorted()
                 // (pageSize + 1) so that we know if a next page exists
                 .limit(pageSize + 1)
