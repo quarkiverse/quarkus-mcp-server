@@ -19,6 +19,13 @@ record Cursor(Instant createdAt, Instant snapshotTimestamp) {
         return Base64.getEncoder().encodeToString(buffer.array());
     }
 
+    /**
+     * @return {@code true} if this is an initial cursor, i.e. not obtained from a previous page
+     */
+    boolean isInitial() {
+        return Instant.EPOCH.equals(createdAt);
+    }
+
     static Cursor decode(String value) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Blank cursor value");
