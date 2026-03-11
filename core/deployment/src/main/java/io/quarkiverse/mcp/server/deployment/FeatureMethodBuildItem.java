@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.deployment;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
@@ -53,14 +54,14 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final DotName iconsProvider;
 
     // Server config name
-    private final String server;
+    private final Set<String> servers;
 
     // meta key (prefix + name) -> json
     private final Map<String, String> metadata;
 
     FeatureMethodBuildItem(BeanInfo bean, MethodInfo method, InvokerInfo invoker, String name, String title, String description,
             String uri, String mimeType, int size, Feature feature, ToolManager.ToolAnnotations toolAnnotations,
-            String server, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
+            Set<String> servers, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
             Type inputSchemaGenerator,
             Content.Annotations resourceAnnotations,
             Map<String, String> metadata,
@@ -79,7 +80,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.mimeType = mimeType;
         this.size = size;
         this.toolAnnotations = toolAnnotations;
-        this.server = server;
+        this.servers = servers;
         this.structuredContent = structuredContent;
         this.outputSchemaFrom = outputSchemaFrom;
         this.outputSchemaGenerator = outputSchemaGenerator;
@@ -136,8 +137,8 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         return toolAnnotations;
     }
 
-    String getServer() {
-        return server;
+    Set<String> getServers() {
+        return servers;
     }
 
     boolean isStructuredContent() {

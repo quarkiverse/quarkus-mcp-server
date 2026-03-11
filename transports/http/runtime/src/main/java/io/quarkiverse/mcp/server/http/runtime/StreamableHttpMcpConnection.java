@@ -19,8 +19,8 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
 
     private final List<SubsidiarySse> sseStreams;
 
-    StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig) {
-        super(id, Objects.requireNonNull(serverConfig));
+    StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName) {
+        super(id, Objects.requireNonNull(serverConfig), serverName);
         this.sseStreams = new CopyOnWriteArrayList<>();
     }
 

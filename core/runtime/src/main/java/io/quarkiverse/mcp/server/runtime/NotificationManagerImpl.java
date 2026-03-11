@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -126,8 +127,8 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -165,7 +166,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             if (type == null) {
                 throw new IllegalStateException("Type must be set");
             }
-            NotificationDefinitionInfo ret = new NotificationDefinitionInfo(name, description, serverName, fun, asyncFun,
+            NotificationDefinitionInfo ret = new NotificationDefinitionInfo(name, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, type);
             String key = key(ret);
 
@@ -182,10 +183,10 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
 
         private final Notification.Type type;
 
-        private NotificationDefinitionInfo(String name, String description, String serverName,
+        private NotificationDefinitionInfo(String name, String description, Set<String> serverNames,
                 Function<NotificationArguments, Void> fun,
                 Function<NotificationArguments, Uni<Void>> asyncFun, boolean runOnVirtualThread, Notification.Type type) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, null);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, null);
             this.type = type;
         }
 

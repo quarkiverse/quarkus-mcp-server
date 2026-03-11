@@ -131,7 +131,7 @@ public class HttpMcpServerRecorder {
                 String id = ConnectionManager.connectionId();
                 LOG.debugf("SSE connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, serverConfig, response);
+                SseMcpConnection connection = new SseMcpConnection(id, serverConfig, serverName, response);
                 connectionManager.add(connection);
 
                 // TODO we cannot override the close handler set/used by Quarkus HTTP

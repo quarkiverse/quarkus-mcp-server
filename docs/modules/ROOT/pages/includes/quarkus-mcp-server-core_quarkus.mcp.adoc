@@ -29,6 +29,27 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-support-multi-server-bindings]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-support-multi-server-bindings[`quarkus.mcp.server.support-multi-server-bindings`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.support-multi-server-bindings+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+If set to `true` then it's possible to bind a feature (such as tool or resource) to multiple server configurations. If set to `false` then only a single binding is allowed.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SUPPORT_MULTI_SERVER_BINDINGS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SUPPORT_MULTI_SERVER_BINDINGS+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.enabled+++[]

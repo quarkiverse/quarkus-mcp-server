@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.function.Function;
 
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
@@ -30,8 +31,18 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
         /**
          * @return the name of the respective server configuration
          * @see McpServer
+         * @deprecated Use {@link #serverNames()} instead
          */
-        String serverName();
+        @Deprecated(since = "1.11")
+        default String serverName() {
+            return serverNames().iterator().next();
+        }
+
+        /**
+         * @return the names of the associated server configurations
+         * @see McpServer
+         */
+        Set<String> serverNames();
 
         /**
          * @return {@code true} if backed by a business method of a CDI bean, {@code false} otherwise
@@ -75,6 +86,14 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          * @see McpServer
          */
         THIS setServerName(String serverName);
+
+        /**
+         *
+         * @param serverNames
+         * @return self
+         * @see McpServer
+         */
+        THIS setServerNames(String... serverNames);
 
         /**
          *

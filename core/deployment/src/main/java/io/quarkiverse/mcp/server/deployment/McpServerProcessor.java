@@ -268,13 +268,13 @@ class McpServerProcessor {
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
-            CombinedIndexBuildItem combinedIndex,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
             TransformedAnnotationsBuildItem transformedAnnotations,
             FeatureAnnotationsBuildItem featureAnnotations,
             BuildProducer<FeatureMethodBuildItem> features,
             BuildProducer<ValidationErrorBuildItem> errors) {
 
-        List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, featureAnnotations, errors);
+        List<Throwable> wrongUsages = findWrongAnnotationUsage(beanArchiveIndex.getIndex(), featureAnnotations, errors);
         if (!wrongUsages.isEmpty()) {
             errors.produce(new ValidationErrorBuildItem(wrongUsages));
         }
@@ -283,12 +283,12 @@ class McpServerProcessor {
 
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(featureAnnotations::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
-            for (MethodInfo method : beanClass.methods()) {
+            feature: for (MethodInfo method : beanClass.methods()) {
                 AnnotationInstance featureAnnotation = featureAnnotations.getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
                     Feature feature = featureAnnotations.getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature, featureAnnotation, defaultValueConverters,
-                            combinedIndex.getComputingIndex());
+                            beanArchiveIndex.getIndex());
                     String name;
                     if (feature == PROMPT_COMPLETE
                             || feature == RESOURCE_TEMPLATE_COMPLETE) {
@@ -398,15 +398,8 @@ class McpServerProcessor {
                         }
                     }
 
-                    String server = McpServer.DEFAULT;
-                    AnnotationInstance serverAnotation = method.declaredAnnotation(DotNames.MCP_SERVER);
-                    if (serverAnotation == null) {
-                        // Try the declaring class
-                        serverAnotation = method.declaringClass().declaredAnnotation(DotNames.MCP_SERVER);
-                    }
-                    if (serverAnotation != null) {
-                        server = serverAnotation.value().asString();
-                    }
+                    // @McpServer bindings
+                    Set<String> servers = initServerBindings(config, beanArchiveIndex.getIndex(), method);
 
                     // Process metadata entries
                     AnnotationInstance metaField = method.declaredAnnotation(DotNames.META_FIELD);
@@ -454,28 +447,32 @@ class McpServerProcessor {
                         }
                     }
 
-                    OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
-                            : OptionalInt.empty();
-                    if (nameMaxLength.isPresent()
-                            && name.length() > nameMaxLength.getAsInt()) {
-                        String message = "Tool name [%s] exceeds the maximum length of %s characters"
-                                .formatted(name, nameMaxLength.getAsInt());
-                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
-                    } else {
-                        FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                                title, description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
-                                inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
-                                iconsProvider);
-                        features.produce(fm);
-                        found.compute(feature, (f, list) -> {
-                            if (list == null) {
-                                list = new ArrayList<>();
-                            }
-                            list.add(fm);
-                            return list;
-                        });
+                    for (String server : servers) {
+                        OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
+                                : OptionalInt.empty();
+                        if (nameMaxLength.isPresent()
+                                && name.length() > nameMaxLength.getAsInt()) {
+                            String message = "Tool name [%s] exceeds the maximum length of %s characters"
+                                    .formatted(name, nameMaxLength.getAsInt());
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                            break feature;
+                        }
                     }
+
+                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                            title, description, uri, mimeType, size, feature, toolAnnotations,
+                            servers, structuredContent,
+                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
+                            inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
+                            iconsProvider);
+                    features.produce(fm);
+                    found.compute(feature, (f, list) -> {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        list.add(fm);
+                        return list;
+                    });
                 }
             }
         }
@@ -562,6 +559,43 @@ class McpServerProcessor {
                 }
             }
         }
+    }
+
+    private Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, MethodInfo method) {
+        Set<String> ret = new HashSet<String>();
+        if (config.supportMultiServerBindings()) {
+            // The set of bindings includes all values declared on the feature method and all values defined on the declaring class of the feature
+            for (AnnotationInstance a : method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index)) {
+                ret.add(a.value().asString());
+            }
+            for (AnnotationInstance a : method.declaringClass().declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index)) {
+                ret.add(a.value().asString());
+            }
+        } else {
+            // Compatibility mode - only a single binding is allowed
+            List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            if (methodAnnotations.size() > 1) {
+                throw new IllegalStateException(
+                        "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                                + method.name()
+                                + "()");
+            } else if (methodAnnotations.size() == 1) {
+                ret.add(methodAnnotations.get(0).value().asString());
+            } else {
+                // Try the declaring class
+                List<AnnotationInstance> classAnnotations = method.declaringClass()
+                        .declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+                if (classAnnotations.size() > 1) {
+                    throw new IllegalStateException(
+                            "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                                    + method.name()
+                                    + "()");
+                } else if (classAnnotations.size() == 1) {
+                    ret.add(classAnnotations.get(0).value().asString());
+                }
+            }
+        }
+        return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }
 
     @BuildStep
@@ -710,12 +744,12 @@ class McpServerProcessor {
         return null;
     }
 
-    private List<Throwable> findWrongAnnotationUsage(CombinedIndexBuildItem combinedIndex,
+    private List<Throwable> findWrongAnnotationUsage(IndexView index,
             FeatureAnnotationsBuildItem featureAnnotations,
             BuildProducer<ValidationErrorBuildItem> validationErrors) {
         List<Throwable> wrongUsages = new ArrayList<>();
         for (Map.Entry<DotName, Feature> e : featureAnnotations.annotationToFeature().entrySet()) {
-            findWrongMethods(combinedIndex.getIndex(), e.getKey(), e.getValue(), wrongUsages);
+            findWrongMethods(index, e.getKey(), e.getValue(), wrongUsages);
         }
         return wrongUsages;
     }
@@ -1442,10 +1476,15 @@ class McpServerProcessor {
             iconsProvider = metaMethod.loadNull();
         }
 
+        ResultHandle serverNames = Gizmo.setOperations(metaMethod).of(featureMethod.getServers()
+                .stream()
+                .map(metaMethod::load)
+                .toArray(ResultHandle[]::new));
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
-                        Content.Annotations.class, String.class,
+                        Content.Annotations.class, Set.class,
                         Class.class, Class.class, Class.class, Map.class, List.class, List.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
@@ -1454,7 +1493,7 @@ class McpServerProcessor {
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 metaMethod.load(featureMethod.getSize()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations, resourceAnnotations, metaMethod.load(featureMethod.getServer()),
+                toolAnnotations, resourceAnnotations, serverNames,
                 featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
                 featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()

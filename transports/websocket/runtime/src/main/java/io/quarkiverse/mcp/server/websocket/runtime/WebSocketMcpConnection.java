@@ -11,8 +11,8 @@ public class WebSocketMcpConnection extends McpConnectionBase {
 
     private final WebSocketConnection connection;
 
-    WebSocketMcpConnection(String id, McpServerRuntimeConfig serverConfig, WebSocketConnection connection) {
-        super(id, serverConfig);
+    WebSocketMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName, WebSocketConnection connection) {
+        super(id, serverConfig, serverName);
         this.connection = connection;
     }
 

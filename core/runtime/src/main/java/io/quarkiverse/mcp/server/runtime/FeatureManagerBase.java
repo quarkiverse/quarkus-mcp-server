@@ -225,7 +225,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected boolean matchesServer(INFO info, McpRequest mcpRequest) {
-        return info.serverName().equals(mcpRequest.serverName());
+        return info.serverNames().contains(mcpRequest.serverName());
     }
 
     protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
@@ -248,7 +248,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
                 case META -> MetaImpl.from(Messages.getParams(argProviders.rawMessage()));
                 case ELICITATION -> ElicitationImpl.from(argProviders);
-                case PARAMS -> handleParam(metadata, arg, argProviders.getArg(arg.name()));
+                case PARAMS -> handleParam(metadata, argProviders.serverName(), arg, argProviders.getArg(arg.name()));
                 default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
             };
             idx++;
@@ -256,22 +256,22 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return ret;
     }
 
-    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String message) {
+    protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String serverName, String message) {
         return new McpException(message, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
     @SuppressWarnings("unchecked")
-    private Object handleParam(FeatureMetadata<?> metadata, FeatureArgument arg, Object val) {
+    private Object handleParam(FeatureMetadata<?> metadata, String serverName, FeatureArgument arg, Object val) {
         if (val == null) {
             if (arg.defaultValue() != null) {
                 // Try to use the default value
                 val = convert(arg.defaultValue(), arg.type());
             }
             if (val == null && arg.required()) {
-                throw invalidArgument(metadata, "Missing required argument: " + arg.name());
+                throw invalidArgument(metadata, serverName, "Missing required argument: " + arg.name());
             }
         } else if (!arg.isValid(val)) {
-            throw invalidArgument(metadata,
+            throw invalidArgument(metadata, serverName,
                     "Invalid argument [%s] - value does not match the expected JSON type: %s".formatted(arg.name(),
                             arg.expectedJsonType().toString().toLowerCase()));
         } else {
@@ -281,7 +281,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 try {
                     val = mapper.convertValue(map, javaType);
                 } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata,
+                    throw invalidArgument(metadata, serverName,
                             "Invalid argument [%s] - unable to convert JSON object".formatted(arg.name()));
                 }
             } else if (val instanceof List list) {
@@ -290,14 +290,14 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 try {
                     val = mapper.convertValue(list, javaType);
                 } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata,
+                    throw invalidArgument(metadata, serverName,
                             "Invalid argument [%s] - unable to convert JSON array".formatted(arg.name()));
                 }
             } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
                 try {
                     val = Enum.valueOf(clazz, val.toString());
                 } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata,
+                    throw invalidArgument(metadata, serverName,
                             "Invalid argument [%s] - %s is not an expected enum constant".formatted(arg.name(), val));
                 }
             } else if (val instanceof Number num) {
@@ -466,18 +466,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     protected static abstract class FeatureDefinitionBase<INFO extends FeatureInfo, ARGUMENTS, RESPONSE, THIS extends FeatureDefinitionBase<INFO, ARGUMENTS, RESPONSE, THIS>> {
 
         protected final String name;
-        protected final Set<String> serverNames;
+        protected final Set<String> knownServerNames;
         protected String description;
         protected Function<ARGUMENTS, RESPONSE> fun;
         protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected boolean runOnVirtualThread;
-        protected String serverName;
+        protected Set<String> serverNames;
         protected List<Icon> icons = List.of();
 
-        protected FeatureDefinitionBase(String name, Set<String> serverNames) {
+        protected FeatureDefinitionBase(String name, Set<String> knownServerNames) {
             this.name = Objects.requireNonNull(name);
-            this.serverName = McpServer.DEFAULT;
-            this.serverNames = serverNames;
+            this.knownServerNames = knownServerNames;
+            this.serverNames = Set.of(McpServer.DEFAULT);
         }
 
         @SuppressWarnings("unchecked")
@@ -491,7 +491,12 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         public THIS setServerName(String serverName) {
-            this.serverName = Objects.requireNonNull(serverName);
+            this.serverNames = Set.of(Objects.requireNonNull(serverName));
+            return self();
+        }
+
+        public THIS setServerNames(String... serverNames) {
+            this.serverNames = Set.of(serverNames);
             return self();
         }
 
@@ -525,9 +530,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             if (requireDescription && description == null) {
                 throw new IllegalStateException("Description must be set");
             }
-            if (serverNames != null && !serverNames.contains(serverName)) {
+            if (knownServerNames != null) {
                 // Validate server name if InvalidServerNameStrategy.FAIL
-                throw new IllegalStateException("Invalid server name: " + serverName);
+                for (String serverName : serverNames) {
+                    if (!knownServerNames.contains(serverName)) {
+                        throw new IllegalStateException("Invalid server name: " + serverName);
+                    }
+                }
             }
         }
 
@@ -538,19 +547,19 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         protected final String name;
         protected final String description;
-        protected final String serverName;
+        protected final Set<String> serverNames;
         protected final Instant createdAt;
         protected final Function<ARGUMENTS, RESPONSE> fun;
         protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected final boolean runOnVirtualThread;
         protected final List<Icon> icons;
 
-        protected FeatureDefinitionInfoBase(String name, String description, String serverName,
+        protected FeatureDefinitionInfoBase(String name, String description, Set<String> serverNames,
                 Function<ARGUMENTS, RESPONSE> fun,
                 Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread, List<Icon> icons) {
             this.name = name;
             this.description = description;
-            this.serverName = serverName;
+            this.serverNames = serverNames;
             this.createdAt = nextTimestamp();
             this.fun = fun;
             this.asyncFun = asyncFun;
@@ -569,8 +578,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         @Override
-        public String serverName() {
-            return serverName;
+        public Set<String> serverNames() {
+            return serverNames;
         }
 
         @Override
