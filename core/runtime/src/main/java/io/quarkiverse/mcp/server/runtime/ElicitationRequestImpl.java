@@ -78,7 +78,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
             }
             schema.put("required", required);
             JsonObject params = new JsonObject().put("message", message).put("requestedSchema", schema);
-            sender.send(Messages.newRequest(id, McpMethod.ELICITATION_CREATE.jsonRpcName(), params));
+            sender.send(Messages.newRequest(requestId, McpMethod.ELICITATION_CREATE.jsonRpcName(), params));
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {
