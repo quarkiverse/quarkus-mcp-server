@@ -5,7 +5,6 @@ import static io.quarkiverse.mcp.server.runtime.Messages.getProgressToken;
 
 import java.lang.reflect.Type;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -408,7 +407,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata, Instance<IconsProvider> iconsProviders) {
             this.metadata = metadata;
-            this.createdAt = nextTimestamp();
+            this.createdAt = Timestamps.next();
             this.iconsProviders = iconsProviders;
             this.iconsProvider = initIconsProvider(metadata.info().iconsProvider());
         }
@@ -537,7 +536,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             this.name = name;
             this.description = description;
             this.serverName = serverName;
-            this.createdAt = nextTimestamp();
+            this.createdAt = Timestamps.next();
             this.fun = fun;
             this.asyncFun = asyncFun;
             this.runOnVirtualThread = runOnVirtualThread;
@@ -647,19 +646,6 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             }
         }
         return type;
-    }
-
-    private static volatile Instant lastTimestamp = Instant.EPOCH;
-
-    private synchronized static Instant nextTimestamp() {
-        Instant ts = Instant.now();
-        if (ts.isAfter(lastTimestamp)) {
-            lastTimestamp = ts;
-            return ts;
-        }
-        ts = lastTimestamp.plus(1, ChronoUnit.MILLIS);
-        lastTimestamp = ts;
-        return ts;
     }
 
     static abstract class AbstractFeatureArguments implements FeatureManager.FeatureArguments {
