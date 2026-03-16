@@ -125,7 +125,7 @@ public class SamplingRequestImpl implements SamplingRequest {
                 future.complete(samplingResponse);
             });
             id.set(requestId);
-            sender.send(Messages.newRequest(id, McpMethod.SAMPLING_CREATE_MESSAGE.jsonRpcName(), this));
+            sender.send(Messages.newRequest(requestId, McpMethod.SAMPLING_CREATE_MESSAGE.jsonRpcName(), this));
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {
