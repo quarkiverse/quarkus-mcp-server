@@ -22,7 +22,6 @@ import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.DurationConverter;
@@ -42,64 +41,65 @@ public class ToolDefaultValuesTest extends McpServerTest {
 
     @Test
     public void testDefaultValues() {
-        McpSseTestClient client = McpAssured.newConnectedSseClient();
-        client.when()
-                .toolsList(page -> {
-                    assertEquals(3, page.tools().size());
+        try (var client = McpAssured.newConnectedStreamableClient()) {
+            client.when()
+                    .toolsList(page -> {
+                        assertEquals(3, page.tools().size());
 
-                    ToolInfo alpha = page.findByName("alpha");
-                    JsonObject alphaSchema = alpha.inputSchema();
-                    JsonObject alphaProperties = alphaSchema.getJsonObject("properties");
-                    assertEquals(10, alphaProperties.size());
+                        ToolInfo alpha = page.findByName("alpha");
+                        JsonObject alphaSchema = alpha.inputSchema();
+                        JsonObject alphaProperties = alphaSchema.getJsonObject("properties");
+                        assertEquals(10, alphaProperties.size());
 
-                    JsonObject alphaBoolVal = alphaProperties.getJsonObject("boolVal");
-                    assertNotNull(alphaBoolVal);
-                    assertEquals("boolean", alphaBoolVal.getString("type"));
-                    assertEquals(true, alphaBoolVal.getBoolean("default"));
+                        JsonObject alphaBoolVal = alphaProperties.getJsonObject("boolVal");
+                        assertNotNull(alphaBoolVal);
+                        assertEquals("boolean", alphaBoolVal.getString("type"));
+                        assertEquals(true, alphaBoolVal.getBoolean("default"));
 
-                    JsonObject timeUnit = alphaProperties.getJsonObject("timeUnit");
-                    assertNotNull(timeUnit);
-                    assertEquals("string", timeUnit.getString("type"));
-                    assertEquals("HOURS", timeUnit.getString("default"));
+                        JsonObject timeUnit = alphaProperties.getJsonObject("timeUnit");
+                        assertNotNull(timeUnit);
+                        assertEquals("string", timeUnit.getString("type"));
+                        assertEquals("HOURS", timeUnit.getString("default"));
 
-                    assertTrue(alphaSchema.getJsonArray("required").isEmpty());
+                        assertTrue(alphaSchema.getJsonArray("required").isEmpty());
 
-                    ToolInfo bravo = page.findByName("bravo");
-                    JsonObject bravoSchema = bravo.inputSchema();
-                    JsonObject bravoProperties = bravoSchema.getJsonObject("properties");
-                    assertEquals(1, bravoProperties.size());
+                        ToolInfo bravo = page.findByName("bravo");
+                        JsonObject bravoSchema = bravo.inputSchema();
+                        JsonObject bravoProperties = bravoSchema.getJsonObject("properties");
+                        assertEquals(1, bravoProperties.size());
 
-                    JsonObject bravoBoolVal = bravoProperties.getJsonObject("boolVal");
-                    assertNotNull(bravoBoolVal);
-                    assertEquals("boolean", bravoBoolVal.getString("type"));
-                    assertEquals(true, bravoBoolVal.getBoolean("default"));
+                        JsonObject bravoBoolVal = bravoProperties.getJsonObject("boolVal");
+                        assertNotNull(bravoBoolVal);
+                        assertEquals("boolean", bravoBoolVal.getString("type"));
+                        assertEquals(true, bravoBoolVal.getBoolean("default"));
 
-                    assertTrue(bravoSchema.getJsonArray("required").isEmpty());
+                        assertTrue(bravoSchema.getJsonArray("required").isEmpty());
 
-                    ToolInfo charlie = page.findByName("charlie");
-                    JsonObject charlieSchema = charlie.inputSchema();
-                    JsonObject charlieProperties = charlieSchema.getJsonObject("properties");
-                    assertEquals(1, charlieProperties.size());
-                    JsonObject charlieDoubleVal = charlieProperties.getJsonObject("doubleVal");
-                    assertNotNull(charlieDoubleVal);
-                    assertEquals("number", charlieDoubleVal.getString("type"));
-                    assertEquals(2.1, charlieDoubleVal.getDouble("default"));
-                    assertTrue(alphaSchema.getJsonArray("required").isEmpty());
-                })
-                .toolsCall("alpha", toolResponse -> {
-                    assertFalse(toolResponse.isError());
-                    assertEquals("true::2::2::2::2.1::2.1::fooo::HOURS::PT5S::MyArg[price=10, names=[foo, bar, baz]]",
-                            toolResponse.content().get(0).asText().text());
-                })
-                .toolsCall("bravo", toolResponse -> {
-                    assertFalse(toolResponse.isError());
-                    assertEquals("true", toolResponse.content().get(0).asText().text());
-                })
-                .toolsCall("charlie", toolResponse -> {
-                    assertFalse(toolResponse.isError());
-                    assertEquals("2.1", toolResponse.content().get(0).asText().text());
-                })
-                .thenAssertResults();
+                        ToolInfo charlie = page.findByName("charlie");
+                        JsonObject charlieSchema = charlie.inputSchema();
+                        JsonObject charlieProperties = charlieSchema.getJsonObject("properties");
+                        assertEquals(1, charlieProperties.size());
+                        JsonObject charlieDoubleVal = charlieProperties.getJsonObject("doubleVal");
+                        assertNotNull(charlieDoubleVal);
+                        assertEquals("number", charlieDoubleVal.getString("type"));
+                        assertEquals(2.1, charlieDoubleVal.getDouble("default"));
+                        assertTrue(alphaSchema.getJsonArray("required").isEmpty());
+                    })
+                    .toolsCall("alpha", toolResponse -> {
+                        assertFalse(toolResponse.isError());
+                        assertEquals("true::2::2::2::2.1::2.1::fooo::HOURS::PT5S::MyArg[price=10, names=[foo, bar, baz]]",
+                                toolResponse.content().get(0).asText().text());
+                    })
+                    .toolsCall("bravo", toolResponse -> {
+                        assertFalse(toolResponse.isError());
+                        assertEquals("true", toolResponse.content().get(0).asText().text());
+                    })
+                    .toolsCall("charlie", toolResponse -> {
+                        assertFalse(toolResponse.isError());
+                        assertEquals("2.1", toolResponse.content().get(0).asText().text());
+                    })
+                    .thenAssertResults();
+        }
     }
 
     public record MyArg(int price, List<String> names) {
