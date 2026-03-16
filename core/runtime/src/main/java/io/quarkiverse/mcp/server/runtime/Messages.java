@@ -96,7 +96,7 @@ public class Messages {
                 }
             }
         }
-        return new Cursor(Instant.EPOCH, Instant.now());
+        return new Cursor(Instant.EPOCH, Timestamps.nowAfterLast());
     }
 
     public static Object getId(JsonObject message) {
