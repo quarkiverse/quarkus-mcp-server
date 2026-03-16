@@ -99,7 +99,8 @@ public class McpAssured {
         return newWebSocketClient().build().connect();
     }
 
-    public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>> {
+    public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>>
+            extends AutoCloseable {
 
         /**
          *
@@ -223,6 +224,10 @@ public class McpAssured {
          * @return the reponse
          */
         JsonObject waitForResponse(JsonObject request);
+
+        default void close() {
+            disconnect();
+        }
 
         /**
          * @param <BUILDER>
@@ -1415,7 +1420,11 @@ public class McpAssured {
     }
 
     /**
-     * An immutable snapshot from the client.
+     * An immutable snapshot of assertable messages sent from the server.
+     *
+     * @param requests The requests sent from the server
+     * @param responses The responses sent from the server
+     * @param notifications The notifications sent from the server
      */
     public record Snapshot(List<JsonObject> requests, List<JsonObject> responses, List<JsonObject> notifications) {
     }
