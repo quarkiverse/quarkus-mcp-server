@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -101,8 +102,8 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -139,7 +140,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         public CompletionInfo register() {
             validate();
             validateReference(name, argumentName);
-            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(refName(name), description, serverName, fun, asyncFun,
+            CompletionDefinitionInfo ret = new CompletionDefinitionInfo(refName(name), description, serverNames, fun, asyncFun,
                     runOnVirtualThread, argumentName);
             String key = ret.name() + "_" + ret.argumentName();
             CompletionInfo existing = completions.putIfAbsent(key, ret);
@@ -153,11 +154,11 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     class CompletionDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<CompletionArguments, CompletionResponse>
             implements CompletionManager.CompletionInfo {
 
-        protected CompletionDefinitionInfo(String name, String description, String serverName,
+        protected CompletionDefinitionInfo(String name, String description, Set<String> serverNames,
                 Function<CompletionArguments, CompletionResponse> fun,
                 Function<CompletionArguments, Uni<CompletionResponse>> asyncFun, boolean runOnVirtualThread,
                 String argumentName) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, null);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, null);
             this.argumentName = argumentName;
         }
 

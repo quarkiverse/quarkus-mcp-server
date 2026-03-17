@@ -268,13 +268,13 @@ class McpServerProcessor {
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
-            CombinedIndexBuildItem combinedIndex,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
             TransformedAnnotationsBuildItem transformedAnnotations,
             FeatureAnnotationsBuildItem featureAnnotations,
             BuildProducer<FeatureMethodBuildItem> features,
             BuildProducer<ValidationErrorBuildItem> errors) {
 
-        List<Throwable> wrongUsages = findWrongAnnotationUsage(combinedIndex, featureAnnotations, errors);
+        List<Throwable> wrongUsages = findWrongAnnotationUsage(beanArchiveIndex.getIndex(), featureAnnotations, errors);
         if (!wrongUsages.isEmpty()) {
             errors.produce(new ValidationErrorBuildItem(wrongUsages));
         }
@@ -283,12 +283,12 @@ class McpServerProcessor {
 
         for (BeanInfo bean : beanDiscovery.beanStream().classBeans().filter(featureAnnotations::hasFeatureMethod)) {
             ClassInfo beanClass = bean.getTarget().get().asClass();
-            for (MethodInfo method : beanClass.methods()) {
+            feature: for (MethodInfo method : beanClass.methods()) {
                 AnnotationInstance featureAnnotation = featureAnnotations.getFeatureAnnotation(method);
                 if (featureAnnotation != null) {
                     Feature feature = featureAnnotations.getFeature(featureAnnotation);
                     validateFeatureMethod(method, feature, featureAnnotation, defaultValueConverters,
-                            combinedIndex.getComputingIndex());
+                            beanArchiveIndex.getIndex());
                     String name;
                     if (feature == PROMPT_COMPLETE
                             || feature == RESOURCE_TEMPLATE_COMPLETE) {
@@ -398,15 +398,8 @@ class McpServerProcessor {
                         }
                     }
 
-                    String server = McpServer.DEFAULT;
-                    AnnotationInstance serverAnotation = method.declaredAnnotation(DotNames.MCP_SERVER);
-                    if (serverAnotation == null) {
-                        // Try the declaring class
-                        serverAnotation = method.declaringClass().declaredAnnotation(DotNames.MCP_SERVER);
-                    }
-                    if (serverAnotation != null) {
-                        server = serverAnotation.value().asString();
-                    }
+                    // @McpServer bindings
+                    Set<String> servers = initServerBindings(config, beanArchiveIndex.getIndex(), method);
 
                     // Process metadata entries
                     AnnotationInstance metaField = method.declaredAnnotation(DotNames.META_FIELD);
@@ -454,28 +447,32 @@ class McpServerProcessor {
                         }
                     }
 
-                    OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
-                            : OptionalInt.empty();
-                    if (nameMaxLength.isPresent()
-                            && name.length() > nameMaxLength.getAsInt()) {
-                        String message = "Tool name [%s] exceeds the maximum length of %s characters"
-                                .formatted(name, nameMaxLength.getAsInt());
-                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
-                    } else {
-                        FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
-                                title, description, uri, mimeType, size, feature, toolAnnotations, server, structuredContent,
-                                outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
-                                inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
-                                iconsProvider);
-                        features.produce(fm);
-                        found.compute(feature, (f, list) -> {
-                            if (list == null) {
-                                list = new ArrayList<>();
-                            }
-                            list.add(fm);
-                            return list;
-                        });
+                    for (String server : servers) {
+                        OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
+                                : OptionalInt.empty();
+                        if (nameMaxLength.isPresent()
+                                && name.length() > nameMaxLength.getAsInt()) {
+                            String message = "Tool name [%s] exceeds the maximum length of %s characters"
+                                    .formatted(name, nameMaxLength.getAsInt());
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                            break feature;
+                        }
                     }
+
+                    FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
+                            title, description, uri, mimeType, size, feature, toolAnnotations,
+                            servers, structuredContent,
+                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
+                            inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
+                            iconsProvider);
+                    features.produce(fm);
+                    found.compute(feature, (f, list) -> {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        list.add(fm);
+                        return list;
+                    });
                 }
             }
         }
@@ -562,6 +559,56 @@ class McpServerProcessor {
                 }
             }
         }
+    }
+
+    private Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, MethodInfo method) {
+        Set<String> ret = new HashSet<String>();
+        if (config.supportMultiServerBindings()) {
+            // The set of bindings includes all values declared on the feature method and all values defined on the declaring class of the feature
+            List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            List<AnnotationInstance> classAnnotations = method.declaringClass()
+                    .declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            for (AnnotationInstance a : methodAnnotations) {
+                ret.add(a.value().asString());
+            }
+            for (AnnotationInstance a : classAnnotations) {
+                ret.add(a.value().asString());
+            }
+            if (ret.size() > 1 && methodAnnotations.size() == 1 && classAnnotations.size() == 1) {
+                // In versions 1.10 and lower, the method-level annotation overrode the class-level one;
+                // now both are merged - warn users who may be relying on the old behavior
+                LOG.warnf(
+                        "Feature method %s#%s() is bound to servers %s because @McpServer bindings declared on"
+                                + " the method and the declaring class are now merged."
+                                + " In previous versions, the method-level binding would override the class-level one."
+                                + " Set 'quarkus.mcp.server.support-multi-server-bindings=false' to revert to the old behavior.",
+                        method.declaringClass().name().withoutPackagePrefix(), method.name(), ret);
+            }
+        } else {
+            // Compatibility mode - only a single binding is allowed
+            List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            if (methodAnnotations.size() > 1) {
+                throw new IllegalStateException(
+                        "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                                + method.name()
+                                + "()");
+            } else if (methodAnnotations.size() == 1) {
+                ret.add(methodAnnotations.get(0).value().asString());
+            } else {
+                // Try the declaring class
+                List<AnnotationInstance> classAnnotations = method.declaringClass()
+                        .declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+                if (classAnnotations.size() > 1) {
+                    throw new IllegalStateException(
+                            "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                                    + method.name()
+                                    + "()");
+                } else if (classAnnotations.size() == 1) {
+                    ret.add(classAnnotations.get(0).value().asString());
+                }
+            }
+        }
+        return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }
 
     @BuildStep
@@ -710,12 +757,12 @@ class McpServerProcessor {
         return null;
     }
 
-    private List<Throwable> findWrongAnnotationUsage(CombinedIndexBuildItem combinedIndex,
+    private List<Throwable> findWrongAnnotationUsage(IndexView index,
             FeatureAnnotationsBuildItem featureAnnotations,
             BuildProducer<ValidationErrorBuildItem> validationErrors) {
         List<Throwable> wrongUsages = new ArrayList<>();
         for (Map.Entry<DotName, Feature> e : featureAnnotations.annotationToFeature().entrySet()) {
-            findWrongMethods(combinedIndex.getIndex(), e.getKey(), e.getValue(), wrongUsages);
+            findWrongMethods(index, e.getKey(), e.getValue(), wrongUsages);
         }
         return wrongUsages;
     }
@@ -814,7 +861,10 @@ class McpServerProcessor {
         // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
         MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
         ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
-        for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
+        for (FeatureMethodBuildItem prompt : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isPrompt)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                .toList()) {
             processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts,
                     DotNames.PROMPT_ARG);
         }
@@ -823,7 +873,9 @@ class McpServerProcessor {
         // io.quarkiverse.mcp.server.runtime.McpMetadata.promptCompletions()
         MethodCreator promptCompletionsMethod = metadataCreator.getMethodCreator("promptCompletions", List.class);
         ResultHandle retPromptCompletions = Gizmo.newArrayList(promptCompletionsMethod);
-        for (FeatureMethodBuildItem promptCompletion : featureMethods.stream().filter(FeatureMethodBuildItem::isPromptComplete)
+        for (FeatureMethodBuildItem promptCompletion : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isPromptComplete)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, promptCompletionsMethod, promptCompletion, retPromptCompletions,
                     DotNames.COMPLETE_ARG);
@@ -833,7 +885,10 @@ class McpServerProcessor {
         // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
         MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
         ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
-        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
+        for (FeatureMethodBuildItem tool : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isTool)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                .toList()) {
             processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools,
                     tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL) ? DotNames.LANGCHAIN4J_P
                             : DotNames.TOOL_ARG);
@@ -843,7 +898,10 @@ class McpServerProcessor {
         // io.quarkiverse.mcp.server.runtime.McpMetadata.resources()
         MethodCreator resourcesMethod = metadataCreator.getMethodCreator("resources", List.class);
         ResultHandle retResources = Gizmo.newArrayList(resourcesMethod);
-        for (FeatureMethodBuildItem resource : featureMethods.stream().filter(FeatureMethodBuildItem::isResource).toList()) {
+        for (FeatureMethodBuildItem resource : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isResource)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                .toList()) {
             processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources,
                     null);
         }
@@ -853,7 +911,9 @@ class McpServerProcessor {
         MethodCreator resourceTemplatesMethod = metadataCreator.getMethodCreator("resourceTemplates", List.class);
         ResultHandle retResourceTemplates = Gizmo.newArrayList(resourceTemplatesMethod);
         for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isResourceTemplate).toList()) {
+                .filter(FeatureMethodBuildItem::isResourceTemplate)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                .toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplatesMethod, resourceTemplate, retResourceTemplates,
                     DotNames.RESOURCE_TEMPLATE_ARG);
         }
@@ -865,6 +925,7 @@ class McpServerProcessor {
         ResultHandle retResourceTemplateCompletions = Gizmo.newArrayList(resourceTemplateCompletionsMethod);
         for (FeatureMethodBuildItem resourceTemplateCompletion : featureMethods.stream()
                 .filter(FeatureMethodBuildItem::isResourceTemplateComplete)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplateCompletionsMethod, resourceTemplateCompletion,
                     retResourceTemplateCompletions,
@@ -875,7 +936,9 @@ class McpServerProcessor {
         // io.quarkiverse.mcp.server.runtime.McpMetadata.notifications()
         MethodCreator notificationsMethod = metadataCreator.getMethodCreator("notifications", List.class);
         ResultHandle retNotifications = Gizmo.newArrayList(notificationsMethod);
-        for (FeatureMethodBuildItem notification : featureMethods.stream().filter(FeatureMethodBuildItem::isNotification)
+        for (FeatureMethodBuildItem notification : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isNotification)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
                     null);
@@ -885,7 +948,10 @@ class McpServerProcessor {
         //  io.quarkiverse.mcp.server.runtime.McpMetadata.defaultValueConverters()
         MethodCreator convertersMethod = metadataCreator.getMethodCreator("defaultValueConverters", Map.class);
         ResultHandle retConverters = Gizmo.newHashMap(convertersMethod);
-        for (DefaultValueConverterBuildItem converter : defaultValueConverters) {
+        List<DefaultValueConverterBuildItem> sortedConverters = defaultValueConverters.stream()
+                .sorted(Comparator.comparing(DefaultValueConverterBuildItem::getClassName))
+                .toList();
+        for (DefaultValueConverterBuildItem converter : sortedConverters) {
             ResultHandle converterType = Types.getTypeHandle(convertersMethod, converter.getArgumentType());
             ResultHandle converterInstance = convertersMethod
                     .newInstance(MethodDescriptor.ofConstructor(converter.getClassName()));
@@ -896,8 +962,8 @@ class McpServerProcessor {
         // McpMetadata.serverNames()
         MethodCreator serverNamesMethod = metadataCreator.getMethodCreator("serverNames", Set.class);
         ResultHandle set = Gizmo.newHashSet(serverNamesMethod);
-        for (ServerNameBuildItem serverName : serverNames) {
-            Gizmo.setOperations(serverNamesMethod).on(set).add(serverNamesMethod.load(serverName.getName()));
+        for (String serverName : serverNames.stream().map(ServerNameBuildItem::getName).sorted().toList()) {
+            Gizmo.setOperations(serverNamesMethod).on(set).add(serverNamesMethod.load(serverName));
         }
         serverNamesMethod.returnValue(set);
 
@@ -906,7 +972,10 @@ class McpServerProcessor {
         // that can only consume java.lang.reflect.Type
         MethodCreator toolArgumentHolders = metadataCreator.getMethodCreator("toolArgumentHolders", Map.class);
         ResultHandle holders = Gizmo.newHashMap(toolArgumentHolders);
-        for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
+        for (FeatureMethodBuildItem tool : featureMethods.stream()
+                .filter(FeatureMethodBuildItem::isTool)
+                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                .toList()) {
             generateToolArgsHolder(toolArgumentHolders, holders, tool, classOutput, reflectiveClasses);
         }
         toolArgumentHolders.returnValue(holders);
@@ -1409,7 +1478,10 @@ class McpServerProcessor {
         } else {
             meta = Gizmo.newHashMap(metaMethod);
             JdkMapInstance mapInstance = Gizmo.mapOperations(metaMethod).on(meta);
-            for (Map.Entry<String, String> e : metaEntries.entrySet()) {
+            for (Map.Entry<String, String> e : metaEntries.entrySet()
+                    .stream()
+                    .sorted(Comparator.comparing(Entry::getKey))
+                    .toList()) {
                 mapInstance.put(metaMethod.load(e.getKey()), metaMethod.load(e.getValue()));
             }
         }
@@ -1442,10 +1514,17 @@ class McpServerProcessor {
             iconsProvider = metaMethod.loadNull();
         }
 
+        ResultHandle serverNames = Gizmo.setOperations(metaMethod)
+                .of(featureMethod.getServers()
+                        .stream()
+                        .sorted()
+                        .map(metaMethod::load)
+                        .toArray(ResultHandle[]::new));
+
         ResultHandle info = metaMethod.newInstance(
                 MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
                         String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
-                        Content.Annotations.class, String.class,
+                        Content.Annotations.class, Set.class,
                         Class.class, Class.class, Class.class, Map.class, List.class, List.class, Class.class),
                 metaMethod.load(featureMethod.getName()),
                 featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
@@ -1454,7 +1533,7 @@ class McpServerProcessor {
                 featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
                 metaMethod.load(featureMethod.getSize()),
                 args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations, resourceAnnotations, metaMethod.load(featureMethod.getServer()),
+                toolAnnotations, resourceAnnotations, serverNames,
                 featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
                         : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
                 featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()

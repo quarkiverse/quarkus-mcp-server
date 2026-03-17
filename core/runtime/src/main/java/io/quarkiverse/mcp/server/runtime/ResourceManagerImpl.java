@@ -255,8 +255,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
-        public String serverName() {
-            return metadata.info().serverName();
+        public Set<String> serverNames() {
+            return metadata.info().serverNames();
         }
 
         @Override
@@ -322,11 +322,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private final Content.Annotations annotations;
         private final Map<MetaKey, Object> metadata;
 
-        private ResourceDefinitionInfo(String name, String title, String description, String serverName,
+        private ResourceDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
-            super(name, description, serverName, fun, asyncFun, runOnVirtualThread, icons);
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uri = uri;
             this.mimeType = mimeType;
@@ -500,7 +500,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                     throw resourceWithNameAlreadyExists(name);
                 }
                 resourceNames.add(name);
-                return new ResourceDefinitionInfo(name, title, description, serverName, fun, asyncFun,
+                return new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                         runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
             });
             if (newValue != null) {

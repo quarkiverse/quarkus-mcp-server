@@ -6,6 +6,7 @@ import '@vaadin/grid/vaadin-grid-sort-column.js';
 import '@vaadin/text-field';
 import '@vaadin/checkbox';
 import '@vaadin/button';
+import '@vaadin/select';
 import '@vaadin/dialog';
 import '@vaadin/vertical-layout';
 import '@vaadin/icon';
@@ -52,7 +53,8 @@ export class QwcMcpPrompts extends LitElement {
         _promptResult: { state: true },
         _searchTerm: { state: true },
         _forceNewSession: { state: true, type: Boolean },
-        _bearerToken: { state: true, type: String }
+        _bearerToken: { state: true, type: String },
+        _selectedServerName: { state: true, type: String }
     };
 
     constructor() {
@@ -67,6 +69,7 @@ export class QwcMcpPrompts extends LitElement {
         this._searchTerm = '';
         this._forceNewSession = false;
         this._bearerToken = '';
+        this._selectedServerName = '';
     }
 
     connectedCallback() {
@@ -98,7 +101,9 @@ export class QwcMcpPrompts extends LitElement {
                             const item = e.detail.value;
                             if (item) {
                                 this._selectedPrompt = item;
-                                if (item.arguments && item.arguments.length > 0) {
+                                const serverNames = item.serverNames || [];
+                                this._selectedServerName = serverNames.length > 0 ? serverNames[0] : '';
+                                if ((item.arguments && item.arguments.length > 0) || serverNames.length > 1) {
                                     this._showInputDialog = true;
                                 } else {
                                     this._getPrompt();
@@ -113,9 +118,9 @@ export class QwcMcpPrompts extends LitElement {
                         ></vaadin-grid-sort-column>
                         <vaadin-grid-sort-column
                             header="${msg('MCP Server', { id: 'mcp-server-col-mcp-server' })}"
-                            path="serverName"
+                            path="serverNames"
                             auto-width
-                            ${columnBodyRenderer(this._renderServerName, [])}
+                            ${columnBodyRenderer(this._renderServerNames, [])}
                         ></vaadin-grid-sort-column>
                         <vaadin-grid-sort-column
                             header="${msg('Description', { id: 'mcp-server-col-description' })}"
@@ -181,7 +186,7 @@ export class QwcMcpPrompts extends LitElement {
                             `,
                             []
                         )}
-                        ${dialogRenderer(() => this._renderPromptInput())}
+                        ${dialogRenderer(() => this._renderPromptInput(), [this._selectedServerName])}
                     ></vaadin-dialog>`;
     }
 
@@ -199,9 +204,19 @@ export class QwcMcpPrompts extends LitElement {
         if (this._selectedPrompt) {
             const prompt = this._selectedPrompt;
             const args = prompt.arguments || [];
+            const serverNames = prompt.serverNames || [];
+            const serverItems = serverNames.map(s => ({label: s, value: s}));
 
             return html`<vaadin-vertical-layout>
                             <b>${prompt.name}</b>
+                            ${serverItems.length > 1 ? html`
+                                <vaadin-select
+                                    label="${msg('MCP Server', { id: 'mcp-server-col-mcp-server' })}"
+                                    .items="${serverItems}"
+                                    .value="${this._selectedServerName}"
+                                    @value-changed="${(e) => this._selectedServerName = e.detail.value}">
+                                </vaadin-select>
+                            ` : ''}
                             <vaadin-checkbox
                                 id="prompt_force_new_session"
                                 label="${msg('Force new session', { id: 'mcp-server-force-new-session' })}"
@@ -238,8 +253,9 @@ export class QwcMcpPrompts extends LitElement {
         return html`<code>${prompt.name}</code>`;
     }
 
-    _renderServerName(prompt) {
-        return html`${prompt.serverName}`;
+    _renderServerNames(prompt) {
+        const names = prompt.serverNames || [];
+        return html`${names.join(', ')}`;
     }
 
     _renderArgsCount(prompt) {
@@ -265,7 +281,7 @@ export class QwcMcpPrompts extends LitElement {
         this._filtered = this._prompts.filter((prompt) => {
            return this._match(prompt.name, this._searchTerm) ||
                   this._match(prompt.description, this._searchTerm) ||
-                  this._match(prompt.serverName, this._searchTerm);
+                  this._matchArray(prompt.serverNames, this._searchTerm);
         });
     }
 
@@ -274,6 +290,13 @@ export class QwcMcpPrompts extends LitElement {
             return false;
         }
         return value.toLowerCase().includes(term.toLowerCase());
+    }
+
+    _matchArray(values, term) {
+        if (!values || !Array.isArray(values)) {
+            return false;
+        }
+        return values.some(v => this._match(v, term));
     }
 
     _closeResultDialog() {
@@ -311,6 +334,7 @@ export class QwcMcpPrompts extends LitElement {
 
         this.jsonRpc.getPrompt({
             name: prompt.name,
+            serverName: this._selectedServerName,
             args: JSON.stringify(argsObj),
             bearerToken: this._bearerToken,
             forceNewSession: this._forceNewSession

@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.IconsProvider;
@@ -19,7 +20,7 @@ public record FeatureMethodInfo(String name,
         String declaringClassName,
         ToolManager.ToolAnnotations toolAnnotations,
         Content.Annotations resourceAnnotations,
-        String serverName,
+        Set<String> serverNames,
         Class<?> outputSchemaFrom,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator,
         Class<? extends InputSchemaGenerator<?>> inputSchemaGenerator,

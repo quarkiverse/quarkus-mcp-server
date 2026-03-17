@@ -27,6 +27,12 @@ public interface McpConnection {
      */
     LogLevel logLevel();
 
+    /**
+     * @return the name of server configuration
+     * @see McpServer
+     */
+    String serverName();
+
     enum Status {
 
         /**
