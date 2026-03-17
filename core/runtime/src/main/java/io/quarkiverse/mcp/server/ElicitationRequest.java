@@ -22,6 +22,12 @@ public interface ElicitationRequest {
 
     /**
      * @return the requested schema
+     * @see StringSchema
+     * @see BooleanSchema
+     * @see IntegerSchema
+     * @see NumberSchema
+     * @see SingleSelectEnumSchema
+     * @see MultiSelectEnumSchema
      */
     Map<String, PrimitiveSchema> requestedSchema();
 
@@ -100,6 +106,10 @@ public interface ElicitationRequest {
             implements
                 PrimitiveSchema {
 
+        public static BooleanSchemaBuilder builder() {
+            return new BooleanSchemaBuilder();
+        }
+
         public BooleanSchema() {
             this(null, null, null, false);
         }
@@ -124,6 +134,39 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class BooleanSchemaBuilder {
+
+            private String title;
+            private String description;
+            private Boolean defaultValue;
+            private boolean required;
+
+            public BooleanSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public BooleanSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public BooleanSchemaBuilder setDefaultValue(Boolean defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public BooleanSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public BooleanSchema build() {
+                return new BooleanSchema(title, description, defaultValue, required);
+            }
+
+        }
+
     }
 
     record NumberSchema(String title,
@@ -134,6 +177,10 @@ public interface ElicitationRequest {
             Number defaultValue)
             implements
                 PrimitiveSchema {
+
+        public static NumberSchemaBuilder builder() {
+            return new NumberSchemaBuilder();
+        }
 
         public NumberSchema(String title, String description, Number maximum, Number minimum, boolean required) {
             this(title, description, maximum, minimum, required, null);
@@ -173,6 +220,51 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class NumberSchemaBuilder {
+
+            private String title;
+            private String description;
+            private Number maximum;
+            private Number minimum;
+            private boolean required;
+            private Number defaultValue;
+
+            public NumberSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public NumberSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public NumberSchemaBuilder setMaximum(Number maximum) {
+                this.maximum = maximum;
+                return this;
+            }
+
+            public NumberSchemaBuilder setMinimum(Number minimum) {
+                this.minimum = minimum;
+                return this;
+            }
+
+            public NumberSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public NumberSchemaBuilder setDefaultValue(Number defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public NumberSchema build() {
+                return new NumberSchema(title, description, maximum, minimum, required, defaultValue);
+            }
+
+        }
+
     }
 
     record IntegerSchema(String title,
@@ -183,6 +275,10 @@ public interface ElicitationRequest {
             Integer defaultValue)
             implements
                 PrimitiveSchema {
+
+        public static IntegerSchemaBuilder builder() {
+            return new IntegerSchemaBuilder();
+        }
 
         public IntegerSchema(String title, String description, Integer maximum, Integer minimum, boolean required) {
             this(title, description, maximum, minimum, required, null);
@@ -222,6 +318,51 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class IntegerSchemaBuilder {
+
+            private String title;
+            private String description;
+            private Integer maximum;
+            private Integer minimum;
+            private boolean required;
+            private Integer defaultValue;
+
+            public IntegerSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public IntegerSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public IntegerSchemaBuilder setMaximum(Integer maximum) {
+                this.maximum = maximum;
+                return this;
+            }
+
+            public IntegerSchemaBuilder setMinimum(Integer minimum) {
+                this.minimum = minimum;
+                return this;
+            }
+
+            public IntegerSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public IntegerSchemaBuilder setDefaultValue(Integer defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public IntegerSchema build() {
+                return new IntegerSchema(title, description, maximum, minimum, required, defaultValue);
+            }
+
+        }
+
     }
 
     /**
@@ -235,6 +376,10 @@ public interface ElicitationRequest {
             String defaultValue)
             implements
                 PrimitiveSchema {
+
+        public static EnumSchemaBuilder builder(List<String> enumValues) {
+            return new EnumSchemaBuilder(enumValues);
+        }
 
         public EnumSchema(String title, String description, List<String> enumValues, List<String> enumNames, boolean required) {
             this(title, description, enumValues, enumNames, required, null);
@@ -277,6 +422,50 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class EnumSchemaBuilder {
+
+            private final List<String> enumValues;
+            private String title;
+            private String description;
+            private List<String> enumNames;
+            private boolean required;
+            private String defaultValue;
+
+            EnumSchemaBuilder(List<String> enumValues) {
+                this.enumValues = enumValues;
+            }
+
+            public EnumSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public EnumSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public EnumSchemaBuilder setEnumNames(List<String> enumNames) {
+                this.enumNames = enumNames;
+                return this;
+            }
+
+            public EnumSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public EnumSchemaBuilder setDefaultValue(String defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public EnumSchema build() {
+                return new EnumSchema(title, description, enumValues, enumNames, required, defaultValue);
+            }
+
+        }
+
     }
 
     /**
@@ -290,6 +479,10 @@ public interface ElicitationRequest {
             String defaultValue)
             implements
                 PrimitiveSchema {
+
+        public static SingleSelectEnumSchemaBuilder builder(List<String> enumValues) {
+            return new SingleSelectEnumSchemaBuilder(enumValues);
+        }
 
         public SingleSelectEnumSchema(List<String> enumValues) {
             this(null, null, enumValues, null, false, null);
@@ -341,6 +534,50 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class SingleSelectEnumSchemaBuilder {
+
+            private final List<String> enumValues;
+            private String title;
+            private String description;
+            private List<String> enumTitles;
+            private boolean required;
+            private String defaultValue;
+
+            SingleSelectEnumSchemaBuilder(List<String> enumValues) {
+                this.enumValues = enumValues;
+            }
+
+            public SingleSelectEnumSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public SingleSelectEnumSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public SingleSelectEnumSchemaBuilder setEnumTitles(List<String> enumTitles) {
+                this.enumTitles = enumTitles;
+                return this;
+            }
+
+            public SingleSelectEnumSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public SingleSelectEnumSchemaBuilder setDefaultValue(String defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public SingleSelectEnumSchema build() {
+                return new SingleSelectEnumSchema(title, description, enumValues, enumTitles, required, defaultValue);
+            }
+
+        }
+
     }
 
     /**
@@ -356,6 +593,10 @@ public interface ElicitationRequest {
             List<String> defaultValues)
             implements
                 PrimitiveSchema {
+
+        public static MultiSelectEnumSchemaBuilder builder(List<String> enumValues) {
+            return new MultiSelectEnumSchemaBuilder(enumValues);
+        }
 
         public MultiSelectEnumSchema(List<String> enumValues) {
             this(null, null, enumValues, null, null, null, false, null);
@@ -409,6 +650,63 @@ public interface ElicitationRequest {
             return ret;
         }
 
+        public static class MultiSelectEnumSchemaBuilder {
+
+            private final List<String> enumValues;
+            private String title;
+            private String description;
+            private List<String> enumTitles;
+            private Integer minItems;
+            private Integer maxItems;
+            private boolean required;
+            private List<String> defaultValues;
+
+            MultiSelectEnumSchemaBuilder(List<String> enumValues) {
+                this.enumValues = enumValues;
+            }
+
+            public MultiSelectEnumSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setEnumTitles(List<String> enumTitles) {
+                this.enumTitles = enumTitles;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setMinItems(Integer minItems) {
+                this.minItems = minItems;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setMaxItems(Integer maxItems) {
+                this.maxItems = maxItems;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public MultiSelectEnumSchemaBuilder setDefaultValues(List<String> defaultValues) {
+                this.defaultValues = defaultValues;
+                return this;
+            }
+
+            public MultiSelectEnumSchema build() {
+                return new MultiSelectEnumSchema(title, description, enumValues, enumTitles, minItems, maxItems, required,
+                        defaultValues);
+            }
+
+        }
+
     }
 
     record StringSchema(String title,
@@ -420,6 +718,10 @@ public interface ElicitationRequest {
             String defaultValue)
             implements
                 PrimitiveSchema {
+
+        public static StringSchemaBuilder builder() {
+            return new StringSchemaBuilder();
+        }
 
         public StringSchema(String title, String description, Integer maxLength, Integer minLength, Format format,
                 boolean required) {
@@ -475,6 +777,57 @@ public interface ElicitationRequest {
                 ret.put("default", defaultValue);
             }
             return ret;
+        }
+
+        public static class StringSchemaBuilder {
+
+            private String title;
+            private String description;
+            private Integer maxLength;
+            private Integer minLength;
+            private Format format;
+            private boolean required;
+            private String defaultValue;
+
+            public StringSchemaBuilder setTitle(String title) {
+                this.title = title;
+                return this;
+            }
+
+            public StringSchemaBuilder setDescription(String description) {
+                this.description = description;
+                return this;
+            }
+
+            public StringSchemaBuilder setMaxLength(Integer maxLength) {
+                this.maxLength = maxLength;
+                return this;
+            }
+
+            public StringSchemaBuilder setMinLength(Integer minLength) {
+                this.minLength = minLength;
+                return this;
+            }
+
+            public StringSchemaBuilder setFormat(Format format) {
+                this.format = format;
+                return this;
+            }
+
+            public StringSchemaBuilder setRequired(boolean required) {
+                this.required = required;
+                return this;
+            }
+
+            public StringSchemaBuilder setDefaultValue(String defaultValue) {
+                this.defaultValue = defaultValue;
+                return this;
+            }
+
+            public StringSchema build() {
+                return new StringSchema(title, description, maxLength, minLength, format, required, defaultValue);
+            }
+
         }
 
     }
