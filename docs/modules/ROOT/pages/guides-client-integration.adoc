@@ -275,6 +275,17 @@ new StringSchema(
     StringSchema.Format.EMAIL, // format validation
     true                       // required
 )
+
+// Using the builder
+StringSchema.builder()
+    .setTitle("Email Address")
+    .setDescription("Your email address")
+    .setMaxLength(50)
+    .setMinLength(5)
+    .setFormat(StringSchema.Format.EMAIL)
+    .setRequired(true)
+    .setDefaultValue("user@example.com")
+    .build()
 ----
 
 ==== Number Input
@@ -294,6 +305,33 @@ new NumberSchema(
     0,              // minimum
     true            // required
 )
+
+// Using the builder
+NumberSchema.builder()
+    .setTitle("Age")
+    .setDescription("Your age")
+    .setMaximum(120)
+    .setMinimum(0)
+    .setRequired(true)
+    .setDefaultValue(25)
+    .build()
+----
+
+==== Integer Input
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationRequest.IntegerSchema;
+
+// Using the builder
+IntegerSchema.builder()
+    .setTitle("Quantity")
+    .setDescription("Number of items")
+    .setMaximum(100)
+    .setMinimum(1)
+    .setRequired(true)
+    .setDefaultValue(1)
+    .build()
 ----
 
 ==== Boolean Input
@@ -312,6 +350,14 @@ new BooleanSchema(
     true,                          // defaultValue
     false                          // required
 )
+
+// Using the builder
+BooleanSchema.builder()
+    .setTitle("Subscribe")
+    .setDescription("Subscribe to newsletter")
+    .setDefaultValue(true)
+    .setRequired(false)
+    .build()
 ----
 
 ==== Enum/Select Input
@@ -335,6 +381,15 @@ new SingleSelectEnumSchema(
     List.of("red", "green", "blue"),
     "blue"                                     // default
 )
+
+// Using the builder
+SingleSelectEnumSchema.builder(List.of("s", "m", "l"))
+    .setTitle("Size")
+    .setDescription("Choose a size")
+    .setEnumTitles(List.of("Small", "Medium", "Large"))
+    .setRequired(true)
+    .setDefaultValue("m")
+    .build()
 ----
 
 ==== Multi-select Input
@@ -348,6 +403,17 @@ import java.util.List;
 new MultiSelectEnumSchema(
     List.of("java", "python", "javascript", "go")
 )
+
+// Using the builder
+MultiSelectEnumSchema.builder(List.of("java", "python", "javascript", "go"))
+    .setTitle("Languages")
+    .setDescription("Select your programming languages")
+    .setEnumTitles(List.of("Java", "Python", "JavaScript", "Go"))
+    .setMinItems(1)
+    .setMaxItems(3)
+    .setRequired(true)
+    .setDefaultValues(List.of("java"))
+    .build()
 ----
 
 === Complete Elicitation Example

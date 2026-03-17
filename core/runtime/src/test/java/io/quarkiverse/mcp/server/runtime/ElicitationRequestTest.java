@@ -79,4 +79,125 @@ public class ElicitationRequestTest {
                 multiEnumSchema.asJson().encode());
     }
 
+    @Test
+    public void testStringSchemaBuilder() {
+        StringSchema schema = StringSchema.builder()
+                .setTitle("title")
+                .setDescription("desc")
+                .setMaxLength(10)
+                .setMinLength(5)
+                .setFormat(Format.EMAIL)
+                .setRequired(true)
+                .setDefaultValue("mail@acme.org")
+                .build();
+        assertTrue(schema.required());
+        assertEquals("mail@acme.org", schema.defaultValue());
+        assertEquals(
+                "{\"type\":\"string\",\"title\":\"title\",\"description\":\"desc\",\"maxLength\":10,\"minLength\":5,\"format\":\"email\",\"default\":\"mail@acme.org\"}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testBooleanSchemaBuilder() {
+        BooleanSchema schema = BooleanSchema.builder()
+                .setTitle("title")
+                .setDescription("desc")
+                .setDefaultValue(true)
+                .setRequired(true)
+                .build();
+        assertTrue(schema.required());
+        assertTrue(schema.defaultValue());
+        assertEquals(
+                "{\"type\":\"boolean\",\"title\":\"title\",\"description\":\"desc\",\"default\":true}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testNumberSchemaBuilder() {
+        NumberSchema schema = NumberSchema.builder()
+                .setTitle("title")
+                .setDescription("desc")
+                .setMaximum(100)
+                .setMinimum(1)
+                .setRequired(true)
+                .setDefaultValue(10)
+                .build();
+        assertTrue(schema.required());
+        assertEquals(10, schema.defaultValue());
+        assertEquals(1, schema.minimum());
+        assertEquals(100, schema.maximum());
+        assertEquals(
+                "{\"type\":\"number\",\"title\":\"title\",\"description\":\"desc\",\"maximum\":100,\"minimum\":1,\"default\":10}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testIntegerSchemaBuilder() {
+        IntegerSchema schema = IntegerSchema.builder()
+                .setTitle("title")
+                .setDescription("desc")
+                .setMaximum(100)
+                .setMinimum(1)
+                .setRequired(true)
+                .setDefaultValue(10)
+                .build();
+        assertTrue(schema.required());
+        assertEquals(10, schema.defaultValue());
+        assertEquals(1, schema.minimum());
+        assertEquals(100, schema.maximum());
+        assertEquals(
+                "{\"type\":\"integer\",\"title\":\"title\",\"description\":\"desc\",\"maximum\":100,\"minimum\":1,\"default\":10}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testEnumSchemaBuilder() {
+        EnumSchema schema = EnumSchema.builder(List.of("foo", "bar"))
+                .setTitle("title")
+                .setDescription("desc")
+                .setEnumNames(List.of("n1", "n2"))
+                .setRequired(true)
+                .setDefaultValue("foo")
+                .build();
+        assertTrue(schema.required());
+        assertEquals(List.of("foo", "bar"), schema.enumValues());
+        assertEquals(
+                "{\"type\":\"string\",\"enum\":[\"foo\",\"bar\"],\"title\":\"title\",\"description\":\"desc\",\"enumNames\":[\"n1\",\"n2\"],\"default\":\"foo\"}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testSingleSelectEnumSchemaBuilder() {
+        SingleSelectEnumSchema schema = SingleSelectEnumSchema.builder(List.of("foo", "bar"))
+                .setTitle("tile")
+                .setDescription("desc")
+                .setEnumTitles(List.of("n1", "n2"))
+                .setRequired(true)
+                .setDefaultValue("foo")
+                .build();
+        assertTrue(schema.required());
+        assertEquals(List.of("foo", "bar"), schema.enumValues());
+        assertEquals(
+                "{\"type\":\"string\",\"title\":\"tile\",\"description\":\"desc\",\"oneOf\":[{\"const\":\"foo\",\"title\":\"n1\"},{\"const\":\"bar\",\"title\":\"n2\"}],\"default\":\"foo\"}",
+                schema.asJson().encode());
+    }
+
+    @Test
+    public void testMultiSelectEnumSchemaBuilder() {
+        MultiSelectEnumSchema schema = MultiSelectEnumSchema.builder(List.of("foo", "bar"))
+                .setTitle("tile")
+                .setDescription("desc")
+                .setEnumTitles(List.of("n1", "n2"))
+                .setMinItems(1)
+                .setMaxItems(2)
+                .setRequired(true)
+                .setDefaultValues(List.of("foo"))
+                .build();
+        assertTrue(schema.required());
+        assertEquals(List.of("foo", "bar"), schema.enumValues());
+        assertEquals(
+                "{\"type\":\"array\",\"title\":\"tile\",\"description\":\"desc\",\"minItems\":1,\"maxItems\":2,\"items\":{\"anyOf\":[{\"const\":\"foo\",\"title\":\"n1\"},{\"const\":\"bar\",\"title\":\"n2\"}]},\"default\":[\"foo\"]}",
+                schema.asJson().encode());
+    }
+
 }

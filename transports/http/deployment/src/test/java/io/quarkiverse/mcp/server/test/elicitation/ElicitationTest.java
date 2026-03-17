@@ -105,7 +105,12 @@ public class ElicitationTest extends McpServerTest {
                                 new StringSchema("title", "desc", 1, 10, StringSchema.Format.DATE_TIME, false, "default"))
                         .addSchemaProperty("active1", new BooleanSchema(false))
                         .addSchemaProperty("active2", new BooleanSchema())
-                        .addSchemaProperty("active3", new BooleanSchema("title", "desc", false, false))
+                        .addSchemaProperty("active3",
+                                BooleanSchema.builder()
+                                        .setTitle("title")
+                                        .setDescription("desc")
+                                        .setDefaultValue(false)
+                                        .build())
                         .addSchemaProperty("num1", new NumberSchema(false))
                         .addSchemaProperty("num2", new NumberSchema("title", "desc", 1, 2, false, 1))
                         .addSchemaProperty("num3", new NumberSchema())
