@@ -23,6 +23,7 @@
         <module>devtools/stdio-sse-proxy</module>
         <module>cli-adapter</module>
         <module>hibernate-validator</module>
+        <module>schema-validator</module>
         <module>relocations/sse/deployment</module>
         <module>relocations/sse/runtime</module>
         <module>relocations/sse/integration-tests</module>

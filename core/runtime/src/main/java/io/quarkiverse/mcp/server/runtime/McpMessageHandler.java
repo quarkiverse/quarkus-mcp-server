@@ -87,6 +87,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final McpMetrics mcpMetrics;
 
+    private final McpRequestValidator mcpRequestValidator;
+
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
@@ -98,7 +100,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             McpMetadata metadata, Vertx vertx,
             List<InitialCheck> initialChecks,
             List<InitialResponseInfo> initialResponseInfos,
-            McpMetrics mcpMetrics) {
+            McpMetrics mcpMetrics,
+            McpRequestValidator mcpRequestValidator) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -120,6 +123,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.metadata = metadata;
         this.vertx = vertx;
         this.mcpMetrics = mcpMetrics;
+        this.mcpRequestValidator = mcpRequestValidator;
         this.ongoingRequests = ConcurrentHashMap.newKeySet();
 
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
@@ -191,14 +195,17 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
         McpMethod method = McpMethod.from(message.getString("method"));
+        if (method == null) {
+            return unsupportedMethod(message, mcpRequest);
+        }
         long start = System.nanoTime();
-        Future<Void> ret = switch (mcpRequest.connection().status()) {
-            case NEW -> initializeNew(method, message, mcpRequest);
-            case INITIALIZING -> initializing(method, message, mcpRequest);
-            case IN_OPERATION -> operation(method, message, mcpRequest);
-            case CLOSED -> mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.INTERNAL_ERROR,
-                    "Connection is closed");
-        };
+        Future<Void> ret;
+        if (mcpRequestValidator != null) {
+            ret = mcpRequestValidator.validate(message, mcpRequest, method)
+                    .compose(valid -> valid ? handleRequest(message, mcpRequest, method) : Future.succeededFuture());
+        } else {
+            ret = handleRequest(message, mcpRequest, method);
+        }
         if (mcpMetrics != null) {
             ret.onComplete(ar -> {
                 mcpMetrics.mcpRequestCompleted(method, message, mcpRequest,
@@ -206,6 +213,16 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             });
         }
         return ret;
+    }
+
+    Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
+        return switch (mcpRequest.connection().status()) {
+            case NEW -> initializeNew(method, message, mcpRequest);
+            case INITIALIZING -> initializing(method, message, mcpRequest);
+            case IN_OPERATION -> operation(method, message, mcpRequest);
+            case CLOSED -> mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.INTERNAL_ERROR,
+                    "Connection is closed");
+        };
     }
 
     private McpServerRuntimeConfig serverConfig(MCP_REQUEST mcpRequest) {
@@ -301,7 +318,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
     }
 
-    private Future<Void> initializing(McpMethod method, JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> initializing(McpMethod method, JsonObject message, MCP_REQUEST mcpRequest) {
         if (McpMethod.NOTIFICATIONS_INITIALIZED == method) {
             if (mcpRequest.connection().setInitialized()) {
                 LOG.debugf("Client successfully initialized [%s]", mcpRequest.connection().id());
@@ -375,10 +392,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return ret.future();
     }
 
-    private Future<Void> operation(McpMethod method, JsonObject message, McpRequest mcpRequest) {
-        if (method == null) {
-            return unsupportedMethod(message, mcpRequest);
-        }
+    private Future<Void> operation(McpMethod method, JsonObject message, MCP_REQUEST mcpRequest) {
         // Few operations do not involve user code
         // and don't need a new duplicated context
         if (method == PING) {
@@ -387,6 +401,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return close(message, mcpRequest);
         } else if (method == LOGGING_SET_LEVEL) {
             return setLogLevel(message, mcpRequest);
+        } else if (method == McpMethod.NOTIFICATIONS_PROGRESS) {
+            return progress(message, mcpRequest);
         }
         // Create a new duplicated context and process the operation on this context
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
@@ -429,7 +445,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return ret.future();
     }
 
-    private Future<Void> unsupportedMethod(JsonObject message, McpRequest mcpRequest) {
+    protected Future<Void> unsupportedMethod(JsonObject message, MCP_REQUEST mcpRequest) {
         return mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.METHOD_NOT_FOUND,
                 "Unsupported method: " + message.getString("method"));
     }
@@ -533,6 +549,16 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return mcpRequest.sender().sendResult(id, new JsonObject());
     }
 
+    private Future<Void> progress(JsonObject message, McpRequest mcpRequest) {
+        JsonObject params = Messages.getParams(message);
+        String token = "n/a";
+        if (params != null) {
+            token = params.getString("progressToken", "n/a");
+        }
+        LOG.debugf("Progress notification ignored [token: %s]", token);
+        return Future.succeededFuture();
+    }
+
     private Future<Void> close(JsonObject message, McpRequest mcpRequest) {
         if (connectionManager.remove(mcpRequest.connection().id())) {
             LOG.debugf("Connection %s explicitly closed ", mcpRequest.connection().id());
@@ -570,7 +596,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Map<String, Object> initResult(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
         Map<String, Object> ret = new HashMap<>();
 
-        // Note that currently the protocol version does not affect the behavior of the server in any way
+        // Note that currently the protocol version does not affect the behavior
+        // of the server except for opt-in schema validation
         String version = SUPPORTED_PROTOCOL_VERSIONS.get(0);
         if (SUPPORTED_PROTOCOL_VERSIONS.contains(initialRequest.protocolVersion())) {
             version = initialRequest.protocolVersion();

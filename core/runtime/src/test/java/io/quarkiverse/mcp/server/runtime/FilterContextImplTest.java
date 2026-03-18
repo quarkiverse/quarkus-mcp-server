@@ -55,6 +55,12 @@ public class FilterContextImplTest {
             public McpConnectionBase connection() {
                 return null;
             }
+
+            @Override
+            public String protocolVersion() {
+                throw new UnsupportedOperationException();
+            }
+
         });
         assertNull(filterContext.connection());
         assertNull(filterContext.meta().getValue(MetaKey.of("foo")));

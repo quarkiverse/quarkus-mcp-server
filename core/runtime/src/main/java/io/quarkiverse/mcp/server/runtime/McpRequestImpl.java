@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -81,6 +82,15 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     @Override
     public void contextEnd() {
         requestContext.terminate();
+    }
+
+    @Override
+    public String protocolVersion() {
+        if ((connection.status() == Status.IN_OPERATION || connection.status() == Status.INITIALIZING)
+                && connection.initialRequest() != null) {
+            return connection.initialRequest().protocolVersion();
+        }
+        return null;
     }
 
 }

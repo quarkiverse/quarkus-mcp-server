@@ -31,4 +31,6 @@ public interface McpRequest {
     void contextStart();
 
     void contextEnd();
+
+    String protocolVersion();
 }

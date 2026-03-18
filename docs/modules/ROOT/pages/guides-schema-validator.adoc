@@ -1,0 +1,28 @@
+== Schema Validator
+
+include::./includes/attributes.adoc[]
+:diataxis-type: howto
+
+The extension provides integration with the https://vertx.io/docs/vertx-json-schema/java/[Vert.x JSON Schema] library.
+When present, all client requests and notifications are validated against the relevant MCP JSON schema.
+Validation errors are transformed into protocol error messages with the JSON-RPC error code `-32600` (`INVALID_REQUEST`).
+The error message includes the name of the schema type that failed validation, e.g. `Schema validation failed - CallToolRequest: ...`.
+
+If you want to use the Schema Validator in your application you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-schema-validator` extension to your build file first.
+For instance, with Maven, add the following dependency to your POM file:
+
+```xml
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-schema-validator</artifactId>
+    <version>${quarkus-mcp.version}</version>
+</dependency>
+```
+
+No further configuration is needed.
+Validations are performed automatically.
+
+The extension includes MCP JSON schemas for the following protocol versions: `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
+The appropriate schema is selected based on the protocol version negotiated during the client initialization.
+
+NOTE: The MCP server performs some basic validation of messages by default. However, this extension ensures that message instances are valid, as defined by the JSON Schema specification.
