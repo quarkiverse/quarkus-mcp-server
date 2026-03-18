@@ -563,7 +563,8 @@ class McpServerProcessor {
 
     private Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, MethodInfo method) {
         Set<String> ret = new HashSet<String>();
-        if (config.supportMultiServerBindings()) {
+        Optional<Boolean> multiServerBindings = config.supportMultiServerBindings();
+        if (multiServerBindings.orElse(true)) {
             // The set of bindings includes all values declared on the feature method and all values defined on the declaring class of the feature
             List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
             List<AnnotationInstance> classAnnotations = method.declaringClass()
@@ -574,15 +575,18 @@ class McpServerProcessor {
             for (AnnotationInstance a : classAnnotations) {
                 ret.add(a.value().asString());
             }
-            if (ret.size() > 1 && methodAnnotations.size() == 1 && classAnnotations.size() == 1) {
+            if (ret.size() > 1 && methodAnnotations.size() == 1 && classAnnotations.size() == 1
+                    && multiServerBindings.isEmpty()) {
                 // In versions 1.10 and lower, the method-level annotation overrode the class-level one;
-                // now both are merged - warn users who may be relying on the old behavior
-                LOG.warnf(
-                        "Feature method %s#%s() is bound to servers %s because @McpServer bindings declared on"
-                                + " the method and the declaring class are now merged."
-                                + " In previous versions, the method-level binding would override the class-level one."
-                                + " Set 'quarkus.mcp.server.support-multi-server-bindings=false' to revert to the old behavior.",
-                        method.declaringClass().name().withoutPackagePrefix(), method.name(), ret);
+                // now both are merged - fail the build if the user has not explicitly opted in
+                throw new IllegalStateException(
+                        String.format(
+                                "Feature method %s#%s() is bound to servers %s because @McpServer bindings declared on"
+                                        + " the method and the declaring class are now merged."
+                                        + " In previous versions, the method-level binding would override the class-level one."
+                                        + " Set 'quarkus.mcp.server.support-multi-server-bindings=true' to use the new merge behavior,"
+                                        + " or 'quarkus.mcp.server.support-multi-server-bindings=false' to revert to the old behavior.",
+                                method.declaringClass().name().withoutPackagePrefix(), method.name(), ret));
             }
         } else {
             // Compatibility mode - only a single binding is allowed

@@ -21,7 +21,9 @@ import io.quarkiverse.mcp.server.McpServer.McpServers;
  * sense anymore. Instead, all values declared on a class are included in the set of servers for a feature. If you need to
  * revert to the previous behavior you can set the {@code quarkus.mcp.server.support-multi-server-bindings} configuration
  * property to {@code false}. Then the previous rules will apply and multiple server bindings will then result in a
- * build failure.
+ * build failure. If the property is not set explicitly and an ambiguous pattern is detected (a feature method and its
+ * declaring class both declare different {@code @McpServer} values), the build will fail with an error explaining the
+ * options.
  *
  * @see Tool
  * @see Prompt

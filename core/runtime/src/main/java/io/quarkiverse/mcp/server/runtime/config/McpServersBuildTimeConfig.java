@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime.config;
 
 import java.util.Map;
+import java.util.Optional;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkus.runtime.annotations.ConfigDocMapKey;
@@ -28,9 +29,11 @@ public interface McpServersBuildTimeConfig {
     /**
      * If set to `true` then it's possible to bind a feature (such as tool or resource) to multiple server configurations.
      * If set to `false` then only a single binding is allowed.
+     * <p>
+     * If not set explicitly and an ambiguous binding pattern is detected (i.e. a feature method and its declaring class both
+     * declare different {@code @McpServer} values), the build will fail with an error explaining the options.
      */
-    @WithDefault("true")
-    boolean supportMultiServerBindings();
+    Optional<Boolean> supportMultiServerBindings();
 
     /**
      * Server configurations.
