@@ -37,12 +37,12 @@
   </scm>
 
     <properties>
-        <quarkus.version>3.27.2</quarkus.version>
+        <quarkus.version>3.33.0</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.230.2</sundrio.version>
         <swagger-annotations.version>2.2.45</swagger-annotations.version>
-        <!-- TODO: unify the pattern for version properties -->
-        <version.langchain4j>1.12.2</version.langchain4j>
+        <langchain4j.version>1.12.2</langchain4j.version>
+        <assertj.version>3.27.7</assertj.version>
     </properties>
 
     <dependencyManagement>
@@ -64,6 +64,7 @@
                     <groupId>io.quarkus</groupId>
                     <artifactId>quarkus-maven-plugin</artifactId>
                     <version>${quarkus.version}</version>
+                    <extensions>true</extensions>
                 </plugin>
                 <plugin>
                     <groupId>io.quarkus</groupId>
