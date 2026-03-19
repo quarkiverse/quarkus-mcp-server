@@ -56,13 +56,14 @@ public class MicrometerMcpMetrics implements McpMetrics {
     }
 
     private Tags createTags(McpMethod method, JsonObject message, McpRequest mcpRequest) {
+        JsonObject params = Messages.getParams(message);
         return switch (method) {
             case TOOLS_CALL -> Tags.of(
-                    TOOL_NAME, Messages.getParams(message).getString("name"));
+                    TOOL_NAME, params != null ? params.getString("name") : "n/a");
             case RESOURCES_READ -> Tags.of(
-                    RESOURCE_URI, Messages.getParams(message).getString("uri"));
+                    RESOURCE_URI, params != null ? params.getString("uri") : "n/a");
             case PROMPTS_GET -> Tags.of(
-                    PROMPT_NAME, Messages.getParams(message).getString("name"));
+                    PROMPT_NAME, params != null ? params.getString("name") : "n/a");
             default -> Tags.empty();
         };
     }
