@@ -86,6 +86,10 @@ class ResourceMessageHandler extends MessageHandler {
     Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender()
+                    .sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Missing required params");
+        }
         String resourceUri = params.getString("uri");
         if (resourceUri == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");

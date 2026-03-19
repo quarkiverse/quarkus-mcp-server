@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -67,6 +68,10 @@ class ToolMessageHandler extends MessageHandler {
     Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = getParams(message);
+        if (params == null) {
+            return mcpRequest.sender()
+                    .sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Missing required params");
+        }
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
         try {
