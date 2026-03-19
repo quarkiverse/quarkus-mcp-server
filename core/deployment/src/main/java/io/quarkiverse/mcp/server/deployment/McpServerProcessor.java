@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.Priority;
@@ -111,6 +112,7 @@ import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
+import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
@@ -447,15 +449,25 @@ class McpServerProcessor {
                         }
                     }
 
-                    for (String server : servers) {
-                        OptionalInt nameMaxLength = feature == TOOL ? config.servers().get(server).tools().nameMaxLength()
-                                : OptionalInt.empty();
-                        if (nameMaxLength.isPresent()
-                                && name.length() > nameMaxLength.getAsInt()) {
-                            String message = "Tool name [%s] exceeds the maximum length of %s characters"
-                                    .formatted(name, nameMaxLength.getAsInt());
-                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
-                            break feature;
+                    if (feature == TOOL) {
+                        for (String server : servers) {
+                            McpServerBuildTimeConfig serverConfig = config.servers().get(server);
+                            OptionalInt nameMaxLength = serverConfig.tools().nameMaxLength();
+                            if (nameMaxLength.isPresent()
+                                    && name.length() > nameMaxLength.getAsInt()) {
+                                String message = "Tool name [%s] exceeds the maximum length of %s characters"
+                                        .formatted(name, nameMaxLength.getAsInt());
+                                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                                break feature;
+                            }
+                            Optional<Pattern> namePattern = serverConfig.tools().namePattern();
+                            if (namePattern.isPresent()
+                                    && !namePattern.get().matcher(name).matches()) {
+                                String message = "Tool name [%s] does not match the pattern: %s"
+                                        .formatted(name, namePattern.get());
+                                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                                break feature;
+                            }
                         }
                     }
 
