@@ -7,13 +7,13 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-enabled]] [.property-path]##link:#quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-enabled[`quarkus.mcp.server.websocket.enabled`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-enabled]] [.property-path]##link:#quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-enabled[`+++quarkus.mcp.server.websocket.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.websocket.enabled+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".websocket.enabled`
+`+++quarkus.mcp.server."server-name".websocket.enabled+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".websocket.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -33,13 +33,13 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-endpoint-path]] [.property-path]##link:#quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-endpoint-path[`quarkus.mcp.server.websocket.endpoint-path`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-endpoint-path]] [.property-path]##link:#quarkus-mcp-server-websocket_quarkus-mcp-server-websocket-endpoint-path[`+++quarkus.mcp.server.websocket.endpoint-path+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.websocket.endpoint-path+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".websocket.endpoint-path`
+`+++quarkus.mcp.server."server-name".websocket.endpoint-path+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".websocket.endpoint-path+++[]
 endif::add-copy-button-to-config-props[]

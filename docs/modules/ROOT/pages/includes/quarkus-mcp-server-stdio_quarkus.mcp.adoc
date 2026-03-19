@@ -7,7 +7,7 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-initialization-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-initialization-enabled[`quarkus.mcp.server.stdio.initialization-enabled`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-initialization-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-initialization-enabled[`+++quarkus.mcp.server.stdio.initialization-enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.stdio.initialization-enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -28,7 +28,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled[`quarkus.mcp.server.stdio.enabled`]##
+a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-enabled[`+++quarkus.mcp.server.stdio.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.stdio.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -53,7 +53,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out[`quarkus.mcp.server.stdio.null-system-out`]##
+a| [[quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out]] [.property-path]##link:#quarkus-mcp-server-stdio_quarkus-mcp-server-stdio-null-system-out[`+++quarkus.mcp.server.stdio.null-system-out+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.stdio.null-system-out+++[]
 endif::add-copy-button-to-config-props[]
