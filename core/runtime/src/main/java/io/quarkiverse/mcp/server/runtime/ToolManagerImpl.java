@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,6 +52,7 @@ import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolOutputGuardrail;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -588,10 +590,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         public ToolInfo register() {
             validate();
             for (String serverName : serverNames) {
-                OptionalInt nameMaxLength = buildTimeConfig.servers().get(serverName).tools().nameMaxLength();
+                McpServerBuildTimeConfig serverConfig = buildTimeConfig.servers().get(serverName);
+                OptionalInt nameMaxLength = serverConfig.tools().nameMaxLength();
                 if (nameMaxLength.isPresent() && name.length() > nameMaxLength.getAsInt()) {
                     throw new IllegalStateException("Tool name [%s] exceeds the maximum length of %s characters"
                             .formatted(name, nameMaxLength.getAsInt()));
+                }
+                Optional<Pattern> namePattern = serverConfig.tools().namePattern();
+                if (namePattern.isPresent() && !namePattern.get().matcher(name).matches()) {
+                    throw new IllegalStateException("Tool name [%s] does not match the pattern: %s"
+                            .formatted(name, serverConfig.tools().namePattern()));
                 }
             }
 

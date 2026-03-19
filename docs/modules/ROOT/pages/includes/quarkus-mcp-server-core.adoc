@@ -507,6 +507,36 @@ endif::add-copy-button-to-env-var[]
 |int
 |
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-tools-name-pattern]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-name-pattern[`+++quarkus.mcp.server.tools.name-pattern+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.name-pattern+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tools.name-pattern+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.name-pattern+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+All tool names must match the specified pattern.
+
+The names of tools that are defined declaratively with annotations are validated at build time. The names of tools that are added programmatically are validated at runtime.
+
+Typically, the pattern `^++[++A-Za-z0-9_.-++]{++1,128`$++}++ follows the spec recommendations.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_NAME_PATTERN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_NAME_PATTERN+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html[Pattern]
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`+++quarkus.mcp.server.server-info.name+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.name+++[]

@@ -49,6 +49,15 @@ public @interface Tool {
     String ELEMENT_NAME = "<<element name>>";
 
     /**
+     * The recommended pattern for tool names as defined in the
+     * <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names">MCP spec</a>.
+     * <p>
+     * Tool names should only contain uppercase and lowercase ASCII letters (A-Z, a-z), digits (0-9),
+     * underscore (_), hyphen (-), and dot (.) and should be between 1 and 128 characters in length.
+     */
+    String SPEC_NAME_PATTERN = "^[A-Za-z0-9_.-]{1,128}$";
+
+    /**
      * Each tool must have a unique name.
      * <p>
      * Intended for programmatic or logical use, but used for UI in past specs or as fallback if title isn't present.
