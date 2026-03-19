@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptResponse;
@@ -58,6 +59,10 @@ class PromptMessageHandler extends MessageHandler {
     Future<Void> promptsGet(JsonObject message, McpRequest mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender()
+                    .sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Missing required params");
+        }
         String promptName = params.getString("name");
         LOG.debugf("Get prompt %s [id: %s]", promptName, id);
         try {
