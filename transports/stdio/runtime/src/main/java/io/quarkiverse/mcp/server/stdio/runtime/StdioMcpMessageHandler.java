@@ -29,6 +29,7 @@ import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
+import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -72,10 +73,12 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             @All List<InitialResponseInfo> initialResponseInfos,
             McpMetadata metadata,
             Vertx vertx,
-            Instance<McpMetrics> metrics) {
+            Instance<McpMetrics> metrics,
+            Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
-                initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
+                initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
         this.executor = Executors.newSingleThreadExecutor();
         if (config.servers().size() > 1) {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");

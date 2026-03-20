@@ -82,7 +82,7 @@ class McpStreamableClient extends SseClient {
     protected void process(SseEvent event) {
         if ("message".equals(event.name())) {
             JsonObject json = new JsonObject(event.data());
-            if (json.containsKey("id")) {
+            if (json.getValue("id") != null) {
                 if (json.containsKey("result") || json.containsKey("error")) {
                     state.responses.add(json);
                 } else {

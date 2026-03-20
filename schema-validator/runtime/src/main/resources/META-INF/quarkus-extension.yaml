@@ -1,0 +1,9 @@
+name: MCP Server - Schema Validator
+description: JSON Schema validation for MCP server requests.
+metadata:
+  keywords:
+    - mcp, json-schema, validator
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
+  categories:
+    - "artificial-intelligence"
+  status: "stable"

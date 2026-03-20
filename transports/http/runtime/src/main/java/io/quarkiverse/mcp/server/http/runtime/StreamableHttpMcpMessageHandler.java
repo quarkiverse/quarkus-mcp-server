@@ -45,6 +45,7 @@ import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
+import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
@@ -85,11 +86,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private static final String CORS_ORIGINS_PROPERTY = "quarkus.http.cors.origins";
 
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
+    public static final String MCP_PROTOCOL_VERSION_HEADER = "Mcp-Protocol-Version";
     public static final String DUMMY_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
 
     private static final InitialRequest DUMMY_INIT_REQUEST = new InitialRequest(
-            new Implementation(DUMMY_INIT_IMPL_NAME, "1", null), SUPPORTED_PROTOCOL_VERSIONS.get(0),
-            List.of(), Transport.STREAMABLE_HTTP);
+            new Implementation(DUMMY_INIT_IMPL_NAME, "1", null),
+            // "2025-03-26"
+            SUPPORTED_PROTOCOL_VERSIONS.get(2),
+            List.of(),
+            Transport.STREAMABLE_HTTP);
 
     private final McpMetadata metadata;
 
@@ -116,10 +121,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             McpMetadata metadata,
             Vertx vertx,
-            Instance<McpMetrics> metrics) {
+            Instance<McpMetrics> metrics,
+            Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, responseHandlers, metadata,
-                vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null);
+                vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
@@ -196,9 +203,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         };
 
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        if (mcpProtocolVersion != null
+                && !SUPPORTED_PROTOCOL_VERSIONS.contains(mcpProtocolVersion)) {
+            LOG.errorf("Invalid MCP protocol header: %s", mcpProtocolVersion);
+            ctx.fail(400);
+            return;
+        }
         HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, json, connection, securitySupport, ctx.response(),
-                mcpSessionId == null,
-                contextSupport, currentIdentityAssociation);
+                mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion);
         ScanResult result = scan(mcpRequest);
         if (result.forceSseInit()) {
             mcpRequest.initiateSse();
@@ -293,7 +306,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     protected InitialRequest dummyInitialRequest(HttpMcpRequest mcpRequest) {
         McpHttpServerRuntimeConfig config = httpConfig.servers().get(mcpRequest.serverName());
         if (config != null && config.http().streamable().dummyInit()) {
-            return DUMMY_INIT_REQUEST;
+            // "If the server does not receive an MCP-Protocol-Version header, the server SHOULD assume protocol version 2025-03-26"
+            // Note that this is inconsistent with initial handshake where the latest supported version is used
+            String version = mcpRequest.mcpProtocolVersion;
+            if (version == null) {
+                return DUMMY_INIT_REQUEST;
+            }
+            return new InitialRequest(
+                    DUMMY_INIT_REQUEST.implementation(),
+                    version,
+                    List.of(),
+                    Transport.STREAMABLE_HTTP);
         }
         return null;
     }
@@ -334,6 +357,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpRequest.newSession) {
             connectionManager.remove(mcpRequest.connection().id());
         }
+    }
+
+    @Override
+    protected Future<Void> unsupportedMethod(JsonObject message, HttpMcpRequest mcpRequest) {
+        if (mcpRequest.newSession) {
+            connectionManager.remove(mcpRequest.connection().id());
+        }
+        return super.unsupportedMethod(message, mcpRequest);
     }
 
     @Override
@@ -541,14 +572,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final HttpServerResponse response;
 
+        final String mcpProtocolVersion;
+
         public HttpMcpRequest(String serverName, Object json, StreamableHttpMcpConnection connection,
                 SecuritySupport securitySupport,
                 HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
-                CurrentIdentityAssociation currentIdentityAssociation) {
+                CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion) {
             super(serverName, json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;
+            this.mcpProtocolVersion = mcpProtocolVersion;
         }
 
         @Override
@@ -585,6 +619,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     return response.end(message.toBuffer());
                 }
             }
+        }
+
+        @Override
+        public String protocolVersion() {
+            String ret = super.protocolVersion();
+            return ret != null ? ret : mcpProtocolVersion;
         }
 
     }

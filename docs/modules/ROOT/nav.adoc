@@ -20,6 +20,7 @@
 *** xref:guides-error-handling.adoc[Error Handling]
 *** xref:guides-multiple-servers.adoc[Multiple Servers]
 *** xref:guides-using-filters-and-checks.adoc[Using Filters and Checks]
+*** xref:guides-schema-validator.adoc[Schema Validator]
 ** Integration
 *** xref:guides-client-integration.adoc[Client Integration]
 *** xref:guides-logging-progress-cancellation.adoc[Monitoring]
