@@ -10,8 +10,8 @@ import static io.quarkiverse.mcp.server.runtime.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.annotation.Annotation;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,10 +45,9 @@ import org.jboss.jandex.EquivalenceKey.TypeEquivalenceKey;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
-import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
-import org.jboss.jandex.WildcardType;
+import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.AudioContent;
@@ -133,32 +132,34 @@ import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.InjectionPointInfo;
 import io.quarkus.arc.processor.InvokerBuilder;
 import io.quarkus.arc.processor.KotlinUtils;
-import io.quarkus.arc.processor.Types;
-import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
+import io.quarkus.arc.processor.RuntimeTypeCreator;
+import io.quarkus.deployment.GeneratedClassGizmo2Adaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.AdditionalIndexedClassesBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
 import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.deployment.util.JandexUtil;
-import io.quarkus.gizmo.BytecodeCreator;
-import io.quarkus.gizmo.ClassCreator;
-import io.quarkus.gizmo.ClassOutput;
-import io.quarkus.gizmo.FieldCreator;
-import io.quarkus.gizmo.FieldDescriptor;
-import io.quarkus.gizmo.Gizmo;
-import io.quarkus.gizmo.Gizmo.JdkList.JdkListInstance;
-import io.quarkus.gizmo.Gizmo.JdkMap.JdkMapInstance;
-import io.quarkus.gizmo.MethodCreator;
-import io.quarkus.gizmo.MethodDescriptor;
-import io.quarkus.gizmo.ResultHandle;
-import io.quarkus.gizmo.SignatureBuilder;
+import io.quarkus.gizmo2.ClassOutput;
+import io.quarkus.gizmo2.Const;
+import io.quarkus.gizmo2.Expr;
+import io.quarkus.gizmo2.Gizmo;
+import io.quarkus.gizmo2.LocalVar;
+import io.quarkus.gizmo2.Var;
+import io.quarkus.gizmo2.creator.BlockCreator;
+import io.quarkus.gizmo2.creator.ClassCreator;
+import io.quarkus.gizmo2.desc.ConstructorDesc;
+import io.quarkus.gizmo2.desc.Descs.MD_Collection;
+import io.quarkus.gizmo2.desc.Descs.MD_Map;
+import io.quarkus.gizmo2.desc.FieldDesc;
+import io.quarkus.gizmo2.desc.MethodDesc;
 import io.quarkus.runtime.metrics.MetricsFactory;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -824,179 +825,235 @@ class McpServerProcessor {
             List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             List<ServerNameBuildItem> serverNames,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
+            BuildProducer<GeneratedResourceBuildItem> generatedResources,
             BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
 
         // Note that the generated McpMetadata impl must be considered an application class
         // so that it can see the generated invokers
-        ClassOutput classOutput = new GeneratedClassGizmoAdaptor(generatedClasses, true);
+        ClassOutput classOutput = new GeneratedClassGizmo2Adaptor(generatedClasses, generatedResources, true);
+        Gizmo gizmo = Gizmo.create(classOutput)
+                .withDebugInfo(false)
+                .withParameters(false);
+
+        ManagerUsage managerUsage = analyzeManagerUsage(beanDiscovery);
 
         String metadataClassName = "io.quarkiverse.mcp.server.runtime.McpMetadata_Impl";
-        ClassCreator metadataCreator = ClassCreator.builder().classOutput(classOutput)
-                .className(metadataClassName)
-                .interfaces(McpMetadata.class)
-                .build();
+        gizmo.class_(metadataClassName, cc -> {
+            cc.implements_(McpMetadata.class);
+            cc.defaultConstructor();
 
-        boolean isResourceManagerUsed = false;
-        boolean isResourceTemplateManagerUsed = false;
-        boolean isPromptManagerUsed = false;
-        boolean isToolManagerUsed = false;
-        for (InjectionPointInfo ip : beanDiscovery.getInjectionPoints()) {
-            if (ip.getRequiredType().name().equals(DotNames.RESOURCE_MANAGER)) {
-                isResourceManagerUsed = true;
-            } else if (ip.getRequiredType().name().equals(DotNames.RESOURCE_TEMPLATE_MANAGER)) {
-                isResourceTemplateManagerUsed = true;
-            } else if (ip.getRequiredType().name().equals(DotNames.PROMPT_MANAGER)) {
-                isPromptManagerUsed = true;
-            } else if (ip.getRequiredType().name().equals(DotNames.TOOL_MANAGER)) {
-                isToolManagerUsed = true;
-            }
-        }
+            // McpMetadata.isResourceManagerUsed()
+            cc.method("isResourceManagerUsed", mc -> {
+                mc.returning(boolean.class);
+                mc.body(bc -> bc.return_(managerUsage.resources()));
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.isResourceManagerUsed()
-        MethodCreator isResourceManagerUsedMethod = metadataCreator.getMethodCreator("isResourceManagerUsed", boolean.class);
-        isResourceManagerUsedMethod.returnValue(isResourceManagerUsedMethod.load(isResourceManagerUsed));
+            // McpMetadata.isResourceTemplateManagerUsed()
+            cc.method("isResourceTemplateManagerUsed", mc -> {
+                mc.returning(boolean.class);
+                mc.body(bc -> bc.return_(managerUsage.resourceTemplates()));
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.isResourceManagerUsed()
-        MethodCreator isResourceTemplateManagerUsedMethod = metadataCreator.getMethodCreator("isResourceTemplateManagerUsed",
-                boolean.class);
-        isResourceTemplateManagerUsedMethod
-                .returnValue(isResourceTemplateManagerUsedMethod.load(isResourceTemplateManagerUsed));
+            // McpMetadata.isPromptManagerUsed()
+            cc.method("isPromptManagerUsed", mc -> {
+                mc.returning(boolean.class);
+                mc.body(bc -> bc.return_(managerUsage.prompts()));
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.isPromptManagerUsed()
-        MethodCreator isPromptManagerUsedMethod = metadataCreator.getMethodCreator("isPromptManagerUsed", boolean.class);
-        isPromptManagerUsedMethod.returnValue(isPromptManagerUsedMethod.load(isPromptManagerUsed));
+            // McpMetadata.isToolManagerUsed()
+            cc.method("isToolManagerUsed", mc -> {
+                mc.returning(boolean.class);
+                mc.body(bc -> bc.return_(managerUsage.tools()));
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.isToolManagerUsed()
-        MethodCreator isToolManagerUsedMethod = metadataCreator.getMethodCreator("isToolManagerUsed", boolean.class);
-        isToolManagerUsedMethod.returnValue(isToolManagerUsedMethod.load(isToolManagerUsed));
+            AtomicInteger counter = new AtomicInteger();
 
-        AtomicInteger counter = new AtomicInteger();
+            // McpMetadata.prompts()
+            cc.method("prompts", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem prompt : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isPrompt)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(processFeatureMethod(counter, cc, prompt, DotNames.PROMPT_ARG), cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.prompts()
-        MethodCreator promptsMethod = metadataCreator.getMethodCreator("prompts", List.class);
-        ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
-        for (FeatureMethodBuildItem prompt : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isPrompt)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts,
-                    DotNames.PROMPT_ARG);
-        }
-        promptsMethod.returnValue(retPrompts);
+            // McpMetadata.promptCompletions()
+            cc.method("promptCompletions", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem promptCompletion : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isPromptComplete)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(processFeatureMethod(counter, cc, promptCompletion, DotNames.COMPLETE_ARG),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.promptCompletions()
-        MethodCreator promptCompletionsMethod = metadataCreator.getMethodCreator("promptCompletions", List.class);
-        ResultHandle retPromptCompletions = Gizmo.newArrayList(promptCompletionsMethod);
-        for (FeatureMethodBuildItem promptCompletion : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isPromptComplete)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, promptCompletionsMethod, promptCompletion, retPromptCompletions,
-                    DotNames.COMPLETE_ARG);
-        }
-        promptCompletionsMethod.returnValue(retPromptCompletions);
+            // McpMetadata.tools()
+            cc.method("tools", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem tool : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isTool)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(processFeatureMethod(counter, cc, tool,
+                                        tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)
+                                                ? DotNames.LANGCHAIN4J_P
+                                                : DotNames.TOOL_ARG),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.tools()
-        MethodCreator toolsMethod = metadataCreator.getMethodCreator("tools", List.class);
-        ResultHandle retTools = Gizmo.newArrayList(toolsMethod);
-        for (FeatureMethodBuildItem tool : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isTool)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools,
-                    tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL) ? DotNames.LANGCHAIN4J_P
-                            : DotNames.TOOL_ARG);
-        }
-        toolsMethod.returnValue(retTools);
+            // McpMetadata.resources()
+            cc.method("resources", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem resource : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isResource)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(processFeatureMethod(counter, cc, resource, null),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.resources()
-        MethodCreator resourcesMethod = metadataCreator.getMethodCreator("resources", List.class);
-        ResultHandle retResources = Gizmo.newArrayList(resourcesMethod);
-        for (FeatureMethodBuildItem resource : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isResource)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources,
-                    null);
-        }
-        resourcesMethod.returnValue(retResources);
+            // McpMetadata.resourceTemplates()
+            cc.method("resourceTemplates", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isResourceTemplate)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, resourceTemplate, DotNames.RESOURCE_TEMPLATE_ARG),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.resourceTemplates()
-        MethodCreator resourceTemplatesMethod = metadataCreator.getMethodCreator("resourceTemplates", List.class);
-        ResultHandle retResourceTemplates = Gizmo.newArrayList(resourceTemplatesMethod);
-        for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isResourceTemplate)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, resourceTemplatesMethod, resourceTemplate, retResourceTemplates,
-                    DotNames.RESOURCE_TEMPLATE_ARG);
-        }
-        resourceTemplatesMethod.returnValue(retResourceTemplates);
+            // McpMetadata.resourceTemplateCompletions()
+            cc.method("resourceTemplateCompletions", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem resourceTemplateCompletion : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isResourceTemplateComplete)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, resourceTemplateCompletion, DotNames.COMPLETE_ARG),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.resourceTemplateCompletions()
-        MethodCreator resourceTemplateCompletionsMethod = metadataCreator.getMethodCreator("resourceTemplateCompletions",
-                List.class);
-        ResultHandle retResourceTemplateCompletions = Gizmo.newArrayList(resourceTemplateCompletionsMethod);
-        for (FeatureMethodBuildItem resourceTemplateCompletion : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isResourceTemplateComplete)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, resourceTemplateCompletionsMethod, resourceTemplateCompletion,
-                    retResourceTemplateCompletions,
-                    DotNames.COMPLETE_ARG);
-        }
-        resourceTemplateCompletionsMethod.returnValue(retResourceTemplateCompletions);
+            // McpMetadata.notifications()
+            cc.method("notifications", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem notification : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isNotification)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, notification, null),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        // io.quarkiverse.mcp.server.runtime.McpMetadata.notifications()
-        MethodCreator notificationsMethod = metadataCreator.getMethodCreator("notifications", List.class);
-        ResultHandle retNotifications = Gizmo.newArrayList(notificationsMethod);
-        for (FeatureMethodBuildItem notification : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isNotification)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
-                    null);
-        }
-        notificationsMethod.returnValue(retNotifications);
+            // McpMetadata.defaultValueConverters()
+            cc.method("defaultValueConverters", mc -> {
+                mc.returning(Map.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(HashMap.class));
+                    List<DefaultValueConverterBuildItem> sortedConverters = defaultValueConverters.stream()
+                            .sorted(Comparator.comparing(DefaultValueConverterBuildItem::getClassName))
+                            .toList();
+                    for (DefaultValueConverterBuildItem converter : sortedConverters) {
+                        LocalVar converterType = RuntimeTypeCreator.of(bc).create(converter.getArgumentType());
+                        bc.withMap(ret).put(converterType, bc.new_(ClassDesc.of(converter.getClassName())));
+                    }
+                    bc.return_(ret);
+                });
 
-        //  io.quarkiverse.mcp.server.runtime.McpMetadata.defaultValueConverters()
-        MethodCreator convertersMethod = metadataCreator.getMethodCreator("defaultValueConverters", Map.class);
-        ResultHandle retConverters = Gizmo.newHashMap(convertersMethod);
-        List<DefaultValueConverterBuildItem> sortedConverters = defaultValueConverters.stream()
-                .sorted(Comparator.comparing(DefaultValueConverterBuildItem::getClassName))
-                .toList();
-        for (DefaultValueConverterBuildItem converter : sortedConverters) {
-            ResultHandle converterType = Types.getTypeHandle(convertersMethod, converter.getArgumentType());
-            ResultHandle converterInstance = convertersMethod
-                    .newInstance(MethodDescriptor.ofConstructor(converter.getClassName()));
-            Gizmo.mapOperations(convertersMethod).on(retConverters).put(converterType, converterInstance);
-        }
-        convertersMethod.returnValue(retConverters);
+            });
 
-        // McpMetadata.serverNames()
-        MethodCreator serverNamesMethod = metadataCreator.getMethodCreator("serverNames", Set.class);
-        ResultHandle set = Gizmo.newHashSet(serverNamesMethod);
-        for (String serverName : serverNames.stream().map(ServerNameBuildItem::getName).sorted().toList()) {
-            Gizmo.setOperations(serverNamesMethod).on(set).add(serverNamesMethod.load(serverName));
-        }
-        serverNamesMethod.returnValue(set);
+            // McpMetadata.serverNames()
+            cc.method("serverNames", mc -> {
+                mc.returning(Set.class);
+                mc.body(bc -> {
+                    bc.return_(bc.setOf(serverNames.stream()
+                            .map(ServerNameBuildItem::getName)
+                            .distinct()
+                            .sorted()
+                            .map(Const::of)
+                            .toList()));
+                });
+            });
 
-        // McpMetadata.toolArgumentHolders()
-        // Generated tool argument holders are used to workaround a limitation of com.github.victools.jsonschema.generator.SchemaGenerator
-        // that can only consume java.lang.reflect.Type
-        MethodCreator toolArgumentHolders = metadataCreator.getMethodCreator("toolArgumentHolders", Map.class);
-        ResultHandle holders = Gizmo.newHashMap(toolArgumentHolders);
-        for (FeatureMethodBuildItem tool : featureMethods.stream()
-                .filter(FeatureMethodBuildItem::isTool)
-                .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
-                .toList()) {
-            generateToolArgsHolder(toolArgumentHolders, holders, tool, classOutput, reflectiveClasses);
-        }
-        toolArgumentHolders.returnValue(holders);
+            // McpMetadata.toolArgumentHolders()
+            // Generated tool argument holders are used to workaround a limitation of com.github.victools.jsonschema.generator.SchemaGenerator
+            // that can only consume java.lang.reflect.Type
+            cc.method("toolArgumentHolders", mc -> {
+                mc.returning(Map.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(HashMap.class));
+                    for (FeatureMethodBuildItem tool : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isTool)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        String generatedClassName = generateToolArgsHolder(gizmo, tool, classOutput, reflectiveClasses,
+                                beanArchiveIndex.getIndex());
+                        if (generatedClassName != null) {
+                            bc.withMap(ret).put(Const.of(tool.getName()), Const.of(ClassDesc.of(generatedClassName)));
+                        }
+                    }
+                    bc.return_(ret);
+                });
+            });
 
-        metadataCreator.close();
+        });
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(McpMetadata.class)
                 .scope(Singleton.class)
@@ -1005,8 +1062,31 @@ class McpServerProcessor {
                 .done());
     }
 
-    private void generateToolArgsHolder(MethodCreator toolArgumentHolders, ResultHandle holders, FeatureMethodBuildItem tool,
-            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+    private ManagerUsage analyzeManagerUsage(BeanDiscoveryFinishedBuildItem beanDiscovery) {
+        boolean isResourceManagerUsed = false;
+        boolean isResourceTemplateManagerUsed = false;
+        boolean isPromptManagerUsed = false;
+        boolean isToolManagerUsed = false;
+        for (InjectionPointInfo ip : beanDiscovery.getInjectionPoints()) {
+            DotName requiredType = ip.getRequiredType().name();
+            if (requiredType.equals(DotNames.RESOURCE_MANAGER)) {
+                isResourceManagerUsed = true;
+            } else if (requiredType.equals(DotNames.RESOURCE_TEMPLATE_MANAGER)) {
+                isResourceTemplateManagerUsed = true;
+            } else if (requiredType.equals(DotNames.PROMPT_MANAGER)) {
+                isPromptManagerUsed = true;
+            } else if (requiredType.equals(DotNames.TOOL_MANAGER)) {
+                isToolManagerUsed = true;
+            }
+        }
+        return new ManagerUsage(isResourceManagerUsed, isResourceTemplateManagerUsed, isPromptManagerUsed, isToolManagerUsed);
+    }
+
+    private record ManagerUsage(boolean resources, boolean resourceTemplates, boolean prompts, boolean tools) {
+    }
+
+    private String generateToolArgsHolder(Gizmo gizmo, FeatureMethodBuildItem tool,
+            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index) {
         // Generate a holder for each tool with at least one argument that is:
         // - serialized
         // - annotated with any other annotation than @ToolArg and @P
@@ -1023,47 +1103,26 @@ class McpServerProcessor {
                 }
             }
         }
-        if (generateHolder) {
-            // org.example.MyTool_foo
-            String className = tool.getMethod().declaringClass().name().toString() + "_" + tool.getName();
-            LOG.debugf("Generate tool arguments holder: %s", className);
-            reflectiveClasses.produce(ReflectiveClassBuildItem.builder(className).fields().build());
-            ClassCreator argumentsHolder = ClassCreator.builder().classOutput(classOutput)
-                    .className(className)
-                    .build();
+        if (!generateHolder) {
+            return null;
+        }
+        // org.example.MyTool_foo
+        String className = tool.getMethod().declaringClass().name().toString() + "_" + tool.getName();
+        LOG.debugf("Generate tool arguments holder: %s", className);
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(className).fields().build());
+        gizmo.class_(className, cc -> {
+            cc.defaultConstructor();
             for (MethodParameterInfo param : serializedArguments) {
-                FieldCreator paramField = argumentsHolder.getFieldCreator(param.name(), param.type().name().toString());
-                paramField.setModifiers(Modifier.PUBLIC);
-                setSignature(paramField, param.type());
-                param.declaredAnnotations().forEach(paramField::addAnnotation);
+                cc.field(param.name(), fc -> {
+                    fc.public_();
+                    fc.setType(Jandex2Gizmo.genericTypeOf(param.type()));
+                    for (AnnotationInstance annotation : param.declaredAnnotations()) {
+                        Jandex2Gizmo.addAnnotation(fc, annotation, index);
+                    }
+                });
             }
-            argumentsHolder.close();
-            // map.put("foo", org.example.MyTool_foo.class)
-            Gizmo.mapOperations(toolArgumentHolders).on(holders).put(toolArgumentHolders.load(tool.getName()),
-                    toolArgumentHolders.loadClass(argumentsHolder.getClassName()));
-        }
-    }
-
-    private void setSignature(FieldCreator field, org.jboss.jandex.Type type) {
-        if (type.kind() == Kind.PARAMETERIZED_TYPE) {
-            field.setSignature(SignatureBuilder.forField().setType(gizmoType(type)).build());
-        }
-    }
-
-    private io.quarkus.gizmo.Type gizmoType(org.jboss.jandex.Type type) {
-        if (type.kind() == Kind.CLASS) {
-            return io.quarkus.gizmo.Type.classType(type.name());
-        } else if (type.kind() == Kind.PARAMETERIZED_TYPE) {
-            ParameterizedType parameterizedType = type.asParameterizedType();
-            return io.quarkus.gizmo.Type.parameterizedType(io.quarkus.gizmo.Type.classType(type.name()),
-                    parameterizedType.arguments().stream().map(this::gizmoType).toArray(io.quarkus.gizmo.Type[]::new));
-        } else if (type.kind() == Kind.WILDCARD_TYPE) {
-            WildcardType wildcardType = type.asWildcardType();
-            return wildcardType.superBound() != null
-                    ? io.quarkus.gizmo.Type.wildcardTypeWithLowerBound(gizmoType(wildcardType.superBound()))
-                    : io.quarkus.gizmo.Type.wildcardTypeWithUpperBound(gizmoType(wildcardType.extendsBound()));
-        }
-        throw new IllegalArgumentException("Unsupported type: " + type);
+        });
+        return className;
     }
 
     @BuildStep
@@ -1386,189 +1445,195 @@ class McpServerProcessor {
         return ret;
     }
 
-    private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
-            FeatureMethodBuildItem featureMethod, ResultHandle retList,
-            DotName argAnnotationName) {
-        String methodName = "meta$" + counter.incrementAndGet();
-        MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
+    private MethodDesc processFeatureMethod(AtomicInteger counter, ClassCreator cc,
+            FeatureMethodBuildItem featureMethod, DotName argAnnotationName) {
+        return cc.method("meta$" + counter.incrementAndGet(), mc -> {
+            mc.returning(FeatureMetadata.class);
 
-        ResultHandle args = Gizmo.newArrayList(metaMethod);
-        for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
-            String name = param.name();
-            String title = null;
-            String description = "";
-            // Argument is required by default
-            boolean required = true;
-            String defaultValue = null;
-            if (argAnnotationName != null) {
-                AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
-                if (argAnnotation != null) {
-                    AnnotationValue nameValue;
-                    if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
-                        nameValue = argAnnotation.value();
-                    } else {
-                        nameValue = argAnnotation.value("name");
+            mc.body(bc -> {
+                LocalVar args = bc.localVar("args", List.class, bc.new_(ArrayList.class));
+
+                for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
+                    String name = param.name();
+                    String title = null;
+                    String description = "";
+                    // Argument is required by default
+                    boolean required = true;
+                    String defaultValue = null;
+                    if (argAnnotationName != null) {
+                        AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
+                        if (argAnnotation != null) {
+                            AnnotationValue nameValue;
+                            if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
+                                nameValue = argAnnotation.value();
+                            } else {
+                                nameValue = argAnnotation.value("name");
+                            }
+                            if (nameValue != null) {
+                                name = nameValue.asString();
+                            }
+                            AnnotationValue titleValue = argAnnotation.value("title");
+                            if (titleValue != null) {
+                                title = titleValue.asString();
+                            }
+                            AnnotationValue descriptionValue = argAnnotation.value("description");
+                            if (descriptionValue != null) {
+                                description = descriptionValue.asString();
+                            }
+                            AnnotationValue requiredValue = argAnnotation.value("required");
+                            if (requiredValue != null) {
+                                // Annotation value always takes precedence
+                                required = requiredValue.asBoolean();
+                            } else if (DotNames.OPTIONAL.equals(param.type().name())
+                                    || hasDefaultValue(param)) {
+                                // No annotation value is defined and Optional type is used or default value set
+                                required = false;
+                            }
+                            AnnotationValue defaultValueValue = argAnnotation.value(DEFAULT_VALUE);
+                            if (defaultValueValue != null) {
+                                defaultValue = defaultValueValue.asString();
+                            }
+                        } else if (DotNames.OPTIONAL.equals(param.type().name())) {
+                            // No annotation is defined and Optional type is used
+                            required = false;
+                        }
                     }
-                    if (nameValue != null) {
-                        name = nameValue.asString();
+
+                    // Fail the build if argument name is not available
+                    if (name == null) {
+                        String explicitAnnotation = argAnnotationName != null
+                                ? " or define the name explicitly with @" + argAnnotationName.withoutPackagePrefix()
+                                : "";
+                        throw new IllegalStateException(
+                                "Missing argument name - compile the class %s with -parameters%s"
+                                        .formatted(featureMethod.getMethod().declaringClass().name(), explicitAnnotation));
                     }
-                    AnnotationValue titleValue = argAnnotation.value("title");
-                    if (titleValue != null) {
-                        title = titleValue.asString();
-                    }
-                    AnnotationValue descriptionValue = argAnnotation.value("description");
-                    if (descriptionValue != null) {
-                        description = descriptionValue.asString();
-                    }
-                    AnnotationValue requiredValue = argAnnotation.value("required");
-                    if (requiredValue != null) {
-                        // Annotation value always takes precedence
-                        required = requiredValue.asBoolean();
-                    } else if (DotNames.OPTIONAL.equals(param.type().name())
-                            || hasDefaultValue(param)) {
-                        // No annotation value is defined and Optional type is used or default value set
-                        required = false;
-                    }
-                    AnnotationValue defaultValueValue = argAnnotation.value(DEFAULT_VALUE);
-                    if (defaultValueValue != null) {
-                        defaultValue = defaultValueValue.asString();
-                    }
-                } else if (DotNames.OPTIONAL.equals(param.type().name())) {
-                    // No annotation is defined and Optional type is used
-                    required = false;
+
+                    LocalVar type = RuntimeTypeCreator.of(bc).create(param.type());
+                    // new FeatureArgument(String name, String title, String description, boolean required, Type type, String defaultValue, Provider provider)
+                    LocalVar arg = bc.localVar("arg", bc.new_(FeatureArgument.class,
+                            Const.of(name),
+                            title != null ? Const.of(title) : Const.ofNull(String.class),
+                            Const.of(description),
+                            Const.of(required),
+                            type,
+                            defaultValue != null ? Const.of(defaultValue) : Const.ofNull(String.class),
+                            Const.of(providerFrom(param.type()))));
+                    bc.withList(args).add(arg);
                 }
-            }
 
-            // Fail the build if argument name is not available
-            if (name == null) {
-                throw new IllegalStateException(
-                        "Missing argument name - compile the class %s with -parameters or define the name explicitly with @%s"
-                                .formatted(featureMethod.getMethod().declaringClass().name(),
-                                        argAnnotationName.withoutPackagePrefix()));
-            }
+                LocalVar toolAnnotations;
+                if (featureMethod.isTool() && featureMethod.getToolAnnotations() != null) {
+                    ToolAnnotations annotations = featureMethod.getToolAnnotations();
+                    // new ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint, boolean openWorldHint)
+                    toolAnnotations = bc.localVar("toolAnnotations", bc.new_(ToolManager.ToolAnnotations.class,
+                            annotations.title() != null ? Const.of(annotations.title()) : Const.ofNull(String.class),
+                            Const.of(annotations.readOnlyHint()),
+                            Const.of(annotations.destructiveHint()),
+                            Const.of(annotations.idempotentHint()),
+                            Const.of(annotations.openWorldHint())));
+                } else {
+                    toolAnnotations = bc.localVar("toolAnnotations", Const.ofNull(ToolManager.ToolAnnotations.class));
+                }
 
-            ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
-            ResultHandle provider = metaMethod.load(providerFrom(param.type()));
-            ResultHandle arg = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, String.class,
-                            boolean.class,
-                            Type.class, String.class, FeatureArgument.Provider.class),
-                    metaMethod.load(name), title != null ? metaMethod.load(title) : metaMethod.loadNull(),
-                    metaMethod.load(description), metaMethod.load(required), type,
-                    defaultValue != null ? metaMethod.load(defaultValue) : metaMethod.loadNull(),
-                    provider);
-            Gizmo.listOperations(metaMethod).on(args).add(arg);
-        }
-        ResultHandle toolAnnotations;
-        if (featureMethod.isTool() && featureMethod.getToolAnnotations() != null) {
-            ToolAnnotations annotations = featureMethod.getToolAnnotations();
-            toolAnnotations = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(ToolManager.ToolAnnotations.class, String.class, boolean.class,
-                            boolean.class, boolean.class, boolean.class),
-                    annotations.title() == null ? metaMethod.loadNull() : metaMethod.load(annotations.title()),
-                    metaMethod.load(annotations.readOnlyHint()),
-                    metaMethod.load(annotations.destructiveHint()),
-                    metaMethod.load(annotations.idempotentHint()),
-                    metaMethod.load(annotations.openWorldHint()));
-        } else {
-            toolAnnotations = metaMethod.loadNull();
-        }
+                LocalVar resourceAnnotations;
+                if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
+                        && featureMethod.getResourceAnnotations() != null) {
+                    // new Annotations(Role audience, String lastModified, Double priority)
+                    Content.Annotations annotations = featureMethod.getResourceAnnotations();
+                    resourceAnnotations = bc.localVar("resourceAnnotations", bc.new_(
+                            ConstructorDesc.of(Content.Annotations.class, Role.class, String.class, Double.class),
+                            annotations.audience() == null ? Const.ofNull(Role.class) : Const.of(annotations.audience()),
+                            annotations.lastModified() == null ? Const.ofNull(String.class)
+                                    : Const.of(annotations.lastModified()),
+                            annotations.priority() == null ? Const.ofNull(Double.class) : Const.of(annotations.priority())));
+                } else {
+                    resourceAnnotations = bc.localVar("resourceAnnotations", Const.ofNull(Content.Annotations.class));
+                }
 
-        ResultHandle resourceAnnotations;
-        if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
-                && featureMethod.getResourceAnnotations() != null) {
-            Content.Annotations annotations = featureMethod.getResourceAnnotations();
-            resourceAnnotations = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(Content.Annotations.class, Role.class, String.class, Double.class),
-                    annotations.audience() == null ? metaMethod.loadNull() : metaMethod.load(annotations.audience()),
-                    annotations.lastModified() == null ? metaMethod.loadNull() : metaMethod.load(annotations.lastModified()),
-                    annotations.priority() == null ? metaMethod.loadNull() : metaMethod.load(annotations.priority()));
-        } else {
-            resourceAnnotations = metaMethod.loadNull();
-        }
+                LocalVar meta;
+                Map<String, String> metaEntries = featureMethod.getMetadata();
+                if (metaEntries.isEmpty()) {
+                    meta = bc.localVar("meta", bc.mapOf());
+                } else {
+                    meta = bc.localVar("meta", bc.invokeStatic(MD_Map.ofEntries, bc.newArray(Entry.class, metaEntries.entrySet()
+                            .stream()
+                            .sorted(Comparator.comparing(Entry::getKey))
+                            .map(e -> bc.mapEntry(Const.of(e.getKey()), Const.of(e.getValue())))
+                            .toList())));
+                }
 
-        ResultHandle meta;
-        Map<String, String> metaEntries = featureMethod.getMetadata();
-        if (metaEntries.isEmpty()) {
-            meta = Gizmo.mapOperations(metaMethod).of();
-        } else {
-            meta = Gizmo.newHashMap(metaMethod);
-            JdkMapInstance mapInstance = Gizmo.mapOperations(metaMethod).on(meta);
-            for (Map.Entry<String, String> e : metaEntries.entrySet()
-                    .stream()
-                    .sorted(Comparator.comparing(Entry::getKey))
-                    .toList()) {
-                mapInstance.put(metaMethod.load(e.getKey()), metaMethod.load(e.getValue()));
-            }
-        }
+                LocalVar inputGuardrails;
+                if (featureMethod.getInputGuardrails().isEmpty()) {
+                    inputGuardrails = bc.localVar("inputGuardrails", bc.listOf());
+                } else {
+                    inputGuardrails = bc.localVar("inputGuardrails", bc.listOf(
+                            featureMethod.getInputGuardrails().stream()
+                                    .map(name -> Const.of(Jandex2Gizmo.classDescOf(name)))
+                                    .toList()));
+                }
+                LocalVar outputGuardrails;
+                if (featureMethod.getOutputGuardrails().isEmpty()) {
+                    outputGuardrails = bc.localVar("outputGuardrails", bc.listOf());
+                } else {
+                    outputGuardrails = bc.localVar("outputGuardrails", bc.listOf(
+                            featureMethod.getOutputGuardrails().stream()
+                                    .map(name -> Const.of(Jandex2Gizmo.classDescOf(name)))
+                                    .toList()));
+                }
 
-        ResultHandle inputGuardrails;
-        if (featureMethod.getInputGuardrails().isEmpty()) {
-            inputGuardrails = Gizmo.listOperations(metaMethod).of();
-        } else {
-            inputGuardrails = Gizmo.newArrayList(metaMethod);
-            JdkListInstance list = Gizmo.listOperations(metaMethod).on(inputGuardrails);
-            for (DotName clazzName : featureMethod.getInputGuardrails()) {
-                list.add(metaMethod.loadClass(clazzName.toString()));
-            }
-        }
-        ResultHandle outputGuardrails;
-        if (featureMethod.getOutputGuardrails().isEmpty()) {
-            outputGuardrails = Gizmo.listOperations(metaMethod).of();
-        } else {
-            outputGuardrails = Gizmo.newArrayList(metaMethod);
-            JdkListInstance list = Gizmo.listOperations(metaMethod).on(outputGuardrails);
-            for (DotName clazzName : featureMethod.getOutputGuardrails()) {
-                list.add(metaMethod.loadClass(clazzName.toString()));
-            }
-        }
+                LocalVar iconsProvider;
+                if (featureMethod.getIconsProvider() != null) {
+                    iconsProvider = bc.localVar("iconsProvider",
+                            Const.of(ClassDesc.of(featureMethod.getIconsProvider().toString())));
+                } else {
+                    iconsProvider = bc.localVar("iconsProvider", Const.ofNull(Class.class));
+                }
 
-        ResultHandle iconsProvider;
-        if (featureMethod.getIconsProvider() != null) {
-            iconsProvider = metaMethod.loadClass(featureMethod.getIconsProvider().toString());
-        } else {
-            iconsProvider = metaMethod.loadNull();
-        }
-
-        ResultHandle serverNames = Gizmo.setOperations(metaMethod)
-                .of(featureMethod.getServers()
+                LocalVar serverNames = bc.localVar("serverNames", bc.setOf(featureMethod.getServers()
                         .stream()
                         .sorted()
-                        .map(metaMethod::load)
-                        .toArray(ResultHandle[]::new));
+                        .map(Const::of).toList()));
 
-        ResultHandle info = metaMethod.newInstance(
-                MethodDescriptor.ofConstructor(FeatureMethodInfo.class, String.class, String.class, String.class, String.class,
-                        String.class, int.class, List.class, String.class, ToolManager.ToolAnnotations.class,
-                        Content.Annotations.class, Set.class,
-                        Class.class, Class.class, Class.class, Map.class, List.class, List.class, Class.class),
-                metaMethod.load(featureMethod.getName()),
-                featureMethod.getTitle() != null ? metaMethod.load(featureMethod.getTitle()) : metaMethod.loadNull(),
-                metaMethod.load(featureMethod.getDescription()),
-                featureMethod.getUri() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getUri()),
-                featureMethod.getMimeType() == null ? metaMethod.loadNull() : metaMethod.load(featureMethod.getMimeType()),
-                metaMethod.load(featureMethod.getSize()),
-                args, metaMethod.load(featureMethod.getMethod().declaringClass().name().toString()),
-                toolAnnotations, resourceAnnotations, serverNames,
-                featureMethod.getOutputSchemaFrom() == null ? metaMethod.loadNull()
-                        : metaMethod.loadClass(featureMethod.getOutputSchemaFrom().name().toString()),
-                featureMethod.getOutputSchemaGenerator() == null ? metaMethod.loadNull()
-                        : metaMethod.loadClass(featureMethod.getOutputSchemaGenerator().name().toString()),
-                featureMethod.getInputSchemaGenerator() == null ? metaMethod.loadNull()
-                        : metaMethod.loadClass(featureMethod.getInputSchemaGenerator().name().toString()),
-                meta, inputGuardrails, outputGuardrails, iconsProvider);
-        ResultHandle invoker = metaMethod
-                .newInstance(MethodDescriptor.ofConstructor(featureMethod.getInvoker().getClassName()));
-        ResultHandle executionModel = metaMethod.load(featureMethod.getExecutionModel());
-        ResultHandle resultMapper = getMapper(metaMethod, featureMethod);
-        ResultHandle metadata = metaMethod.newInstance(
-                MethodDescriptor.ofConstructor(FeatureMetadata.class, Feature.class, FeatureMethodInfo.class, Invoker.class,
-                        ExecutionModel.class, Function.class),
-                metaMethod.load(featureMethod.getFeature()), info, invoker, executionModel, resultMapper);
-        metaMethod.returnValue(metadata);
+                // new FeatureMethodInfo(...)
+                LocalVar info = bc.localVar("info", bc.new_(FeatureMethodInfo.class,
+                        Const.of(featureMethod.getName()),
+                        featureMethod.getTitle() != null ? Const.of(featureMethod.getTitle()) : Const.ofNull(String.class),
+                        Const.of(featureMethod.getDescription()),
+                        featureMethod.getUri() == null ? Const.ofNull(String.class) : Const.of(featureMethod.getUri()),
+                        featureMethod.getMimeType() == null ? Const.ofNull(String.class)
+                                : Const.of(featureMethod.getMimeType()),
+                        Const.of(featureMethod.getSize()),
+                        args,
+                        Const.of(featureMethod.getMethod().declaringClass().name().toString()),
+                        toolAnnotations,
+                        resourceAnnotations,
+                        serverNames,
+                        featureMethod.getOutputSchemaFrom() == null ? Const.ofNull(Class.class)
+                                : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getOutputSchemaFrom().name())),
+                        featureMethod.getOutputSchemaGenerator() == null ? Const.ofNull(Class.class)
+                                : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getOutputSchemaGenerator().name())),
+                        featureMethod.getInputSchemaGenerator() == null ? Const.ofNull(Class.class)
+                                : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getInputSchemaGenerator().name())),
+                        meta,
+                        inputGuardrails,
+                        outputGuardrails,
+                        iconsProvider));
 
-        Gizmo.listOperations(method).on(retList)
-                .add(method.invokeVirtualMethod(metaMethod.getMethodDescriptor(), method.getThis()));
+                LocalVar invoker = bc.localVar("invoker", Invoker.class, bc.new_(featureMethod.getInvoker().getClassDesc()));
+                LocalVar executionModel = bc.localVar("executionModel", Const.of(featureMethod.getExecutionModel()));
+                Var resultMapper = getMapper(bc, featureMethod);
+
+                // new FeatureMetadata<>(Feature feature, FeatureMethodInfo info, Invoker<Object, Object> invoker, ExecutionModel executionModel, Function<Result<Object>, Uni<M>> resultMapper)
+                bc.return_(bc.new_(FeatureMetadata.class,
+                        Const.of(featureMethod.getFeature()),
+                        info,
+                        invoker,
+                        executionModel,
+                        bc.cast(resultMapper, Function.class)));
+            });
+
+        });
     }
 
     private boolean hasDefaultValue(MethodParameterInfo param) {
@@ -1609,58 +1674,57 @@ class McpServerProcessor {
         }
     }
 
-    private ResultHandle getMapper(BytecodeCreator bytecode, FeatureMethodBuildItem featureMethod) {
+    private Var getMapper(BlockCreator bc, FeatureMethodBuildItem featureMethod) {
         // Returns a function that converts the returned object to Uni<RESPONSE>
         // where the RESPONSE is one of ToolResponse, PromptResponse, ResourceResponse, CompleteResponse
         // IMPL NOTE: at this point the method return type is already validated
         org.jboss.jandex.Type returnType = featureMethod.getMethod().returnType();
         return switch (featureMethod.getFeature()) {
-            case PROMPT -> promptResultMapper(featureMethod, bytecode, returnType);
-            case PROMPT_COMPLETE -> readResultMapper(bytecode,
+            case PROMPT -> promptResultMapper(featureMethod, bc, returnType);
+            case PROMPT_COMPLETE -> readResultMapper(bc,
                     createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "String"));
-            case TOOL -> toolResultMapper(featureMethod, bytecode, returnType);
-            case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(featureMethod, bytecode, returnType);
-            case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bytecode,
+            case TOOL -> toolResultMapper(featureMethod, bc, returnType);
+            case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(featureMethod, bc, returnType);
+            case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bc,
                     createMapperClassSimpleName(RESOURCE_TEMPLATE_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE,
                             c -> "String"));
-            case NOTIFICATION -> readResultMapper(bytecode, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
+            case NOTIFICATION -> readResultMapper(bc, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
             default -> throw new IllegalArgumentException("Unsupported feature: " + featureMethod.getFeature());
         };
     }
 
-    ResultHandle resourceResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+    Var resourceResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, RESOURCE_TYPES)) {
-            return encoderResultMapper(featureMethod, bytecode, returnType, ResourceContentsEncoderResultMapper.class);
+            return encoderResultMapper(featureMethod, bc, returnType, ResourceContentsEncoderResultMapper.class);
         } else {
-            return readResultMapper(bytecode,
+            return readResultMapper(bc,
                     createMapperClassSimpleName(RESOURCE, returnType, DotNames.RESOURCE_RESPONSE, c -> "Content"));
         }
     }
 
-    ResultHandle encoderResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+    Var encoderResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType,
             Class<?> mapperClazz) {
         // Arc.container().instance(mapperClazz).get();
-        ResultHandle container = bytecode
-                .invokeStaticMethod(MethodDescriptor.ofMethod(Arc.class, "container", ArcContainer.class));
-        ResultHandle instance = bytecode.invokeInterfaceMethod(MethodDescriptor.ofMethod(ArcContainer.class, "instance",
+        Expr container = bc.invokeStatic(MethodDesc.of(Arc.class, "container", ArcContainer.class));
+        Expr instance = bc.invokeInterface(MethodDesc.of(ArcContainer.class, "instance",
                 InstanceHandle.class, Class.class, Annotation[].class), container,
-                bytecode.loadClass(mapperClazz), bytecode.newArray(Annotation.class, 0));
-        ResultHandle mapper = bytecode.invokeInterfaceMethod(
-                MethodDescriptor.ofMethod(InstanceHandle.class, "get", Object.class),
-                instance);
+                Const.of(mapperClazz), bc.newArray(Annotation.class));
+        LocalVar mapper = bc.localVar("mapper", bc.invokeInterface(
+                MethodDesc.of(InstanceHandle.class, "get", Object.class),
+                instance));
         if (DotNames.UNI.equals(returnType.name())) {
             if (useUniList(featureMethod, returnType.asParameterizedType().arguments().get(0))) {
-                mapper = bytecode.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(mapperClazz, "uniList", Function.class), mapper);
+                bc.set(mapper, bc.invokeVirtual(
+                        MethodDesc.of(mapperClazz, "uniList", Function.class), mapper));
             } else {
-                mapper = bytecode.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(mapperClazz, "uni", Function.class), mapper);
+                bc.set(mapper, bc.invokeVirtual(
+                        MethodDesc.of(mapperClazz, "uni", Function.class), mapper));
             }
         } else if (useUniList(featureMethod, returnType)) {
-            mapper = bytecode.invokeVirtualMethod(
-                    MethodDescriptor.ofMethod(mapperClazz, "list", Function.class), mapper);
+            bc.set(mapper, bc.invokeVirtual(
+                    MethodDesc.of(mapperClazz, "list", Function.class), mapper));
         }
         return mapper;
     }
@@ -1671,27 +1735,27 @@ class McpServerProcessor {
                 && DotNames.LIST.equals(type.name());
     }
 
-    ResultHandle toolResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+    Var toolResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, TOOL_TYPES)) {
             if (featureMethod.isStructuredContent()) {
-                return encoderResultMapper(featureMethod, bytecode, returnType, ToolStructuredContentResultMapper.class);
+                return encoderResultMapper(featureMethod, bc, returnType, ToolStructuredContentResultMapper.class);
             } else {
-                return encoderResultMapper(featureMethod, bytecode, returnType, ToolEncoderResultMapper.class);
+                return encoderResultMapper(featureMethod, bc, returnType, ToolEncoderResultMapper.class);
             }
         } else {
-            return readResultMapper(bytecode, createMapperClassSimpleName(TOOL, returnType, DotNames.TOOL_RESPONSE, c -> {
+            return readResultMapper(bc, createMapperClassSimpleName(TOOL, returnType, DotNames.TOOL_RESPONSE, c -> {
                 return isContent(c) ? "Content" : "String";
             }));
         }
     }
 
-    ResultHandle promptResultMapper(FeatureMethodBuildItem featureMethod, BytecodeCreator bytecode,
+    Var promptResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType) {
         if (useEncoder(returnType, PROMPT_TYPES)) {
-            return encoderResultMapper(featureMethod, bytecode, returnType, PromptEncoderResultMapper.class);
+            return encoderResultMapper(featureMethod, bc, returnType, PromptEncoderResultMapper.class);
         } else {
-            return readResultMapper(bytecode,
+            return readResultMapper(bc,
                     createMapperClassSimpleName(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> "OfMessage"));
         }
     }
@@ -1735,9 +1799,9 @@ class McpServerProcessor {
                 || DotNames.AUDIO_CONTENT.equals(typeName);
     }
 
-    private ResultHandle readResultMapper(BytecodeCreator bytecode, String mapperClassSimpleName) {
-        String mapperClassName = ResultMappers.class.getName() + "$" + mapperClassSimpleName;
-        return bytecode.readStaticField(FieldDescriptor.of(mapperClassName, "INSTANCE", mapperClassName));
+    private Var readResultMapper(BlockCreator bc, String mapperClassSimpleName) {
+        ClassDesc mapperClassDesc = ClassDesc.of(ResultMappers.class.getName() + "$" + mapperClassSimpleName);
+        return Expr.staticField(FieldDesc.of(mapperClassDesc, "INSTANCE", mapperClassDesc));
     }
 
     private static ExecutionModel executionModel(MethodInfo method, TransformedAnnotationsBuildItem transformedAnnotations) {
