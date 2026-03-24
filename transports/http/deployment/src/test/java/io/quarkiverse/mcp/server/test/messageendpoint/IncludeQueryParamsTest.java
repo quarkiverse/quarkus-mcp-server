@@ -44,7 +44,7 @@ public class IncludeQueryParamsTest extends McpServerTest {
         client.when()
                 .toolsCall("queryParams", toolResponse -> {
                     assertFalse(toolResponse.isError());
-                    assertQuery(toolResponse.content().get(0).asText().text());
+                    assertQuery(toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

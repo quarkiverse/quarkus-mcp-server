@@ -88,15 +88,15 @@ public class ToolDefaultValuesTest extends McpServerTest {
                     .toolsCall("alpha", toolResponse -> {
                         assertFalse(toolResponse.isError());
                         assertEquals("true::2::2::2::2.1::2.1::fooo::HOURS::PT5S::MyArg[price=10, names=[foo, bar, baz]]",
-                                toolResponse.content().get(0).asText().text());
+                                toolResponse.firstContent().asText().text());
                     })
                     .toolsCall("bravo", toolResponse -> {
                         assertFalse(toolResponse.isError());
-                        assertEquals("true", toolResponse.content().get(0).asText().text());
+                        assertEquals("true", toolResponse.firstContent().asText().text());
                     })
                     .toolsCall("charlie", toolResponse -> {
                         assertFalse(toolResponse.isError());
-                        assertEquals("2.1", toolResponse.content().get(0).asText().text());
+                        assertEquals("2.1", toolResponse.firstContent().asText().text());
                     })
                     .thenAssertResults();
         }

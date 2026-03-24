@@ -43,7 +43,7 @@ public class SupportedArgumentTypesTest extends McpServerTest {
                         entry("obj1", new MyPojo("bar"))),
                         toolResult -> {
                             assertEquals("falsetrue182.0[1, 2][foo, bar][MyPojo[name=baz]][42]HOURSfooMyPojo[name=bar]",
-                                    toolResult.content().get(0).asText().text());
+                                    toolResult.firstContent().asText().text());
                         })
                 .thenAssertResults();
     }

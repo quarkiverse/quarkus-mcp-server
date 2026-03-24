@@ -27,13 +27,13 @@ public class LoggingTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.TUESDAY), response -> {
-                    assertEquals("tuesday:INFO", response.content().get(0).asText().text());
+                    assertEquals("tuesday:INFO", response.firstContent().asText().text());
                 })
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
-                    assertEquals("monday:INFO", response.content().get(0).asText().text());
+                    assertEquals("monday:INFO", response.firstContent().asText().text());
                 })
                 .toolsCall("charlie", Map.of("day", DayOfWeek.WEDNESDAY), response -> {
-                    assertEquals("wednesday:INFO", response.content().get(0).asText().text());
+                    assertEquals("wednesday:INFO", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
 

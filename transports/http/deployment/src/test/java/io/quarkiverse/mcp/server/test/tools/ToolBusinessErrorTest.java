@@ -33,15 +33,15 @@ public class ToolBusinessErrorTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
                     assertTrue(r.isError());
-                    assertEquals("Business error", r.content().get(0).asText().text());
+                    assertEquals("Business error", r.firstContent().asText().text());
                 })
                 .toolsCall("charlie", r -> {
                     assertTrue(r.isError());
-                    assertEquals("java.lang.IllegalArgumentException: I am not ready!", r.content().get(0).asText().text());
+                    assertEquals("java.lang.IllegalArgumentException: I am not ready!", r.firstContent().asText().text());
                 })
                 .toolsCall("delta", Map.of("price", 10), r -> {
                     assertTrue(r.isError());
-                    assertEquals("java.lang.NullPointerException: I am null!", r.content().get(0).asText().text());
+                    assertEquals("java.lang.NullPointerException: I am null!", r.firstContent().asText().text());
                 })
                 .toolsCall("echo")
                 .withErrorAssert(error -> {

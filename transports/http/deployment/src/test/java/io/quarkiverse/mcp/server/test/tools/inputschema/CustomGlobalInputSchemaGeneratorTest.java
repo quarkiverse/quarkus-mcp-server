@@ -57,15 +57,15 @@ public class CustomGlobalInputSchemaGeneratorTest extends McpServerTest {
                 })
                 .toolsCall("alpha", Map.of("size", 5), toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":5}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":5}", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("bravo", toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":10}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("charlie", toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":10}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

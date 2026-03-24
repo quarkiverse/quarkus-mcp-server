@@ -36,7 +36,7 @@ public class QueryParamsNotIncludedByDefaultTest extends McpServerTest {
 
         client.when()
                 .toolsCall("queryParams", r -> {
-                    String text4 = r.content().get(0).asText().text();
+                    String text4 = r.firstContent().asText().text();
                     assertFalse(text4.contains("foo=1"));
                     assertFalse(text4.contains("bar=2"));
                     // HttpServerRequest#params() also contains path params

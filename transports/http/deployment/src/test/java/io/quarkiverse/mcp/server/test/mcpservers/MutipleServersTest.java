@@ -84,11 +84,11 @@ public class MutipleServersTest extends McpServerTest {
 
         client.whenBatch()
                 // tools
-                .toolsCall("alpha", r -> assertEquals("1", r.content().get(0).asText().text()))
+                .toolsCall("alpha", r -> assertEquals("1", r.firstContent().asText().text()))
                 .toolsCall("bravo").withErrorAssert(e -> assertEquals("Invalid tool name: bravo", e.message())).send()
                 .toolsCall("charlie").withErrorAssert(e -> assertEquals("Invalid tool name: charlie", e.message())).send()
-                .toolsCall("delta", r -> assertEquals("4", r.content().get(0).asText().text()))
-                .toolsCall("echo", r -> assertEquals("5", r.content().get(0).asText().text()))
+                .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
+                .toolsCall("echo", r -> assertEquals("5", r.firstContent().asText().text()))
                 .toolsCall("foxtrot").withErrorAssert(e -> assertEquals("Invalid tool name: foxtrot", e.message())).send()
                 // prompts
                 .promptsGet("alphaPrompt", r -> assertEquals("1", r.messages().get(0).content().asText().text()))

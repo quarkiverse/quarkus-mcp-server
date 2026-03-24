@@ -43,7 +43,7 @@ public class MultipleServersActiveTest extends McpServerTest {
 
         client.when()
                 .toolsCall("alpha", response -> {
-                    assertEquals("1", response.content().get(0).asText().text());
+                    assertEquals("1", response.firstContent().asText().text());
                 })
                 .toolsCall("bravo")
                 .withErrorAssert(error -> {
@@ -67,7 +67,7 @@ public class MultipleServersActiveTest extends McpServerTest {
 
         client.when()
                 .toolsCall("bravo", response -> {
-                    assertEquals("2", response.content().get(0).asText().text());
+                    assertEquals("2", response.firstContent().asText().text());
                 })
                 .toolsCall("alpha")
                 .withErrorAssert(error -> {
@@ -91,7 +91,7 @@ public class MultipleServersActiveTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", response -> {
-                    assertEquals("3", response.content().get(0).asText().text());
+                    assertEquals("3", response.firstContent().asText().text());
                 })
                 .toolsCall("alpha")
                 .withErrorAssert(error -> {

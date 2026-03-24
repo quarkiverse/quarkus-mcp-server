@@ -40,7 +40,7 @@ public class ToolsSchemaValidationOlderVersionTest extends McpServerTest {
                 .connect();
         client.when()
                 .toolsCall("bravo", Map.of("price", 42), toolResponse -> {
-                    assertEquals("foo42", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo42", toolResponse.firstContent().asText().text());
                 })
                 // Send a tools/call request without the required "params" field
                 .message(client.newRequest("tools/call"))
@@ -65,7 +65,7 @@ public class ToolsSchemaValidationOlderVersionTest extends McpServerTest {
                     assertEquals("bravo", page.tools().get(0).name());
                 })
                 .toolsCall("bravo", Map.of("price", 7), toolResponse -> {
-                    assertEquals("foo7", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo7", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -34,14 +34,14 @@ public class MetaTest extends McpServerTest {
                 .withArguments(Map.of("count", 2))
                 .withMetadata(Map.of("count", 1))
                 .withAssert(toolResponse -> {
-                    assertEquals("foofoo", toolResponse.content().get(0).asText().text());
+                    assertEquals("foofoo", toolResponse.firstContent().asText().text());
                 })
                 .send()
                 .toolsCall("baz")
                 .withArguments(Map.of("count", 3))
                 .withMetadata(Map.of("count", 2))
                 .withAssert(toolResponse -> {
-                    assertEquals("bazbazbazbazbazbaz", toolResponse.content().get(0).asText().text());
+                    assertEquals("bazbazbazbazbazbaz", toolResponse.firstContent().asText().text());
                 })
                 .send()
                 .thenAssertResults();

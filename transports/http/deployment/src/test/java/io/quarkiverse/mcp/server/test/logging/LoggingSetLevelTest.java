@@ -47,7 +47,7 @@ public class LoggingSetLevelTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
-                    assertEquals("monday:INFO", response.content().get(0).asText().text());
+                    assertEquals("monday:INFO", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
 
@@ -63,10 +63,10 @@ public class LoggingSetLevelTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
-                    assertEquals("monday:CRITICAL", response.content().get(0).asText().text());
+                    assertEquals("monday:CRITICAL", response.firstContent().asText().text());
                 })
                 .toolsCall("charlie", Map.of("day", DayOfWeek.WEDNESDAY), response -> {
-                    assertEquals("wednesday:CRITICAL", response.content().get(0).asText().text());
+                    assertEquals("wednesday:CRITICAL", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
 

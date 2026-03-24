@@ -94,13 +94,13 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
                 .connect();
 
         client.when()
-                .toolsCall("alpha", r -> assertEquals("1", r.content().get(0).asText().text()))
-                .toolsCall("shared", r -> assertEquals("shared", r.content().get(0).asText().text()))
+                .toolsCall("alpha", r -> assertEquals("1", r.firstContent().asText().text()))
+                .toolsCall("shared", r -> assertEquals("shared", r.firstContent().asText().text()))
                 .toolsCall("bravo").withErrorAssert(e -> assertEquals("Invalid tool name: bravo", e.message())).send()
                 .toolsCall("charlie").withErrorAssert(e -> assertEquals("Invalid tool name: charlie", e.message())).send()
-                .toolsCall("delta", r -> assertEquals("4", r.content().get(0).asText().text()))
+                .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
                 .toolsCall("golf").withErrorAssert(e -> assertEquals("Invalid tool name: golf", e.message())).send()
-                .toolsCall("echo", r -> assertEquals("5", r.content().get(0).asText().text()))
+                .toolsCall("echo", r -> assertEquals("5", r.firstContent().asText().text()))
                 .toolsCall("foxtrot").withErrorAssert(e -> assertEquals("Invalid tool name: foxtrot", e.message())).send()
                 .promptsGet("alphaPrompt", r -> assertEquals("1", r.messages().get(0).content().asText().text()))
                 .promptsGet("sharedPrompt", r -> assertEquals("shared", r.messages().get(0).content().asText().text()))
@@ -122,11 +122,11 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
                 .connect();
 
         client.when()
-                .toolsCall("bravo", r -> assertEquals("2", r.content().get(0).asText().text()))
-                .toolsCall("shared", r -> assertEquals("shared", r.content().get(0).asText().text()))
+                .toolsCall("bravo", r -> assertEquals("2", r.firstContent().asText().text()))
+                .toolsCall("shared", r -> assertEquals("shared", r.firstContent().asText().text()))
                 .toolsCall("alpha").withErrorAssert(e -> assertEquals("Invalid tool name: alpha", e.message())).send()
-                .toolsCall("golf", r -> assertEquals("golf", r.content().get(0).asText().text()))
-                .toolsCall("foxtrot", r -> assertEquals("6", r.content().get(0).asText().text()))
+                .toolsCall("golf", r -> assertEquals("golf", r.firstContent().asText().text()))
+                .toolsCall("foxtrot", r -> assertEquals("6", r.firstContent().asText().text()))
                 .promptsGet("sharedPrompt", r -> assertEquals("shared", r.messages().get(0).content().asText().text()))
                 .promptsGet("bravoPrompt", r -> assertEquals("2", r.messages().get(0).content().asText().text()))
                 .promptsGet("alphaPrompt").withErrorAssert(e -> assertEquals("Invalid prompt name: alphaPrompt", e.message()))
@@ -146,9 +146,9 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
                 .connect();
 
         client.whenBatch()
-                .toolsCall("charlie", r -> assertEquals("3", r.content().get(0).asText().text()))
-                .toolsCall("delta", r -> assertEquals("4", r.content().get(0).asText().text()))
-                .toolsCall("golf", r -> assertEquals("golf", r.content().get(0).asText().text()))
+                .toolsCall("charlie", r -> assertEquals("3", r.firstContent().asText().text()))
+                .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
+                .toolsCall("golf", r -> assertEquals("golf", r.firstContent().asText().text()))
                 .toolsCall("alpha").withErrorAssert(e -> assertEquals("Invalid tool name: alpha", e.message())).send()
                 .toolsCall("shared").withErrorAssert(e -> assertEquals("Invalid tool name: shared", e.message())).send()
                 .promptsGet("charliePrompt", r -> assertEquals("3", r.messages().get(0).content().asText().text()))

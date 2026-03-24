@@ -30,35 +30,35 @@ public class InvalidArgumentTypeTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", true, "timeUnit", TimeUnit.DAYS, "isActive", true), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("Invalid argument [price] - value does not match the expected JSON type: number", text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", "hello"), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("Invalid argument [isActive] - value does not match the expected JSON type: boolean", text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", "AGES", "isActive", true), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("Invalid argument [timeUnit] - AGES is not an expected enum constant",
                             text);
                 })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", true),
                         toolResponse -> {
                             assertTrue(toolResponse.isError());
-                            String text = toolResponse.content().get(0).asText().text();
+                            String text = toolResponse.firstContent().asText().text();
                             assertEquals(
                                     "Invalid argument [pojo] - value does not match the expected JSON type: object",
                                     text);
                         })
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", new MyPojo("foo")),
                         toolResult -> {
-                            assertEquals("1DAYStrueMyPojo[name=foo]", toolResult.content().get(0).asText().text());
+                            assertEquals("1DAYStrueMyPojo[name=foo]", toolResult.firstContent().asText().text());
                         })
                 .toolsCall("charlie", Map.of("pojos", List.of(1, 2)), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals(
                             "Invalid argument [pojos] - unable to convert JSON array",
                             text);

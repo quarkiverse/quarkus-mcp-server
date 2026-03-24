@@ -28,10 +28,10 @@ public class ToolsSchemaValidationTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsCall("bravo", Map.of("price", 12), toolResponse -> {
-                    assertEquals("foo12", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo12", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("bravo", Map.of("price", 21), toolResponse -> {
-                    assertEquals("foo21", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo21", toolResponse.firstContent().asText().text());
                 })
                 // Send a tools/list request without the required "params" field
                 .message(client.newRequest("tools/list").put("params", new JsonObject().put("cursor", true)))

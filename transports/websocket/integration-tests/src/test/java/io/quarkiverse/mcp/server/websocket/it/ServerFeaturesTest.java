@@ -51,7 +51,7 @@ class ServerFeaturesTest {
 
                 })
                 .toolsCall("toLowerCase", Map.of("value", "LooP"), r -> {
-                    assertEquals("loop", r.content().get(0).asText().text());
+                    assertEquals("loop", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

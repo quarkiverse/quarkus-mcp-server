@@ -35,7 +35,7 @@ public class ToolStructuredContentCompatibilityModeTest extends McpServerTest {
                 })
                 .toolsCall("bravo", toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":10}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
                     assertNotNull(toolResponse.structuredContent());
                     if (toolResponse.structuredContent() instanceof JsonObject json) {
                         assertEquals(10, json.getInteger("val"));

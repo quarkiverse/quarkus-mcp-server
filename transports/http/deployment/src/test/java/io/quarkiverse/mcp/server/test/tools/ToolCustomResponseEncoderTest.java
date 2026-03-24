@@ -38,15 +38,15 @@ public class ToolCustomResponseEncoderTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
                     assertTrue(r.isError());
-                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.content().get(0).asText().text());
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.firstContent().asText().text());
                 })
                 .toolsCall("bravos", Map.of("price", 10), r -> {
                     assertTrue(r.isError());
-                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.content().get(0).asText().text());
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.firstContent().asText().text());
                 })
                 .toolsCall("deltas", Map.of("price", 10), r -> {
                     assertFalse(r.isError());
-                    assertEquals("[{\"name\":\"foo\",\"sum\":20,\"valid\":true}]", r.content().get(0).asText().text());
+                    assertEquals("[{\"name\":\"foo\",\"sum\":20,\"valid\":true}]", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -61,7 +61,7 @@ public class InitCheckSuccessTest extends McpServerTest {
             if (!"foo".equals(request.getHeader("Mcp-Test"))) {
                 return InitialCheck.CheckResult.error("Mcp-Test header not set");
             }
-            return initialRequest.supportsSampling() ? InitialCheck.CheckResult.successs()
+            return initialRequest.supportsSampling() ? InitialCheck.CheckResult.success()
                     : InitialCheck.CheckResult.error("Sampling not supported");
         }
 

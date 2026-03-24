@@ -62,7 +62,7 @@ public class ProgrammaticToolTest extends McpServerTest {
                     assertEquals("ALPHA", page.tools().get(0).title());
                     assertEquals("ALPHA", page.tools().get(0).meta().getString("upperCaseName"));
                 })
-                .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.content().get(0).asText().text()))
+                .toolsCall("alpha", Map.of("foo", 2), r -> assertEquals("22", r.firstContent().asText().text()))
                 .thenAssertResults();
 
         ToolArguments lastArgs = MyTools.lastArgs.get();
@@ -78,7 +78,7 @@ public class ProgrammaticToolTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> assertEquals(2, page.size()))
-                .toolsCall("bravo", Map.of("foo", 3), r -> assertEquals("33", r.content().get(0).asText().text()))
+                .toolsCall("bravo", Map.of("foo", 3), r -> assertEquals("33", r.firstContent().asText().text()))
                 .thenAssertResults();
 
         assertEquals("notifications/tools/list_changed",
@@ -88,7 +88,7 @@ public class ProgrammaticToolTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> assertEquals(1, page.size()))
-                .toolsCall("bravo", Map.of("foo", 4), r -> assertEquals("34", r.content().get(0).asText().text()))
+                .toolsCall("bravo", Map.of("foo", 4), r -> assertEquals("34", r.firstContent().asText().text()))
                 .thenAssertResults();
     }
 

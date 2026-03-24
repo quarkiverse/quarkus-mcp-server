@@ -27,7 +27,7 @@ public class MissingToolArgumentTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    assertEquals("Missing required argument: price", toolResponse.content().get(0).asText().text());
+                    assertEquals("Missing required argument: price", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

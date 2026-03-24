@@ -74,18 +74,18 @@ public class SimpleStreamableTest extends McpServerTest {
                     assertNotNull(dayProperty);
                     assertEquals("string", dayProperty.getString("type"));
                 })
-                .toolsCall("alpha", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                .toolsCall("alpha", Map.of("price", 1), r -> assertEquals("Hello 1!", r.firstContent().asText().text()))
                 .toolsCall("uni_alpha", Map.of("uni_price", 1),
-                        r -> assertEquals("Hello 1.0!", r.content().get(0).asText().text()))
-                .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
-                .toolsCall("uni_bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.content().get(0).asText().text()))
+                        r -> assertEquals("Hello 1.0!", r.firstContent().asText().text()))
+                .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.firstContent().asText().text()))
+                .toolsCall("uni_bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.firstContent().asText().text()))
                 .toolsCall("charlie", Map.of("day", DayOfWeek.FRIDAY),
-                        r -> assertEquals("charlie1", r.content().get(0).asText().text()))
+                        r -> assertEquals("charlie1", r.firstContent().asText().text()))
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY),
-                        r -> assertEquals("charlie11", r.content().get(0).asText().text()))
-                .toolsCall("uni_charlie", r -> assertEquals("charlie2", r.content().get(0).asText().text()))
-                .toolsCall("list_charlie", r -> assertEquals("charlie3", r.content().get(0).asText().text()))
-                .toolsCall("uni_list_charlie", r -> assertEquals("charlie4", r.content().get(0).asText().text()))
+                        r -> assertEquals("charlie11", r.firstContent().asText().text()))
+                .toolsCall("uni_charlie", r -> assertEquals("charlie2", r.firstContent().asText().text()))
+                .toolsCall("list_charlie", r -> assertEquals("charlie3", r.firstContent().asText().text()))
+                .toolsCall("uni_list_charlie", r -> assertEquals("charlie4", r.firstContent().asText().text()))
                 .thenAssertResults();
     }
 

@@ -49,7 +49,7 @@ public class SubsidiarySseTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", toolResponse -> {
-                    assertEquals("charlie!", toolResponse.content().get(0).asText().text());
+                    assertEquals("charlie!", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

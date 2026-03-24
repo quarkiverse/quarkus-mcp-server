@@ -30,10 +30,10 @@ public class RawMessageTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsCall("foo", Map.of("count", 2), toolResponse -> {
-                    assertEquals("foofoofoofoo", toolResponse.content().get(0).asText().text());
+                    assertEquals("foofoofoofoo", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("baz", Map.of("count", 3), toolResponse -> {
-                    assertEquals("bazbazbazbazbazbazbazbazbaz", toolResponse.content().get(0).asText().text());
+                    assertEquals("bazbazbazbazbazbazbazbazbaz", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

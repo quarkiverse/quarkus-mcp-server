@@ -48,7 +48,7 @@ public class InitialRequestTest extends McpServerTest {
         client.when()
                 .toolsCall("testInitRequest", r -> {
                     assertFalse(r.isError());
-                    assertEquals("ok", r.content().get(0).asText().text());
+                    assertEquals("ok", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -35,10 +35,10 @@ public class ToolComplexArgumentTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
                 .toolsCall("alpha", Map.of("myArg", new MyArg(10, List.of("foo", "bar"))), r -> {
-                    assertEquals("MyArg[price=10, names=[foo, bar]]", r.content().get(0).asText().text());
+                    assertEquals("MyArg[price=10, names=[foo, bar]]", r.firstContent().asText().text());
                 })
                 .toolsCall("alphas", Map.of("myArgs", List.of(new MyArg(10, List.of("foo", "bar")))), r -> {
-                    assertEquals("[MyArg[price=10, names=[foo, bar]]]", r.content().get(0).asText().text());
+                    assertEquals("[MyArg[price=10, names=[foo, bar]]]", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -111,19 +111,19 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
 
         client.when()
                 // alpha is bound to default → accessible
-                .toolsCall("alpha", r -> assertEquals("1", r.content().get(0).asText().text()))
+                .toolsCall("alpha", r -> assertEquals("1", r.firstContent().asText().text()))
                 // shared is bound to default AND bravo → accessible from default
-                .toolsCall("shared", r -> assertEquals("shared", r.content().get(0).asText().text()))
+                .toolsCall("shared", r -> assertEquals("shared", r.firstContent().asText().text()))
                 // bravo is bound to bravo only → NOT accessible from default
                 .toolsCall("bravo").withErrorAssert(e -> assertEquals("Invalid tool name: bravo", e.message())).send()
                 // charlie is bound to charlie only → NOT accessible from default
                 .toolsCall("charlie").withErrorAssert(e -> assertEquals("Invalid tool name: charlie", e.message())).send()
                 // delta is bound to charlie AND default → accessible from default
-                .toolsCall("delta", r -> assertEquals("4", r.content().get(0).asText().text()))
+                .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
                 // golf is bound to charlie AND bravo → NOT accessible from default
                 .toolsCall("golf").withErrorAssert(e -> assertEquals("Invalid tool name: golf", e.message())).send()
                 // echo (programmatic) is bound to default → accessible
-                .toolsCall("echo", r -> assertEquals("5", r.content().get(0).asText().text()))
+                .toolsCall("echo", r -> assertEquals("5", r.firstContent().asText().text()))
                 // foxtrot (programmatic) is bound to bravo → NOT accessible from default
                 .toolsCall("foxtrot").withErrorAssert(e -> assertEquals("Invalid tool name: foxtrot", e.message())).send()
                 // prompts
@@ -151,15 +151,15 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
 
         client.when()
                 // bravo is bound to bravo → accessible
-                .toolsCall("bravo", r -> assertEquals("2", r.content().get(0).asText().text()))
+                .toolsCall("bravo", r -> assertEquals("2", r.firstContent().asText().text()))
                 // shared is bound to default AND bravo → accessible from bravo
-                .toolsCall("shared", r -> assertEquals("shared", r.content().get(0).asText().text()))
+                .toolsCall("shared", r -> assertEquals("shared", r.firstContent().asText().text()))
                 // alpha is bound to default only → NOT accessible from bravo
                 .toolsCall("alpha").withErrorAssert(e -> assertEquals("Invalid tool name: alpha", e.message())).send()
                 // golf is bound to charlie AND bravo → accessible from bravo
-                .toolsCall("golf", r -> assertEquals("golf", r.content().get(0).asText().text()))
+                .toolsCall("golf", r -> assertEquals("golf", r.firstContent().asText().text()))
                 // foxtrot (programmatic) is bound to bravo → accessible
-                .toolsCall("foxtrot", r -> assertEquals("6", r.content().get(0).asText().text()))
+                .toolsCall("foxtrot", r -> assertEquals("6", r.firstContent().asText().text()))
                 // prompts
                 .promptsGet("sharedPrompt", r -> assertEquals("shared", r.messages().get(0).content().asText().text()))
                 .promptsGet("bravoPrompt", r -> assertEquals("2", r.messages().get(0).content().asText().text()))
@@ -182,11 +182,11 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
 
         client.when()
                 // charlie is bound to charlie → accessible
-                .toolsCall("charlie", r -> assertEquals("3", r.content().get(0).asText().text()))
+                .toolsCall("charlie", r -> assertEquals("3", r.firstContent().asText().text()))
                 // delta is bound to charlie AND default → accessible from charlie
-                .toolsCall("delta", r -> assertEquals("4", r.content().get(0).asText().text()))
+                .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
                 // golf is bound to charlie AND bravo → accessible from charlie
-                .toolsCall("golf", r -> assertEquals("golf", r.content().get(0).asText().text()))
+                .toolsCall("golf", r -> assertEquals("golf", r.firstContent().asText().text()))
                 // alpha is bound to default only → NOT accessible from charlie
                 .toolsCall("alpha").withErrorAssert(e -> assertEquals("Invalid tool name: alpha", e.message())).send()
                 // shared is bound to default AND bravo → NOT accessible from charlie
