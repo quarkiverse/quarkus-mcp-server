@@ -57,7 +57,7 @@ public abstract class AbstractRootsTest extends McpServerTest {
 
         client.when()
                 .toolsCall("firstRoot", r -> {
-                    assertEquals("file:///home/file", r.content().get(0).asText().text());
+                    assertEquals("file:///home/file", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
 
@@ -81,7 +81,7 @@ public abstract class AbstractRootsTest extends McpServerTest {
 
         client.when()
                 .toolsCall("firstRoot", r -> {
-                    assertEquals("file:///home/directory", r.content().get(0).asText().text());
+                    assertEquals("file:///home/directory", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

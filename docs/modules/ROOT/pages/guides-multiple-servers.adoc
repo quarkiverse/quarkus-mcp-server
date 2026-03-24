@@ -338,7 +338,7 @@ public void testDefaultServer() {
 
     client.when()
         .toolsCall("defaultTool", response ->
-            assertEquals("Default", response.content().get(0).asText().text()))
+            assertEquals("Default", response.firstContent().asText().text()))
         .toolsCall("bravoTool") // <2>
         .withErrorAssert(error ->
             assertEquals("Invalid tool name: bravoTool", error.message()))
@@ -355,7 +355,7 @@ public void testBravoServer() {
 
     client.when()
         .toolsCall("bravoTool", response ->
-            assertEquals("Bravo", response.content().get(0).asText().text()))
+            assertEquals("Bravo", response.firstContent().asText().text()))
         .toolsCall("defaultTool") // <4>
         .withErrorAssert(error ->
             assertEquals("Invalid tool name: defaultTool", error.message()))

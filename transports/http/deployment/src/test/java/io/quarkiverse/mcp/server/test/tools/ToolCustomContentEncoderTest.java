@@ -33,7 +33,7 @@ public class ToolCustomContentEncoderTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
                     assertFalse(r.isError());
-                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.content().get(0).asText().text());
+                    assertEquals("MyObject[name=foo, sum=20, valid=true]", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

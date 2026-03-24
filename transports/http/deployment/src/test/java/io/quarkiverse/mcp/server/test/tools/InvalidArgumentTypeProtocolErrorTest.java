@@ -63,7 +63,7 @@ public class InvalidArgumentTypeProtocolErrorTest extends McpServerTest {
                 .send()
                 .toolsCall("bravo", Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", true, "pojo", new MyPojo("foo")),
                         toolResult -> {
-                            assertEquals("1DAYStrueMyPojo[name=foo]", toolResult.content().get(0).asText().text());
+                            assertEquals("1DAYStrueMyPojo[name=foo]", toolResult.firstContent().asText().text());
                         })
                 .toolsCall("charlie")
                 .withArguments(Map.of("pojos", List.of(1, 2)))

@@ -35,7 +35,7 @@ public class CustomConstraintViolationConverterTest extends McpServerTest {
                 .withArguments(Map.of("price", 1))
                 .withAssert(toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    assertEquals("must be greater than or equal to 5", toolResponse.content().get(0).asText().text());
+                    assertEquals("must be greater than or equal to 5", toolResponse.firstContent().asText().text());
                 })
                 .send()
                 .thenAssertResults();

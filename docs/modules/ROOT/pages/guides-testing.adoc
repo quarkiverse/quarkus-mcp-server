@@ -132,7 +132,7 @@ public void testToolCall() {
             Map.of("name", "Alice"), // <1>
             response -> {
                 assertFalse(response.isError()); // <2>
-                TextContent content = response.content().get(0).asText(); // <3>
+                TextContent content = response.firstContent().asText(); // <3>
                 assertEquals("Hello, Alice!", content.text());
             })
         .thenAssertResults();
@@ -157,7 +157,7 @@ public void testToolError() {
             Map.of("a", 10, "b", 0), // <1>
             response -> {
                 assertTrue(response.isError()); // <2>
-                String errorText = response.content().get(0).asText().text();
+                String errorText = response.firstContent().asText().text();
                 assertTrue(errorText.contains("division by zero")); // <3>
             })
         .thenAssertResults();
@@ -314,11 +314,11 @@ public void testBatchOperations() {
 
     client.when()
         .toolsCall("add", Map.of("a", 5, "b", 3),
-            r -> assertEquals("8", r.content().get(0).asText().text()))
+            r -> assertEquals("8", r.firstContent().asText().text()))
         .toolsCall("multiply", Map.of("a", 5, "b", 3),
-            r -> assertEquals("15", r.content().get(0).asText().text()))
+            r -> assertEquals("15", r.firstContent().asText().text()))
         .toolsCall("subtract", Map.of("a", 5, "b", 3),
-            r -> assertEquals("2", r.content().get(0).asText().text()))
+            r -> assertEquals("2", r.firstContent().asText().text()))
         .thenAssertResults(); // <1>
 }
 ----
@@ -470,7 +470,7 @@ public void testMetadata() {
             assertEquals(100, meta.getInteger("price"));
         })
         .toolsCall("alpha", Map.of("price", 1), response -> {
-            TextContent content = response.content().get(0).asText();
+            TextContent content = response.firstContent().asText();
             assertEquals(1, content._meta().size()); // <2>
 
             Map<MetaKey, Object> responseMeta = response._meta(); // <3>

@@ -28,7 +28,7 @@ public abstract class ProgressTest extends McpServerTest {
                 .withMetadata(Map.of("progressToken", token))
                 .withAssert(toolResponse -> {
                     assertFalse(toolResponse.isError());
-                    assertEquals("ok", toolResponse.content().get(0).asText().text());
+                    assertEquals("ok", toolResponse.firstContent().asText().text());
                 })
                 .send()
                 .thenAssertResults();

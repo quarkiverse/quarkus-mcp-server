@@ -74,7 +74,7 @@ public class FilterTest extends McpServerTest {
                 .send()
                 .toolsCall("bravo", Map.of("price", 10), toolResponse -> {
                     assertFalse(toolResponse.isError());
-                    assertEquals("30", toolResponse.content().get(0).asText().text());
+                    assertEquals("30", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

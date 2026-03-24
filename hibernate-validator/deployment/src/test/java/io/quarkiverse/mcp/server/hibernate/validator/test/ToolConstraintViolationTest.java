@@ -42,17 +42,17 @@ public class ToolConstraintViolationTest extends McpServerTest {
                 .toolsCall("bravo", Map.of("price", 1), toolResponse -> {
                     assertTrue(toolResponse.isError());
                     assertEquals("bravo.price: must be greater than or equal to 5",
-                            toolResponse.content().get(0).asText().text());
+                            toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("charlie", Map.of("price", 1, "name", ""), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertTrue(text.contains("charlie.price: must be greater than or equal to 5"), text);
                     assertTrue(text.contains("charlie.name: must not be blank"), text);
                 })
                 .toolsCall("delta", Map.of("person", Map.of("age", 5)), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("delta.person.age: must be greater than or equal to 10", text);
                 })
                 .toolsList(page -> {

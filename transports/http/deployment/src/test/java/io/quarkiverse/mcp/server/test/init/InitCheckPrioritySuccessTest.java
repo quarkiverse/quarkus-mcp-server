@@ -39,7 +39,7 @@ public class InitCheckPrioritySuccessTest extends McpServerTest {
         @Override
         public Uni<CheckResult> perform(InitialRequest initialRequest) {
             CHECKS.add(getClass().getSimpleName());
-            return InitialCheck.CheckResult.successs();
+            return InitialCheck.CheckResult.success();
         }
 
     }
@@ -51,7 +51,7 @@ public class InitCheckPrioritySuccessTest extends McpServerTest {
         @Override
         public Uni<CheckResult> perform(InitialRequest initialRequest) {
             AlphaCheck.CHECKS.add(getClass().getSimpleName());
-            return InitialCheck.CheckResult.successs();
+            return InitialCheck.CheckResult.success();
         }
 
     }

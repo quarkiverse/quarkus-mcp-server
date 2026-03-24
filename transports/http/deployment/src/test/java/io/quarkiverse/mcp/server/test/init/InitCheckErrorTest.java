@@ -70,7 +70,7 @@ public class InitCheckErrorTest extends McpServerTest {
             if (!"foo".equals(request.getHeader("Mcp-Test"))) {
                 return InitialCheck.CheckResult.error("Mcp-Test header not set");
             }
-            return InitialCheck.CheckResult.successs();
+            return InitialCheck.CheckResult.success();
         }
 
     }

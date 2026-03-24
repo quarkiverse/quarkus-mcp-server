@@ -56,10 +56,10 @@ class ServerFeaturesTest {
 
                 })
                 .toolsCall("toLowerCase", Map.of("value", "LooP"), r -> {
-                    assertEquals("loop", r.content().get(0).asText().text());
+                    assertEquals("loop", r.firstContent().asText().text());
                 })
                 .toolsCall("answer", Map.of("question", "Are you ok?"), r -> {
-                    assertEquals("{\"value\":\"are you ok?\"}", r.content().get(0).asText().text());
+                    assertEquals("{\"value\":\"are you ok?\"}", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

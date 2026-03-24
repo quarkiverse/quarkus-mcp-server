@@ -35,7 +35,7 @@ public class NotificationsSchemaValidationTest extends McpServerTest {
         // We test here that valid notifications are accepted without issues.
         client.when()
                 .toolsCall("dummy", response -> {
-                    assertEquals("dummy", response.content().get(0).asText().text());
+                    assertEquals("dummy", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }
@@ -55,7 +55,7 @@ public class NotificationsSchemaValidationTest extends McpServerTest {
         // Verify the server still works after receiving the notification
         client.when()
                 .toolsCall("dummy", response -> {
-                    assertEquals("dummy", response.content().get(0).asText().text());
+                    assertEquals("dummy", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }
@@ -71,7 +71,7 @@ public class NotificationsSchemaValidationTest extends McpServerTest {
         // Verify the server still works after receiving the notification
         client.when()
                 .toolsCall("dummy", response -> {
-                    assertEquals("dummy", response.content().get(0).asText().text());
+                    assertEquals("dummy", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -47,11 +47,11 @@ public class CustomInputSchemaGeneratorTest extends McpServerTest {
                 })
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":10}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("bravo", toolResponse -> {
                     assertEquals(1, toolResponse.content().size());
-                    assertEquals("{\"val\":10}", toolResponse.content().get(0).asText().text());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

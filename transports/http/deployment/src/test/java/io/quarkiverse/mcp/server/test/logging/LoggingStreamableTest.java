@@ -28,7 +28,7 @@ public class LoggingStreamableTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.MONDAY), response -> {
-                    assertEquals("monday:INFO", response.content().get(0).asText().text());
+                    assertEquals("monday:INFO", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
 
@@ -37,7 +37,7 @@ public class LoggingStreamableTest extends McpServerTest {
 
         client.when()
                 .toolsCall("charlie", Map.of("day", DayOfWeek.WEDNESDAY), response -> {
-                    assertEquals("wednesday:INFO", response.content().get(0).asText().text());
+                    assertEquals("wednesday:INFO", response.firstContent().asText().text());
                 })
                 .thenAssertResults();
 

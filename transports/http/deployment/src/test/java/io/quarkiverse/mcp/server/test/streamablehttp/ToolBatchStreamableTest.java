@@ -28,10 +28,10 @@ public class ToolBatchStreamableTest extends McpServerTest {
 
         client.whenBatch()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
-                    assertEquals("420", r.content().get(0).asText().text());
+                    assertEquals("420", r.firstContent().asText().text());
                 })
                 .toolsCall("bravo", Map.of("price", 100), r -> {
-                    assertEquals("4200", r.content().get(0).asText().text());
+                    assertEquals("4200", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
 

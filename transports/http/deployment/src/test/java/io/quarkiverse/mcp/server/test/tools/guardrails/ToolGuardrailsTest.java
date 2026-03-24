@@ -62,7 +62,7 @@ public class ToolGuardrailsTest extends McpServerTest {
                 })
                 .toolsCall("mail", Map.of("to", "wrong_@", "body", "hey"), toolResponse -> {
                     assertTrue(toolResponse.isError());
-                    assertEquals("Invalid email format: wrong_@", toolResponse.content().get(0).asText().text());
+                    assertEquals("Invalid email format: wrong_@", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("charlie", Map.of("age", 10), toolResponse -> {
                     assertFalse(toolResponse.isError());

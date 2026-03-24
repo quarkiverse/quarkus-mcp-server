@@ -50,7 +50,7 @@ public class DefaultServerDisabledTest extends McpServerTest {
 
         client.when()
                 .toolsCall("bravo", response -> {
-                    assertEquals("2", response.content().get(0).asText().text());
+                    assertEquals("2", response.firstContent().asText().text());
                 })
                 .toolsCall("alpha")
                 .withErrorAssert(error -> {

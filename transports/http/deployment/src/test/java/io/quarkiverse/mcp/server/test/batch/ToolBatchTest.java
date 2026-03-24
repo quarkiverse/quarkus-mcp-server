@@ -40,12 +40,12 @@ public class ToolBatchTest extends McpServerTest {
         Set<String> fooIds = new HashSet<>();
         client.whenBatch()
                 .toolsCall("bravo", Map.of("price", 10), toolResponse -> {
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("420", text.substring(0, text.indexOf("::")));
                     fooIds.add(text.substring(text.indexOf("::") + 2));
                 })
                 .toolsCall("bravo", Map.of("price", 100), toolResponse -> {
-                    String text = toolResponse.content().get(0).asText().text();
+                    String text = toolResponse.firstContent().asText().text();
                     assertEquals("4200", text.substring(0, text.indexOf("::")));
                     fooIds.add(text.substring(text.indexOf("::") + 2));
                 })

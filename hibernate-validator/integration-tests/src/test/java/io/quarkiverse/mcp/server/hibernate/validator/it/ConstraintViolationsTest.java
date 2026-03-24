@@ -34,7 +34,7 @@ class ConstraintViolationsTest {
                 .toolsCall("bravo", Map.of("price", 1, "name", ""), toolResponse -> {
                     assertTrue(toolResponse.isError());
                     assertEquals("bravo.price: must be greater than or equal to 5",
-                            toolResponse.content().get(0).asText().text());
+                            toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

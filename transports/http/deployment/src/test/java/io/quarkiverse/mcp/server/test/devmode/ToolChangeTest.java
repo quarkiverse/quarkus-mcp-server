@@ -28,7 +28,7 @@ public class ToolChangeTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
                     assertTrue(r.isError());
-                    assertEquals("Business error", r.content().get(0).asText().text());
+                    assertEquals("Business error", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
         client.disconnect();
@@ -46,7 +46,7 @@ public class ToolChangeTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 10), r -> {
                     assertFalse(r.isError());
-                    assertEquals("420", r.content().get(0).asText().text());
+                    assertEquals("420", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -34,7 +34,7 @@ public class NumberArgumentTest extends McpServerTest {
                         .put("charlie", 11)
                         .put("echo", 42.1).getMap(), r -> {
                             assertFalse(r.isError());
-                            assertEquals("10:1:10.1:20.1:11:42.1", r.content().get(0).asText().text());
+                            assertEquals("10:1:10.1:20.1:11:42.1", r.firstContent().asText().text());
                         })
                 .thenAssertResults();
     }

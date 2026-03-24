@@ -47,11 +47,11 @@ public class ToolSecurityTest extends McpServerTest {
         client.when()
                 // Test injected SecurityIdentity
                 .toolsCall("bravo", toolResponse -> {
-                    assertEquals("bob", toolResponse.content().get(0).asText().text());
+                    assertEquals("bob", toolResponse.firstContent().asText().text());
                 })
                 .basicAuth("alice", "alice")
                 .toolsCall("bravo", toolResponse -> {
-                    assertEquals("alice", toolResponse.content().get(0).asText().text());
+                    assertEquals("alice", toolResponse.firstContent().asText().text());
                 })
                 .noBasicAuth()
                 // Test @Authenticated declared on class
@@ -79,7 +79,7 @@ public class ToolSecurityTest extends McpServerTest {
                 .send()
                 .basicAuth("alice", "alice")
                 .toolsCall("alpha", Map.of("price", 2), toolResponse -> {
-                    assertEquals("foofoo", toolResponse.content().get(0).asText().text());
+                    assertEquals("foofoo", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

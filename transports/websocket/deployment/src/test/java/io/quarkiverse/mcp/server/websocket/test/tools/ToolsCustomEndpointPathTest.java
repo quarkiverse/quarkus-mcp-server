@@ -32,10 +32,10 @@ public class ToolsCustomEndpointPathTest extends McpServerTest {
                 .build().connect();
         client.when()
                 .toolsCall("bravo", Map.of("price", 12), toolResponse -> {
-                    assertEquals("foo12", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo12", toolResponse.firstContent().asText().text());
                 })
                 .toolsCall("bravo", Map.of("price", 21), toolResponse -> {
-                    assertEquals("foo21", toolResponse.content().get(0).asText().text());
+                    assertEquals("foo21", toolResponse.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

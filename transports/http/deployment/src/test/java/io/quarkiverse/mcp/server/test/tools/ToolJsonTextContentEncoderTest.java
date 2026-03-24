@@ -29,19 +29,19 @@ public class ToolJsonTextContentEncoderTest extends McpServerTest {
         client.when()
                 .toolsCall("bravo", Map.of("price", 1), r -> {
                     assertFalse(r.isError());
-                    assertEquals("{\"name\":\"foo\",\"sum\":2,\"valid\":true}", r.content().get(0).asText().text());
+                    assertEquals("{\"name\":\"foo\",\"sum\":2,\"valid\":true}", r.firstContent().asText().text());
                 })
                 .toolsCall("uni_bravo", Map.of("price", 1), r -> {
                     assertFalse(r.isError());
-                    assertEquals("{\"name\":\"foo\",\"sum\":3,\"valid\":true}", r.content().get(0).asText().text());
+                    assertEquals("{\"name\":\"foo\",\"sum\":3,\"valid\":true}", r.firstContent().asText().text());
                 })
                 .toolsCall("list_bravo", Map.of("price", 1), r -> {
                     assertFalse(r.isError());
-                    assertEquals("{\"name\":\"foo\",\"sum\":4,\"valid\":true}", r.content().get(0).asText().text());
+                    assertEquals("{\"name\":\"foo\",\"sum\":4,\"valid\":true}", r.firstContent().asText().text());
                 })
                 .toolsCall("uni_list_bravo", Map.of("price", 1), r -> {
                     assertFalse(r.isError());
-                    assertEquals("{\"name\":\"foo\",\"sum\":5,\"valid\":true}", r.content().get(0).asText().text());
+                    assertEquals("{\"name\":\"foo\",\"sum\":5,\"valid\":true}", r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }
