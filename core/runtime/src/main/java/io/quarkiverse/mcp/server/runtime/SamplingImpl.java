@@ -19,7 +19,8 @@ class SamplingImpl implements Sampling {
 
     static SamplingImpl from(ArgumentProviders argProviders) {
         return new SamplingImpl(argProviders.connection(), argProviders.sender(),
-                argProviders.responseHandlers(), argProviders.responseHandlers().getSamplingTimeout(argProviders.serverName()));
+                argProviders.responseHandlers(), argProviders.responseHandlers().getSamplingTimeout(argProviders.serverName()),
+                argProviders.mcpTracing());
     }
 
     private final McpConnection connection;
@@ -30,11 +31,15 @@ class SamplingImpl implements Sampling {
 
     private final Duration timeout;
 
-    SamplingImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+    private final McpTracing mcpTracing;
+
+    SamplingImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout,
+            McpTracing mcpTracing) {
         this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
+        this.mcpTracing = mcpTracing;
     }
 
     @Override
@@ -127,7 +132,7 @@ class SamplingImpl implements Sampling {
             }
             return new SamplingRequestImpl(maxTokens, List.copyOf(messages), temperature, systemPrompt, includeContext,
                     modelPreferences, metadata, stopSequences,
-                    sender, responseHandlers, timeout);
+                    sender, responseHandlers, timeout, SamplingImpl.this.mcpTracing);
         }
 
     }

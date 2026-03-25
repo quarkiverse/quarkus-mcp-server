@@ -1,11 +1,156 @@
-= Observability and Metrics
+= Observability - Tracing and Metrics
 
 include::includes/attributes.adoc[]
 :diataxis-type: reference
 
-This reference documents the observability and metrics capabilities provided by the Quarkus MCP Server extension through https://micrometer.io/[Micrometer] integration.
+This reference documents the observability capabilities provided by the Quarkus MCP Server extension, including distributed tracing through https://opentelemetry.io/[OpenTelemetry] integration and metrics through https://micrometer.io/[Micrometer] integration.
 
-== Overview
+== Tracing
+
+The Quarkus MCP Server extension provides built-in distributed tracing when the Quarkus OpenTelemetry extension is present. The feature is disabled by default and must be explicitly enabled through configuration. The instrumentation follows the https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/[OpenTelemetry Semantic Conventions for MCP].
+
+Traces are created for:
+
+* All MCP protocol method calls (tools, prompts, resources, etc.)
+* Notifications (`notifications/initialized`, `notifications/roots/list_changed`, etc.)
+* Server-to-client callbacks (sampling, elicitation)
+
+=== Prerequisites
+
+The following dependency must be present to enable tracing:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-opentelemetry</artifactId>
+</dependency>
+----
+
+See the https://quarkus.io/guides/opentelemetry[Quarkus OpenTelemetry guide]  and the https://quarkus.io/guides/opentelemetry-tracing[Quarkus OpenTelemetry Tracing guide] for general setup, exporter, sampler, and other configurations.
+
+=== Configuration
+
+Tracing is controlled by the following configuration property:
+
+[source,properties]
+----
+quarkus.mcp.server.tracing.enabled=true
+----
+
+=== Span Naming
+
+Each MCP operation produces a `SERVER` span. The span name is the JSON-RPC method name, optionally followed by a resource identifier for specific operations:
+
+[cols="1,2"]
+|===
+| Method | Span Name
+
+| `tools/call`
+| `tools/call <tool-name>` (e.g., `tools/call toLowerCase`)
+
+| `prompts/get`
+| `prompts/get <prompt-name>` (e.g., `prompts/get code_assist`)
+
+| `resources/read`
+| `resources/read`
+
+| `resources/subscribe`
+| `resources/subscribe`
+
+| `resources/unsubscribe`
+| `resources/unsubscribe`
+
+| All other methods
+| The JSON-RPC method name (e.g., `initialize`, `tools/list`, `ping`)
+|===
+
+=== Span Attributes
+
+==== Common Attributes
+
+All MCP spans include the following attributes:
+
+[cols="1,3"]
+|===
+| Attribute | Description
+
+| `mcp.method.name`
+| The JSON-RPC method name (e.g., `tools/call`, `prompts/get`)
+
+| `mcp.session.id`
+| The MCP connection/session identifier
+
+| `mcp.protocol.version`
+| The negotiated MCP protocol version (not available during `initialize`)
+
+| `rpc.jsonrpc.request_id`
+| The JSON-RPC request ID (only for requests, not for notifications)
+
+| `network.transport`
+| `tcp` for HTTP/WebSocket, `pipe` for stdio
+
+| `network.protocol.name`
+| `http` for HTTP transport (null for stdio)
+
+| `network.protocol.version`
+| `2` for Streamable HTTP (null for WebSocket and stdio)
+|===
+
+==== Method-Specific Attributes
+
+Some methods add additional attributes:
+
+[cols="1,1,3"]
+|===
+| Method | Attribute | Description
+
+| `tools/call`
+| `gen_ai.tool.name`
+| The name of the tool being called
+
+| `tools/call`
+| `gen_ai.operation.name`
+| Always set to `execute_tool`
+
+| `prompts/get`
+| `gen_ai.prompt.name`
+| The name of the prompt being retrieved
+
+| `resources/read`, `resources/subscribe`, `resources/unsubscribe`
+| `mcp.resource.uri`
+| The URI of the resource
+|===
+
+==== Error Attributes
+
+When a request fails, the span status is set to `ERROR` and additional attributes are recorded:
+
+[cols="1,3"]
+|===
+| Attribute | Description
+
+| `error.type`
+| `tool_error` for application-level tool errors, the error code for JSON-RPC errors, or the exception class name for unexpected exceptions
+
+| `rpc.jsonrpc.error_code`
+| The JSON-RPC error code (e.g., `-32600` for invalid request)
+
+| `rpc.jsonrpc.error_message`
+| The JSON-RPC error message text
+|===
+
+=== Context Propagation
+
+MCP uses the `_meta` field in JSON-RPC `params` as the carrier for W3C Trace Context propagation. This is an MCP-specific mechanism, distinct from HTTP header propagation.
+
+When a client includes `traceparent` and `tracestate` keys in the `_meta` field of a request, the server extracts this context and creates a child span. This allows distributed traces to flow from client to server regardless of the underlying transport.
+
+For server-to-client callbacks (sampling, elicitation, roots listing), the server injects its current trace context into the `_meta` field of the outgoing request, allowing the client to continue the trace.
+
+If a span is already present in the server side, independent of the MCP message OTel context, it will be mapped in the span with a link.
+
+== Metrics
 
 The Quarkus MCP Server extension provides built-in metrics integration when the Quarkus Micrometer extension is present. The feature is disabled by default and must be explicitly enabled through configuration.
 
@@ -17,7 +162,7 @@ Metrics are collected for:
 
 All metrics can be exported to any Micrometer-supported monitoring system including Prometheus, Datadog, Graphite, InfluxDB, and others.
 
-== Prerequisites
+=== Prerequisites
 
 The following dependency must be present to enable metrics:
 
@@ -44,7 +189,7 @@ See the https://quarkus.io/guides/micrometer[Quarkus Micrometer guide] for other
 NOTE: When using a registry, you don't need to declare the dependency on quarkus-micrometer anymore.
 It will be pulled automatically by transitivity.
 
-== Configuration
+=== Configuration
 
 Metrics collection is controlled by the following configuration property:
 
@@ -65,11 +210,11 @@ quarkus.mcp.server."main-server".metrics.enabled=true
 quarkus.mcp.server."admin-server".metrics.enabled=true
 ----
 
-== Available Metrics
+=== Available Metrics
 
-=== Connection Metrics
+==== Connection Metrics
 
-==== Active Connections Gauge
+===== Active Connections Gauge
 
 Tracks the current number of active MCP connections.
 
@@ -87,7 +232,7 @@ This metric helps you monitor:
 * Connection lifecycle patterns
 * Capacity planning needs
 
-=== Request Metrics
+==== Request Metrics
 
 All MCP protocol methods automatically get timer metrics that record request duration in milliseconds. The metric name follows the pattern `mcp.server.requests.<method>` where `<method>` is the JSON-RPC method name with slashes replaced by dots.
 
@@ -99,7 +244,7 @@ For example:
 
 The most commonly used metrics are documented below.
 
-==== Common Tags
+===== Common Tags
 
 All request timers include these tags:
 
@@ -114,7 +259,7 @@ All request timers include these tags:
 | Error type if the request failed, or "none" for successful requests. The value is the simple class name of the exception's cause.
 |===
 
-==== Tools Call Timer
+===== Tools Call Timer
 
 Measures the duration of tool execution requests.
 
@@ -126,7 +271,7 @@ Measures the duration of tool execution requests.
 | Specific Tags | `tool.name` - the name of the tool being called
 |===
 
-==== Tools List Timer
+===== Tools List Timer
 
 Measures the duration of listing available tools.
 
@@ -138,7 +283,7 @@ Measures the duration of listing available tools.
 | Specific Tags | None
 |===
 
-==== Resources Read Timer
+===== Resources Read Timer
 
 Measures the duration of resource read requests.
 
@@ -150,7 +295,7 @@ Measures the duration of resource read requests.
 | Specific Tags | `resource.uri` - the URI of the resource being read
 |===
 
-==== Resources List Timer
+===== Resources List Timer
 
 Measures the duration of listing available resources.
 
@@ -162,7 +307,7 @@ Measures the duration of listing available resources.
 | Specific Tags | None
 |===
 
-==== Resources Templates List Timer
+===== Resources Templates List Timer
 
 Measures the duration of listing resource templates.
 
@@ -174,7 +319,7 @@ Measures the duration of listing resource templates.
 | Specific Tags | None
 |===
 
-==== Prompts Get Timer
+===== Prompts Get Timer
 
 Measures the duration of prompt retrieval requests.
 
@@ -186,7 +331,7 @@ Measures the duration of prompt retrieval requests.
 | Specific Tags | `prompt.name` - the name of the prompt being retrieved
 |===
 
-==== Prompts List Timer
+===== Prompts List Timer
 
 Measures the duration of listing available prompts.
 
@@ -198,9 +343,9 @@ Measures the duration of listing available prompts.
 | Specific Tags | None
 |===
 
-== Accessing Metrics
+=== Accessing Metrics
 
-=== Prometheus Endpoint
+==== Prometheus Endpoint
 
 With the Prometheus registry enabled, metrics are exposed at:
 
@@ -220,7 +365,7 @@ scrape_configs:
       - targets: ['localhost:8080']
 ----
 
-=== Programmatic Access
+==== Programmatic Access
 
 You can also access metrics programmatically by injecting the `MeterRegistry`:
 
@@ -255,6 +400,10 @@ public class MetricsMonitor {
 |===
 | Property | Description | Default
 
+| `quarkus.mcp.server.tracing.enabled`
+| Enable tracing when OpenTelemetry is present
+| `false`
+
 | `quarkus.mcp.server.metrics.enabled`
 | Enable metrics collection when Micrometer is present
 | `false`
@@ -266,7 +415,9 @@ public class MetricsMonitor {
 
 == Related Documentation
 
-
+* https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/[OpenTelemetry Semantic Conventions for MCP] - The semantic conventions this extension implements
+* https://quarkus.io/guides/opentelemetry[Quarkus OpenTelemetry Guide] - OpenTelemetry extension overview
+* https://quarkus.io/guides/opentelemetry-tracing[Quarkus OpenTelemetry Tracing Guide] - Tracing configuration, exporters, and sampling
+* https://quarkus.io/guides/micrometer[Quarkus Micrometer Guide] - Detailed Micrometer configuration
 * xref:guides-multiple-servers.adoc[Multiple Servers] - Managing metrics for multiple server instances
 * xref:reference-configuration.adoc[Configuration Reference] - All configuration options
-* https://quarkus.io/guides/micrometer[Quarkus Micrometer Guide] - Detailed Micrometer configuration

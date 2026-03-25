@@ -76,6 +76,11 @@ public class ServerFeatures {
     }
 
     @Tool
+    TextContent failingTool(String value) {
+        throw new RuntimeException("Tool execution failed: " + value);
+    }
+
+    @Tool
     Uni<String> elicitationTool(Elicitation elicitation) {
         if (elicitation.isSupported()) {
             ElicitationRequest request = elicitation.requestBuilder()

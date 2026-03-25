@@ -49,7 +49,8 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
 
     McpStdioTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, null,
-                builder.autoPong, null, builder.title, builder.description, builder.websiteUrl, builder.icons);
+                builder.autoPong, null, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.openTelemetry);
         this.command = builder.command;
         this.workingDirectory = builder.workingDirectory;
         this.environment = builder.environment;
@@ -241,8 +242,9 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         }
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
             sendAndForget(message);
+            return null;
         }
 
     }
@@ -252,8 +254,9 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         private final List<JsonObject> requests = new ArrayList<>();
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
             requests.add(message);
+            return null;
         }
 
         @Override

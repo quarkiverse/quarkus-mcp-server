@@ -1227,6 +1227,32 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tracing-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tracing-enabled[`+++quarkus.mcp.server.tracing.enabled+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tracing.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tracing.enabled+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tracing.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If tracing is enabled when the OpenTelemetry extension is present.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TRACING_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TRACING_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
 |===
 
 ifndef::no-duration-note[]

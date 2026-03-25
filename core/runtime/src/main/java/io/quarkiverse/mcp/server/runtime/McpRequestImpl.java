@@ -1,9 +1,14 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection.Status;
+import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.runtime.tracing.McpRequestInfo;
+import io.quarkiverse.mcp.server.runtime.tracing.McpResponseInfo;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
+import io.vertx.core.json.JsonObject;
 
 public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> implements McpRequest {
 
@@ -16,6 +21,9 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
 
     private final ManagedContext requestContext;
     private final CurrentIdentityAssociation currentIdentityAssociation;
+
+    // Tracing span - started by prepareTracing(), ended by contextEnd()
+    private volatile McpTracingSpan tracingSpan;
 
     public McpRequestImpl(String serverName, Object json, CONNECTION connection, Sender sender,
             SecuritySupport securitySupport,
@@ -61,6 +69,24 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     }
 
     @Override
+    public void prepareTracing(McpTracing mcpTracing, McpMethod method, JsonObject message,
+            InitialRequest.Transport transport) {
+        if (mcpTracing != null) {
+            tracingSpan = mcpTracing.startSpan(method, message, this, transport);
+        }
+    }
+
+    @Override
+    public void setTracingErrorResponse(boolean toolError, Integer jsonRpcErrorCode, String errorMessage) {
+        if (tracingSpan != null) {
+            McpRequestInfo ri = tracingSpan.requestInfo();
+            if (ri != null) {
+                ri.setResponseInfo(new McpResponseInfo(toolError, jsonRpcErrorCode, errorMessage));
+            }
+        }
+    }
+
+    @Override
     public void contextStart() {
         final SecuritySupport securitySupport = securitySupport();
         final ContextSupport contextSupport = contextSupport();
@@ -80,7 +106,16 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     }
 
     @Override
-    public void contextEnd() {
+    public void endTracing(Throwable error) {
+        if (tracingSpan != null) {
+            tracingSpan.end(error);
+            tracingSpan = null;
+        }
+    }
+
+    @Override
+    public void contextEnd(Throwable error) {
+        endTracing(error);
         requestContext.terminate();
     }
 

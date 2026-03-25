@@ -17,7 +17,8 @@ record ArgumentProviders(
         Object progressToken,
         ResponseHandlers responseHandlers,
         String serverName,
-        CancellationRequests cancellationRequests) {
+        CancellationRequests cancellationRequests,
+        McpTracing mcpTracing) {
 
     Object getArg(String name) {
         return args != null ? args.get(name) : null;

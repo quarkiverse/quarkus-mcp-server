@@ -105,7 +105,7 @@ class ResourceMessageHandler extends MessageHandler {
         LOG.debugf("Read resource %s [id: %s]", resourceUri, id);
         ArgumentProviders argProviders = new ArgumentProviders(message, Map.of(), mcpRequest.connection(), id, resourceUri,
                 mcpRequest.sender(), Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName(),
-                manager.cancellationRequests);
+                manager.cancellationRequests, manager.mcpTracing);
         try {
             Future<ResourceResponse> fu = manager.execute(resourceUri,
                     new FeatureExecutionContext(message, mcpRequest, argProviders));
@@ -117,7 +117,7 @@ class ResourceMessageHandler extends MessageHandler {
                     return mcpRequest.sender().sendResult(id, resourceResponse);
                 }
             },
-                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to read resource %s", resourceUri));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());

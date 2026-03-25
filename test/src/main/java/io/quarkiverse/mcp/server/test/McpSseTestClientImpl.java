@@ -53,7 +53,8 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     McpSseTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.openTelemetry);
         this.sseEndpoint = createEndpointUri(builder.baseUri, builder.ssePath);
         this.expectSseConnectionFailure = builder.expectSseConnectionFailure;
         this.httpClient = HttpClient.newHttpClient();
@@ -119,7 +120,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         LOG.infof("Message endpoint received: %s", endpoint);
 
         JsonObject initMessage = newInitMessage();
-        HttpResponse response = sendSync(initMessage, additionalHeaders.apply(initMessage), clientBasicAuth);
+        MultiMap initHeaders = additionalHeaders.apply(initMessage);
+        HttpResponse response;
+        try (TracingHandle ignored = startTracingSpan(initMessage, initHeaders)) {
+            response = sendSync(initMessage, initHeaders, clientBasicAuth);
+        }
         assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
 
         JsonObject initResponse = client.state.waitForResponse(initMessage);
@@ -150,7 +155,10 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
-        response = sendSync(nofitication, additionalHeaders.apply(nofitication), clientBasicAuth);
+        MultiMap notifHeaders = additionalHeaders.apply(nofitication);
+        try (TracingHandle ignored = startTracingSpan(nofitication, notifHeaders)) {
+            response = sendSync(nofitication, notifHeaders, clientBasicAuth);
+        }
         assertEquals(200, response.statusCode());
         connected.set(true);
         return this;
@@ -189,7 +197,10 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     @Override
     public void sendAndForget(JsonObject message) {
-        sendAsync(message.encode(), additionalHeaders.apply(message), clientBasicAuth);
+        MultiMap headers = additionalHeaders.apply(message);
+        try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
+            sendAsync(message.encode(), headers, clientBasicAuth);
+        }
     }
 
     class McpSseAssertImpl extends McpAssertBase implements McpSseAssert {
@@ -237,16 +248,20 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             return this;
         }
 
-        protected void doSend(JsonObject message) {
-            BasicAuth basicAuth = this.basicAuth.get();
-            if (basicAuth == null) {
-                basicAuth = clientBasicAuth;
+        protected TracingHandle doSend(JsonObject message) {
+            MultiMap headers = additionalHeaders(message);
+            try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
+                BasicAuth basicAuth = this.basicAuth.get();
+                if (basicAuth == null) {
+                    basicAuth = clientBasicAuth;
+                }
+                HttpResponse response = sendSync(message, headers, basicAuth);
+                Consumer<HttpResponse> validator = httpResponseValidator.get();
+                if (validator != null) {
+                    validator.accept(response);
+                }
             }
-            HttpResponse response = sendSync(message, additionalHeaders(message), basicAuth);
-            Consumer<HttpResponse> validator = httpResponseValidator.get();
-            if (validator != null) {
-                validator.accept(response);
-            }
+            return null;
         }
 
         @Override
@@ -270,8 +285,9 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         private final List<JsonObject> requests = new ArrayList<>();
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
             requests.add(message);
+            return null;
         }
 
         @Override

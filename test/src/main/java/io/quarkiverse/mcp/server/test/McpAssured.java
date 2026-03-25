@@ -315,6 +315,16 @@ public class McpAssured {
              */
             BUILDER setAutoPong(boolean val);
 
+            /**
+             * Enables client-side MCP tracing. When set, the client creates CLIENT spans
+             * for each MCP request and injects trace context ({@code traceparent}, {@code tracestate})
+             * into the {@code _meta} field of outgoing messages.
+             *
+             * @param openTelemetry the OpenTelemetry instance to use for tracing
+             * @return self
+             */
+            BUILDER setTracing(io.opentelemetry.api.OpenTelemetry openTelemetry);
+
         }
 
     }

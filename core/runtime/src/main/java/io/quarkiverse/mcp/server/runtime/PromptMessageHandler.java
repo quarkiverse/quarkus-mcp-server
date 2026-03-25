@@ -75,7 +75,7 @@ class PromptMessageHandler extends MessageHandler {
                 }
                 result.put("messages", promptResponse.messages());
                 return mcpRequest.sender().sendResult(id, result);
-            }, cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+            }, cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                     "Unable to obtain prompt %s", promptName));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());

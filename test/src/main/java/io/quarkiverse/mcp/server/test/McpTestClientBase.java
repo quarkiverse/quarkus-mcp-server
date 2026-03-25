@@ -15,6 +15,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
@@ -50,6 +56,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         implements McpTestClient<ASSERT, CLIENT> {
 
     protected static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String CLIENT_INSTRUMENTATION_NAME = "io.quarkus.opentelemetry.mcp.test-client";
 
     protected final String name;
     protected final String version;
@@ -58,6 +65,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected final Function<JsonObject, MultiMap> additionalHeaders;
     protected final boolean autoPong;
     protected final BasicAuth clientBasicAuth;
+    protected final OpenTelemetry openTelemetry;
 
     protected final AtomicBoolean connected;
     protected volatile InitResult initResult;
@@ -69,7 +77,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
     McpTestClientBase(String name, String version, String protocolVersion, Set<ClientCapability> clientCapabilities,
             Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, BasicAuth clientBasicAuth,
-            String title, String description, String websiteUrl, Set<Icon> icons) {
+            String title, String description, String websiteUrl, Set<Icon> icons, OpenTelemetry openTelemetry) {
         this.name = name;
         this.version = version;
         this.protocolVersion = protocolVersion;
@@ -77,6 +85,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         this.additionalHeaders = additionalHeaders;
         this.autoPong = autoPong;
         this.clientBasicAuth = clientBasicAuth;
+        this.openTelemetry = openTelemetry;
         this.connected = new AtomicBoolean();
         this.title = title;
         this.description = description;
@@ -187,6 +196,75 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected void addMeta(JsonObject params, Map<String, Object> meta) {
         if (!meta.isEmpty()) {
             params.put("_meta", meta);
+        }
+    }
+
+    /**
+     * Creates a client span and injects trace context into the message's {@code _meta}
+     * and optionally into HTTP headers. The returned handle must be closed when the
+     * response is received to properly end the span and scope.
+     *
+     * @param message the JSON-RPC message (modified in-place to add {@code _meta} trace context)
+     * @param headers optional HTTP headers to inject into, or {@code null} for non-HTTP transports
+     * @return a handle to close when the response arrives, never {@code null}
+     */
+    protected TracingHandle startTracingSpan(JsonObject message, MultiMap headers) {
+        if (openTelemetry != null) {
+            Tracer tracer = openTelemetry.getTracer(CLIENT_INSTRUMENTATION_NAME);
+            Span span = tracer.spanBuilder(message.getString("method"))
+                    .setSpanKind(SpanKind.CLIENT)
+                    .startSpan();
+            Scope scope = span.makeCurrent();
+            // Inject into _meta for MCP-level propagation
+            JsonObject params = message.getJsonObject("params");
+            if (params == null) {
+                params = new JsonObject();
+                message.put("params", params);
+            }
+            Object existing = params.getValue("_meta");
+            JsonObject metaObj;
+            if (existing instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = (Map<String, Object>) existing;
+                metaObj = new JsonObject(map);
+                params.put("_meta", metaObj);
+            } else if (existing instanceof JsonObject) {
+                metaObj = (JsonObject) existing;
+            } else {
+                metaObj = new JsonObject();
+                params.put("_meta", metaObj);
+            }
+            openTelemetry.getPropagators().getTextMapPropagator()
+                    .inject(Context.current(), metaObj, (carrier, key, value) -> carrier.put(key, value));
+            // Inject into HTTP headers for transport-level propagation
+            if (headers != null) {
+                openTelemetry.getPropagators().getTextMapPropagator()
+                        .inject(Context.current(), headers, (carrier, key, value) -> carrier.add(key, value));
+            }
+            return new TracingHandle(span, scope);
+        }
+        return TracingHandle.NOOP;
+    }
+
+    static class TracingHandle implements AutoCloseable {
+        static final TracingHandle NOOP = new TracingHandle(null, null);
+
+        private final Span span;
+        private final Scope scope;
+
+        TracingHandle(Span span, Scope scope) {
+            this.span = span;
+            this.scope = scope;
+        }
+
+        @Override
+        public void close() {
+            if (span != null) {
+                span.end();
+            }
+            if (scope != null) {
+                scope.close();
+            }
         }
     }
 
@@ -326,10 +404,11 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     abstract class McpAssertBase implements McpAssert<ASSERT> {
 
         protected final List<McpTestClientBase.ResponseAssert> asserts = new ArrayList<>();
+        protected final List<TracingHandle> tracingHandles = new ArrayList<>();
 
         protected abstract ASSERT self();
 
-        protected abstract void doSend(JsonObject message);
+        protected abstract TracingHandle doSend(JsonObject message);
 
         @Override
         public Snapshot thenAssertResults() {
@@ -337,6 +416,11 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 JsonObject response = clientState().waitForResponse(responseAssert.request());
                 assertNotNull(response);
                 responseAssert.doAssert(response);
+            }
+            for (TracingHandle handle : tracingHandles) {
+                if (handle != null) {
+                    handle.close();
+                }
             }
             return snapshot();
         }
@@ -434,7 +518,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newRequest(McpAssured.PING);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (pongAssert) {
                     asserts.add(new PongAssert(message));
                 } else if (errorAssertFunction != null) {
@@ -485,7 +569,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newListMessage(McpAssured.TOOLS_LIST, meta, cursor);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ToolsListAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -537,7 +621,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newResourcesReadMessage(uri, meta);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ResourcesReadAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -596,7 +680,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newPromptsGetMessage(promptName, args, meta);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new PromptsGetAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -663,7 +747,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             public ASSERT send() {
                 JsonObject message = newCompleteMessage(Messages.PROMPT_REF, name, argumentName, argumentValue,
                         contextArguments, meta);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new PromptsCompleteAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -748,7 +832,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             public ASSERT send() {
                 JsonObject message = newCompleteMessage(Messages.RESOURCE_REF, name, argumentName, argumentValue,
                         contextArguments, meta);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new PromptsCompleteAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -810,7 +894,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newToolsCallMessage(toolName, args, meta);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ToolsCallAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -855,7 +939,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newListMessage(McpAssured.PROMPTS_LIST, meta, cursor);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new PromptsListAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -900,7 +984,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newListMessage(McpAssured.RESOURCES_TEMPLATES_LIST, meta, cursor);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ResourcesTemplatesListAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -945,7 +1029,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newListMessage(McpAssured.RESOURCES_LIST, meta, cursor);
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ResourcesListAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
@@ -986,7 +1070,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
             @Override
             public ASSERT send() {
-                doSend(message);
+                tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new MessageAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {

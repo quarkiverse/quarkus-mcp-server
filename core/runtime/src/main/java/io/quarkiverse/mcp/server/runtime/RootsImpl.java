@@ -23,7 +23,8 @@ class RootsImpl implements Roots {
 
     static RootsImpl from(ArgumentProviders argProviders) {
         return new RootsImpl(argProviders.connection(), argProviders.sender(),
-                argProviders.responseHandlers(), argProviders.responseHandlers().getRootsTimeout(argProviders.serverName()));
+                argProviders.responseHandlers(), argProviders.responseHandlers().getRootsTimeout(argProviders.serverName()),
+                argProviders.mcpTracing());
     }
 
     private final McpConnection connection;
@@ -34,11 +35,15 @@ class RootsImpl implements Roots {
 
     private final Duration timeout;
 
-    RootsImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+    private final McpTracing mcpTracing;
+
+    RootsImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout,
+            McpTracing mcpTracing) {
         this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
+        this.mcpTracing = mcpTracing;
     }
 
     @Override
@@ -72,7 +77,18 @@ class RootsImpl implements Roots {
                 future.complete(list);
             });
             id.set(requestId);
-            sender.send(Messages.newRequest(requestId, McpMethod.ROOTS_LIST.jsonRpcName()));
+            JsonObject requestMessage = Messages.newRequest(requestId, McpMethod.ROOTS_LIST.jsonRpcName());
+            if (mcpTracing != null) {
+                JsonObject params = requestMessage.getJsonObject("params");
+                if (params == null) {
+                    params = new JsonObject();
+                    requestMessage.put("params", params);
+                }
+                JsonObject meta = new JsonObject();
+                params.put("_meta", meta);
+                mcpTracing.injectMcpOtelContext(meta);
+            }
+            sender.send(requestMessage);
             return future;
         });
         if (!timeout.isNegative() && !timeout.isZero()) {

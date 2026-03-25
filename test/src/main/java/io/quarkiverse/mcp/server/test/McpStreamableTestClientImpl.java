@@ -39,7 +39,8 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private McpStreamableTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.openTelemetry);
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
         this.openSubsidiarySse = builder.openSubsidiarySse;
@@ -64,7 +65,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         JsonObject initMessage = newInitMessage();
         MultiMap initHeaders = additionalHeaders.apply(initMessage);
         addAuthorizationHeader(initHeaders, clientBasicAuth);
-        HttpResponse<String> response = client.sendSync(initMessage.encode(), initHeaders);
+        HttpResponse<String> response;
+        try (TracingHandle ignored = startTracingSpan(initMessage, initHeaders)) {
+            response = client.sendSync(initMessage.encode(), initHeaders);
+        }
         if (expectConnectFailure) {
             assertNotEquals(200, response.statusCode());
             return this;
@@ -122,7 +126,9 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         JsonObject nofitication = newMessage("notifications/initialized");
         MultiMap headers = additionalHeaders(nofitication);
         addAuthorizationHeader(headers, clientBasicAuth);
-        response = client.sendSync(nofitication.encode(), headers);
+        try (TracingHandle ignored = startTracingSpan(nofitication, headers)) {
+            response = client.sendSync(nofitication.encode(), headers);
+        }
         // The server must respond with 202 for response or notification
         if (response.statusCode() != 202) {
             throw new IllegalStateException(
@@ -173,7 +179,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     @Override
     public void sendAndForget(JsonObject message) {
-        send(message, additionalHeaders(message), clientBasicAuth);
+        MultiMap headers = additionalHeaders(message);
+        try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
+            send(message, headers, clientBasicAuth);
+        }
     }
 
     private void send(JsonObject message, MultiMap additionalHeaders, BasicAuth basicAuth) {
@@ -225,12 +234,15 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             return this;
         }
 
-        protected void doSend(JsonObject message) {
-            BasicAuth basicAuth = this.basicAuth.get();
-            if (basicAuth == null) {
-                basicAuth = clientBasicAuth;
+        protected TracingHandle doSend(JsonObject message) {
+            try (TracingHandle tracingHandle = startTracingSpan(message, additionalHeaders(message))) {
+                BasicAuth basicAuth = this.basicAuth.get();
+                if (basicAuth == null) {
+                    basicAuth = clientBasicAuth;
+                }
+                send(message, additionalHeaders(message), basicAuth);
             }
-            send(message, additionalHeaders(message), basicAuth);
+            return null;
         }
 
     }
@@ -240,8 +252,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         private final List<JsonObject> requests = new ArrayList<>();
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
+            // todo handle otel in batches
             requests.add(message);
+            return null;
         }
 
         @Override

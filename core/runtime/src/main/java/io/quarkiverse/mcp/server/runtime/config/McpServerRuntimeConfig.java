@@ -91,6 +91,13 @@ public interface McpServerRuntimeConfig {
     @WithDefault("false")
     boolean metricsEnabled();
 
+    /**
+     * If tracing is enabled when the OpenTelemetry extension is present.
+     */
+    @WithName("tracing.enabled")
+    @WithDefault("false")
+    boolean tracingEnabled();
+
     public interface TrafficLogging {
 
         /**

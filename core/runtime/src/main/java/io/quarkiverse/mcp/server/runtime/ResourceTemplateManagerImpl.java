@@ -251,7 +251,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         argProviders = new ArgumentProviders(argProviders.rawMessage(),
                 matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
                 argProviders.sender(), argProviders.progressToken(), responseHandlers, argProviders.serverName(),
-                cancellationRequests);
+                cancellationRequests, argProviders.mcpTracing());
         return super.prepareArguments(metadata, argProviders);
     }
 
