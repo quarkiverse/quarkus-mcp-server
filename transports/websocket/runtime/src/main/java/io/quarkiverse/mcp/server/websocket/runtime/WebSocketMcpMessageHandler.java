@@ -11,6 +11,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -60,6 +61,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             McpMetadata metadata,
             Vertx vertx,
             @All List<InitialCheck> initialChecks,
@@ -70,7 +72,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
-                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }
 

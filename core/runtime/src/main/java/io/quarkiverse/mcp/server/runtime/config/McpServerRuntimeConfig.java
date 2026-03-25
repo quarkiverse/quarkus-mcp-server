@@ -199,8 +199,12 @@ public interface McpServerRuntimeConfig {
     public interface DevMode {
 
         /**
-         * If set to `true` then if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly,
-         * the server will perform a "dummy" initialization; capability negotiation and protocol version agreement is skipped.
+         * If set to `true` then the server performs an automatic initialization in dev mode when the first message from the
+         * client is not `initialize`; capability negotiation and protocol version agreement is skipped.
+         *
+         * The behavior depends on the transport. For SSE, this is useful when an MCP client attempts to reconnect but does not
+         * reinitialize properly. For Streamable HTTP, this enables the auto-init mode, i.e. the same behavior as
+         * `quarkus.mcp.server.http.streamable.auto-init`.
          *
          * @asciidoclet
          */

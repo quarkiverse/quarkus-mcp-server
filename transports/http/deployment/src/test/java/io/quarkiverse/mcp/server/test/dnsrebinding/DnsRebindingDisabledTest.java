@@ -25,7 +25,7 @@ public class DnsRebindingDisabledTest extends McpServerTest {
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class))
             .overrideConfigKey("quarkus.mcp.server.http.dns-rebinding-check.enabled", "false")
-            .overrideConfigKey("quarkus.mcp.server.http.streamable.dummy-init", "true");
+            .overrideConfigKey("quarkus.mcp.server.http.streamable.auto-init", "true");
 
     @Test
     public void testNonLocalhostRequestNotRejected() {

@@ -9,9 +9,18 @@ import java.util.List;
  * @param protocolVersion the protocol version supported by the client (must not be {@code null})
  * @param clientCapabilities the capabilities supported by the client (must not be {@code null})
  * @param transport the transport used by the client (must not be {@code null})
+ * @param autoInitialized {@code true} if the request was created automatically (without client-initiated initialization)
  */
 public record InitialRequest(Implementation implementation, String protocolVersion,
-        List<ClientCapability> clientCapabilities, Transport transport) {
+        List<ClientCapability> clientCapabilities, Transport transport, boolean autoInitialized) {
+
+    /**
+     * Creates a new initial request with {@code autoInitialized} set to {@code false}.
+     */
+    public InitialRequest(Implementation implementation, String protocolVersion,
+            List<ClientCapability> clientCapabilities, Transport transport) {
+        this(implementation, protocolVersion, clientCapabilities, transport, false);
+    }
 
     public InitialRequest {
         if (implementation == null) {

@@ -67,10 +67,12 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             @All List<ResourceTemplateFilter> filters,
             @Any Instance<IconsProvider> iconsProviders,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+                metadata);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
             this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
@@ -194,7 +196,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString()));
         argProviders = new ArgumentProviders(argProviders.rawMessage(),
                 matchedVariables, argProviders.connection(), argProviders.requestId(), argProviders.uri(),
-                argProviders.sender(), argProviders.progressToken(), responseHandlers, argProviders.serverName());
+                argProviders.sender(), argProviders.progressToken(), responseHandlers, argProviders.serverName(),
+                cancellationRequests);
         return super.prepareArguments(metadata, argProviders);
     }
 

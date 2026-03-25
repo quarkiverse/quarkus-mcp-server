@@ -31,8 +31,10 @@ public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase
             ResourceTemplateManagerImpl resourceTemplateManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+                metadata);
         this.nameToUriTemplate = metadata.resourceTemplates()
                 .stream().map(FeatureMetadata::info).collect(Collectors.toMap(FeatureMethodInfo::name, FeatureMethodInfo::uri));
         for (FeatureMetadata<CompletionResponse> c : metadata.resourceTemplateCompletions()) {

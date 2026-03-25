@@ -78,15 +78,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     final ResponseHandlers responseHandlers;
 
+    final CancellationRequests cancellationRequests;
+
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers,
-            McpServersRuntimeConfig config, McpMetadata metadata) {
+            CancellationRequests cancellationRequests, McpServersRuntimeConfig config, McpMetadata metadata) {
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
         this.loggers = new ConcurrentHashMap<>();
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.responseHandlers = responseHandlers;
+        this.cancellationRequests = cancellationRequests;
         this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
     }
 
@@ -139,7 +142,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         Object id = Messages.getId(message);
         Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
         return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
-                mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName());
+                mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName(),
+                cancellationRequests);
     }
 
     record FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders) {

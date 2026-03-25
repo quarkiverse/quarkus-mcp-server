@@ -83,6 +83,7 @@ import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.DefaultResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.Feature;
@@ -206,6 +207,7 @@ class McpServerProcessor {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
         unremovable.addBeanClass(ResponseHandlers.class);
+        unremovable.addBeanClass(CancellationRequests.class);
         unremovable.addBeanClass(DefaultSchemaGenerator.class);
         unremovable.addBeanClass(McpObjectMapperCustomizer.class);
         // Managers

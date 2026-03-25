@@ -17,6 +17,8 @@ public class McpHttpConfigBuilderCustomizer implements SmallRyeConfigBuilderCust
     static final String HTTP_ROOT_PATH = "http.root-path";
     static final String SSE_MESSAGE_ENDPOINT = "sse.message-endpoint.include-query-params";
     static final String HTTP_MESSAGE_ENDPOINT = "http.message-endpoint.include-query-params";
+    static final String STREAMABLE_DUMMY_INIT = "http.streamable.dummy-init";
+    static final String STREAMABLE_AUTO_INIT = "http.streamable.auto-init";
 
     @Override
     public void configBuilder(SmallRyeConfigBuilder builder) {
@@ -36,6 +38,10 @@ public class McpHttpConfigBuilderCustomizer implements SmallRyeConfigBuilderCust
                     return fallback;
                 } else if (name.endsWith(HTTP_MESSAGE_ENDPOINT)) {
                     String fallback = name.substring(0, name.indexOf(HTTP_MESSAGE_ENDPOINT)) + SSE_MESSAGE_ENDPOINT;
+                    LOG.debugf("Fallback %s to %s", name, fallback);
+                    return fallback;
+                } else if (name.endsWith(STREAMABLE_AUTO_INIT)) {
+                    String fallback = name.substring(0, name.indexOf(STREAMABLE_AUTO_INIT)) + STREAMABLE_DUMMY_INIT;
                     LOG.debugf("Fallback %s to %s", name, fallback);
                     return fallback;
                 }
@@ -62,6 +68,10 @@ public class McpHttpConfigBuilderCustomizer implements SmallRyeConfigBuilderCust
                     return relocate;
                 } else if (name.endsWith(SSE_MESSAGE_ENDPOINT)) {
                     String relocate = name.substring(0, name.indexOf(SSE_MESSAGE_ENDPOINT)) + HTTP_MESSAGE_ENDPOINT;
+                    LOG.debugf("Relocate %s to %s", name, relocate);
+                    return relocate;
+                } else if (name.endsWith(STREAMABLE_DUMMY_INIT)) {
+                    String relocate = name.substring(0, name.indexOf(STREAMABLE_DUMMY_INIT)) + STREAMABLE_AUTO_INIT;
                     LOG.debugf("Relocate %s to %s", name, relocate);
                     return relocate;
                 }
