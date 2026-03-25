@@ -23,6 +23,7 @@ import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -69,6 +70,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
             @All List<InitialResponseInfo> initialResponseInfos,
             McpMetadata metadata,
@@ -78,7 +80,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
-                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.executor = Executors.newSingleThreadExecutor();
         if (config.servers().size() > 1) {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");

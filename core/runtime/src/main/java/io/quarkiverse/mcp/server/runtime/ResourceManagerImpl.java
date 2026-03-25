@@ -72,10 +72,12 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             @All List<ResourceFilter> filters,
             @Any Instance<IconsProvider> iconsProviders,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+                metadata);
         this.resourceTemplateManager = resourceTemplateManager;
         this.uriToResource = new ConcurrentHashMap<>();
         this.resourceNames = Collections.synchronizedSet(new HashSet<>());

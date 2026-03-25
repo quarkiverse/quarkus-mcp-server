@@ -27,13 +27,13 @@ import io.restassured.RestAssured;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 
-public class DummyInitTest extends McpServerTest {
+public class AutoInitTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class))
-            .overrideConfigKey("quarkus.mcp.server.http.streamable.dummy-init", "true");
+            .overrideConfigKey("quarkus.mcp.server.http.streamable.auto-init", "true");
 
     @Inject
     ConnectionManager connectionManager;
@@ -75,7 +75,7 @@ public class DummyInitTest extends McpServerTest {
         try {
             Awaitility.await().until(() -> !connectionManager.iterator().hasNext());
         } catch (ConditionTimeoutException e) {
-            fail("Some connections still exits: "
+            fail("Some connections still exists: "
                     + StreamSupport.stream(connectionManager.spliterator(), false)
                             .map(c -> c.id() + "[" + c.initialRequest().implementation().name() + "]").toList());
         }
@@ -94,7 +94,7 @@ public class DummyInitTest extends McpServerTest {
         @Tool
         String bravo(McpConnection connection) {
             if (!connection.initialRequest().implementation().name()
-                    .equals(StreamableHttpMcpMessageHandler.DUMMY_INIT_IMPL_NAME)) {
+                    .equals(StreamableHttpMcpMessageHandler.AUTO_INIT_IMPL_NAME)) {
                 throw new IllegalStateException();
             }
             return connection.id();

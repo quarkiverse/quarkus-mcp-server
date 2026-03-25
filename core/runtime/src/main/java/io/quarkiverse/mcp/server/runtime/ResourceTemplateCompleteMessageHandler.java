@@ -13,7 +13,7 @@ class ResourceTemplateCompleteMessageHandler extends CompletionMessageHandler {
     private final ResourceTemplateCompletionManagerImpl manager;
 
     ResourceTemplateCompleteMessageHandler(ResourceTemplateCompletionManagerImpl manager) {
-        super(manager.responseHandlers);
+        super(manager);
         this.manager = Objects.requireNonNull(manager);
     }
 

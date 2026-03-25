@@ -26,8 +26,10 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
             PromptManagerImpl promptManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, config, metadata);
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+                metadata);
         this.promptManager = promptManager;
         for (FeatureMetadata<CompletionResponse> c : metadata.promptCompletions()) {
             String key = c.info().name() + "_"

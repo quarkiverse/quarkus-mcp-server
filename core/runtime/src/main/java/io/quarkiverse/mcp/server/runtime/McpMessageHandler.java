@@ -89,6 +89,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final McpRequestValidator mcpRequestValidator;
 
+    private final CancellationRequests cancellationRequests;
+
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
@@ -101,7 +103,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             List<InitialCheck> initialChecks,
             List<InitialResponseInfo> initialResponseInfos,
             McpMetrics mcpMetrics,
-            McpRequestValidator mcpRequestValidator) {
+            McpRequestValidator mcpRequestValidator,
+            CancellationRequests cancellationRequests) {
         this.connectionManager = connectionManager;
         this.promptManager = promptManager;
         this.toolManager = toolManager;
@@ -124,6 +127,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.vertx = vertx;
         this.mcpMetrics = mcpMetrics;
         this.mcpRequestValidator = mcpRequestValidator;
+        this.cancellationRequests = cancellationRequests;
         this.ongoingRequests = ConcurrentHashMap.newKeySet();
 
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
@@ -239,24 +243,23 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
         if (McpMethod.INITIALIZE != method) {
             // Normally the first message must be "initialize"
-
-            // However, we could create a synthetic initial request and perform a dummy initialization
-            InitialRequest dummy = null;
+            // However, automatic initialization can be performed in the dev mode
+            // and the transport can support other ways to supply auto initial requests
+            InitialRequest autoInit = null;
             if (LaunchMode.current() == LaunchMode.DEVELOPMENT
                     && serverConfig(mcpRequest).devMode().dummyInit()) {
-                // In the dev mode, if an MCP client attempts to reconnect an SSE connection but does not reinitialize properly
-                dummy = new InitialRequest(new Implementation("dummy", "1", null),
+                // In the dev mode, perform an automatic initialization
+                autoInit = new InitialRequest(new Implementation("dummy", "1", null),
                         SUPPORTED_PROTOCOL_VERSIONS.get(0),
-                        List.of(), transport());
+                        List.of(), transport(), true);
             } else {
-                // A transport can support other ways to supply dummy initial requests
-                dummy = dummyInitialRequest(mcpRequest);
+                autoInit = autoInitialRequest(mcpRequest);
             }
 
-            if (dummy != null
-                    && mcpRequest.connection().initialize(dummy)
+            if (autoInit != null
+                    && mcpRequest.connection().initialize(autoInit)
                     && mcpRequest.connection().setInitialized()) {
-                LOG.debugf("Connection initialized with dummy initial request: %s [%s]", dummy.implementation().name(),
+                LOG.debugf("Connection initialized with auto initial request: %s [%s]", autoInit.implementation().name(),
                         mcpRequest.connection().id());
                 return operation(method, message, mcpRequest);
             }
@@ -297,7 +300,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         });
     }
 
-    protected InitialRequest dummyInitialRequest(MCP_REQUEST mcpRequest) {
+    protected InitialRequest autoInitialRequest(MCP_REQUEST mcpRequest) {
         return null;
     }
 
@@ -363,7 +366,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> callNotification(NotificationManager.NotificationInfo notification,
-            FeatureExecutionContext featureExecutionContext, McpRequest mcpRequest) {
+            FeatureExecutionContext featureExecutionContext, MCP_REQUEST mcpRequest) {
         // Create a new duplicated context and process the notification on this context
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
         VertxContextSafetyToggle.setContextSafe(context, true);
@@ -433,7 +436,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 mcpRequest.contextEnd();
                 if (ongoingId != null) {
                     ongoingRequests.remove(ongoingId);
-                    mcpRequest.connection().removeCancellationRequest(message);
+                    cancellationRequests.remove(mcpRequest.connection(), message);
                 }
                 if (r.failed()) {
                     ret.fail(r.cause());
@@ -450,7 +453,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 "Unsupported method: " + message.getString("method"));
     }
 
-    private Future<Void> rootsListChanged(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> rootsListChanged(JsonObject message, MCP_REQUEST mcpRequest) {
         List<NotificationManager.NotificationInfo> infos = notificationManager
                 .infosForRequest(FilterContextImpl.of(McpMethod.NOTIFICATIONS_ROOTS_LIST_CHANGED, message, mcpRequest))
                 .filter(n -> n.type() == Type.ROOTS_LIST_CHANGED).toList();
@@ -464,14 +467,15 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     }
 
-    private Future<Void> cancelRequest(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> cancelRequest(JsonObject message, MCP_REQUEST mcpRequest) {
         JsonObject params = Messages.getParams(message);
         if (params != null) {
             Object requestId = params.getValue("requestId");
             // Unknown, completed and invalid requests should be just ignored
             if (requestId != null
                     && ongoingRequests.contains(ongoingId(requestId, mcpRequest))
-                    && mcpRequest.connection().addCancellationRequest(new RequestId(requestId), params.getString("reason"))) {
+                    && cancellationRequests.add(mcpRequest.connection(), new RequestId(requestId),
+                            params.getString("reason"))) {
                 String reason = params.getString("reason");
                 LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
                         mcpRequest.connection().id());
@@ -483,11 +487,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return Future.succeededFuture();
     }
 
-    private String ongoingId(JsonObject message, McpRequest mcpRequest) {
+    private String ongoingId(JsonObject message, MCP_REQUEST mcpRequest) {
         return ongoingId(Messages.isRequest(message) ? Messages.getId(message) : null, mcpRequest);
     }
 
-    private String ongoingId(Object requestId, McpRequest mcpRequest) {
+    private String ongoingId(Object requestId, MCP_REQUEST mcpRequest) {
         if (requestId != null) {
             return requestId + "::" + mcpRequest.connection().id();
         } else {
@@ -495,7 +499,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
     }
 
-    private Future<Void> setLogLevel(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> setLogLevel(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         String level = params.getString("level");
@@ -514,7 +518,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     }
 
-    private Future<Void> complete(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> complete(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         JsonObject ref = params.getJsonObject("ref");
@@ -543,13 +547,13 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
     }
 
-    private Future<Void> ping(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> ping(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         LOG.debugf("Ping [id: %s]", id);
         return mcpRequest.sender().sendResult(id, new JsonObject());
     }
 
-    private Future<Void> progress(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> progress(JsonObject message, MCP_REQUEST mcpRequest) {
         JsonObject params = Messages.getParams(message);
         String token = "n/a";
         if (params != null) {
@@ -559,7 +563,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return Future.succeededFuture();
     }
 
-    private Future<Void> close(JsonObject message, McpRequest mcpRequest) {
+    private Future<Void> close(JsonObject message, MCP_REQUEST mcpRequest) {
         if (connectionManager.remove(mcpRequest.connection().id())) {
             LOG.debugf("Connection %s explicitly closed ", mcpRequest.connection().id());
             return Future.succeededFuture();

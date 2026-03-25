@@ -36,6 +36,7 @@ import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.Subsid
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
@@ -87,14 +88,18 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
     public static final String MCP_PROTOCOL_VERSION_HEADER = "Mcp-Protocol-Version";
-    public static final String DUMMY_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
+    public static final String AUTO_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
 
-    private static final InitialRequest DUMMY_INIT_REQUEST = new InitialRequest(
-            new Implementation(DUMMY_INIT_IMPL_NAME, "1", null),
-            // "2025-03-26"
+    private static final InitialRequest AUTO_INIT_REQUEST = new InitialRequest(
+            new Implementation(AUTO_INIT_IMPL_NAME, "1", null),
+            // MCP spec: "if the server does not receive an MCP-Protocol-Version header,
+            // and has no other way to identify the version - for example,
+            // by relying on the protocol version negotiated during initialization
+            // - the server SHOULD assume protocol version 2025-03-26"
             SUPPORTED_PROTOCOL_VERSIONS.get(2),
             List.of(),
-            Transport.STREAMABLE_HTTP);
+            Transport.STREAMABLE_HTTP,
+            true);
 
     private final McpMetadata metadata;
 
@@ -115,6 +120,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl notificationManager,
             ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
             @All List<InitialResponseInfo> initialResponseInfos,
             CurrentVertxRequest currentVertxRequest,
@@ -126,7 +132,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, responseHandlers, metadata,
                 vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
-                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
@@ -159,8 +165,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         } else {
             McpConnectionBase existing = connectionManager.get(mcpSessionId);
             if (existing == null) {
-                if (httpConfig.servers().get(serverName).http().streamable().dummyInit()) {
-                    // We don't care about non-existent session when dummy init is enabled
+                if (httpConfig.servers().get(serverName).http().streamable().autoInit()) {
+                    // We don't care about non-existent session when auto-init is enabled
                     connection = initConnection(serverName);
                 } else {
                     LOG.errorf("Mcp session not found: %s", mcpSessionId);
@@ -212,39 +218,39 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
         HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, json, connection, securitySupport, ctx.response(),
                 mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion);
-        ScanResult result = scan(mcpRequest);
-        if (result.forceSseInit()) {
-            mcpRequest.initiateSse();
-        }
-        handle(mcpRequest).onComplete(ar -> {
-            if (ar.succeeded()) {
-                if (mcpRequest.sse.get()) {
-                    // Just close the SSE stream
-                    ctx.response().end();
-                } else {
-                    if (!ctx.response().ended()) {
-                        if (!result.containsRequest()) {
-                            // If the input consists solely of responses/notifications
-                            // then the server MUST return HTTP status 202
-                            ctx.response().setStatusCode(202).end();
-                        } else {
-                            ctx.end();
+        try {
+            ScanResult result = scan(mcpRequest);
+            if (result.forceSseInit()) {
+                mcpRequest.initiateSse();
+            }
+            handle(mcpRequest).onComplete(ar -> {
+                if (ar.succeeded()) {
+                    if (mcpRequest.sse.get()) {
+                        // Just close the SSE stream
+                        ctx.response().end();
+                    } else {
+                        if (!ctx.response().ended()) {
+                            if (!result.containsRequest()) {
+                                // If the input consists solely of responses/notifications
+                                // then the server MUST return HTTP status 202
+                                ctx.response().setStatusCode(202).end();
+                            } else {
+                                ctx.end();
+                            }
                         }
                     }
+                } else {
+                    if (!ctx.response().ended()) {
+                        ctx.response().setStatusCode(500).end();
+                    }
                 }
-            } else {
-                if (!ctx.response().ended()) {
-                    ctx.response().setStatusCode(500).end();
-                }
-            }
 
-            // Make sure the dummy connection is removed
-            if (connection.initialRequest() != null
-                    && DUMMY_INIT_IMPL_NAME.equals(connection.initialRequest().implementation().name())
-                    && connectionManager.remove(connection.id())) {
-                LOG.debugf("Dummy session removed [%s]", connection.id());
-            }
-        });
+                removeAutoInitConnection(connection);
+            });
+        } catch (Exception e) {
+            removeAutoInitConnection(connection);
+            throw e;
+        }
     }
 
     void openSseStream(RoutingContext ctx, ConnectionManager connectionManager, String serverName) {
@@ -302,21 +308,30 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return conn;
     }
 
+    private void removeAutoInitConnection(StreamableHttpMcpConnection connection) {
+        if (connection.initialRequest() != null
+                && connection.initialRequest().autoInitialized()
+                && connectionManager.remove(connection.id())) {
+            LOG.debugf("Auto-initialized session removed [%s]", connection.id());
+        }
+    }
+
     @Override
-    protected InitialRequest dummyInitialRequest(HttpMcpRequest mcpRequest) {
+    protected InitialRequest autoInitialRequest(HttpMcpRequest mcpRequest) {
         McpHttpServerRuntimeConfig config = httpConfig.servers().get(mcpRequest.serverName());
-        if (config != null && config.http().streamable().dummyInit()) {
+        if (config != null && config.http().streamable().autoInit()) {
             // "If the server does not receive an MCP-Protocol-Version header, the server SHOULD assume protocol version 2025-03-26"
             // Note that this is inconsistent with initial handshake where the latest supported version is used
             String version = mcpRequest.mcpProtocolVersion;
             if (version == null) {
-                return DUMMY_INIT_REQUEST;
+                return AUTO_INIT_REQUEST;
             }
             return new InitialRequest(
-                    DUMMY_INIT_REQUEST.implementation(),
+                    AUTO_INIT_REQUEST.implementation(),
                     version,
                     List.of(),
-                    Transport.STREAMABLE_HTTP);
+                    Transport.STREAMABLE_HTTP,
+                    true);
         }
         return null;
     }

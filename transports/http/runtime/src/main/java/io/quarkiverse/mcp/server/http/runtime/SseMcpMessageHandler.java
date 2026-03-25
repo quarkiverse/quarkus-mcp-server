@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.http.runtime.SseMcpMessageHandler.SseMcpRequest;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
@@ -62,7 +63,8 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
-            ResponseHandlers serverRequests,
+            ResponseHandlers responseHandlers,
+            CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
             @All List<InitialResponseInfo> initialResponseInfos,
             CurrentVertxRequest currentVertxRequest,
@@ -72,9 +74,9 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             Instance<McpMetrics> metrics,
             Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
-                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null);
+                mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
     }

@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
+import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
@@ -120,6 +121,7 @@ public class WebSocketMcpServerProcessor {
                     ResourceTemplateCompletionManagerImpl.class,
                     NotificationManagerImpl.class,
                     ResponseHandlers.class,
+                    CancellationRequests.class,
                     McpMetadata.class,
                     Vertx.class,
                     List.class,
@@ -140,6 +142,7 @@ public class WebSocketMcpServerProcessor {
                     .addParameterType(Type.classType(ResourceTemplateCompletionManagerImpl.class))
                     .addParameterType(Type.classType(NotificationManagerImpl.class))
                     .addParameterType(Type.classType(ResponseHandlers.class))
+                    .addParameterType(Type.classType(CancellationRequests.class))
                     .addParameterType(Type.classType(McpMetadata.class))
                     .addParameterType(Type.classType(Vertx.class))
                     // List<InitialCheck>
@@ -158,9 +161,9 @@ public class WebSocketMcpServerProcessor {
                             Type.classType(McpRequestValidator.class)))
                     .build());
             // @All List<InitialCheck>
-            constructor.getParameterAnnotations(12).addAnnotation(All.class);
-            // @All List<InitialResponseInfo>
             constructor.getParameterAnnotations(13).addAnnotation(All.class);
+            // @All List<InitialResponseInfo>
+            constructor.getParameterAnnotations(14).addAnnotation(All.class);
             // super(...);
             constructor.invokeSpecialMethod(MethodDescriptor.ofConstructor(WebSocketMcpMessageHandler.class, params),
                     constructor.getThis(),
@@ -180,7 +183,8 @@ public class WebSocketMcpServerProcessor {
                     constructor.getMethodParam(13),
                     constructor.getMethodParam(14),
                     constructor.getMethodParam(15),
-                    constructor.getMethodParam(16));
+                    constructor.getMethodParam(16),
+                    constructor.getMethodParam(17));
             constructor.returnVoid();
 
             // WebSocketMcpMessageHandler.serverName()

@@ -3,14 +3,11 @@ package io.quarkiverse.mcp.server.runtime;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
-import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.vertx.core.json.JsonObject;
 
@@ -32,8 +29,6 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final long idleTimeout;
 
-    protected final ConcurrentMap<RequestId, Optional<String>> cancellationRequests;
-
     protected final String serverName;
 
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName) {
@@ -46,7 +41,6 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.autoPingInterval = serverConfig.autoPingInterval();
         this.lastUsed = Instant.now().toEpochMilli();
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
-        this.cancellationRequests = new ConcurrentHashMap<>();
         this.serverName = serverName;
     }
 
@@ -118,20 +112,6 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     protected void messageSent(JsonObject message) {
         if (trafficLoggerTextLimit > 0) {
             TrafficLogger.messageSent(message, this, trafficLoggerTextLimit);
-        }
-    }
-
-    Optional<String> getCancellationRequest(RequestId requestId) {
-        return cancellationRequests.get(requestId);
-    }
-
-    boolean addCancellationRequest(RequestId requestId, String reason) {
-        return cancellationRequests.putIfAbsent(requestId, Optional.ofNullable(reason)) == null;
-    }
-
-    void removeCancellationRequest(JsonObject request) {
-        if (!cancellationRequests.isEmpty()) {
-            cancellationRequests.remove(new RequestId(Messages.getId(request)));
         }
     }
 

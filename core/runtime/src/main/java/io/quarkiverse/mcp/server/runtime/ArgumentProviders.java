@@ -16,7 +16,8 @@ record ArgumentProviders(
         Sender sender,
         Object progressToken,
         ResponseHandlers responseHandlers,
-        String serverName) {
+        String serverName,
+        CancellationRequests cancellationRequests) {
 
     Object getArg(String name) {
         return args != null ? args.get(name) : null;

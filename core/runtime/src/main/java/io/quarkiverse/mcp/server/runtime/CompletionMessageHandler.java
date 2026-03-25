@@ -13,10 +13,10 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
     private static final Logger LOG = Logger.getLogger(CompletionMessageHandler.class);
 
-    private final ResponseHandlers responseHandlers;
+    private final CompletionManagerBase manager;
 
-    protected CompletionMessageHandler(ResponseHandlers responseHandlers) {
-        this.responseHandlers = responseHandlers;
+    protected CompletionMessageHandler(CompletionManagerBase manager) {
+        this.manager = manager;
     }
 
     protected abstract Future<CompletionResponse> execute(String key, JsonObject message, ArgumentProviders argProviders,
@@ -36,7 +36,8 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(message,
                 Map.of(argumentName, argument.getString("value")), mcpRequest.connection(), id, null, sender,
-                Messages.getProgressToken(message), responseHandlers, mcpRequest.serverName());
+                Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName(),
+                manager.cancellationRequests);
 
         try {
             Future<CompletionResponse> fu = execute(key, message, argProviders, mcpRequest);
