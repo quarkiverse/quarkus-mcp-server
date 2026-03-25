@@ -9,7 +9,6 @@ import java.util.Set;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
-import org.jboss.jandex.AnnotationInstance;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
@@ -34,17 +33,17 @@ import io.quarkiverse.mcp.server.websocket.runtime.config.McpWebSocketServerBuil
 import io.quarkiverse.mcp.server.websocket.runtime.config.McpWebSocketServersBuildTimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
-import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
+import io.quarkus.arc.deployment.GeneratedBeanGizmo2Adaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.AdditionalIndexedClassesBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.gizmo.ClassCreator;
-import io.quarkus.gizmo.ClassOutput;
-import io.quarkus.gizmo.MethodCreator;
-import io.quarkus.gizmo.MethodDescriptor;
-import io.quarkus.gizmo.SignatureBuilder;
-import io.quarkus.gizmo.Type;
+import io.quarkus.gizmo2.ClassOutput;
+import io.quarkus.gizmo2.GenericType;
+import io.quarkus.gizmo2.Gizmo;
+import io.quarkus.gizmo2.ParamVar;
+import io.quarkus.gizmo2.TypeArgument;
+import io.quarkus.gizmo2.desc.ConstructorDesc;
 import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.util.HashUtil;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -80,8 +79,14 @@ public class WebSocketMcpServerProcessor {
     }
 
     @BuildStep
-    void generateEndpoints(McpWebSocketServersBuildTimeConfig config, BuildProducer<GeneratedBeanBuildItem> generatedBeans) {
-        ClassOutput classOutput = new GeneratedBeanGizmoAdaptor(generatedBeans, name -> false);
+    void generateEndpoints(McpWebSocketServersBuildTimeConfig config,
+            BuildProducer<GeneratedBeanBuildItem> generatedBeans) {
+
+        // The generated endpoints are not considered application classes
+        ClassOutput classOutput = new GeneratedBeanGizmo2Adaptor(generatedBeans);
+        Gizmo gizmo = Gizmo.create(classOutput)
+                .withDebugInfo(false)
+                .withParameters(false);
 
         // For each WebSocket path we generate a new class that extends WebSocketMcpMessageHandler
         Set<String> endpointPaths = new HashSet<>();
@@ -96,102 +101,89 @@ public class WebSocketMcpServerProcessor {
                         "Multiple server configurations define the same endpoint path: " + endpointPath);
             }
             String endpointClassName = "io.quarkiverse.mcp.server.websocket.runtime.Endpoint" + HashUtil.sha1(e.getKey());
-            ClassCreator endpointCreator = ClassCreator.builder().classOutput(classOutput)
-                    .className(endpointClassName)
-                    .superClass(WebSocketMcpMessageHandler.class)
-                    .build();
-            // @WebSocket(path = "/foo/bar", inboundProcessingMode = InboundProcessingMode.CONCURRENT)
-            endpointCreator.addAnnotation(
-                    AnnotationInstance.builder(WebSocket.class)
-                            .add("path", e.getValue().websocket().endpointPath())
-                            .add("inboundProcessingMode", InboundProcessingMode.CONCURRENT)
-                            .build());
-            // @Startup - force eager initialization to trigger server name validation
-            endpointCreator.addAnnotation(Startup.class);
-            endpointCreator.addAnnotation(Singleton.class);
 
-            Class<?>[] params = new Class<?>[] {
-                    McpServersRuntimeConfig.class,
-                    ConnectionManager.class,
-                    PromptManagerImpl.class,
-                    ToolManagerImpl.class,
-                    ResourceManagerImpl.class,
-                    PromptCompletionManagerImpl.class,
-                    ResourceTemplateManagerImpl.class,
-                    ResourceTemplateCompletionManagerImpl.class,
-                    NotificationManagerImpl.class,
-                    ResponseHandlers.class,
-                    CancellationRequests.class,
-                    McpMetadata.class,
-                    Vertx.class,
-                    List.class,
-                    List.class,
-                    Instance.class,
-                    Instance.class,
-                    Instance.class
-            };
-            MethodCreator constructor = endpointCreator.getConstructorCreator(params);
-            constructor.setSignature(SignatureBuilder.forMethod()
-                    .addParameterType(Type.classType(McpServersRuntimeConfig.class))
-                    .addParameterType(Type.classType(ConnectionManager.class))
-                    .addParameterType(Type.classType(PromptManagerImpl.class))
-                    .addParameterType(Type.classType(ToolManagerImpl.class))
-                    .addParameterType(Type.classType(ResourceManagerImpl.class))
-                    .addParameterType(Type.classType(PromptCompletionManagerImpl.class))
-                    .addParameterType(Type.classType(ResourceTemplateManagerImpl.class))
-                    .addParameterType(Type.classType(ResourceTemplateCompletionManagerImpl.class))
-                    .addParameterType(Type.classType(NotificationManagerImpl.class))
-                    .addParameterType(Type.classType(ResponseHandlers.class))
-                    .addParameterType(Type.classType(CancellationRequests.class))
-                    .addParameterType(Type.classType(McpMetadata.class))
-                    .addParameterType(Type.classType(Vertx.class))
-                    // List<InitialCheck>
-                    .addParameterType(Type.parameterizedType(Type.classType(List.class), Type.classType(InitialCheck.class)))
-                    // List<InitialResponseInfo>
-                    .addParameterType(
-                            Type.parameterizedType(Type.classType(List.class), Type.classType(InitialResponseInfo.class)))
+            gizmo.class_(endpointClassName, cc -> {
+                cc.extends_(WebSocketMcpMessageHandler.class);
+
+                // @WebSocket(path = "/foo/bar", inboundProcessingMode = InboundProcessingMode.CONCURRENT)
+                cc.addAnnotation(WebSocket.class, ac -> {
+                    ac.add("path", e.getValue().websocket().endpointPath());
+                    ac.add("inboundProcessingMode", InboundProcessingMode.CONCURRENT);
+                });
+                // @Startup - force eager initialization to trigger server name validation
+                cc.addAnnotation(Startup.class);
+                cc.addAnnotation(Singleton.class);
+
+                // Constructor
+                cc.constructor(conc -> {
+                    ParamVar p0 = conc.parameter("config", McpServersRuntimeConfig.class);
+                    ParamVar p1 = conc.parameter("connectionManager", ConnectionManager.class);
+                    ParamVar p2 = conc.parameter("promptManager", PromptManagerImpl.class);
+                    ParamVar p3 = conc.parameter("toolManager", ToolManagerImpl.class);
+                    ParamVar p4 = conc.parameter("resourceManager", ResourceManagerImpl.class);
+                    ParamVar p5 = conc.parameter("promptCompletionManager", PromptCompletionManagerImpl.class);
+                    ParamVar p6 = conc.parameter("resourceTemplateManager", ResourceTemplateManagerImpl.class);
+                    ParamVar p7 = conc.parameter("resourceTemplateCompletionManager",
+                            ResourceTemplateCompletionManagerImpl.class);
+                    ParamVar p8 = conc.parameter("notificationManager", NotificationManagerImpl.class);
+                    ParamVar p9 = conc.parameter("responseHandlers", ResponseHandlers.class);
+                    ParamVar p10 = conc.parameter("cancellationRequests", CancellationRequests.class);
+                    ParamVar p11 = conc.parameter("mcpMetadata", McpMetadata.class);
+                    ParamVar p12 = conc.parameter("vertx", Vertx.class);
+                    // @All List<InitialCheck>
+                    ParamVar p13 = conc.parameter("initialChecks", pp -> {
+                        pp.setType(GenericType.of(List.class, List.of(TypeArgument.of(InitialCheck.class))));
+                        pp.addAnnotation(All.class);
+                    });
+                    // @All List<InitialResponseInfo>
+                    ParamVar p14 = conc.parameter("initialResponseInfos", pp -> {
+                        pp.setType(GenericType.of(List.class, List.of(TypeArgument.of(InitialResponseInfo.class))));
+                        pp.addAnnotation(All.class);
+                    });
                     // Instance<CurrentIdentityAssociation>
-                    .addParameterType(Type.parameterizedType(Type.classType(Instance.class),
-                            Type.classType(CurrentIdentityAssociation.class)))
+                    ParamVar p15 = conc.parameter("currentIdentityAssociation",
+                            GenericType.of(Instance.class, List.of(TypeArgument.of(CurrentIdentityAssociation.class))));
                     // Instance<McpMetrics>
-                    .addParameterType(Type.parameterizedType(Type.classType(Instance.class),
-                            Type.classType(McpMetrics.class)))
+                    ParamVar p16 = conc.parameter("metrics",
+                            GenericType.of(Instance.class, List.of(TypeArgument.of(McpMetrics.class))));
                     // Instance<McpRequestValidator>
-                    .addParameterType(Type.parameterizedType(Type.classType(Instance.class),
-                            Type.classType(McpRequestValidator.class)))
-                    .build());
-            // @All List<InitialCheck>
-            constructor.getParameterAnnotations(13).addAnnotation(All.class);
-            // @All List<InitialResponseInfo>
-            constructor.getParameterAnnotations(14).addAnnotation(All.class);
-            // super(...);
-            constructor.invokeSpecialMethod(MethodDescriptor.ofConstructor(WebSocketMcpMessageHandler.class, params),
-                    constructor.getThis(),
-                    constructor.getMethodParam(0),
-                    constructor.getMethodParam(1),
-                    constructor.getMethodParam(2),
-                    constructor.getMethodParam(3),
-                    constructor.getMethodParam(4),
-                    constructor.getMethodParam(5),
-                    constructor.getMethodParam(6),
-                    constructor.getMethodParam(7),
-                    constructor.getMethodParam(8),
-                    constructor.getMethodParam(9),
-                    constructor.getMethodParam(10),
-                    constructor.getMethodParam(11),
-                    constructor.getMethodParam(12),
-                    constructor.getMethodParam(13),
-                    constructor.getMethodParam(14),
-                    constructor.getMethodParam(15),
-                    constructor.getMethodParam(16),
-                    constructor.getMethodParam(17));
-            constructor.returnVoid();
+                    ParamVar p17 = conc.parameter("mcpRequestValidator",
+                            GenericType.of(Instance.class, List.of(TypeArgument.of(McpRequestValidator.class))));
 
-            // WebSocketMcpMessageHandler.serverName()
-            MethodCreator serverName = endpointCreator.getMethodCreator("serverName", String.class);
-            serverName.returnValue(serverName.load(e.getKey()));
+                    ConstructorDesc superConstructor = ConstructorDesc.of(WebSocketMcpMessageHandler.class,
+                            McpServersRuntimeConfig.class,
+                            ConnectionManager.class,
+                            PromptManagerImpl.class,
+                            ToolManagerImpl.class,
+                            ResourceManagerImpl.class,
+                            PromptCompletionManagerImpl.class,
+                            ResourceTemplateManagerImpl.class,
+                            ResourceTemplateCompletionManagerImpl.class,
+                            NotificationManagerImpl.class,
+                            ResponseHandlers.class,
+                            CancellationRequests.class,
+                            McpMetadata.class,
+                            Vertx.class,
+                            List.class,
+                            List.class,
+                            Instance.class,
+                            Instance.class,
+                            Instance.class);
+                    conc.body(bc -> {
+                        bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
+                                p13, p14, p15, p16, p17);
+                        bc.return_();
+                    });
+                });
 
-            endpointCreator.close();
+                cc.method("serverName", mc -> {
+                    mc.returning(String.class);
+                    mc.body(bc -> {
+                        bc.return_(e.getKey());
+                    });
+                });
+
+            });
         }
     }
 
