@@ -89,7 +89,7 @@ quarkus.oidc.resource-metadata.enabled=true <3>
 ----
 <1> Keycloak realm address. Replace it with your own provider's address.
 <2> Require that only access tokens that have a `quarkus-mcp-server` audience can be accepted. Change this audience value to uniquely identify your Quarkus MCP HTTP Server deployment.
-<3> Allow MCP Clients to discover OAuth2 Protected Resource Metadata of this Quarkus MCP Server in order to meet the https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#protected-resource-metadata-discovery-requirements[Protected Resource Metadata Discovery Requirements] of the [MCP Authorization specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization). See also https://quarkus.io/guides/security-oidc-expanded-configuration#resource-metadata-properties[Quarkus OIDC Expanded Configuration Guide] how to customize the protected resource metadata content.
+<3> Allow MCP Clients to discover OAuth2 Protected Resource Metadata of this Quarkus MCP Server in order to meet the https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#protected-resource-metadata-discovery-requirements[Protected Resource Metadata Discovery Requirements] of the https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization[MCP Authorization specification]. See also https://quarkus.io/guides/security-oidc-expanded-configuration#resource-metadata-properties[Quarkus OIDC Expanded Configuration Guide] how to customize the protected resource metadata content.
 
 == See Also
 
