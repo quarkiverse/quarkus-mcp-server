@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.ToolUseContent;
 
 public class ContentTest {
 
@@ -21,9 +22,14 @@ public class ContentTest {
                 assertThrows(IllegalArgumentException.class, () -> text.asResourceLink()).getMessage());
         assertEquals("Not an audio",
                 assertThrows(IllegalArgumentException.class, () -> text.asAudio()).getMessage());
+        assertEquals("Not a tool use",
+                assertThrows(IllegalArgumentException.class, () -> text.asToolUse()).getMessage());
         ResourceLink link = new ResourceLink("file://", "foo");
         assertEquals("Not a text",
                 assertThrows(IllegalArgumentException.class, () -> link.asText()).getMessage());
+        ToolUseContent toolUse = new ToolUseContent("call_1", "weather", java.util.Map.of(), null);
+        assertEquals("Not a tool result",
+                assertThrows(IllegalArgumentException.class, () -> toolUse.asToolResult()).getMessage());
     }
 
 }

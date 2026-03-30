@@ -13,13 +13,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingResponse;
+import io.quarkiverse.mcp.server.ToolChoice;
+import io.quarkiverse.mcp.server.ToolManager;
 import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
@@ -35,6 +36,8 @@ public class SamplingRequestImpl implements SamplingRequest {
     private final String systemPrompt;
     private final IncludeContext includeContext;
     private final ModelPreferences modelPreferences;
+    private final List<ToolManager.ToolInfo> tools;
+    private final ToolChoice toolChoice;
     private final Map<String, Object> metadata;
     private final List<String> stopSequences;
 
@@ -46,8 +49,8 @@ public class SamplingRequestImpl implements SamplingRequest {
     private final McpTracing mcpTracing;
 
     SamplingRequestImpl(long maxTokens, List<SamplingMessage> messages, BigDecimal temperature, String systemPrompt,
-            IncludeContext includeContext, ModelPreferences modelPreferences, Map<String, Object> metadata,
-            List<String> stopSequences, Sender sender,
+            IncludeContext includeContext, ModelPreferences modelPreferences, List<ToolManager.ToolInfo> tools,
+            ToolChoice toolChoice, Map<String, Object> metadata, List<String> stopSequences, Sender sender,
             ResponseHandlers responseHandlers, Duration timeout, McpTracing mcpTracing) {
         this.maxTokens = maxTokens;
         this.messages = messages;
@@ -55,6 +58,8 @@ public class SamplingRequestImpl implements SamplingRequest {
         this.systemPrompt = systemPrompt;
         this.includeContext = includeContext;
         this.modelPreferences = modelPreferences;
+        this.tools = tools;
+        this.toolChoice = toolChoice;
         this.metadata = metadata;
         this.stopSequences = stopSequences;
         this.sender = sender;
@@ -105,6 +110,22 @@ public class SamplingRequestImpl implements SamplingRequest {
         return modelPreferences;
     }
 
+    @Override
+    public List<ToolManager.ToolInfo> tools() {
+        return tools;
+    }
+
+    @JsonProperty
+    public Object getTools() {
+        return tools != null ? tools.stream().map(ToolManager.ToolInfo::asJson).toList() : null;
+    }
+
+    @JsonProperty
+    @Override
+    public ToolChoice toolChoice() {
+        return toolChoice;
+    }
+
     @JsonProperty
     @Override
     public Map<String, Object> metadata() {
@@ -128,8 +149,9 @@ public class SamplingRequestImpl implements SamplingRequest {
                 }
                 String model = result.getString("model");
                 Role role = Role.valueOf(result.getString("role").toUpperCase());
-                Content content = Contents.parseContent(result.getJsonObject("content"));
-                SamplingResponse samplingResponse = new SamplingResponse(content, model, role, result.getString("stopReason"),
+                Object content = result.getValue("content");
+                SamplingResponse samplingResponse = new SamplingResponse(Contents.parseSamplingMessageContents(content), model,
+                        role, result.getString("stopReason"),
                         MetaImpl.from(result));
                 future.complete(samplingResponse);
             });
