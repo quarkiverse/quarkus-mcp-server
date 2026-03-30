@@ -19,6 +19,8 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.ToolResultContent;
+import io.quarkiverse.mcp.server.ToolUseContent;
 import io.quarkus.jackson.ObjectMapperCustomizer;
 
 @Dependent
@@ -39,6 +41,8 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
         objectMapper.addMixIn(ImageContent.class, ResponseMixin.class);
         objectMapper.addMixIn(ResourceLink.class, ResponseMixin.class);
         objectMapper.addMixIn(TextContent.class, ResponseMixin.class);
+        objectMapper.addMixIn(ToolResultContent.class, ResponseMixin.class);
+        objectMapper.addMixIn(ToolUseContent.class, ResponseMixin.class);
 
         objectMapper.addMixIn(Icon.class, ResponseMixin.class);
         objectMapper.addMixIn(Implementation.class, ResponseMixin.class);
