@@ -58,6 +58,7 @@ import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
+import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.McpServer;
@@ -1006,13 +1007,29 @@ class McpServerProcessor {
                 .constructors()
                 .build());
 
-        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(Content.class, TextContent.class, ImageContent.class,
-                EmbeddedResource.class, AudioContent.class, PromptResponse.class, PromptMessage.class, ToolResponse.class,
+        // Various classes serialized by Jackson
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(
+                Content.class,
+                TextContent.class,
+                ImageContent.class,
+                EmbeddedResource.class,
+                AudioContent.class,
+                PromptResponse.class,
+                PromptMessage.class,
+                ToolResponse.class,
                 FeatureMethodInfo.class,
-                FeatureArgument.class, ResourceResponse.class, ResourceContents.class, TextResourceContents.class,
-                BlobResourceContents.class, Role.class, SamplingMessage.class, ModelPreferences.class, ModelHint.class,
+                FeatureArgument.class,
+                ResourceResponse.class,
+                ResourceContents.class,
+                TextResourceContents.class,
+                BlobResourceContents.class,
+                Role.class,
+                SamplingMessage.class,
+                ModelPreferences.class,
+                ModelHint.class,
                 IncludeContext.class,
-                SamplingRequestImpl.class)
+                SamplingRequestImpl.class,
+                Icon.class)
                 .methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());
