@@ -1,11 +1,17 @@
 package io.quarkiverse.mcp.server.sse.it;
 
+import java.util.List;
+
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
+import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.Icons;
+import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -23,6 +29,7 @@ public class ServerFeatures {
     @Inject
     CodeService codeService;
 
+    @Icons(ToolIcons.class)
     @Tool
     TextContent toLowerCase(String value) {
         return new TextContent(value.toLowerCase());
@@ -44,6 +51,15 @@ public class ServerFeatures {
     }
 
     public record Answer(String value) {
+    }
+
+    public static class ToolIcons implements IconsProvider {
+
+        @Override
+        public List<Icon> get(FeatureInfo feature) {
+            return List.of(new Icon("file://tool-icon", "image/png"));
+        }
+
     }
 
     @Tool

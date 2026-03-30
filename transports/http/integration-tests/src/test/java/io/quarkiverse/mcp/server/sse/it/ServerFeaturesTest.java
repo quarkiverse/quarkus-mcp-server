@@ -65,6 +65,20 @@ class ServerFeaturesTest {
     }
 
     @Test
+    void testToolIcons() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                .toolsList(p -> {
+                    JsonArray icons = p.findByName("toLowerCase").icons();
+                    assertNotNull(icons);
+                    assertEquals(1, icons.size());
+                    assertEquals("file://tool-icon", icons.getJsonObject(0).getString("src"));
+                    assertEquals("image/png", icons.getJsonObject(0).getString("mimeType"));
+                })
+                .thenAssertResults();
+    }
+
+    @Test
     void testResource() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
