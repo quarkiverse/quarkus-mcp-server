@@ -13,12 +13,27 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
      *
      * @param name
      * @param argumentName
+     * @param serverName
+     * @return the completion for the given name reference, argument name, and server
+     * @see McpServer
+     */
+    CompletionInfo getCompletion(String name, String argumentName, String serverName);
+
+    /**
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it searches across all servers and throws an exception if the name and argument combination is ambiguous.
+     *
+     * @param name
+     * @param argumentName
      * @return the completion for the given name reference and argument name
+     * @throws IllegalStateException if multiple completions with the given name and argument exist on different servers
+     * @see #getCompletion(String, String, String)
      */
     CompletionInfo getCompletion(String name, String argumentName);
 
     /**
-     * The combination of the name reference and argument name must be unique.
+     * The combination of the name reference and argument name must be unique within a server configuration. A completion with
+     * the same name reference and argument name can exist on different servers.
      *
      * @param nameReference
      * @return a new definition builder
@@ -68,7 +83,8 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
 
         /**
          * @return the completion info
-         * @throws IllegalArgumentException if a completion for the given name reference and argument already exists
+         * @throws IllegalArgumentException if a completion for the given name reference and argument already exists for the
+         *         same server configuration
          */
         @Override
         CompletionInfo register();

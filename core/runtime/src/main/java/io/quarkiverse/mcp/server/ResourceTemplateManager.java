@@ -13,23 +13,53 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
     /**
      *
      * @param name
+     * @param serverName
+     * @return the resource template with the given name bound to the given server, or {@code null}
+     * @see McpServer
+     */
+    ResourceTemplateInfo getResourceTemplate(String name, String serverName);
+
+    /**
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it searches across all servers and throws an exception if the name is ambiguous.
+     *
+     * @param name
      * @return the resource template with the given name or {@code null}
+     * @throws IllegalStateException if multiple resource templates with the given name exist on different servers
+     * @see #getResourceTemplate(String, String)
      */
     ResourceTemplateInfo getResourceTemplate(String name);
 
     /**
+     * The name must be unique within a server configuration. A resource template with the same name can exist on different
+     * servers.
      *
-     * @param name The name must be unique
+     * @param name
      * @return a new definition builder
-     * @throws IllegalArgumentException if a resource template with the given name already exists
      * @see ResourceTemplateDefinition#register()
      */
     ResourceTemplateDefinition newResourceTemplate(String name);
 
     /**
-     * Removes a resource template previously added with {@link #newResourceTemplate(String)}.
+     * Removes a resource template previously added with {@link #newResourceTemplate(String)} from the given server
+     * configuration only.
      *
-     * @return the removed resource template or {@code null} if no such resource existed
+     * @param name
+     * @param serverName
+     * @return the removed resource template or {@code null} if no such resource template existed
+     */
+    ResourceTemplateInfo removeResourceTemplate(String name, String serverName);
+
+    /**
+     * Removes all resource templates previously added with {@link #newResourceTemplate(String)} with the given name from all
+     * server configurations.
+     * <p>
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it removes matching resource templates across all servers.
+     *
+     * @param name
+     * @return one of the removed resource templates or {@code null} if no such resource template existed
+     * @see #removeResourceTemplate(String, String)
      */
     ResourceTemplateInfo removeResourceTemplate(String name);
 
@@ -93,8 +123,9 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
         ResourceTemplateDefinition setMetadata(Map<MetaKey, Object> metadata);
 
         /**
-         * @throws IllegalArgumentException if a resource template with the given name already exists
          * @return the resource template info
+         * @throws IllegalArgumentException if a resource template with the given name already exists for the same server
+         *         configuration
          */
         @Override
         ResourceTemplateInfo register();

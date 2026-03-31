@@ -20,9 +20,10 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
     interface FeatureInfo extends Comparable<FeatureInfo> {
 
         /**
-         * It is guaranteed that the name is unique for a specific feature.
+         * It is guaranteed that the name is unique for a specific feature within a server configuration.
          *
          * @return the name
+         * @see #serverNames()
          */
         String name();
 

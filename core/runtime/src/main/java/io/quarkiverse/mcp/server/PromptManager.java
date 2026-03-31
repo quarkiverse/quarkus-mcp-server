@@ -13,23 +13,50 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
     /**
      *
      * @param name
+     * @param serverName
+     * @return the prompt with the given name bound to the given server, or {@code null}
+     * @see McpServer
+     */
+    PromptInfo getPrompt(String name, String serverName);
+
+    /**
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it searches across all servers and throws an exception if the name is ambiguous.
+     *
+     * @param name
      * @return the prompt with the given name, or {@code null}
+     * @throws IllegalStateException if multiple prompts with the given name exist on different servers
+     * @see #getPrompt(String, String)
      */
     PromptInfo getPrompt(String name);
 
     /**
+     * The name must be unique within a server configuration. A prompt with the same name can exist on different servers.
      *
-     * @param name The name must be unique
+     * @param name
      * @return a new definition builder
-     * @throws IllegalArgumentException if a prompt with the given name already exists
      * @see PromptDefinition#register()
      */
     PromptDefinition newPrompt(String name);
 
     /**
-     * Removes a prompt previously added with {@link #newPrompt(String)}.
+     * Removes a prompt previously added with {@link #newPrompt(String)} from the given server configuration only.
      *
+     * @param name
+     * @param serverName
      * @return the removed prompt or {@code null} if no such prompt existed
+     */
+    PromptInfo removePrompt(String name, String serverName);
+
+    /**
+     * Removes all prompts previously added with {@link #newPrompt(String)} with the given name from all server configurations.
+     * <p>
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it removes matching prompts across all servers.
+     *
+     * @param name
+     * @return one of the removed prompts or {@code null} if no such prompt existed
+     * @see #removePrompt(String, String)
      */
     PromptInfo removePrompt(String name);
 
@@ -103,7 +130,7 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
 
         /**
          * @return the prompt info
-         * @throws IllegalArgumentException if a prompt with the given name already exists
+         * @throws IllegalArgumentException if a prompt with the given name already exists for the same server configuration
          */
         @Override
         PromptInfo register();

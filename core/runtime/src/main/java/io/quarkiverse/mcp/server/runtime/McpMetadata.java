@@ -41,8 +41,9 @@ public interface McpMetadata {
 
     Map<String, Class<?>> toolArgumentHolders();
 
-    static <T> FeatureMetadata<T> findFeatureByName(List<FeatureMetadata<T>> features, String name) {
-        return features.stream().filter(fm -> fm.info().name().equals(name)).findFirst().orElse(null);
+    static <T> FeatureMetadata<T> findFeature(List<FeatureMetadata<T>> features, String name, String serverName) {
+        return features.stream().filter(fm -> fm.info().name().equals(name) && fm.info().serverNames().contains(serverName))
+                .findFirst().orElse(null);
     }
 
 }

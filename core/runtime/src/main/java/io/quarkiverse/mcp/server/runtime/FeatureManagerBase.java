@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -75,6 +77,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     // used to validate server name if InvalidServerNameStrategy.FAIL is set
     protected final Set<String> serverNames;
+
+    // used to ensure atomic registration of features across multiple server keys
+    protected final Lock registrationLock = new ReentrantLock();
 
     final ResponseHandlers responseHandlers;
 
@@ -621,6 +626,28 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             return ret;
         }
 
+    }
+
+    /**
+     * Finds a unique info by name across all servers. Throws {@link IllegalStateException} if multiple distinct infos with the
+     * given name exist on different servers.
+     *
+     * @return the info or {@code null}
+     */
+    protected static <INFO extends FeatureInfo> INFO findUniqueByName(ConcurrentMap<FeatureKey, INFO> map, String name,
+            Feature feature) {
+        Objects.requireNonNull(name);
+        List<INFO> matches = map.entrySet().stream()
+                .filter(e -> e.getKey().name().equals(name))
+                .map(Map.Entry::getValue)
+                .distinct()
+                .toList();
+        if (matches.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple %s definitions with name [%s] found on different servers; use the method variant that accepts a server name"
+                            .formatted(feature, name));
+        }
+        return matches.isEmpty() ? null : matches.get(0);
     }
 
     protected Map<Type, DefaultValueConverter<?>> defaultValueConverters() {

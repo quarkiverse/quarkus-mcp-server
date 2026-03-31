@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -48,7 +47,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     private static final Logger LOG = Logger.getLogger(PromptManagerImpl.class);
 
-    final ConcurrentMap<String, PromptInfo> prompts;
+    final ConcurrentMap<FeatureKey, PromptInfo> prompts;
 
     final List<PromptFilter> filters;
 
@@ -68,7 +67,10 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                 metadata);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
-            this.prompts.put(f.info().name(), new PromptMethod(f, iconsProviders));
+            PromptMethod promptMethod = new PromptMethod(f, iconsProviders);
+            for (String server : f.info().serverNames()) {
+                this.prompts.put(new FeatureKey(f.info().name(), server), promptMethod);
+            }
         }
         this.filters = filters;
         this.iconsProviders = iconsProviders;
@@ -76,7 +78,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
 
     @Override
     Stream<PromptInfo> infos() {
-        return prompts.values().stream();
+        return prompts.values().stream().distinct();
     }
 
     @Override
@@ -90,22 +92,25 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     }
 
     @Override
+    public PromptInfo getPrompt(String name, String serverName) {
+        return prompts.get(new FeatureKey(name, serverName));
+    }
+
+    @Override
     public PromptInfo getPrompt(String name) {
-        return prompts.get(Objects.requireNonNull(name));
+        return findUniqueByName(prompts, name, Feature.PROMPT);
     }
 
     @Override
     public PromptDefinition newPrompt(String name) {
-        if (prompts.containsKey(name)) {
-            throw promptWithNameAlreadyExists(name);
-        }
         return new PromptDefinitionImpl(name);
     }
 
     @Override
-    public PromptInfo removePrompt(String name) {
+    public PromptInfo removePrompt(String name, String serverName) {
+        FeatureKey key = new FeatureKey(name, serverName);
         AtomicReference<PromptInfo> removed = new AtomicReference<>();
-        prompts.computeIfPresent(name, (key, value) -> {
+        prompts.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
                 notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
@@ -116,8 +121,25 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         return removed.get();
     }
 
-    IllegalArgumentException promptWithNameAlreadyExists(String name) {
-        return new IllegalArgumentException("A prompt with name [" + name + "] already exits");
+    @Override
+    public PromptInfo removePrompt(String name) {
+        AtomicReference<PromptInfo> removed = new AtomicReference<>();
+        prompts.entrySet().removeIf(e -> {
+            if (e.getKey().name().equals(name) && !e.getValue().isMethod()) {
+                removed.set(e.getValue());
+                return true;
+            }
+            return false;
+        });
+        if (removed.get() != null) {
+            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+        }
+        return removed.get();
+    }
+
+    IllegalArgumentException promptWithNameAlreadyExists(String name, String serverName) {
+        return new IllegalArgumentException(
+                "A prompt with name [" + name + "] already exists for server configuration [" + serverName + "]");
     }
 
     @Override
@@ -128,9 +150,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<PromptResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
-        PromptInfo prompt = prompts.get(id);
+        PromptInfo prompt = prompts.get(new FeatureKey(id, mcpRequest.serverName()));
         if (prompt instanceof FeatureInvoker fi
-                && matchesServer(prompt, mcpRequest)
                 && test(prompt, FilterContextImpl.of(McpMethod.PROMPTS_GET, message, mcpRequest))) {
             return fi;
         }
@@ -251,12 +272,21 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             validate();
             PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, metadata, icons);
-            PromptInfo existing = prompts.putIfAbsent(name, ret);
-            if (existing != null) {
-                throw promptWithNameAlreadyExists(name);
-            } else {
-                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+            List<FeatureKey> keys = FeatureKey.list(name, serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey key : keys) {
+                    if (prompts.containsKey(key)) {
+                        throw promptWithNameAlreadyExists(name, key.serverName());
+                    }
+                }
+                for (FeatureKey key : keys) {
+                    prompts.put(key, ret);
+                }
+            } finally {
+                registrationLock.unlock();
             }
+            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
             return ret;
         }
     }

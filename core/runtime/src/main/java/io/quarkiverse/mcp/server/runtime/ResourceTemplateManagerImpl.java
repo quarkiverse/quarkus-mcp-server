@@ -55,7 +55,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     private static final Logger LOG = Logger.getLogger(ResourceTemplateManagerImpl.class);
 
-    final ConcurrentMap<String, ResourceTemplateMetadata> templates;
+    final ConcurrentMap<FeatureKey, ResourceTemplateMetadata> templates;
 
     final List<ResourceTemplateFilter> filters;
 
@@ -75,8 +75,12 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 metadata);
         this.templates = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> fm : metadata.resourceTemplates()) {
-            this.templates.put(fm.info().name(), new ResourceTemplateMetadata(createMatcherFromUriTemplate(fm.info().uri()),
-                    new ResourceTemplateMethod(fm, iconsProviders)));
+            ResourceTemplateMethod templateMethod = new ResourceTemplateMethod(fm, iconsProviders);
+            ResourceTemplateMetadata templateMetadata = new ResourceTemplateMetadata(
+                    createMatcherFromUriTemplate(fm.info().uri()), templateMethod);
+            for (String server : fm.info().serverNames()) {
+                this.templates.put(new FeatureKey(fm.info().name(), server), templateMetadata);
+            }
         }
         this.filters = filters;
         this.iconsProviders = iconsProviders;
@@ -84,7 +88,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
 
     @Override
     Stream<ResourceTemplateInfo> infos() {
-        return templates.values().stream().map(ResourceTemplateMetadata::info);
+        return templates.values().stream().map(ResourceTemplateMetadata::info).distinct();
     }
 
     @Override
@@ -98,25 +102,40 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     @Override
-    public ResourceTemplateInfo getResourceTemplate(String name) {
-        ResourceTemplateMetadata metadata = templates.get(Objects.requireNonNull(name));
+    public ResourceTemplateInfo getResourceTemplate(String name, String serverName) {
+        ResourceTemplateMetadata metadata = templates
+                .get(new FeatureKey(name, serverName));
         return metadata != null ? metadata.info() : null;
     }
 
     @Override
-    public ResourceTemplateDefinition newResourceTemplate(String name) {
-        if (templates.containsKey(name)) {
-            throw resourceTemplateWithNameAlreadyExists(name);
+    public ResourceTemplateInfo getResourceTemplate(String name) {
+        Objects.requireNonNull(name);
+        List<ResourceTemplateInfo> matches = templates.entrySet().stream()
+                .filter(e -> e.getKey().name().equals(name))
+                .map(e -> e.getValue().info())
+                .distinct()
+                .toList();
+        if (matches.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple resource templates with name [%s] found on different servers; use the variant that accepts a server name"
+                            .formatted(name));
         }
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    @Override
+    public ResourceTemplateDefinition newResourceTemplate(String name) {
         return new ResourceTemplateDefinitionImpl(name);
     }
 
     @Override
-    public ResourceTemplateInfo removeResourceTemplate(String name) {
+    public ResourceTemplateInfo removeResourceTemplate(String name, String serverName) {
+        FeatureKey key = new FeatureKey(name, serverName);
         AtomicReference<ResourceTemplateInfo> removed = new AtomicReference<>();
-        templates.computeIfPresent(name, (key, value) -> {
+        templates.computeIfPresent(key, (k, value) -> {
             if (!value.info().isMethod()) {
-                removed.set(value.info);
+                removed.set(value.info());
                 return null;
             }
             return value;
@@ -124,29 +143,63 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         return removed.get();
     }
 
-    private VariableMatcher getVariableMatcher(String name) {
-        return templates.get(name).variableMatcher();
+    @Override
+    public ResourceTemplateInfo removeResourceTemplate(String name) {
+        AtomicReference<ResourceTemplateInfo> removed = new AtomicReference<>();
+        templates.entrySet().removeIf(e -> {
+            if (e.getKey().name().equals(name) && !e.getValue().info().isMethod()) {
+                removed.set(e.getValue().info());
+                return true;
+            }
+            return false;
+        });
+        return removed.get();
+    }
+
+    private VariableMatcher getVariableMatcher(String name, String serverName) {
+        return templates.get(new FeatureKey(name, serverName)).variableMatcher();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
         // This method is used by ResourceManager during "resources/read" - the id is a URI
-        // We need to iterate over all templates and find the matching URI template
-        ResourceTemplateInfo found = findMatching(id);
+        // We need to iterate over all templates and find the matching URI template for the given server
+        ResourceTemplateInfo found = findMatching(id, mcpRequest.serverName());
         if (found instanceof FeatureInvoker fi
-                && matchesServer(found, mcpRequest)
                 && test(found, FilterContextImpl.of(McpMethod.RESOURCES_READ, message, mcpRequest))) {
             return fi;
         }
         return null;
     }
 
+    /**
+     * Finds a matching template across all servers. Used by transport-level logic that does not have server context.
+     */
     public ResourceTemplateInfo findMatching(String uri) {
         List<ResourceTemplateInfo> matching = new ArrayList<>();
-        for (ResourceTemplateMetadata t : templates.values()) {
-            if (t.variableMatcher().matches(uri)) {
-                matching.add(t.info());
+        for (Map.Entry<FeatureKey, ResourceTemplateMetadata> e : templates.entrySet()) {
+            if (e.getValue().variableMatcher().matches(uri)) {
+                matching.add(e.getValue().info());
+            }
+        }
+        // Deduplicate (same info may appear under multiple server keys)
+        matching = matching.stream().distinct().toList();
+        if (matching.isEmpty()) {
+            return null;
+        } else if (matching.size() > 1) {
+            throw new McpException("Multiple resource templates match uri %s [%s]".formatted(uri,
+                    matching.stream().map(ResourceTemplateInfo::name).toList()), JsonRpcErrorCodes.INTERNAL_ERROR);
+        } else {
+            return matching.get(0);
+        }
+    }
+
+    public ResourceTemplateInfo findMatching(String uri, String serverName) {
+        List<ResourceTemplateInfo> matching = new ArrayList<>();
+        for (Map.Entry<FeatureKey, ResourceTemplateMetadata> e : templates.entrySet()) {
+            if (e.getKey().serverName().equals(serverName) && e.getValue().variableMatcher().matches(uri)) {
+                matching.add(e.getValue().info());
             }
         }
         if (matching.isEmpty()) {
@@ -157,7 +210,6 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         } else {
             return matching.get(0);
         }
-
     }
 
     private boolean test(ResourceTemplateInfo resourceTemplate, FilterContext filterContext) {
@@ -179,8 +231,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     record ResourceTemplateMetadata(VariableMatcher variableMatcher, ResourceTemplateInfo info) {
     }
 
-    IllegalArgumentException resourceTemplateWithNameAlreadyExists(String name) {
-        return new IllegalArgumentException("A resource template with name [" + name + "] already exits");
+    IllegalArgumentException resourceTemplateWithNameAlreadyExists(String name, String serverName) {
+        return new IllegalArgumentException(
+                "A resource template with name [" + name + "] already exists for server configuration [" + serverName + "]");
     }
 
     @Override
@@ -191,7 +244,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     @Override
     protected Object[] prepareArguments(FeatureMetadata<?> metadata, ArgumentProviders argProviders) throws McpException {
         // Use variable matching to extract method arguments
-        Map<String, Object> matchedVariables = getVariableMatcher(metadata.info().name())
+        Map<String, Object> matchedVariables = getVariableMatcher(metadata.info().name(), argProviders.serverName())
                 .matchVariables(argProviders.uri()).entrySet().stream()
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().toString()));
         argProviders = new ArgumentProviders(argProviders.rawMessage(),
@@ -407,7 +460,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         protected ResourceTemplateArguments createArguments(ArgumentProviders argumentProviders) {
             // Use variable matching to extract method arguments
-            Map<String, String> matchedVariables = getVariableMatcher(name)
+            Map<String, String> matchedVariables = getVariableMatcher(name, argumentProviders.serverName())
                     .matchVariables(argumentProviders.uri());
             return new ResourceTemplateArgumentsImpl(argumentProviders,
                     matchedVariables,
@@ -501,9 +554,20 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverNames,
                     fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
-            ResourceTemplateMetadata existing = templates.putIfAbsent(name, new ResourceTemplateMetadata(variableMatcher, ret));
-            if (existing != null) {
-                throw resourceTemplateWithNameAlreadyExists(name);
+            ResourceTemplateMetadata templateMetadata = new ResourceTemplateMetadata(variableMatcher, ret);
+            List<FeatureKey> keys = FeatureKey.list(name, serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey key : keys) {
+                    if (templates.containsKey(key)) {
+                        throw resourceTemplateWithNameAlreadyExists(name, key.serverName());
+                    }
+                }
+                for (FeatureKey key : keys) {
+                    templates.put(key, templateMetadata);
+                }
+            } finally {
+                registrationLock.unlock();
             }
             return ret;
         }

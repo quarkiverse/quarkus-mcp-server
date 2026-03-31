@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -25,8 +26,7 @@ import io.vertx.core.json.JsonObject;
 public abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
         implements CompletionManager {
 
-    // key = reference name + "_" + argument name
-    protected final ConcurrentMap<String, CompletionInfo> completions;
+    protected final ConcurrentMap<FeatureKey, CompletionInfo> completions;
 
     protected CompletionManagerBase(Vertx vertx,
             ObjectMapper mapper,
@@ -42,8 +42,13 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     }
 
     @Override
+    public CompletionInfo getCompletion(String name, String argumentName, String serverName) {
+        return completions.get(new FeatureKey(compositeName(name, argumentName), serverName));
+    }
+
+    @Override
     public CompletionInfo getCompletion(String name, String argumentName) {
-        return completions.get(name + "_" + argumentName);
+        return findUniqueByName(completions, compositeName(name, argumentName), Feature.PROMPT_COMPLETE);
     }
 
     @Override
@@ -58,18 +63,21 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
 
     @Override
     Stream<CompletionInfo> infos() {
-        return completions.values().stream();
+        return completions.values().stream().distinct();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<CompletionResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
-        CompletionInfo completion = completions.get(id);
-        if (completion instanceof FeatureInvoker fi
-                && matchesServer(completion, mcpRequest)) {
+        CompletionInfo completion = completions.get(new FeatureKey(id, mcpRequest.serverName()));
+        if (completion instanceof FeatureInvoker fi) {
             return fi;
         }
         return null;
+    }
+
+    private static String compositeName(String name, String argumentName) {
+        return name + "_" + argumentName;
     }
 
     protected abstract Feature feature();
@@ -78,8 +86,9 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
 
     protected abstract String refName(String refName);
 
-    IllegalArgumentException completionAlreadyExists(String refName, String argName) {
-        return new IllegalArgumentException("A completion for [" + refName + "] with agument [" + argName + "] already exits");
+    IllegalArgumentException completionAlreadyExists(String refName, String argName, String serverName) {
+        return new IllegalArgumentException("A completion for [" + refName + "] with argument [" + argName
+                + "] already exists for server configuration [" + serverName + "]");
     }
 
     class CompletionMethod extends FeatureMetadataInvoker<CompletionResponse> implements CompletionManager.CompletionInfo {
@@ -144,10 +153,19 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
             validateReference(name, argumentName);
             CompletionDefinitionInfo ret = new CompletionDefinitionInfo(refName(name), description, serverNames, fun, asyncFun,
                     runOnVirtualThread, argumentName);
-            String key = ret.name() + "_" + ret.argumentName();
-            CompletionInfo existing = completions.putIfAbsent(key, ret);
-            if (existing != null) {
-                throw completionAlreadyExists(name, argumentName);
+            List<FeatureKey> keys = FeatureKey.list(compositeName(ret.name(), ret.argumentName()), serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey key : keys) {
+                    if (completions.containsKey(key)) {
+                        throw completionAlreadyExists(name, argumentName, key.serverName());
+                    }
+                }
+                for (FeatureKey key : keys) {
+                    completions.put(key, ret);
+                }
+            } finally {
+                registrationLock.unlock();
             }
             return ret;
         }

@@ -442,12 +442,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 && Messages.isRequest(message)
                 && FORCE_SSE_REQUESTS.contains(method)) {
             JsonObject params = Messages.getParams(message);
+            String serverName = mcpRequest.serverName();
             if (params != null) {
                 return switch (method) {
-                    case TOOLS_CALL -> forceSseTool(params);
-                    case PROMPTS_GET -> forceSsePrompt(params);
-                    case RESOURCES_READ -> forceSseResource(params);
-                    case COMPLETION_COMPLETE -> forceSseCompletion(params);
+                    case TOOLS_CALL -> forceSseTool(serverName, params);
+                    case PROMPTS_GET -> forceSsePrompt(serverName, params);
+                    case RESOURCES_READ -> forceSseResource(serverName, params);
+                    case COMPLETION_COMPLETE -> forceSseCompletion(serverName, params);
                     default -> throw new IllegalArgumentException("Unexpected value: " + method);
                 };
             }
@@ -455,10 +456,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private boolean forceSseTool(JsonObject params) {
+    private boolean forceSseTool(String serverName, JsonObject params) {
         String name = params.getString("name");
         if (name != null) {
-            var fm = McpMetadata.findFeatureByName(metadata.tools(), name);
+            var fm = McpMetadata.findFeature(metadata.tools(), name, serverName);
             if (fm != null) {
                 for (FeatureArgument a : fm.info().arguments()) {
                     if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
@@ -466,7 +467,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     }
                 }
             } else {
-                ToolInfo info = toolManager.getTool(name);
+                ToolInfo info = toolManager.getTool(name, serverName);
                 if (info != null && !info.isMethod()) {
                     // Always force SSE init for a tool added programatically
                     return true;
@@ -476,10 +477,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private boolean forceSsePrompt(JsonObject params) {
+    private boolean forceSsePrompt(String serverName, JsonObject params) {
         String name = params.getString("name");
         if (name != null) {
-            var fm = McpMetadata.findFeatureByName(metadata.prompts(), name);
+            var fm = McpMetadata.findFeature(metadata.prompts(), name, serverName);
             if (fm != null) {
                 for (FeatureArgument a : fm.info().arguments()) {
                     if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
@@ -487,7 +488,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     }
                 }
             } else {
-                PromptInfo info = promptManager.getPrompt(name);
+                PromptInfo info = promptManager.getPrompt(name, serverName);
                 if (info != null && !info.isMethod()) {
                     // Always force SSE init for a prompt added programatically
                     return true;
@@ -497,7 +498,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private boolean forceSseResource(JsonObject params) {
+    private boolean forceSseResource(String serverName, JsonObject params) {
         String resourceUri = params.getString("uri");
         if (resourceUri != null) {
             FeatureMetadata<?> fm = metadata.resources().stream().filter(m -> m.info().uri().equals(resourceUri))
@@ -506,7 +507,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 // Also try resource templates
                 ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
                 if (rti != null && rti.isMethod()) {
-                    fm = McpMetadata.findFeatureByName(metadata.resourceTemplates(), rti.name());
+                    fm = McpMetadata.findFeature(metadata.resourceTemplates(), rti.name(), serverName);
                 }
             }
             if (fm != null) {
@@ -516,7 +517,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     }
                 }
             } else {
-                ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri);
+                ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri, serverName);
                 if (info != null) {
                     if (!info.isMethod()) {
                         // Always force SSE init for a resource added programatically
@@ -534,7 +535,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private boolean forceSseCompletion(JsonObject params) {
+    private boolean forceSseCompletion(String serverName, JsonObject params) {
         JsonObject ref = params.getJsonObject("ref");
         if (ref != null) {
             String referenceType = ref.getString("type");
@@ -543,10 +544,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             String argumentName = argument != null ? argument.getString("name") : null;
             if (referenceName != null && argumentName != null) {
                 if ("ref/prompt".equals(referenceType)) {
-                    return forceSseCompletion(referenceName, argumentName, metadata.promptCompletions(),
+                    return forceSseCompletion(serverName, referenceName, argumentName, metadata.promptCompletions(),
                             promptCompletionManager);
                 } else if ("ref/resource".equals(referenceType)) {
-                    return forceSseCompletion(referenceName, argumentName, metadata.resourceTemplateCompletions(),
+                    return forceSseCompletion(serverName, referenceName, argumentName, metadata.resourceTemplateCompletions(),
                             resourceTemplateCompletionManager);
                 }
             }
@@ -555,10 +556,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     }
 
-    private boolean forceSseCompletion(String referenceName, String argumentName,
+    private boolean forceSseCompletion(String serverName, String referenceName, String argumentName,
             List<FeatureMetadata<CompletionResponse>> completions, CompletionManager completionManager) {
         FeatureMetadata<?> fm = completions.stream().filter(m -> {
             return m.info().name().equals(referenceName)
+                    && m.info().serverNames().contains(serverName)
                     && argumentName.equals(m.info().arguments().stream().filter(FeatureArgument::isParam).findFirst()
                             .orElseThrow().name());
         })
@@ -570,7 +572,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         } else {
-            CompletionManager.CompletionInfo info = completionManager.getCompletion(referenceName, argumentName);
+            CompletionManager.CompletionInfo info = completionManager.getCompletion(referenceName, argumentName, serverName);
             if (info != null && !info.isMethod()) {
                 // Always force SSE init for a completion added programatically
                 return true;

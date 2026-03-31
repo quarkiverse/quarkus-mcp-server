@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -76,7 +75,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     final Instance<InputSchemaGenerator<?>> inputSchemaGenerator;
     final Instance<OutputSchemaGenerator> outputSchemaGenerator;
 
-    final ConcurrentMap<String, ToolInfo> tools;
+    final ConcurrentMap<FeatureKey, ToolInfo> tools;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
@@ -120,13 +119,16 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.buildTimeConfig = buildTimeConfig;
         this.config = config;
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
-            this.tools.put(f.info().name(), new ToolMethod(f, iconsProviders));
+            ToolMethod toolMethod = new ToolMethod(f, iconsProviders);
+            for (String server : f.info().serverNames()) {
+                this.tools.put(new FeatureKey(f.info().name(), server), toolMethod);
+            }
         }
     }
 
     @Override
     Stream<ToolInfo> infos() {
-        return tools.values().stream();
+        return tools.values().stream().distinct();
     }
 
     @Override
@@ -140,26 +142,30 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     }
 
     @Override
+    public ToolInfo getTool(String name, String serverName) {
+        return tools.get(new FeatureKey(name, serverName));
+    }
+
+    @Override
     public ToolInfo getTool(String name) {
-        return tools.get(Objects.requireNonNull(name));
+        return findUniqueByName(tools, name, Feature.TOOL);
     }
 
     @Override
     public ToolDefinition newTool(String name) {
-        if (tools.containsKey(name)) {
-            throw toolAlreadyExists(name);
-        }
         return new ToolDefinitionImpl(name);
     }
 
-    IllegalArgumentException toolAlreadyExists(String name) {
-        return new IllegalArgumentException("A tool with name [" + name + "] already exits");
+    IllegalArgumentException toolAlreadyExists(String name, String serverName) {
+        return new IllegalArgumentException(
+                "A tool with name [" + name + "] already exists for server configuration [" + serverName + "]");
     }
 
     @Override
-    public ToolInfo removeTool(String name) {
+    public ToolInfo removeTool(String name, String serverName) {
+        FeatureKey key = new FeatureKey(name, serverName);
         AtomicReference<ToolInfo> removed = new AtomicReference<>();
-        tools.computeIfPresent(name, (key, value) -> {
+        tools.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
                 notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
@@ -170,12 +176,27 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return removed.get();
     }
 
+    @Override
+    public ToolInfo removeTool(String name) {
+        AtomicReference<ToolInfo> removed = new AtomicReference<>();
+        tools.entrySet().removeIf(e -> {
+            if (e.getKey().name().equals(name) && !e.getValue().isMethod()) {
+                removed.set(e.getValue());
+                return true;
+            }
+            return false;
+        });
+        if (removed.get() != null) {
+            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+        }
+        return removed.get();
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<ToolResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
-        ToolInfo tool = tools.get(id);
+        ToolInfo tool = tools.get(new FeatureKey(id, mcpRequest.serverName()));
         if (tool instanceof FeatureInvoker fi
-                && matchesServer(tool, mcpRequest)
                 && test(tool, FilterContextImpl.of(McpMethod.TOOLS_CALL, message, mcpRequest))) {
             return fi;
         }
@@ -628,12 +649,21 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
                     initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons);
-            ToolInfo existing = tools.putIfAbsent(name, ret);
-            if (existing != null) {
-                throw toolAlreadyExists(name);
-            } else {
-                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+            List<FeatureKey> keys = FeatureKey.list(name, serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey key : keys) {
+                    if (tools.containsKey(key)) {
+                        throw toolAlreadyExists(name, key.serverName());
+                    }
+                }
+                for (FeatureKey key : keys) {
+                    tools.put(key, ret);
+                }
+            } finally {
+                registrationLock.unlock();
             }
+            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
             return ret;
         }
 

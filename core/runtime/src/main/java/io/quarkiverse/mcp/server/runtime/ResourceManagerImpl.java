@@ -55,8 +55,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     final ResourceTemplateManagerImpl resourceTemplateManager;
 
-    final ConcurrentMap<String, ResourceInfo> uriToResource;
-    final Set<String> resourceNames;
+    final ConcurrentMap<FeatureKey, ResourceInfo> uriToResource;
+    final Set<FeatureKey> resourceNames;
 
     // uri -> subscribers (connection ids)
     final ConcurrentMap<String, List<String>> uriToSubscribers;
@@ -83,8 +83,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         this.resourceNames = Collections.synchronizedSet(new HashSet<>());
         this.uriToSubscribers = new ConcurrentHashMap<>();
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
-            this.uriToResource.put(f.info().uri(), new ResourceMethod(f, iconsProviders));
-            this.resourceNames.add(f.info().name());
+            ResourceMethod resourceMethod = new ResourceMethod(f, iconsProviders);
+            for (String server : f.info().serverNames()) {
+                this.uriToResource.put(new FeatureKey(f.info().uri(), server), resourceMethod);
+                this.resourceNames.add(new FeatureKey(f.info().name(), server));
+            }
         }
         this.filters = filters;
         this.iconsProviders = iconsProviders;
@@ -92,7 +95,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     Stream<ResourceInfo> infos() {
-        return uriToResource.values().stream();
+        return uriToResource.values().stream().distinct();
     }
 
     @Override
@@ -106,13 +109,18 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     @Override
+    public ResourceInfo getResource(String uri, String serverName) {
+        return uriToResource.get(new FeatureKey(uri, serverName));
+    }
+
+    @Override
     public ResourceInfo getResource(String uri) {
-        return uriToResource.get(Objects.requireNonNull(uri));
+        return findUniqueByName(uriToResource, uri, Feature.RESOURCE);
     }
 
     void subscribe(String uri, McpRequest mcpRequest) {
-        ResourceInfo info = getResource(uri);
-        if (info == null || !matchesServer(info, mcpRequest)) {
+        ResourceInfo info = getResource(uri, mcpRequest.serverName());
+        if (info == null) {
             throw notFound(uri);
         }
         List<String> ids = new CopyOnWriteArrayList<>();
@@ -130,11 +138,6 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     @Override
     public ResourceDefinition newResource(String name) {
-        for (ResourceInfo resource : uriToResource.values()) {
-            if (resource.name().equals(name)) {
-                resourceWithNameAlreadyExists(name);
-            }
-        }
         return new ResourceDefinitionImpl(name);
     }
 
@@ -153,21 +156,24 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
     }
 
-    IllegalArgumentException resourceWithNameAlreadyExists(String name) {
-        return new IllegalArgumentException("A resource with name [" + name + "] already exits");
+    IllegalArgumentException resourceWithNameAlreadyExists(String name, String serverName) {
+        return new IllegalArgumentException(
+                "A resource with name [" + name + "] already exists for server configuration [" + serverName + "]");
     }
 
-    IllegalArgumentException resourceWithUriAlreadyExists(String uri) {
-        return new IllegalArgumentException("A resource with uri [" + uri + "] already exits");
+    IllegalArgumentException resourceWithUriAlreadyExists(String uri, String serverName) {
+        return new IllegalArgumentException(
+                "A resource with uri [" + uri + "] already exists for server configuration [" + serverName + "]");
     }
 
     @Override
-    public ResourceInfo removeResource(String uri) {
+    public ResourceInfo removeResource(String uri, String serverName) {
+        FeatureKey key = new FeatureKey(uri, serverName);
         AtomicReference<ResourceInfo> removed = new AtomicReference<>();
-        uriToResource.computeIfPresent(uri, (key, value) -> {
+        uriToResource.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                resourceNames.remove(value.name());
+                resourceNames.remove(new FeatureKey(value.name(), serverName));
                 notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
                 return null;
             }
@@ -176,12 +182,28 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         return removed.get();
     }
 
+    @Override
+    public ResourceInfo removeResource(String uri) {
+        AtomicReference<ResourceInfo> removed = new AtomicReference<>();
+        uriToResource.entrySet().removeIf(e -> {
+            if (e.getKey().name().equals(uri) && !e.getValue().isMethod()) {
+                removed.set(e.getValue());
+                resourceNames.remove(new FeatureKey(e.getValue().name(), e.getKey().serverName()));
+                return true;
+            }
+            return false;
+        });
+        if (removed.get() != null) {
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+        }
+        return removed.get();
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<ResourceResponse> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
-        ResourceInfo resource = uriToResource.get(id);
+        ResourceInfo resource = uriToResource.get(new FeatureKey(id, mcpRequest.serverName()));
         if (resource instanceof FeatureInvoker fi
-                && matchesServer(resource, mcpRequest)
                 && test(resource, FilterContextImpl.of(McpMethod.RESOURCES_READ, message, mcpRequest))) {
             return fi;
         }
@@ -457,9 +479,6 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
         @Override
         public ResourceDefinition setUri(String uri) {
-            if (uriToResource.containsKey(uri)) {
-                throw resourceWithUriAlreadyExists(uri);
-            }
             this.uri = Objects.requireNonNull(uri);
             return this;
         }
@@ -494,21 +513,31 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             if (uri == null) {
                 throw new IllegalStateException("uri must be set");
             }
-            ResourceInfo newValue = uriToResource.compute(uri, (uri, old) -> {
-                if (old != null) {
-                    throw resourceWithUriAlreadyExists(uri);
+            ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
+                    runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
+            List<FeatureKey> nameKeys = FeatureKey.list(name, serverNames);
+            List<FeatureKey> uriKeys = FeatureKey.list(uri, serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey nameKey : nameKeys) {
+                    if (resourceNames.contains(nameKey)) {
+                        throw resourceWithNameAlreadyExists(name, nameKey.serverName());
+                    }
                 }
-                if (resourceNames.contains(name)) {
-                    throw resourceWithNameAlreadyExists(name);
+                for (FeatureKey uriKey : uriKeys) {
+                    if (uriToResource.containsKey(uriKey)) {
+                        throw resourceWithUriAlreadyExists(uri, uriKey.serverName());
+                    }
                 }
-                resourceNames.add(name);
-                return new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                        runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
-            });
-            if (newValue != null) {
-                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+                for (int i = 0; i < nameKeys.size(); i++) {
+                    resourceNames.add(nameKeys.get(i));
+                    uriToResource.put(uriKeys.get(i), ret);
+                }
+            } finally {
+                registrationLock.unlock();
             }
-            return newValue;
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+            return ret;
         }
     }
 

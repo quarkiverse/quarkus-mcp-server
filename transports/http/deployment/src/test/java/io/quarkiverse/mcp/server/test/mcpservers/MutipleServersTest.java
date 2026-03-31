@@ -63,16 +63,16 @@ public class MutipleServersTest extends McpServerTest {
                 .register());
         assertEquals("Invalid server name: nonexistent", ise.getMessage());
 
-        ToolManager.ToolInfo bravo = toolManager.getTool("bravo");
+        ToolManager.ToolInfo bravo = toolManager.getTool("bravo", "bravo");
         assertNotNull(bravo);
         assertThat(bravo.serverNames()).containsExactly("bravo");
-        ToolManager.ToolInfo echo = toolManager.getTool("echo");
+        ToolManager.ToolInfo echo = toolManager.getTool("echo", McpServer.DEFAULT);
         assertNotNull(echo);
         assertThat(echo.serverNames()).containsExactly(McpServer.DEFAULT);
-        PromptManager.PromptInfo bravoPrompt = promptManager.getPrompt("bravoPrompt");
+        PromptManager.PromptInfo bravoPrompt = promptManager.getPrompt("bravoPrompt", "bravo");
         assertNotNull(bravoPrompt);
         assertThat(bravoPrompt.serverNames()).containsExactly("bravo");
-        ResourceManager.ResourceInfo bravoResource = resourceManager.getResource("file://2");
+        ResourceManager.ResourceInfo bravoResource = resourceManager.getResource("file://2", "bravo");
         assertNotNull(bravoResource);
         assertThat(bravoResource.serverNames()).containsExactly("bravo");
 

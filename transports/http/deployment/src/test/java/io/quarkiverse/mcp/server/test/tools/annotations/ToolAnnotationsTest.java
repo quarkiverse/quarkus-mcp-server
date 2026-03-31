@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.Tool.Annotations;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -35,7 +36,7 @@ public class ToolAnnotationsTest extends McpServerTest {
 
     @Test
     public void testAnnotations() {
-        ToolManager.ToolInfo alpha = manager.getTool("alpha");
+        ToolManager.ToolInfo alpha = manager.getTool("alpha", McpServer.DEFAULT);
         assertTrue(alpha.annotations().isPresent());
         assertEquals("Alpha tool", alpha.annotations().get().title());
         assertTrue(alpha.annotations().get().readOnlyHint());
@@ -43,7 +44,7 @@ public class ToolAnnotationsTest extends McpServerTest {
         assertFalse(alpha.annotations().get().idempotentHint());
         assertTrue(alpha.annotations().get().openWorldHint());
 
-        ToolManager.ToolInfo bravo = manager.getTool("bravo");
+        ToolManager.ToolInfo bravo = manager.getTool("bravo", McpServer.DEFAULT);
         assertTrue(bravo.annotations().isPresent());
         assertEquals("Bravo tool", bravo.annotations().get().title());
         assertFalse(bravo.annotations().get().readOnlyHint());
@@ -51,7 +52,7 @@ public class ToolAnnotationsTest extends McpServerTest {
         assertFalse(bravo.annotations().get().idempotentHint());
         assertFalse(bravo.annotations().get().openWorldHint());
 
-        ToolManager.ToolInfo charlie = manager.getTool("charlie");
+        ToolManager.ToolInfo charlie = manager.getTool("charlie", McpServer.DEFAULT);
         assertTrue(charlie.annotations().isEmpty());
 
         McpSseTestClient client = McpAssured.newSseClient()
