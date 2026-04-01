@@ -14,23 +14,50 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
     /**
      *
      * @param name
+     * @param serverName
+     * @return the tool with the given name bound to the given server, or {@code null}
+     * @see McpServer
+     */
+    ToolInfo getTool(String name, String serverName);
+
+    /**
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it searches across all servers and throws an exception if the name is ambiguous.
+     *
+     * @param name
      * @return the tool with the given name, or {@code null}
+     * @throws IllegalStateException if multiple tools with the given name exist on different servers
+     * @see #getTool(String, String)
      */
     ToolInfo getTool(String name);
 
     /**
+     * The name must be unique within a server configuration. A tool with the same name can exist on different servers.
      *
-     * @param name The name must be unique
+     * @param name
      * @return a new definition builder
-     * @throws IllegalArgumentException if a tool with the given name already exists
      * @see ToolDefinition#register()
      */
     ToolDefinition newTool(String name);
 
     /**
-     * Removes a tool previously added with {@link #newTool(String)}.
+     * Removes a tool previously added with {@link #newTool(String)} from the given server configuration only.
      *
+     * @param name
+     * @param serverName
      * @return the removed tool or {@code null} if no such tool existed
+     */
+    ToolInfo removeTool(String name, String serverName);
+
+    /**
+     * Removes all tools previously added with {@link #newTool(String)} with the given name from all server configurations.
+     * <p>
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it removes matching tools across all servers.
+     *
+     * @param name
+     * @return one of the removed tools or {@code null} if no such tool existed
+     * @see #removeTool(String, String)
      */
     ToolInfo removeTool(String name);
 
@@ -136,7 +163,7 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         /**
          * @return the tool info
-         * @throws IllegalArgumentException if a tool with the given name already exists
+         * @throws IllegalArgumentException if a tool with the given name already exists for the same server configuration
          */
         @Override
         ToolInfo register();

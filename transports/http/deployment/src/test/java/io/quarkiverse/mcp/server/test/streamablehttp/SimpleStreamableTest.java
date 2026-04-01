@@ -12,6 +12,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.FooService;
@@ -42,7 +43,7 @@ public class SimpleStreamableTest extends McpServerTest {
                 .setDescription("foofoo")
                 .setHandler(atgs -> null)
                 .register();
-        assertNotNull(toolManager.getTool("foofoo"));
+        assertNotNull(toolManager.getTool("foofoo", McpServer.DEFAULT));
         assertNotNull(toolManager.removeTool("foofoo"));
 
         client.when()

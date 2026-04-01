@@ -14,6 +14,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -493,7 +494,7 @@ class McpServerProcessor {
             }
         }
 
-        // Check duplicate names
+        // Check duplicate names - only report errors when features with the same name have overlapping server bindings
         for (List<FeatureMethodBuildItem> featureMethods : found.values()) {
             Map<String, List<FeatureMethodBuildItem>> byName = featureMethods.stream()
                     .collect(Collectors.toMap(this::getDuplicateValidationName, List::of, (v1, v2) -> {
@@ -504,10 +505,7 @@ class McpServerProcessor {
                     }));
             for (Entry<String, List<FeatureMethodBuildItem>> e : byName.entrySet()) {
                 if (e.getValue().size() > 1) {
-                    String message = "Duplicate feature method found for %s:\n\t%s"
-                            .formatted(e.getKey(),
-                                    e.getValue().stream().map(Object::toString).collect(Collectors.joining("\n\t")));
-                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                    checkOverlappingServers(e.getKey(), e.getValue(), "Duplicate feature method", errors);
                 }
             }
         }
@@ -522,11 +520,9 @@ class McpServerProcessor {
                         list.addAll(v2);
                         return list;
                     }));
-            for (List<FeatureMethodBuildItem> list : byUri.values()) {
-                if (list.size() > 1) {
-                    String message = "Duplicate resource uri found:\n\t%s"
-                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
-                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+            for (Map.Entry<String, List<FeatureMethodBuildItem>> e : byUri.entrySet()) {
+                if (e.getValue().size() > 1) {
+                    checkOverlappingServers(e.getKey(), e.getValue(), "Duplicate resource uri", errors);
                 }
             }
         }
@@ -541,11 +537,9 @@ class McpServerProcessor {
                         list.addAll(v2);
                         return list;
                     }));
-            for (List<FeatureMethodBuildItem> list : byUri.values()) {
-                if (list.size() > 1) {
-                    String message = "Duplicate resource template uri found:\n\t%s"
-                            .formatted(list.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
-                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+            for (Map.Entry<String, List<FeatureMethodBuildItem>> e : byUri.entrySet()) {
+                if (e.getValue().size() > 1) {
+                    checkOverlappingServers(e.getKey(), e.getValue(), "Duplicate resource template uri", errors);
                 }
             }
         }
@@ -818,6 +812,21 @@ class McpServerProcessor {
             return featureMethod.getName() + argumentName;
         }
         return featureMethod.getName();
+    }
+
+    private void checkOverlappingServers(String key, List<FeatureMethodBuildItem> features, String errorPrefix,
+            BuildProducer<ValidationErrorBuildItem> errors) {
+        for (int i = 0; i < features.size(); i++) {
+            for (int j = i + 1; j < features.size(); j++) {
+                if (!Collections.disjoint(features.get(i).getServers(), features.get(j).getServers())) {
+                    String message = "%s found for %s:\n\t%s"
+                            .formatted(errorPrefix, key,
+                                    features.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
+                    return;
+                }
+            }
+        }
     }
 
     @Record(RUNTIME_INIT)

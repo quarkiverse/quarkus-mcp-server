@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -31,8 +32,7 @@ import io.vertx.core.json.JsonObject;
 @Singleton
 public class NotificationManagerImpl extends FeatureManagerBase<Void, NotificationInfo> implements NotificationManager {
 
-    // key = notification type + "::" + name
-    final ConcurrentMap<String, NotificationInfo> notifications;
+    final ConcurrentMap<FeatureKey, NotificationInfo> notifications;
 
     NotificationManagerImpl(McpMetadata metadata,
             Vertx vertx,
@@ -47,21 +47,23 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         this.notifications = new ConcurrentHashMap<>();
         for (FeatureMetadata<Void> notification : metadata.notifications()) {
             NotificationMethod notificationMethod = new NotificationMethod(notification);
-            this.notifications.put(key(notificationMethod), notificationMethod);
+            String compositeKey = key(notificationMethod);
+            for (String server : notification.info().serverNames()) {
+                this.notifications.put(new FeatureKey(compositeKey, server), notificationMethod);
+            }
         }
     }
 
     @Override
     Stream<NotificationInfo> infos() {
-        return notifications.values().stream();
+        return notifications.values().stream().distinct();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected FeatureInvoker<Void> getInvoker(String id, McpRequest mcpRequest, JsonObject message) {
-        NotificationInfo init = notifications.get(id);
-        if (init instanceof FeatureInvoker fi
-                && matchesServer(init, mcpRequest)) {
+        NotificationInfo init = notifications.get(new FeatureKey(id, mcpRequest.serverName()));
+        if (init instanceof FeatureInvoker fi) {
             return fi;
         }
         return null;
@@ -80,8 +82,13 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     }
 
     @Override
+    public NotificationInfo getNotification(Type type, String name, String serverName) {
+        return notifications.get(new FeatureKey(key(type, name), serverName));
+    }
+
+    @Override
     public NotificationInfo getNotification(Type type, String name) {
-        return notifications.get(key(type, name));
+        return findUniqueByName(notifications, key(type, name), Feature.NOTIFICATION);
     }
 
     @Override
@@ -94,8 +101,10 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         return notifications.entrySet().removeIf(e -> filter.test(e.getValue()));
     }
 
-    IllegalArgumentException notificationAlreadyExists(Type type, String name) {
-        return new IllegalArgumentException("A " + type + " notification with name [" + name + "] already exits");
+    IllegalArgumentException notificationAlreadyExists(Type type, String name, String serverName) {
+        return new IllegalArgumentException(
+                "A " + type + " notification with name [" + name + "] already exists for server configuration [" + serverName
+                        + "]");
     }
 
     @Override
@@ -170,11 +179,20 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             }
             NotificationDefinitionInfo ret = new NotificationDefinitionInfo(name, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, type);
-            String key = key(ret);
-
-            NotificationInfo existing = notifications.putIfAbsent(key, ret);
-            if (existing != null) {
-                throw notificationAlreadyExists(type, name);
+            String compositeKey = key(ret);
+            List<FeatureKey> keys = FeatureKey.list(compositeKey, serverNames);
+            registrationLock.lock();
+            try {
+                for (FeatureKey key : keys) {
+                    if (notifications.containsKey(key)) {
+                        throw notificationAlreadyExists(type, name, key.serverName());
+                    }
+                }
+                for (FeatureKey key : keys) {
+                    notifications.put(key, ret);
+                }
+            } finally {
+                registrationLock.unlock();
             }
             return ret;
         }

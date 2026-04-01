@@ -39,13 +39,16 @@ public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase
                 .stream().map(FeatureMetadata::info).collect(Collectors.toMap(FeatureMethodInfo::name, FeatureMethodInfo::uri));
         for (FeatureMetadata<CompletionResponse> c : metadata.resourceTemplateCompletions()) {
             // Find the corresponding resource template
-            String key = nameToUriTemplate.get(c.info().name()) + "_"
+            String compositeKey = nameToUriTemplate.get(c.info().name()) + "_"
                     + c.info().arguments().stream()
                             .filter(FeatureArgument::isParam)
                             .findFirst()
                             .orElseThrow()
                             .name();
-            this.completions.put(key, new CompletionMethod(c));
+            CompletionMethod completionMethod = new CompletionMethod(c);
+            for (String server : c.info().serverNames()) {
+                this.completions.put(new FeatureKey(compositeKey, server), completionMethod);
+            }
         }
         this.resourceTemplateManager = resourceTemplateManager;
     }
@@ -62,7 +65,12 @@ public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase
 
     @Override
     protected void validateReference(String refName, String argumentName) {
-        ResourceTemplateMetadata templateMeta = resourceTemplateManager.templates.get(refName);
+        // Find any template with the given name (across all servers)
+        ResourceTemplateMetadata templateMeta = resourceTemplateManager.templates.entrySet().stream()
+                .filter(e -> e.getKey().name().equals(refName))
+                .map(java.util.Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
         if (templateMeta == null) {
             throw new IllegalStateException("Resource template does not exist: " + refName);
         }

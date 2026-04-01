@@ -104,7 +104,7 @@ public class ProgrammaticResourceTest extends McpServerTest {
                 .thenAssertResults();
 
         IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> myResources.registerFailure());
-        assertEquals("A resource with name [dummy] already exits", iae.getMessage());
+        assertEquals("A resource with name [dummy] already exists for server configuration [<default>]", iae.getMessage());
     }
 
     @Singleton

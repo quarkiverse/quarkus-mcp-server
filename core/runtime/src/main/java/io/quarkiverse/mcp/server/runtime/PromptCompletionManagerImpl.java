@@ -32,9 +32,12 @@ public class PromptCompletionManagerImpl extends CompletionManagerBase implement
                 metadata);
         this.promptManager = promptManager;
         for (FeatureMetadata<CompletionResponse> c : metadata.promptCompletions()) {
-            String key = c.info().name() + "_"
+            String compositeKey = c.info().name() + "_"
                     + c.info().arguments().stream().filter(FeatureArgument::isParam).findFirst().orElseThrow().name();
-            this.completions.put(key, new CompletionMethod(c));
+            CompletionMethod completionMethod = new CompletionMethod(c);
+            for (String server : c.info().serverNames()) {
+                this.completions.put(new FeatureKey(compositeKey, server), completionMethod);
+            }
         }
     }
 

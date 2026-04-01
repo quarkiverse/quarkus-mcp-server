@@ -14,23 +14,52 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
     /**
      *
      * @param uri
+     * @param serverName
+     * @return the resource with the given URI bound to the given server, or {@code null}
+     * @see McpServer
+     */
+    ResourceInfo getResource(String uri, String serverName);
+
+    /**
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it searches across all servers and throws an exception if the URI is ambiguous.
+     *
+     * @param uri
      * @return the resource with the given URI or {@code null}
+     * @throws IllegalStateException if multiple resources with the given URI exist on different servers
+     * @see #getResource(String, String)
      */
     ResourceInfo getResource(String uri);
 
     /**
+     * The name and URI must be unique within a server configuration. A resource with the same name can exist on different
+     * servers.
      *
-     * @param name The name must be unique
+     * @param name
      * @return a new definition builder
-     * @throws IllegalArgumentException if a resource with the given name already exists
      * @see ResourceDefinition#register()
      */
     ResourceDefinition newResource(String name);
 
     /**
-     * Removes a resource previously added with {@link #newResource(String)}.
+     * Removes a resource previously added with {@link #newResource(String)} from the given server configuration only.
      *
+     * @param uri
+     * @param serverName
      * @return the removed resource or {@code null} if no such resource existed
+     */
+    ResourceInfo removeResource(String uri, String serverName);
+
+    /**
+     * Removes all resources previously added with {@link #newResource(String)} with the given URI from all server
+     * configurations.
+     * <p>
+     * For backwards compatibility, this method does not default to the {@link McpServer#DEFAULT} server configuration.
+     * Instead, it removes matching resources across all servers.
+     *
+     * @param uri
+     * @return one of the removed resources or {@code null} if no such resource existed
+     * @see #removeResource(String, String)
      */
     ResourceInfo removeResource(String uri);
 
@@ -77,7 +106,6 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
         /**
          * @param uri
          * @return self
-         * @throws IllegalArgumentException if a resource with the given URI already exists
          * @see Resource#uri()
          */
         ResourceDefinition setUri(String uri);
@@ -110,7 +138,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
         /**
          * @return the resource info
-         * @throws IllegalArgumentException if a resource with the given name or URI already exists
+         * @throws IllegalArgumentException if a resource with the given name or URI already exists for the same server
+         *         configuration
          */
         @Override
         ResourceInfo register();

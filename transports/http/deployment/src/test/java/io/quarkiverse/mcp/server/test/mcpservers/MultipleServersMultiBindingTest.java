@@ -53,51 +53,51 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
 
     @Test
     public void testServerNames() {
-        ToolManager.ToolInfo alpha = toolManager.getTool("alpha");
+        ToolManager.ToolInfo alpha = toolManager.getTool("alpha", DEFAULT);
         assertNotNull(alpha);
         assertThat(alpha.serverNames()).containsExactly(DEFAULT);
 
-        ToolManager.ToolInfo bravo = toolManager.getTool("bravo");
+        ToolManager.ToolInfo bravo = toolManager.getTool("bravo", "bravo");
         assertNotNull(bravo);
         assertThat(bravo.serverNames()).containsExactly("bravo");
 
-        ToolManager.ToolInfo shared = toolManager.getTool("shared");
+        ToolManager.ToolInfo shared = toolManager.getTool("shared", DEFAULT);
         assertNotNull(shared);
         assertThat(shared.serverNames()).containsExactlyInAnyOrder(DEFAULT, "bravo");
 
-        ToolManager.ToolInfo charlie = toolManager.getTool("charlie");
+        ToolManager.ToolInfo charlie = toolManager.getTool("charlie", "charlie");
         assertNotNull(charlie);
         assertThat(charlie.serverNames()).containsExactly("charlie");
 
-        ToolManager.ToolInfo delta = toolManager.getTool("delta");
+        ToolManager.ToolInfo delta = toolManager.getTool("delta", DEFAULT);
         assertNotNull(delta);
         assertThat(delta.serverNames()).containsExactlyInAnyOrder("charlie", DEFAULT);
 
-        ToolManager.ToolInfo golf = toolManager.getTool("golf");
+        ToolManager.ToolInfo golf = toolManager.getTool("golf", "bravo");
         assertNotNull(golf);
         assertThat(golf.serverNames()).containsExactlyInAnyOrder("charlie", "bravo");
 
-        PromptManager.PromptInfo sharedPrompt = promptManager.getPrompt("sharedPrompt");
+        PromptManager.PromptInfo sharedPrompt = promptManager.getPrompt("sharedPrompt", DEFAULT);
         assertNotNull(sharedPrompt);
         assertThat(sharedPrompt.serverNames()).containsExactlyInAnyOrder(DEFAULT, "bravo");
 
-        PromptManager.PromptInfo deltaPrompt = promptManager.getPrompt("deltaPrompt");
+        PromptManager.PromptInfo deltaPrompt = promptManager.getPrompt("deltaPrompt", DEFAULT);
         assertNotNull(deltaPrompt);
         assertThat(deltaPrompt.serverNames()).containsExactlyInAnyOrder("charlie", DEFAULT);
 
-        ResourceManager.ResourceInfo sharedResource = resourceManager.getResource("file://shared");
+        ResourceManager.ResourceInfo sharedResource = resourceManager.getResource("file://shared", DEFAULT);
         assertNotNull(sharedResource);
         assertThat(sharedResource.serverNames()).containsExactlyInAnyOrder(DEFAULT, "bravo");
 
-        ResourceManager.ResourceInfo deltaResource = resourceManager.getResource("file://delta");
+        ResourceManager.ResourceInfo deltaResource = resourceManager.getResource("file://delta", DEFAULT);
         assertNotNull(deltaResource);
         assertThat(deltaResource.serverNames()).containsExactlyInAnyOrder("charlie", DEFAULT);
 
-        ToolManager.ToolInfo echo = toolManager.getTool("echo");
+        ToolManager.ToolInfo echo = toolManager.getTool("echo", DEFAULT);
         assertNotNull(echo);
         assertThat(echo.serverNames()).containsExactly(DEFAULT);
 
-        ToolManager.ToolInfo foxtrot = toolManager.getTool("foxtrot");
+        ToolManager.ToolInfo foxtrot = toolManager.getTool("foxtrot", "bravo");
         assertNotNull(foxtrot);
         assertThat(foxtrot.serverNames()).containsExactly("bravo");
     }

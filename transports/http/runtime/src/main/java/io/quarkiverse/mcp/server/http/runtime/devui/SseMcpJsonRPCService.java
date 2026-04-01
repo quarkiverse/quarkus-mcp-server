@@ -273,7 +273,9 @@ public class SseMcpJsonRPCService {
 
     public JsonObject callTool(String name, String serverName, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        ToolManager.ToolInfo info = toolManager.getTool(name);
+        ToolManager.ToolInfo info = serverName != null && !serverName.isBlank()
+                ? toolManager.getTool(name, serverName)
+                : toolManager.getTool(name);
         if (info == null) {
             return new JsonObject().put("error", "Tool not found: " + name);
         }
@@ -294,7 +296,9 @@ public class SseMcpJsonRPCService {
 
     public JsonObject getPrompt(String name, String serverName, JsonObject args, String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        PromptManager.PromptInfo info = promptManager.getPrompt(name);
+        PromptManager.PromptInfo info = serverName != null && !serverName.isBlank()
+                ? promptManager.getPrompt(name, serverName)
+                : promptManager.getPrompt(name);
         if (info == null) {
             return new JsonObject().put("error", "Prompt not found: " + name);
         }
@@ -316,7 +320,9 @@ public class SseMcpJsonRPCService {
     public JsonObject completePrompt(String name, String serverName, String argumentName, String argumentValue,
             String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        CompletionManager.CompletionInfo info = promptCompletionManager.getCompletion(name, argumentName);
+        CompletionManager.CompletionInfo info = serverName != null && !serverName.isBlank()
+                ? promptCompletionManager.getCompletion(name, argumentName, serverName)
+                : promptCompletionManager.getCompletion(name, argumentName);
         if (info == null) {
             return new JsonObject().put("error", "Prompt completion not found: " + name);
         }
@@ -361,7 +367,9 @@ public class SseMcpJsonRPCService {
     public JsonObject completeResourceTemplate(String name, String serverName, String argumentName, String argumentValue,
             String bearerToken, boolean forceNewSession)
             throws IOException, InterruptedException {
-        CompletionManager.CompletionInfo info = resourceTemplateCompletionManager.getCompletion(name, argumentName);
+        CompletionManager.CompletionInfo info = serverName != null && !serverName.isBlank()
+                ? resourceTemplateCompletionManager.getCompletion(name, argumentName, serverName)
+                : resourceTemplateCompletionManager.getCompletion(name, argumentName);
         if (info == null) {
             return new JsonObject().put("error", "Resource template completion not found: " + name);
         }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.Role;
@@ -33,13 +34,14 @@ public class ResourceTemplatesTest extends McpServerTest {
 
     @Test
     public void testResourceTemplates() {
-        ResourceTemplateManager.ResourceTemplateInfo foxtrotTemplate = manager.getResourceTemplate("foxtrot_custom_name");
+        ResourceTemplateManager.ResourceTemplateInfo foxtrotTemplate = manager.getResourceTemplate("foxtrot_custom_name",
+                McpServer.DEFAULT);
         assertNotNull(foxtrotTemplate);
         assertEquals("Foxtrot Resource", foxtrotTemplate.title());
         assertEquals("file:///foxtrot/{path}", foxtrotTemplate.uriTemplate());
         assertEquals("application/json", foxtrotTemplate.mimeType());
         assertEquals("customValue", foxtrotTemplate.metadata().get(MetaKey.of("customField")));
-        ResourceTemplateManager.ResourceTemplateInfo golfTemplate = manager.getResourceTemplate("golf");
+        ResourceTemplateManager.ResourceTemplateInfo golfTemplate = manager.getResourceTemplate("golf", McpServer.DEFAULT);
         assertNotNull(golfTemplate);
         assertEquals(Role.ASSISTANT, golfTemplate.annotations().orElseThrow().audience());
         assertEquals(0.7, golfTemplate.annotations().orElseThrow().priority());
