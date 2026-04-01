@@ -104,6 +104,8 @@ public class MyTools {
 
 The programmatic API also allows you to remove existing tools at runtime (using `removeTool(String name)`), which is not possible with the annotation-based approach.
 
+TIP: When using the Streamable HTTP transport, features added programmatically always force SSE initialization because it's not possible to determine whether SSE-dependent functionality (such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) will be used. If your handler does not use any of these, you can add the `TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT` hint via `addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)` to skip the SSE initialization and improve performance.
+
 == LangChain4j Support
 
 The `@dev.langchain4j.agent.tool.Tool` and `@dev.langchain4j.agent.tool.P` annotations from LangChain4j can be used instead of `@Tool`/`@ToolArg`.

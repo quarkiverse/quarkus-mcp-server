@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -68,6 +69,41 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          * @return the execution model
          */
         ExecutionModel executionModel();
+
+        /**
+         * @return the transport hints
+         */
+        default Map<TransportHint, Object> transportHints() {
+            return Map.of();
+        }
+
+    }
+
+    /**
+     * Allows transport hints to be configured on a feature definition.
+     *
+     * @param <THIS> self type for fluent API
+     * @see TransportHint
+     * @see FeatureInfo#transportHints()
+     */
+    interface TransportHintDefinition<THIS> {
+
+        /**
+         * Adds a hint that does not require a value.
+         *
+         * @param hint
+         * @return self
+         */
+        THIS addHint(TransportHint hint);
+
+        /**
+         * Adds a hint with the given value.
+         *
+         * @param hint
+         * @param value
+         * @return self
+         */
+        THIS addHint(TransportHint hint, Object value);
 
     }
 

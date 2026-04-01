@@ -81,7 +81,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
      * <p>
      * This construct is not thread-safe and should not be reused.
      */
-    interface ToolDefinition extends FeatureDefinition<ToolInfo, ToolArguments, ToolResponse, ToolDefinition> {
+    interface ToolDefinition extends FeatureDefinition<ToolInfo, ToolArguments, ToolResponse, ToolDefinition>,
+            TransportHintDefinition<ToolDefinition> {
 
         /**
          *

@@ -72,7 +72,8 @@ public interface CompletionManager extends FeatureManager<CompletionInfo> {
      * This construct is not thread-safe and should not be reused.
      */
     interface CompletionDefinition
-            extends FeatureDefinition<CompletionInfo, CompletionArguments, CompletionResponse, CompletionDefinition> {
+            extends FeatureDefinition<CompletionInfo, CompletionArguments, CompletionResponse, CompletionDefinition>,
+            TransportHintDefinition<CompletionDefinition> {
 
         /**
          * Set the name of the completed argument.

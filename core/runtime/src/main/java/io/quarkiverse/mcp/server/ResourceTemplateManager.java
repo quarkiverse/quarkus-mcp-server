@@ -87,7 +87,8 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
      */
     interface ResourceTemplateDefinition
             extends
-            FeatureDefinition<ResourceTemplateInfo, ResourceTemplateArguments, ResourceResponse, ResourceTemplateDefinition> {
+            FeatureDefinition<ResourceTemplateInfo, ResourceTemplateArguments, ResourceResponse, ResourceTemplateDefinition>,
+            TransportHintDefinition<ResourceTemplateDefinition> {
 
         /**
          * @param title

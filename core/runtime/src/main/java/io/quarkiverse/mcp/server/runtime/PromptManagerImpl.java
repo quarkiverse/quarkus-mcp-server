@@ -33,6 +33,7 @@ import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.PromptResponse;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -271,7 +272,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         public PromptInfo register() {
             validate();
             PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, arguments, metadata, icons);
+                    runOnVirtualThread, arguments, metadata, icons, transportHints);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
@@ -297,15 +298,18 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         private final String title;
         private final List<PromptArgument> arguments;
         private final Map<MetaKey, Object> metadata;
+        private final Map<TransportHint, Object> transportHints;
 
         private PromptDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
-                List<PromptArgument> arguments, Map<MetaKey, Object> metadata, List<Icon> icons) {
+                List<PromptArgument> arguments, Map<MetaKey, Object> metadata, List<Icon> icons,
+                Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.metadata = Map.copyOf(metadata);
+            this.transportHints = Map.copyOf(transportHints);
         }
 
         @Override
@@ -321,6 +325,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         @Override
         public Map<MetaKey, Object> metadata() {
             return metadata;
+        }
+
+        @Override
+        public Map<TransportHint, Object> transportHints() {
+            return transportHints;
         }
 
         @Override

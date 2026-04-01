@@ -95,7 +95,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      * This construct is not thread-safe and should not be reused.
      */
     interface ResourceDefinition
-            extends FeatureDefinition<ResourceInfo, ResourceArguments, ResourceResponse, ResourceDefinition> {
+            extends FeatureDefinition<ResourceInfo, ResourceArguments, ResourceResponse, ResourceDefinition>,
+            TransportHintDefinition<ResourceDefinition> {
 
         /**
          * @param title

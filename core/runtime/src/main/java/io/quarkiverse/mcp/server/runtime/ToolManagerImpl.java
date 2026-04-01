@@ -51,6 +51,7 @@ import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolOutputGuardrail;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
@@ -648,7 +649,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
-                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons);
+                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons, transportHints);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
@@ -692,13 +693,14 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final Map<MetaKey, Object> metadata;
         private final List<ToolInputGuardrail> input;
         private final List<ToolOutputGuardrail> output;
+        private final Map<TransportHint, Object> transportHints;
 
         private ToolDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ToolArguments, ToolResponse> fun,
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
                 Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata, List<ToolInputGuardrail> input,
-                List<ToolOutputGuardrail> output, List<Icon> icons) {
+                List<ToolOutputGuardrail> output, List<Icon> icons, Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.arguments = List.copyOf(arguments);
@@ -708,6 +710,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             this.metadata = Map.copyOf(metadata);
             this.input = input;
             this.output = output;
+            this.transportHints = Map.copyOf(transportHints);
         }
 
         @Override
@@ -728,6 +731,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public Map<MetaKey, Object> metadata() {
             return metadata;
+        }
+
+        @Override
+        public Map<TransportHint, Object> transportHints() {
+            return transportHints;
         }
 
         @Override

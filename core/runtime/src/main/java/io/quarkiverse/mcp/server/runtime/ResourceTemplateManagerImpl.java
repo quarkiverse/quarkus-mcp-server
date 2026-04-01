@@ -41,6 +41,7 @@ import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -394,17 +395,20 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final String mimeType;
         private final Content.Annotations annotations;
         private final Map<MetaKey, Object> metadata;
+        private final Map<TransportHint, Object> transportHints;
 
         private ResourceTemplateDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
+                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons,
+                Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
             this.annotations = annotations;
             this.metadata = Map.copyOf(metadata);
+            this.transportHints = Map.copyOf(transportHints);
         }
 
         @Override
@@ -430,6 +434,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         public Map<MetaKey, Object> metadata() {
             return metadata;
+        }
+
+        @Override
+        public Map<TransportHint, Object> transportHints() {
+            return transportHints;
         }
 
         @Override
@@ -552,7 +561,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 throw new IllegalStateException("uriTemplate must be set");
             }
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverNames,
-                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons);
+                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons, transportHints);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata templateMetadata = new ResourceTemplateMetadata(variableMatcher, ret);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);

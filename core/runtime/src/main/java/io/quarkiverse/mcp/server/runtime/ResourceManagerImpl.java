@@ -40,6 +40,7 @@ import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
@@ -353,11 +354,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private final int size;
         private final Content.Annotations annotations;
         private final Map<MetaKey, Object> metadata;
+        private final Map<TransportHint, Object> transportHints;
 
         private ResourceDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons) {
+                String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons,
+                Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uri = uri;
@@ -365,6 +368,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             this.size = size;
             this.annotations = annotations;
             this.metadata = Map.copyOf(metadata);
+            this.transportHints = Map.copyOf(transportHints);
         }
 
         @Override
@@ -395,6 +399,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public Map<MetaKey, Object> metadata() {
             return metadata;
+        }
+
+        @Override
+        public Map<TransportHint, Object> transportHints() {
+            return transportHints;
         }
 
         @Override
@@ -522,7 +531,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 throw new IllegalStateException("uri must be set");
             }
             ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons);
+                    runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons, transportHints);
             List<FeatureKey> nameKeys = FeatureKey.list(name, serverNames);
             List<FeatureKey> uriKeys = FeatureKey.list(uri, serverNames);
             registrationLock.lock();
