@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialRequest;
@@ -32,6 +33,7 @@ import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SubsidiarySse;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
@@ -468,10 +470,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             } else {
                 ToolInfo info = toolManager.getTool(name, serverName);
-                if (info != null && !info.isMethod()) {
-                    // Always force SSE init for a tool added programatically
-                    return true;
-                }
+                return info != null && !info.isMethod() && !skipSseInit(info);
             }
         }
         return false;
@@ -489,10 +488,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             } else {
                 PromptInfo info = promptManager.getPrompt(name, serverName);
-                if (info != null && !info.isMethod()) {
-                    // Always force SSE init for a prompt added programatically
-                    return true;
-                }
+                return info != null && !info.isMethod() && !skipSseInit(info);
             }
         }
         return false;
@@ -519,16 +515,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             } else {
                 ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri, serverName);
                 if (info != null) {
-                    if (!info.isMethod()) {
-                        // Always force SSE init for a resource added programatically
-                        return true;
-                    }
+                    return !info.isMethod() && !skipSseInit(info);
                 } else {
                     // Also try resource templates
                     ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
-                    if (rti != null && !rti.isMethod()) {
-                        return true;
-                    }
+                    return rti != null && !rti.isMethod() && !skipSseInit(rti);
                 }
             }
         }
@@ -573,12 +564,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         } else {
             CompletionManager.CompletionInfo info = completionManager.getCompletion(referenceName, argumentName, serverName);
-            if (info != null && !info.isMethod()) {
-                // Always force SSE init for a completion added programatically
-                return true;
-            }
+            return info != null && !info.isMethod() && !skipSseInit(info);
         }
         return false;
+    }
+
+    private static boolean skipSseInit(FeatureInfo info) {
+        return info.transportHints().containsKey(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT);
     }
 
     static class HttpMcpRequest extends McpRequestImpl<StreamableHttpMcpConnection> implements Sender {

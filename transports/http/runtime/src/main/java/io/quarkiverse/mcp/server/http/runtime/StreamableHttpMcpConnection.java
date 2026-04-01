@@ -53,7 +53,7 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
         if (sse == null) {
             Object id = Messages.getId(message);
             String method = message.getString("method");
-            LOG.warnf("Discarding message [id=%s,method=%s] - no 'subsidiary' SSE streams open yet", id, method);
+            LOG.debugf("Discarding message [id=%s,method=%s] - no 'subsidiary' SSE streams open yet", id, method);
             return Future.succeededFuture();
         } else {
             messageSent(message);

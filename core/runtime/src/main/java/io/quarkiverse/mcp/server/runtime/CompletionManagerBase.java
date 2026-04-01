@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,6 +18,7 @@ import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
@@ -152,7 +154,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
             validate();
             validateReference(name, argumentName);
             CompletionDefinitionInfo ret = new CompletionDefinitionInfo(refName(name), description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, argumentName);
+                    runOnVirtualThread, argumentName, transportHints);
             List<FeatureKey> keys = FeatureKey.list(compositeName(ret.name(), ret.argumentName()), serverNames);
             registrationLock.lock();
             try {
@@ -174,19 +176,26 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
     class CompletionDefinitionInfo extends FeatureManagerBase.FeatureDefinitionInfoBase<CompletionArguments, CompletionResponse>
             implements CompletionManager.CompletionInfo {
 
+        private final String argumentName;
+        private final Map<TransportHint, Object> transportHints;
+
         protected CompletionDefinitionInfo(String name, String description, Set<String> serverNames,
                 Function<CompletionArguments, CompletionResponse> fun,
                 Function<CompletionArguments, Uni<CompletionResponse>> asyncFun, boolean runOnVirtualThread,
-                String argumentName) {
+                String argumentName, Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, null);
             this.argumentName = argumentName;
+            this.transportHints = Map.copyOf(transportHints);
         }
-
-        private final String argumentName;
 
         @Override
         public String argumentName() {
             return argumentName;
+        }
+
+        @Override
+        public Map<TransportHint, Object> transportHints() {
+            return transportHints;
         }
 
         @Override

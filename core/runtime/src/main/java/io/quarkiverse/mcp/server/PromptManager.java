@@ -79,7 +79,8 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
      * This construct is not thread-safe and should not be reused.
      */
     interface PromptDefinition
-            extends FeatureManager.FeatureDefinition<PromptInfo, PromptArguments, PromptResponse, PromptDefinition> {
+            extends FeatureManager.FeatureDefinition<PromptInfo, PromptArguments, PromptResponse, PromptDefinition>,
+            TransportHintDefinition<PromptDefinition> {
 
         /**
          *

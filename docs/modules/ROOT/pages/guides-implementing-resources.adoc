@@ -389,6 +389,8 @@ public class MyResources {
 
 The programmatic API also allows you to remove existing resources at runtime (using `removeResource(String uri)`), which is not possible with the annotation-based approach.
 
+TIP: When using the Streamable HTTP transport, features added programmatically always force SSE initialization because it's not possible to determine whether SSE-dependent functionality (such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) will be used. If your handler does not use any of these, you can add the `TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT` hint via `addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)` to skip the SSE initialization and improve performance.
+
 === Programmatic Resource Templates
 
 Use the `io.quarkiverse.mcp.server.ResourceTemplateManager` API to register resource templates programmatically:
@@ -430,6 +432,8 @@ public class MyResourceTemplates {
 <4> Registers the resource template definition.
 
 The programmatic API also allows you to remove existing resource templates at runtime (using `removeResourceTemplate(String name)`), which is not possible with the annotation-based approach.
+
+TIP: When using the Streamable HTTP transport, features added programmatically always force SSE initialization because it's not possible to determine whether SSE-dependent functionality (such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) will be used. If your handler does not use any of these, you can add the `TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT` hint via `addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)` to skip the SSE initialization and improve performance.
 
 == See Also
 

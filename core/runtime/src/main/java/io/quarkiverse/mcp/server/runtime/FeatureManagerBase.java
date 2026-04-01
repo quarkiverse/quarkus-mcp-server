@@ -50,6 +50,7 @@ import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
@@ -481,6 +482,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected boolean runOnVirtualThread;
         protected Set<String> serverNames;
         protected List<Icon> icons = List.of();
+        protected Map<TransportHint, Object> transportHints = Map.of();
 
         protected FeatureDefinitionBase(String name, Set<String> knownServerNames) {
             this.name = Objects.requireNonNull(name);
@@ -525,6 +527,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         public THIS setIcons(Icon... icons) {
             this.icons = List.of(icons);
+            return self();
+        }
+
+        public THIS addHint(TransportHint hint) {
+            return addHint(hint, true);
+        }
+
+        public THIS addHint(TransportHint hint, Object value) {
+            if (transportHints.isEmpty()) {
+                transportHints = new HashMap<>();
+            }
+            transportHints.put(Objects.requireNonNull(hint), value);
             return self();
         }
 
