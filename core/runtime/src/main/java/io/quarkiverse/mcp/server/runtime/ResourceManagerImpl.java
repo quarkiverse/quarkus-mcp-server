@@ -117,6 +117,14 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 .collect(Collectors.toCollection(CopyOnWriteArrayList::new)));
     }
 
+    void unsubscribe(String uri, McpRequest mcpRequest) {
+        ResourceInfo info = getResource(uri);
+        if (info == null || !matchesServer(info, mcpRequest)) {
+            throw notFound(uri);
+        }
+        unsubscribe(uri, mcpRequest.connection().id());
+    }
+
     void unsubscribe(String uri, String connectionId) {
         List<String> ids = uriToSubscribers.get(uri);
         if (ids != null) {
