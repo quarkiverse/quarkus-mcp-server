@@ -37,7 +37,11 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Subscribe to resource %s [id: %s]", resourceUri, id);
-        manager.subscribe(resourceUri, mcpRequest);
+        try {
+            manager.subscribe(resourceUri, mcpRequest);
+        } catch (McpException e) {
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+        }
         // Send empty result
         return mcpRequest.sender().sendResult(id, new JsonObject());
     }
@@ -50,7 +54,11 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Resource URI not defined");
         }
         LOG.debugf("Unsubscribe to resource %s [id: %s]", resourceUri, id);
-        manager.unsubscribe(resourceUri, mcpRequest.connection().id());
+        try {
+            manager.unsubscribe(resourceUri, mcpRequest);
+        } catch (McpException e) {
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+        }
         // Send empty result
         return mcpRequest.sender().sendResult(id, new JsonObject());
     }
