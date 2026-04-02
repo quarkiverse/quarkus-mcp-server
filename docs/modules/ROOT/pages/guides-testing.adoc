@@ -10,7 +10,7 @@ This guide covers testing MCP servers using the _McpAssured_ testing utility, wh
 `McpAssured` is a testing library designed specifically for MCP servers. It provides:
 
 * Fluent API: Readable, chainable test methods
-* Transport Support: Test SSE, Streamable HTTP, and WebSocket transports
+* Transport Support: Test SSE, Streamable HTTP, WebSocket, and STDIO transports
 * Type-Safe Assertions: Strongly-typed response validation
 * Batch Testing: Send multiple requests and validate results together
 * Request/Response Inspection: Access raw JSON-RPC messages for advanced scenarios
@@ -30,7 +30,7 @@ Add the test dependency to your project:
 
 == Creating Test Clients
 
-McpAssured provides three transport-specific client types.
+`McpAssured` provides four transport-specific client types.
 
 === SSE Transport Client
 
@@ -86,6 +86,48 @@ public void testWebSocketTransport() {
 }
 ----
 <1> Creates and connects a new WebSocket client
+
+=== STDIO Transport Client
+
+Unlike the HTTP and WebSocket clients which connect to an already-running Quarkus application, the STDIO client launches the MCP server as a subprocess and communicates via `stdin`/`stdout` using newline-delimited JSON messages.
+Therefore, `McpStdioTestClient` is designed for *integration tests* executed by `maven-failsafe-plugin`, i.e. after the application has been built.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStdioTestClient;
+
+@Test
+public void testStdioTransport() {
+    try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) { // <1>
+        client.when()
+            .toolsList(page -> assertEquals(1, page.size()))
+            .thenAssertResults();
+    } // <2>
+}
+----
+<1> By default, launches `java -jar target/quarkus-app/quarkus-run.jar` in the current working directory
+<2> `close()` terminates the subprocess
+
+The client builder allows customization of the server command, working directory, environment variables, and stderr handling:
+
+[source,java]
+----
+McpStdioTestClient client = McpAssured.newStdioClient()
+    .setCommand("java", "-jar", "/path/to/app.jar") // <1>
+    .setWorkingDirectory(Path.of("/path/to/workdir")) // <2>
+    .setEnvironment(Map.of("MY_VAR", "value")) // <3>
+    .setStderrHandler(line -> LOG.info(line)) // <4>
+    .build()
+    .connect();
+----
+<1> Override the default command
+<2> Override the default working directory
+<3> Set additional environment variables for the server process
+<4> Custom handler for server stderr lines; by default stderr is forwarded to `System.err`
+
+The server's stderr output can also be inspected in tests via `client.stderrLines()`.
+This is useful for asserting that the server logged expected messages, since Quarkus redirects console logging to stderr for the STDIO transport.
 
 == Testing Tools
 

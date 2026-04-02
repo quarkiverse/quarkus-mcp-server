@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +27,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @see #newSseClient()
  * @see #newStreamableClient()
+ * @see #newStdioClient()
  */
 public class McpAssured {
 
@@ -97,6 +99,22 @@ public class McpAssured {
      */
     public static McpWebSocketTestClient newConnectedWebSocketClient() {
         return newWebSocketClient().build().connect();
+    }
+
+    /**
+     *
+     * @return a new STDIO test client builder
+     */
+    public static McpStdioTestClient.Builder newStdioClient() {
+        return new McpStdioTestClientImpl.BuilderImpl();
+    }
+
+    /**
+     *
+     * @return a connected STDIO test client
+     */
+    public static McpStdioTestClient newConnectedStdioClient() {
+        return newStdioClient().build().connect();
     }
 
     public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>>
@@ -491,6 +509,86 @@ public class McpAssured {
              * @return a new test client
              */
             McpWebSocketTestClient build();
+        }
+
+    }
+
+    /**
+     * A test client that leverages the STDIO transport.
+     * <p>
+     * The client launches the MCP server as a subprocess and communicates via stdin/stdout
+     * using newline-delimited JSON messages.
+     */
+    public interface McpStdioTestClient
+            extends McpTestClient<McpStdioAssert, McpStdioTestClient> {
+
+        /**
+         *
+         * @return the subprocess handle
+         */
+        Process process();
+
+        /**
+         *
+         * @return the captured stderr lines
+         */
+        List<String> stderrLines();
+
+        public interface Builder extends McpTestClient.Builder<Builder> {
+
+            /**
+             * Set the command to launch the MCP server process.
+             * <p>
+             * By default, {@code java -jar target/quarkus-app/quarkus-run.jar} is used.
+             *
+             * @param command
+             * @return self
+             */
+            Builder setCommand(String... command);
+
+            /**
+             * Set the command to launch the MCP server process.
+             * <p>
+             * By default, {@code java -jar target/quarkus-app/quarkus-run.jar} is used.
+             *
+             * @param command
+             * @return self
+             */
+            Builder setCommand(List<String> command);
+
+            /**
+             * Set the working directory for the server process.
+             * <p>
+             * By default, the current working directory is used.
+             *
+             * @param dir
+             * @return self
+             */
+            Builder setWorkingDirectory(Path dir);
+
+            /**
+             * Set additional environment variables for the server process.
+             *
+             * @param env
+             * @return self
+             */
+            Builder setEnvironment(Map<String, String> env);
+
+            /**
+             * Set a custom handler for stderr lines from the server process.
+             * <p>
+             * By default, stderr is forwarded to {@link System#err}.
+             *
+             * @param handler
+             * @return self
+             */
+            Builder setStderrHandler(Consumer<String> handler);
+
+            /**
+             *
+             * @return a new test client
+             */
+            McpStdioTestClient build();
         }
 
     }
@@ -1308,6 +1406,10 @@ public class McpAssured {
     }
 
     public interface McpWebSocketAssert extends McpAssert<McpWebSocketAssert> {
+
+    }
+
+    public interface McpStdioAssert extends McpAssert<McpStdioAssert> {
 
     }
 
