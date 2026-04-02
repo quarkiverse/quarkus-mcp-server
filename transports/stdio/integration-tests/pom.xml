@@ -21,6 +21,12 @@
             <artifactId>quarkus-mcp-server-stdio</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <!-- For consistent build order -->
         <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
