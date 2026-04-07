@@ -26,6 +26,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: "Build against latest Quarkus snapshot"
