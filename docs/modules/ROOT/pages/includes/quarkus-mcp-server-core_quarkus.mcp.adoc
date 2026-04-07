@@ -7,7 +7,7 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations[`quarkus.mcp.server.support-langchain4j-annotations`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-support-langchain4j-annotations[`+++quarkus.mcp.server.support-langchain4j-annotations+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.support-langchain4j-annotations+++[]
 endif::add-copy-button-to-config-props[]
@@ -29,7 +29,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`quarkus.mcp.server.schema-generator.jackson.enabled`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-enabled[`+++quarkus.mcp.server.schema-generator.jackson.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -50,7 +50,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-order`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-order[`+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-order+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-order+++[]
 endif::add-copy-button-to-config-props[]
@@ -73,7 +73,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required[`quarkus.mcp.server.schema-generator.jackson.respect-json-property-required`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-respect-json-property-required[`+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-required+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.respect-json-property-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -96,7 +96,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-value[`+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-value+++[]
 endif::add-copy-button-to-config-props[]
@@ -119,7 +119,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property[`quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-flattened-enums-from-json-property[`+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.flattened-enums-from-json-property+++[]
 endif::add-copy-button-to-config-props[]
@@ -142,7 +142,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods[`quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-include-only-json-property-annotated-methods[`+++quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.include-only-json-property-annotated-methods+++[]
 endif::add-copy-button-to-config-props[]
@@ -165,7 +165,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy[`quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-property-naming-strategy[`+++quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.ignore-property-naming-strategy+++[]
 endif::add-copy-button-to-config-props[]
@@ -188,7 +188,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes[`quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-always-ref-subtypes[`+++quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.always-ref-subtypes+++[]
 endif::add-copy-button-to-config-props[]
@@ -211,7 +211,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes[`quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-inline-transformed-subtypes[`+++quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.inline-transformed-subtypes+++[]
 endif::add-copy-button-to-config-props[]
@@ -234,7 +234,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup[`quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-skip-subtype-lookup[`+++quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.skip-subtype-lookup+++[]
 endif::add-copy-button-to-config-props[]
@@ -257,7 +257,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform[`quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-ignore-type-info-transform[`+++quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.ignore-type-info-transform+++[]
 endif::add-copy-button-to-config-props[]
@@ -280,7 +280,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id[`quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jackson-json-identity-reference-always-as-id[`+++quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jackson.json-identity-reference-always-as-id+++[]
 endif::add-copy-button-to-config-props[]
@@ -303,7 +303,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled[`quarkus.mcp.server.schema-generator.jakarta-validation.enabled`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-enabled[`+++quarkus.mcp.server.schema-generator.jakarta-validation.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -324,7 +324,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-field-is-required[`+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-field-is-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -347,7 +347,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required[`quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-not-nullable-method-is-required[`+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.not-nullable-method-is-required+++[]
 endif::add-copy-button-to-config-props[]
@@ -370,7 +370,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format[`quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-prefer-idn-email-format[`+++quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.prefer-idn-email-format+++[]
 endif::add-copy-button-to-config-props[]
@@ -393,7 +393,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions[`quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-jakarta-validation-include-pattern-expressions[`+++quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.jakarta-validation.include-pattern-expressions+++[]
 endif::add-copy-button-to-config-props[]
@@ -416,7 +416,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`quarkus.mcp.server.schema-generator.swagger2.enabled`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-schema-generator-swagger2-enabled[`+++quarkus.mcp.server.schema-generator.swagger2.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.schema-generator.swagger2.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -437,7 +437,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy[`quarkus.mcp.server.invalid-server-name-strategy`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-invalid-server-name-strategy[`+++quarkus.mcp.server.invalid-server-name-strategy+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.invalid-server-name-strategy+++[]
 endif::add-copy-button-to-config-props[]
@@ -458,13 +458,13 @@ endif::add-copy-button-to-env-var[]
 a|`fail`, `ignore`
 |`+++fail+++`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length[`quarkus.mcp.server.tools.name-max-length`]##
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length[`+++quarkus.mcp.server.tools.name-max-length+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.name-max-length+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".tools.name-max-length`
+`+++quarkus.mcp.server."server-name".tools.name-max-length+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".tools.name-max-length+++[]
 endif::add-copy-button-to-config-props[]
@@ -484,13 +484,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`quarkus.mcp.server.server-info.name`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-name]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-name[`+++quarkus.mcp.server.server-info.name+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.name+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.name`
+`+++quarkus.mcp.server."server-name".server-info.name+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.name+++[]
 endif::add-copy-button-to-config-props[]
@@ -512,13 +512,13 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-version]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-version[`quarkus.mcp.server.server-info.version`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-version]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-version[`+++quarkus.mcp.server.server-info.version+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.version+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.version`
+`+++quarkus.mcp.server."server-name".server-info.version+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.version+++[]
 endif::add-copy-button-to-config-props[]
@@ -540,13 +540,13 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-title]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-title[`quarkus.mcp.server.server-info.title`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-title]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-title[`+++quarkus.mcp.server.server-info.title+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.title+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.title`
+`+++quarkus.mcp.server."server-name".server-info.title+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.title+++[]
 endif::add-copy-button-to-config-props[]
@@ -566,13 +566,13 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-src]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-src[`quarkus.mcp.server.server-info.icons.src`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-src]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-src[`+++quarkus.mcp.server.server-info.icons[i].src+++`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.server-info.icons.src+++[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons[i].src+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.icons.src`
+`+++quarkus.mcp.server."server-name".server-info.icons.src+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.src+++[]
 endif::add-copy-button-to-config-props[]
@@ -583,22 +583,22 @@ The URI pointing to an icon resource.
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SRC+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__SRC+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SRC+++`
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__SRC+++`
 endif::add-copy-button-to-env-var[]
 --
 |string
 |required icon:exclamation-circle[title=Configuration property is required]
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-mime-type]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-mime-type[`quarkus.mcp.server.server-info.icons.mime-type`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-mime-type]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-mime-type[`+++quarkus.mcp.server.server-info.icons[i].mime-type+++`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.server-info.icons.mime-type+++[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons[i].mime-type+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.icons.mime-type`
+`+++quarkus.mcp.server."server-name".server-info.icons.mime-type+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.mime-type+++[]
 endif::add-copy-button-to-config-props[]
@@ -609,22 +609,22 @@ The mime type.
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_MIME_TYPE+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__MIME_TYPE+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_MIME_TYPE+++`
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__MIME_TYPE+++`
 endif::add-copy-button-to-env-var[]
 --
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-sizes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-sizes[`quarkus.mcp.server.server-info.icons.sizes`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-sizes]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-sizes[`+++quarkus.mcp.server.server-info.icons[i].sizes+++`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.server-info.icons.sizes+++[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons[i].sizes+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.icons.sizes`
+`+++quarkus.mcp.server."server-name".server-info.icons.sizes+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.sizes+++[]
 endif::add-copy-button-to-config-props[]
@@ -635,22 +635,22 @@ The list of sizes in WxH format.
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SIZES+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__SIZES+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_SIZES+++`
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__SIZES+++`
 endif::add-copy-button-to-env-var[]
 --
 |list of string
 |required icon:exclamation-circle[title=Configuration property is required]
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-theme]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-theme[`quarkus.mcp.server.server-info.icons.theme`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-theme]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-icons-i-theme[`+++quarkus.mcp.server.server-info.icons[i].theme+++`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.server-info.icons.theme+++[]
+config_property_copy_button:+++quarkus.mcp.server.server-info.icons[i].theme+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.icons.theme`
+`+++quarkus.mcp.server."server-name".server-info.icons.theme+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.icons.theme+++[]
 endif::add-copy-button-to-config-props[]
@@ -661,22 +661,22 @@ The theme.
 
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_THEME+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__THEME+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_THEME+++`
+Environment variable: `+++QUARKUS_MCP_SERVER_SERVER_INFO_ICONS_I__THEME+++`
 endif::add-copy-button-to-env-var[]
 --
 a|`light`, `dark`
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-description]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-description[`quarkus.mcp.server.server-info.description`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-description]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-description[`+++quarkus.mcp.server.server-info.description+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.description+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.description`
+`+++quarkus.mcp.server."server-name".server-info.description+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.description+++[]
 endif::add-copy-button-to-config-props[]
@@ -696,13 +696,13 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url[`quarkus.mcp.server.server-info.website-url`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-website-url[`+++quarkus.mcp.server.server-info.website-url+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.website-url+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.website-url`
+`+++quarkus.mcp.server."server-name".server-info.website-url+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.website-url+++[]
 endif::add-copy-button-to-config-props[]
@@ -722,13 +722,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URL.html[URL]
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions[`quarkus.mcp.server.server-info.instructions`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-server-info-instructions[`+++quarkus.mcp.server.server-info.instructions+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.server-info.instructions+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".server-info.instructions`
+`+++quarkus.mcp.server."server-name".server-info.instructions+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".server-info.instructions+++[]
 endif::add-copy-button-to-config-props[]
@@ -748,13 +748,13 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled[`quarkus.mcp.server.traffic-logging.enabled`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled[`+++quarkus.mcp.server.traffic-logging.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.traffic-logging.enabled+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".traffic-logging.enabled`
+`+++quarkus.mcp.server."server-name".traffic-logging.enabled+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".traffic-logging.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -774,13 +774,13 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit[`quarkus.mcp.server.traffic-logging.text-limit`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-text-limit[`+++quarkus.mcp.server.traffic-logging.text-limit+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.traffic-logging.text-limit+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".traffic-logging.text-limit`
+`+++quarkus.mcp.server."server-name".traffic-logging.text-limit+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".traffic-logging.text-limit+++[]
 endif::add-copy-button-to-config-props[]
@@ -800,13 +800,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++200+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`quarkus.mcp.server.client-logging.default-level`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-client-logging-default-level[`+++quarkus.mcp.server.client-logging.default-level+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.client-logging.default-level+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".client-logging.default-level`
+`+++quarkus.mcp.server."server-name".client-logging.default-level+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".client-logging.default-level+++[]
 endif::add-copy-button-to-config-props[]
@@ -826,13 +826,13 @@ endif::add-copy-button-to-env-var[]
 a|`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
 |`+++info+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval[`quarkus.mcp.server.auto-ping-interval`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-auto-ping-interval[`+++quarkus.mcp.server.auto-ping-interval+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.auto-ping-interval+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".auto-ping-interval`
+`+++quarkus.mcp.server."server-name".auto-ping-interval+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".auto-ping-interval+++[]
 endif::add-copy-button-to-config-props[]
@@ -854,13 +854,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size[`quarkus.mcp.server.resources.page-size`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-page-size[`+++quarkus.mcp.server.resources.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.resources.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".resources.page-size`
+`+++quarkus.mcp.server."server-name".resources.page-size+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".resources.page-size+++[]
 endif::add-copy-button-to-config-props[]
@@ -880,13 +880,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`quarkus.mcp.server.resource-templates.page-size`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`+++quarkus.mcp.server.resource-templates.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.resource-templates.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".resource-templates.page-size`
+`+++quarkus.mcp.server."server-name".resource-templates.page-size+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".resource-templates.page-size+++[]
 endif::add-copy-button-to-config-props[]
@@ -906,13 +906,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`quarkus.mcp.server.tools.page-size`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`+++quarkus.mcp.server.tools.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".tools.page-size`
+`+++quarkus.mcp.server."server-name".tools.page-size+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".tools.page-size+++[]
 endif::add-copy-button-to-config-props[]
@@ -932,13 +932,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode[`quarkus.mcp.server.tools.structured-content.compatibility-mode`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode[`+++quarkus.mcp.server.tools.structured-content.compatibility-mode+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.structured-content.compatibility-mode+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".tools.structured-content.compatibility-mode`
+`+++quarkus.mcp.server."server-name".tools.structured-content.compatibility-mode+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".tools.structured-content.compatibility-mode+++[]
 endif::add-copy-button-to-config-props[]
@@ -959,13 +959,13 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error[`quarkus.mcp.server.tools.input-validation-error`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-input-validation-error[`+++quarkus.mcp.server.tools.input-validation-error+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.input-validation-error+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".tools.input-validation-error`
+`+++quarkus.mcp.server."server-name".tools.input-validation-error+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".tools.input-validation-error+++[]
 endif::add-copy-button-to-config-props[]
@@ -985,13 +985,13 @@ endif::add-copy-button-to-env-var[]
 a|`protocol`, `tool`
 |`+++tool+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`quarkus.mcp.server.prompts.page-size`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`+++quarkus.mcp.server.prompts.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".prompts.page-size`
+`+++quarkus.mcp.server."server-name".prompts.page-size+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".prompts.page-size+++[]
 endif::add-copy-button-to-config-props[]
@@ -1011,13 +1011,13 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout[`quarkus.mcp.server.sampling.default-timeout`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout[`+++quarkus.mcp.server.sampling.default-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.sampling.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".sampling.default-timeout`
+`+++quarkus.mcp.server."server-name".sampling.default-timeout+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".sampling.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
@@ -1037,13 +1037,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++60S+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout[`quarkus.mcp.server.roots.default-timeout`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-roots-default-timeout[`+++quarkus.mcp.server.roots.default-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.roots.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".roots.default-timeout`
+`+++quarkus.mcp.server."server-name".roots.default-timeout+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".roots.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
@@ -1063,13 +1063,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++60S+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout[`quarkus.mcp.server.elicitation.default-timeout`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-elicitation-default-timeout[`+++quarkus.mcp.server.elicitation.default-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.elicitation.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".elicitation.default-timeout`
+`+++quarkus.mcp.server."server-name".elicitation.default-timeout+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".elicitation.default-timeout+++[]
 endif::add-copy-button-to-config-props[]
@@ -1089,13 +1089,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++60S+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`quarkus.mcp.server.dev-mode.dummy-init`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`+++quarkus.mcp.server.dev-mode.dummy-init+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.dev-mode.dummy-init+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".dev-mode.dummy-init`
+`+++quarkus.mcp.server."server-name".dev-mode.dummy-init+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".dev-mode.dummy-init+++[]
 endif::add-copy-button-to-config-props[]
@@ -1116,13 +1116,13 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout[`quarkus.mcp.server.connection-idle-timeout`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-connection-idle-timeout[`+++quarkus.mcp.server.connection-idle-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.connection-idle-timeout+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".connection-idle-timeout`
+`+++quarkus.mcp.server."server-name".connection-idle-timeout+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".connection-idle-timeout+++[]
 endif::add-copy-button-to-config-props[]
@@ -1144,13 +1144,13 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++30M+++`
 
-a| [[quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled[`quarkus.mcp.server.metrics.enabled`]##
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-metrics-enabled[`+++quarkus.mcp.server.metrics.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.metrics.enabled+++[]
 endif::add-copy-button-to-config-props[]
 
 
-`quarkus.mcp.server."server-name".metrics.enabled`
+`+++quarkus.mcp.server."server-name".metrics.enabled+++`
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server."server-name".metrics.enabled+++[]
 endif::add-copy-button-to-config-props[]
