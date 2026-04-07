@@ -7,9 +7,13 @@ import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ROOTS;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.SAMPLING;
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
@@ -42,6 +46,7 @@ import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
+import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -111,6 +116,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private final McpHttpServersRuntimeConfig httpConfig;
 
+    // precomputed maps, feature -> forceSse
+    private final Map<FeatureKey, Boolean> toolsForceSse;
+    private final Map<FeatureKey, Boolean> promptsForceSse;
+    private final Map<FeatureKey, Boolean> resourcesForceSse;
+    private final Map<FeatureKey, Boolean> resourceTemplatesForceSse;
+    private final Map<String, Boolean> completionsForceSse;
+
     StreamableHttpMcpMessageHandler(McpServersRuntimeConfig config,
             McpHttpServersRuntimeConfig runtimeConfig,
             ConnectionManager connectionManager,
@@ -140,6 +152,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.httpConfig = runtimeConfig;
         checkCorsConfig(config);
+
+        // Precompute forceSse scan results for declarative features
+        this.toolsForceSse = precomputeForceSse(metadata.tools());
+        this.promptsForceSse = precomputeForceSse(metadata.prompts());
+        this.resourcesForceSse = precomputeForceSse(metadata.resources(), fm -> fm.info().uri());
+        this.resourceTemplatesForceSse = precomputeForceSse(metadata.resourceTemplates());
+        this.completionsForceSse = precomputeCompletionForceSse(
+                Stream.concat(metadata.promptCompletions().stream(), metadata.resourceTemplateCompletions().stream()).toList());
     }
 
     @Override
@@ -398,13 +418,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return false;
     }
 
-    private static final Set<McpMethod> FORCE_SSE_REQUESTS = Set.of(
+    private static final EnumSet<McpMethod> FORCE_SSE_METHODS = EnumSet.of(
             McpMethod.TOOLS_CALL,
             McpMethod.PROMPTS_GET,
             McpMethod.RESOURCES_READ,
             McpMethod.COMPLETION_COMPLETE);
 
-    private static final Set<FeatureArgument.Provider> FORCE_SSE_PROVIDERS = Set.of(
+    private static final EnumSet<FeatureArgument.Provider> FORCE_SSE_PROVIDERS = EnumSet.of(
             PROGRESS,
             MCP_LOG,
             SAMPLING,
@@ -415,34 +435,44 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private ScanResult scan(HttpMcpRequest mcpRequest) {
-        boolean forceSseInit = false;
-        boolean containsRequest = false;
         // Scan the request payload and attempt to identify messages that should force SSE init
         // such as a tool call with the Progress param
+        boolean forceSseInit = false;
+        boolean containsRequest = false;
         if (mcpRequest.json() instanceof JsonObject message) {
-            forceSseInit = forceSse(mcpRequest, message);
+            // Single message
             containsRequest = Messages.isRequest(message);
+            forceSseInit = forceSse(mcpRequest, message, containsRequest);
         } else if (mcpRequest.json() instanceof JsonArray batch) {
+            // Batch of messages
             if (!Messages.isResponse(batch.getJsonObject(0))) {
                 // The batch contains at least 2 requests/notifications
-                // or 1 requests/notification that forces SSE init
-                forceSseInit = batch.size() > 1 || forceSse(mcpRequest, batch.getJsonObject(0));
-                for (Object e : batch) {
-                    if (e instanceof JsonObject message && Messages.isRequest(message)) {
-                        containsRequest = true;
-                        break;
+                // or exactly 1 request that forces SSE init
+                if (batch.size() > 1) {
+                    forceSseInit = true;
+                    for (Object e : batch) {
+                        if (e instanceof JsonObject message && Messages.isRequest(message)) {
+                            containsRequest = true;
+                            break;
+                        }
                     }
+                } else {
+                    JsonObject message = batch.getJsonObject(0);
+                    containsRequest = Messages.isRequest(message);
+                    forceSseInit = forceSse(mcpRequest, message, containsRequest);
                 }
             }
         }
         return new ScanResult(forceSseInit, containsRequest);
     }
 
-    private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message) {
+    private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message, boolean isRequest) {
+        if (!isRequest) {
+            return false;
+        }
         McpMethod method = McpMethod.from(message.getString("method"));
         if (method != null
-                && Messages.isRequest(message)
-                && FORCE_SSE_REQUESTS.contains(method)) {
+                && FORCE_SSE_METHODS.contains(method)) {
             JsonObject params = Messages.getParams(message);
             String serverName = mcpRequest.serverName();
             if (params != null) {
@@ -461,13 +491,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private boolean forceSseTool(String serverName, JsonObject params) {
         String name = params.getString("name");
         if (name != null) {
-            var fm = McpMetadata.findFeature(metadata.tools(), name, serverName);
-            if (fm != null) {
-                for (FeatureArgument a : fm.info().arguments()) {
-                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                        return true;
-                    }
-                }
+            Boolean forceSse = toolsForceSse.get(new FeatureKey(name, serverName));
+            if (forceSse != null) {
+                return forceSse;
             } else {
                 ToolInfo info = toolManager.getTool(name, serverName);
                 return info != null && !info.isMethod() && !skipSseInit(info);
@@ -479,13 +505,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private boolean forceSsePrompt(String serverName, JsonObject params) {
         String name = params.getString("name");
         if (name != null) {
-            var fm = McpMetadata.findFeature(metadata.prompts(), name, serverName);
-            if (fm != null) {
-                for (FeatureArgument a : fm.info().arguments()) {
-                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                        return true;
-                    }
-                }
+            Boolean forceSse = promptsForceSse.get(new FeatureKey(name, serverName));
+            if (forceSse != null) {
+                return forceSse;
             } else {
                 PromptInfo info = promptManager.getPrompt(name, serverName);
                 return info != null && !info.isMethod() && !skipSseInit(info);
@@ -497,30 +519,27 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private boolean forceSseResource(String serverName, JsonObject params) {
         String resourceUri = params.getString("uri");
         if (resourceUri != null) {
-            FeatureMetadata<?> fm = metadata.resources().stream().filter(m -> m.info().uri().equals(resourceUri))
-                    .findFirst().orElse(null);
-            if (fm == null) {
-                // Also try resource templates
-                ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
-                if (rti != null && rti.isMethod()) {
-                    fm = McpMetadata.findFeature(metadata.resourceTemplates(), rti.name(), serverName);
+            Boolean forceSse = resourcesForceSse.get(new FeatureKey(resourceUri, serverName));
+            if (forceSse != null) {
+                return forceSse;
+            }
+            // Also try resource templates
+            ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri, serverName);
+            if (rti != null && rti.isMethod()) {
+                forceSse = resourceTemplatesForceSse.get(new FeatureKey(rti.name(), serverName));
+                if (forceSse != null) {
+                    return forceSse;
                 }
             }
-            if (fm != null) {
-                for (FeatureArgument a : fm.info().arguments()) {
-                    if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                        return true;
-                    }
-                }
+            ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri, serverName);
+            if (info != null) {
+                return !info.isMethod() && !skipSseInit(info);
             } else {
-                ResourceManager.ResourceInfo info = resourceManager.getResource(resourceUri, serverName);
-                if (info != null) {
-                    return !info.isMethod() && !skipSseInit(info);
-                } else {
-                    // Also try resource templates
-                    ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri);
-                    return rti != null && !rti.isMethod() && !skipSseInit(rti);
+                // Also try resource templates
+                if (rti == null) {
+                    rti = resourceTemplateManager.findMatching(resourceUri, serverName);
                 }
+                return rti != null && !rti.isMethod() && !skipSseInit(rti);
             }
         }
         return false;
@@ -534,10 +553,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             JsonObject argument = params.getJsonObject("argument");
             String argumentName = argument != null ? argument.getString("name") : null;
             if (referenceName != null && argumentName != null) {
-                if ("ref/prompt".equals(referenceType)) {
+                if (Messages.isPromptRef(referenceType)) {
                     return forceSseCompletion(serverName, referenceName, argumentName, metadata.promptCompletions(),
                             promptCompletionManager);
-                } else if ("ref/resource".equals(referenceType)) {
+                } else if (Messages.isResourceRef(referenceType)) {
                     return forceSseCompletion(serverName, referenceName, argumentName, metadata.resourceTemplateCompletions(),
                             resourceTemplateCompletionManager);
                 }
@@ -549,24 +568,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean forceSseCompletion(String serverName, String referenceName, String argumentName,
             List<FeatureMetadata<CompletionResponse>> completions, CompletionManager completionManager) {
-        FeatureMetadata<?> fm = completions.stream().filter(m -> {
-            return m.info().name().equals(referenceName)
-                    && m.info().serverNames().contains(serverName)
-                    && argumentName.equals(m.info().arguments().stream().filter(FeatureArgument::isParam).findFirst()
-                            .orElseThrow().name());
-        })
-                .findFirst().orElse(null);
-        if (fm != null) {
-            for (FeatureArgument a : fm.info().arguments()) {
-                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
-                    return true;
-                }
-            }
+        Boolean forceSse = completionsForceSse.get(forceSseCompletionKey(referenceName, serverName, argumentName));
+        if (forceSse != null) {
+            return forceSse;
         } else {
             CompletionManager.CompletionInfo info = completionManager.getCompletion(referenceName, argumentName, serverName);
             return info != null && !info.isMethod() && !skipSseInit(info);
         }
-        return false;
+    }
+
+    private static String forceSseCompletionKey(String referenceName, String serverName, String argumentName) {
+        return referenceName + "_" + serverName + "_" + argumentName;
     }
 
     private static boolean skipSseInit(FeatureInfo info) {
@@ -666,6 +678,46 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private IllegalStateException serverNameNotDefined() {
         return new IllegalStateException("Server name not defined");
+    }
+
+    private static <F> Map<FeatureKey, Boolean> precomputeForceSse(List<FeatureMetadata<F>> features) {
+        return precomputeForceSse(features, fm -> fm.info().name());
+    }
+
+    private static <F> Map<FeatureKey, Boolean> precomputeForceSse(List<FeatureMetadata<F>> features,
+            Function<FeatureMetadata<F>, String> keyMapper) {
+        Map<FeatureKey, Boolean> ret = new HashMap<>();
+        for (FeatureMetadata<F> tm : features) {
+            boolean res = false;
+            for (FeatureArgument a : tm.info().arguments()) {
+                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+                    res = true;
+                }
+            }
+            for (String serverName : tm.info().serverNames()) {
+                ret.put(new FeatureKey(keyMapper.apply(tm), serverName), res);
+            }
+        }
+        return ret;
+    }
+
+    private static <F> Map<String, Boolean> precomputeCompletionForceSse(List<FeatureMetadata<F>> features) {
+        Map<String, Boolean> ret = new HashMap<>();
+        for (FeatureMetadata<F> tm : features) {
+            boolean res = false;
+            for (FeatureArgument a : tm.info().arguments()) {
+                if (FORCE_SSE_PROVIDERS.contains(a.provider())) {
+                    res = true;
+                }
+            }
+            for (String serverName : tm.info().serverNames()) {
+                String key = forceSseCompletionKey(tm.info().name(), serverName,
+                        tm.info().arguments().stream().filter(FeatureArgument::isParam).findFirst()
+                                .orElseThrow().name());
+                ret.put(key, res);
+            }
+        }
+        return ret;
     }
 
 }
