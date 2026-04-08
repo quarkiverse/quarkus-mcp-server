@@ -1,6 +1,6 @@
 name: quarkus-mcp-server
 title: MCP Server
 version:
-  main: dev # fallback to using the matched refname as the value for other branches
+  main: 1.11.x
 nav:
   - modules/ROOT/nav.adoc
