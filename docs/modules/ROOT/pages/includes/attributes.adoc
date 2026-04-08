@@ -1,5 +1,5 @@
-:project-version: 1.11.0
+:project-version: 1.11.1
 
 :examples-dir: ./../examples/
 :spec-version: 2025-11-25
-:quarkus-version: 3.33.1
+:quarkus-version: 3.33.0
