@@ -42,7 +42,7 @@
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.240.1</sundrio.version>
         <swagger-annotations.version>2.2.47</swagger-annotations.version>
-        <langchain4j.version>1.12.2</langchain4j.version>
+        <langchain4j.version>1.13.0</langchain4j.version>
         <assertj.version>3.27.7</assertj.version>
     </properties>
 
