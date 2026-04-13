@@ -394,7 +394,6 @@ For tool methods, encoders are selected in this order:
 1. `ToolResponseEncoder` - If one exists and supports the type
 2. `ContentEncoder` - If no `ToolResponseEncoder` matches
 3. Default JSON encoder - If no custom encoders match
-
 [source,java]
 ----
 // With ToolResponseEncoder<MyObject> and ContentEncoder<MyObject> defined:
