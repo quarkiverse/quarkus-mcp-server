@@ -24,12 +24,12 @@ public class MyTools {
 
     @Tool(description = "Process data with logging")
     String processData(String input, McpLog log) {
-        log.info("Starting data processing for input: {}", input); // <1>
+        log.info("Starting data processing for input: %s", input); // <1>
 
         // Do some work
         String result = input.toUpperCase();
 
-        log.debug("Processing complete. Result length: {}", result.length()); // <2>
+        log.debug("Processing complete. Result length: %d", result.length()); // <2>
 
         return result;
     }
@@ -85,7 +85,7 @@ public class MyTools {
         try {
             return performRiskyOperation(input);
         } catch (Exception e) {
-            log.error(e, "Failed to process input: {}", input); // <1>
+            log.error(e, "Failed to process input: %s", input); // <1>
             return "Processing failed: " + e.getMessage();
         }
     }
@@ -123,7 +123,7 @@ public class MyTools {
         if (log.level().compareTo(LogLevel.DEBUG) <= 0) { // <1>
             // Only compute expensive debug info if debug is enabled
             String expensiveDebugInfo = computeExpensiveDebugInfo();
-            log.debug("Debug info: {}", expensiveDebugInfo);
+            log.debug("Debug info: %s", expensiveDebugInfo);
         }
 
         return "Processing complete";
@@ -510,7 +510,7 @@ public class MyTools {
             if (result.isRequested()) {
                 if (result.reason().isPresent()) { // <1>
                     String reason = result.reason().get();
-                    log.info("Cancelled due to: {}", reason);
+                    log.info("Cancelled due to: %s", reason);
                     return "Cancelled: " + reason;
                 } else {
                     return "Cancelled (no reason provided)";
@@ -571,7 +571,7 @@ public class MyTools {
 
                 // Log every 25%
                 if (i % 25 == 0) {
-                    log.info("Progress: {}%", i); // <4>
+                    log.info("Progress: %d%%", i); // <4>
                 }
             }
 
