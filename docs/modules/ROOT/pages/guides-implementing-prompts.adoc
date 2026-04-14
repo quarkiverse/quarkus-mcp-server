@@ -141,7 +141,7 @@ import io.quarkiverse.mcp.server.McpLog;
 
 @Prompt(description = "Prompt with logging")
 PromptMessage loggedPrompt(String input, McpLog log) {
-    log.info("Processing prompt with input: {}", input);
+    log.info("Processing prompt with input: %s", input);
     return PromptMessage.withUserRole(new TextContent("Processing: " + input));
 }
 ----
