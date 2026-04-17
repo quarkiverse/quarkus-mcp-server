@@ -69,7 +69,7 @@ class McpLogImpl implements McpLog {
 
     @Override
     public void error(Throwable t, String format, Object... params) {
-        logger.infof(t, format, params);
+        logger.errorf(t, format, params);
         send(LogLevel.ERROR, format, params);
     }
 
