@@ -2,6 +2,8 @@ package io.quarkiverse.mcp.server.test.tools.annotations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -22,6 +24,8 @@ import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class ToolAnnotationsTest extends McpServerTest {
 
@@ -51,15 +55,33 @@ public class ToolAnnotationsTest extends McpServerTest {
         assertFalse(bravo.annotations().get().idempotentHint());
         assertFalse(bravo.annotations().get().openWorldHint());
 
+        ToolManager.ToolInfo withoutTitle = manager.getTool("withoutTitle");
+        assertTrue(withoutTitle.annotations().isPresent());
+        assertTrue(withoutTitle.annotations().get().readOnlyHint());
+        assertFalse(withoutTitle.annotations().get().destructiveHint());
+
         ToolManager.ToolInfo charlie = manager.getTool("charlie");
         assertTrue(charlie.annotations().isEmpty());
+
+        // Verify the JSON output does not contain "title" when title is not set
+        JsonObject alphaAnnotations = alpha.asJson().getJsonObject("annotations");
+        assertNotNull(alphaAnnotations);
+        assertEquals("Alpha tool", alphaAnnotations.getString("title"));
+
+        JsonObject withoutTitleAnnotations = withoutTitle.asJson().getJsonObject("annotations");
+        assertNotNull(withoutTitleAnnotations);
+        assertFalse(withoutTitleAnnotations.containsKey("title"),
+                "annotations must not contain 'title' key when title is not set");
+
+        assertFalse(charlie.asJson().containsKey("annotations"),
+                "tool without explicit annotations must not contain 'annotations' key");
 
         McpSseTestClient client = McpAssured.newSseClient()
                 .build()
                 .connect();
 
         client.when().toolsList(page -> {
-            assertEquals(3, page.tools().size());
+            assertEquals(4, page.tools().size());
             ToolInfo alphaTool = page.findByName("alpha");
             assertTrue(alphaTool.annotations().get().readOnlyHint());
             assertFalse(alphaTool.annotations().get().destructiveHint());
@@ -72,9 +94,32 @@ public class ToolAnnotationsTest extends McpServerTest {
             assertFalse(bravoTool.annotations().get().idempotentHint());
             assertFalse(bravoTool.annotations().get().openWorldHint());
 
+            ToolInfo withoutTitleTool = page.findByName("withoutTitle");
+            assertTrue(withoutTitleTool.annotations().isPresent());
+            assertNull(withoutTitleTool.annotations().get().title());
+            assertTrue(withoutTitleTool.annotations().get().readOnlyHint());
+            assertFalse(withoutTitleTool.annotations().get().destructiveHint());
+
             ToolInfo charlieTool = page.findByName("charlie");
             assertTrue(charlieTool.annotations().isEmpty());
-        });
+        })
+                // Verify the raw JSON response - null-valued optional fields must not be serialized
+                .message(client.newRequest(McpAssured.TOOLS_LIST))
+                .withAssert(response -> {
+                    JsonArray tools = response.getJsonObject("result").getJsonArray("tools");
+                    for (int i = 0; i < tools.size(); i++) {
+                        JsonObject tool = tools.getJsonObject(i);
+                        JsonObject annotations = tool.getJsonObject("annotations");
+                        if (annotations != null) {
+                            for (String key : annotations.fieldNames()) {
+                                assertNotNull(annotations.getValue(key),
+                                        "annotations must not contain null value for key: " + key);
+                            }
+                        }
+                    }
+                })
+                .send()
+                .thenAssertResults();
     }
 
     public record MyArg(int price, List<String> names) {

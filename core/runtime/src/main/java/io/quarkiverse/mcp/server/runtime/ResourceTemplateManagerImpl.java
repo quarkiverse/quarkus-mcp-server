@@ -383,8 +383,10 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         public JsonObject asJson() {
             JsonObject ret = new JsonObject().put("name", name())
                     .put("description", description())
-                    .put("uriTemplate", uriTemplate())
-                    .put("mimeType", mimeType());
+                    .put("uriTemplate", uriTemplate());
+            if (mimeType != null) {
+                ret.put("mimeType", mimeType);
+            }
             if (title != null) {
                 ret.put("title", title);
             }
