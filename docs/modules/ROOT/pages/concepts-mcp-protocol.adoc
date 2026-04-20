@@ -278,7 +278,7 @@ See: https://modelcontextprotocol.io/specification/{spec-version}/server/tools[T
 
 **Resources** are data sources that clients can read and optionally subscribe to for updates.
 
-* Identified by URI (e.g., `file:///path/to/file`, `database://table/row`)
+* Identified by URI (e.g., `+file:///path/to/file+`, `database://table/row`)
 * Support static URIs and URI templates with variables
 * Can be text or binary content
 * Clients can subscribe to receive update notifications
