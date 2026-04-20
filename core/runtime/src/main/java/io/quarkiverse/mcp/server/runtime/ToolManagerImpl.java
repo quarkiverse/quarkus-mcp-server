@@ -334,12 +334,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             JsonObject tool = metadata.asJson();
             ToolAnnotations toolAnnotations = metadata.info().toolAnnotations();
             if (toolAnnotations != null) {
-                tool.put("annotations", new JsonObject()
-                        .put("title", toolAnnotations.title())
-                        .put("destructiveHint", toolAnnotations.destructiveHint())
-                        .put("idempotentHint", toolAnnotations.idempotentHint())
-                        .put("openWorldHint", toolAnnotations.openWorldHint())
-                        .put("readOnlyHint", toolAnnotations.readOnlyHint()));
+                tool.put("annotations", toolAnnotationsToJson(toolAnnotations));
             }
 
             Class<? extends InputSchemaGenerator<?>> inputSchemaGeneratorClass = metadata.info().inputSchemaGenerator();
@@ -380,6 +375,20 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             return tool;
         }
 
+    }
+
+    private static JsonObject toolAnnotationsToJson(ToolAnnotations toolAnnotations) {
+        JsonObject ret = new JsonObject();
+        if (toolAnnotations != null) {
+            if (toolAnnotations.title() != null && !toolAnnotations.title().isBlank()) {
+                ret.put("title", toolAnnotations.title());
+            }
+            ret.put("destructiveHint", toolAnnotations.destructiveHint())
+                    .put("idempotentHint", toolAnnotations.idempotentHint())
+                    .put("openWorldHint", toolAnnotations.openWorldHint())
+                    .put("readOnlyHint", toolAnnotations.readOnlyHint());
+        }
+        return ret;
     }
 
     private static abstract class ToolContext {
@@ -746,13 +755,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (title != null) {
                 tool.put("title", title);
             }
-            if (annotations.isPresent()) {
-                tool.put("annotations", new JsonObject()
-                        .put("title", annotations.get().title())
-                        .put("destructiveHint", annotations.get().destructiveHint())
-                        .put("idempotentHint", annotations.get().idempotentHint())
-                        .put("openWorldHint", annotations.get().openWorldHint())
-                        .put("readOnlyHint", annotations.get().readOnlyHint()));
+            ToolAnnotations toolAnnotations = annotations.orElse(null);
+            if (toolAnnotations != null) {
+                tool.put("annotations", toolAnnotationsToJson(toolAnnotations));
             }
             if (inputSchema != null) {
                 tool.put("inputSchema", inputSchema);
