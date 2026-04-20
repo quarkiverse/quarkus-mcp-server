@@ -1188,7 +1188,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             if (annotations == null) {
                 toolAnnotations = Optional.empty();
             } else {
-                toolAnnotations = Optional.of(new ToolAnnotations(annotations.getString("title", ""),
+                toolAnnotations = Optional.of(new ToolAnnotations(annotations.getString("title"),
                         annotations.getBoolean("readOnlyHint", false),
                         annotations.getBoolean("destructiveHint", true),
                         annotations.getBoolean("idempotentHint", false),
