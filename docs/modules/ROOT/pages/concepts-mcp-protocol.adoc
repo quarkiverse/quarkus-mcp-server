@@ -36,8 +36,8 @@ See the https://modelcontextprotocol.io/specification/{spec-version}[official MC
 
 === Compliance and Testing
 
-NOTE: The absence of an official "Compliance Test Suite" (similar to Java's TCK) makes it challenging to verify full specification compliance.
-The `quarkus-mcp-server` implementation is tested against real MCP clients and aims for maximum compatibility.
+The `quarkus-mcp-server` implementation is tested against the official https://github.com/modelcontextprotocol/conformance[MCP Conformance Test Suite] and against real MCP clients to maximize specification compliance.
+Conformance test integration lives in the `conformance/` module of the project.
 If you encounter any issues or discrepancies with the specification, please open an issue on https://github.com/quarkiverse/quarkus-mcp-server/issues.
 
 == Known Limitations
