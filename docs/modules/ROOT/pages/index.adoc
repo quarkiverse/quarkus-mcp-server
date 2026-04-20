@@ -42,7 +42,7 @@ Quarkus analyzes your code at build time, not runtime. Tools, resources, and pro
 
 === Production Ready, Out of the Box
 
-* **Multiple transports** : STDIO, HTTP, SSE, WebSocket all supported
+* **Multiple transports** : STDIO, Streamable HTTP (preferred), SSE (deprecated in MCP 2025-03-26), and WebSocket all supported
 * **Enterprise integration** : Full CDI support with dependency injection, interceptors, and decorators
 * **Security built-in** : Integrate with Quarkus Security for authentication and authorization
 * **Reactive by default** : Built on Eclipse Vert.x for non-blocking I/O, also supports virtual threads
