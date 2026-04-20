@@ -1,12 +1,16 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialRequest;
 
@@ -24,6 +28,21 @@ public class InitialRequestTest {
         assertEquals("transport must not be null",
                 assertThrows(IllegalArgumentException.class, () -> new InitialRequest(impl, "1.0", List.of(), null))
                         .getMessage());
+    }
+
+    @Test
+    public void testSupportsSamplingTools() {
+        Implementation impl = new Implementation("test", "1.0", "");
+        InitialRequest supportsTools = new InitialRequest(impl, "1.0",
+                List.of(new ClientCapability(ClientCapability.SAMPLING, Map.of("tools", Map.of()))),
+                InitialRequest.Transport.STDIO);
+        assertTrue(supportsTools.supportsSampling());
+        assertTrue(supportsTools.supportsSamplingTools());
+
+        InitialRequest samplingOnly = new InitialRequest(impl, "1.0",
+                List.of(new ClientCapability(ClientCapability.SAMPLING, Map.of())),
+                InitialRequest.Transport.STDIO);
+        assertFalse(samplingOnly.supportsSamplingTools());
     }
 
 }

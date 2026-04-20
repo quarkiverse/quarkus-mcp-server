@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * A content provided to or from an LLM.
  */
 public sealed interface Content
-        permits TextContent, ImageContent, EmbeddedResource, AudioContent, ResourceLink {
+        permits TextContent, ImageContent, EmbeddedResource, AudioContent, ResourceLink, ToolUseContent, ToolResultContent {
 
     /**
      * @return the type of the content
@@ -75,6 +75,26 @@ public sealed interface Content
         throw new IllegalArgumentException("Not a resource link");
     }
 
+    /**
+     * Casts and returns this object as a tool use content, or throws an {@link IllegalArgumentException} if the content object
+     * does not represent a {@link ToolUseContent}.
+     *
+     * @return the tool use content
+     */
+    default ToolUseContent asToolUse() {
+        throw new IllegalArgumentException("Not a tool use");
+    }
+
+    /**
+     * Casts and returns this object as a tool result content, or throws an {@link IllegalArgumentException} if the content
+     * object does not represent a {@link ToolResultContent}.
+     *
+     * @return the tool result content
+     */
+    default ToolResultContent asToolResult() {
+        throw new IllegalArgumentException("Not a tool result");
+    }
+
     @JsonProperty("type")
     default String getType() {
         return type().toString().toLowerCase();
@@ -93,7 +113,9 @@ public sealed interface Content
         IMAGE,
         RESOURCE,
         AUDIO,
-        RESOURCE_LINK
+        RESOURCE_LINK,
+        TOOL_USE,
+        TOOL_RESULT
     }
 
 }

@@ -581,8 +581,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         JsonObject capabilities = params.getJsonObject("capabilities");
         if (capabilities != null) {
             for (String name : capabilities.fieldNames()) {
-                // TODO capability properties
-                clientCapabilities.add(new ClientCapability(name, Map.of()));
+                Object value = capabilities.getValue(name);
+                Map<String, Object> properties = value instanceof JsonObject json ? json.getMap() : Map.of();
+                clientCapabilities.add(new ClientCapability(name, properties));
             }
         }
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());

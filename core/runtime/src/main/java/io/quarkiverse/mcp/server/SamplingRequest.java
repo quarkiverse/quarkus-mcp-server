@@ -56,6 +56,16 @@ public interface SamplingRequest {
     ModelPreferences modelPreferences();
 
     /**
+     * @return the tools exposed to the model during sampling
+     */
+    List<ToolManager.ToolInfo> tools();
+
+    /**
+     * @return the tool selection behavior
+     */
+    ToolChoice toolChoice();
+
+    /**
      *
      * @return the optional metadata
      */
@@ -152,6 +162,24 @@ public interface SamplingRequest {
          * @return self
          */
         Builder setModelPreferences(ModelPreferences modelPreferences);
+
+        /**
+         * @param tool
+         * @return self
+         */
+        Builder addTool(ToolManager.ToolInfo tool);
+
+        /**
+         * @param tools
+         * @return self
+         */
+        Builder setTools(List<? extends ToolManager.ToolInfo> tools);
+
+        /**
+         * @param toolChoice
+         * @return self
+         */
+        Builder setToolChoice(ToolChoice toolChoice);
 
         /**
          *

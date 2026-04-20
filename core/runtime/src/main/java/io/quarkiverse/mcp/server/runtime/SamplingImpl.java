@@ -14,6 +14,8 @@ import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingRequest.Builder;
 import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
+import io.quarkiverse.mcp.server.ToolChoice;
+import io.quarkiverse.mcp.server.ToolManager;
 
 class SamplingImpl implements Sampling {
 
@@ -43,6 +45,11 @@ class SamplingImpl implements Sampling {
     }
 
     @Override
+    public boolean isToolCallingSupported() {
+        return connection.initialRequest().supportsSamplingTools();
+    }
+
+    @Override
     public Builder requestBuilder() {
         if (!connection.status().isClientInitialized()) {
             throw McpMessageHandler.clientNotInitialized(connection);
@@ -62,6 +69,8 @@ class SamplingImpl implements Sampling {
         private String systemPrompt;
         private IncludeContext includeContext;
         private ModelPreferences modelPreferences;
+        private final List<ToolManager.ToolInfo> tools = new ArrayList<>();
+        private ToolChoice toolChoice;
         private Map<String, Object> metadata;
         private List<String> stopSequences;
         private Duration timeout = SamplingImpl.this.timeout;
@@ -103,6 +112,25 @@ class SamplingImpl implements Sampling {
         }
 
         @Override
+        public Builder addTool(ToolManager.ToolInfo tool) {
+            tools.add(Objects.requireNonNull(tool));
+            return this;
+        }
+
+        @Override
+        public Builder setTools(List<? extends ToolManager.ToolInfo> tools) {
+            this.tools.clear();
+            this.tools.addAll(List.copyOf(tools));
+            return this;
+        }
+
+        @Override
+        public Builder setToolChoice(ToolChoice toolChoice) {
+            this.toolChoice = toolChoice;
+            return this;
+        }
+
+        @Override
         public Builder setMetadata(Map<String, Object> metadata) {
             this.metadata = metadata;
             return this;
@@ -125,8 +153,12 @@ class SamplingImpl implements Sampling {
             if (maxTokens == null) {
                 throw new IllegalStateException("maxTokens must be set");
             }
+            if ((!tools.isEmpty() || toolChoice != null) && !isToolCallingSupported()) {
+                throw new IllegalStateException("Client " + connection.initialRequest().implementation()
+                        + " does not support sampling with tools");
+            }
             return new SamplingRequestImpl(maxTokens, List.copyOf(messages), temperature, systemPrompt, includeContext,
-                    modelPreferences, metadata, stopSequences,
+                    modelPreferences, List.copyOf(tools), toolChoice, metadata, stopSequences,
                     sender, responseHandlers, timeout);
         }
 
