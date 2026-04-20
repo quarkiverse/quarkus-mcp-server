@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.EmbeddedResource;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.ImageContent;
@@ -38,6 +39,7 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
         objectMapper.addMixIn(ImageContent.class, ResponseMixin.class);
         objectMapper.addMixIn(ResourceLink.class, ResponseMixin.class);
         objectMapper.addMixIn(TextContent.class, ResponseMixin.class);
+        objectMapper.addMixIn(Content.Annotations.class, ResponseMixin.class);
 
         objectMapper.addMixIn(Icon.class, ResponseMixin.class);
 
