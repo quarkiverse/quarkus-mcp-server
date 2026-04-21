@@ -5,6 +5,7 @@ include::includes/attributes.adoc[]
 
 This guide covers how to configure and run multiple MCP servers within a single Quarkus application, each with its own endpoint, features, and security policies.
 
+[id="overview"]
 == Overview
 
 The Quarkus MCP Server extension supports running multiple independent MCP server instances in a single application. Each server can have:
@@ -21,6 +22,7 @@ This is useful for:
 * To run multiple API versions simultaneously
 * To gather multiple logical services in one deployment
 
+[id="default-server"]
 == Default Server
 
 By default, a single MCP server is configured and features are registered to it:
@@ -44,8 +46,10 @@ This tool is automatically registered to the **default server**, accessible at t
 * SSE: `/mcp/sse`
 * WebSocket: `/ws/mcp`
 
+[id="configuring-multiple-servers"]
 == Configuring Multiple Servers
 
+[id="step-1-configure-server-endpoints"]
 === Step 1: Configure Server Endpoints
 
 Define different root paths for each named server in `application.properties`:
@@ -81,6 +85,7 @@ Each server will have its own set of endpoints:
 |`/charlie/mcp/sse`
 |===
 
+[id="step-2-bind-features-to-servers"]
 === Step 2: Bind Features to Servers
 
 Use the `@McpServer` annotation to bind features to specific servers:
@@ -159,8 +164,10 @@ Then the previous rules will apply, and multiple server bindings will then resul
 ====
 
 
+[id="using-mcpserver-annotation"]
 == Using @McpServer Annotation
 
+[id="method-level-binding"]
 === Method-Level Binding
 
 Bind individual features to specific servers:
@@ -190,6 +197,7 @@ public class MultiServerFeatures {
 }
 ----
 
+[id="class-level-binding"]
 === Class-Level Binding
 
 Bind all features in a class to a server by default:
@@ -220,6 +228,7 @@ public class BravoFeatures {
 <2> These tools inherit the "bravo" server binding
 <3> Class-level and method-level annotations are combined
 
+[id="default-server-constant"]
 == Default Server Constant
 
 Use `McpServer.DEFAULT` to explicitly reference the default (unnamed) server:
@@ -246,12 +255,14 @@ public class SpecialFeatures {
 <1> Inherits "special" from class-level annotation
 <2> Explicitly override to use default server
 
+[id="per-server-configuration"]
 == Per-Server Configuration
 
 Configure each server independently using the naming pattern:
 
 `quarkus.mcp.server.<server-name>.<property>`
 
+[id="traffic-logging"]
 === Traffic Logging
 
 Enable traffic logging per server:
@@ -266,6 +277,7 @@ quarkus.mcp.server.bravo.traffic-logging.text-limit=500
 quarkus.mcp.server.traffic-logging.enabled=false
 ----
 
+[id="transport-configuration"]
 === Transport Configuration
 
 Configure transports independently:
@@ -282,10 +294,12 @@ quarkus.mcp.server.admin.http.root-path=/admin/mcp
 quarkus.mcp.server.public.ws.root-path=/public/ws/mcp
 ----
 
+[id="security-configuration"]
 == Security Configuration
 
 Each server can have different security policies.
 
+[id="example-public-and-secured-servers"]
 === Example: Public and Secured Servers
 
 [source,properties]
@@ -320,6 +334,7 @@ public class MyFeatures {
 }
 ----
 
+[id="testing-multiple-servers"]
 == Testing Multiple Servers
 
 Test each server independently using McpAssured:
@@ -368,6 +383,7 @@ public void testBravoServer() {
 <3> Connect to bravo server
 <4> Default server tools are not available here
 
+[id="see-also"]
 == See Also
 
 * xref:reference-configuration.adoc[Configuration Reference]
