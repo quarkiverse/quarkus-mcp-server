@@ -77,8 +77,13 @@ class ToolMessageHandler extends MessageHandler {
         try {
             Future<ToolResponse> fu = manager.execute(toolName,
                     new FeatureExecutionContext(message, mcpRequest));
-            return fu.compose(toolResponse -> mcpRequest.sender().sendResult(id, toolResponse),
-                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest.connection(), cause, LOG,
+            return fu.compose(toolResponse -> {
+                if (toolResponse.isError()) {
+                    mcpRequest.setTracingErrorResponse(true, null, null);
+                }
+                return mcpRequest.sender().sendResult(id, toolResponse);
+            },
+                    cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to call tool %s", toolName));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());

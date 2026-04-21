@@ -31,14 +31,16 @@ public class ElicitationRequestImpl implements ElicitationRequest {
     private final Sender sender;
     private final ResponseHandlers responseHandlers;
     private final Duration timeout;
+    private final McpTracing mcpTracing;
 
     ElicitationRequestImpl(String message, Map<String, PrimitiveSchema> requestedSchema, Sender sender,
-            ResponseHandlers responseHandlers, Duration timeout) {
+            ResponseHandlers responseHandlers, Duration timeout, McpTracing mcpTracing) {
         this.message = message;
         this.requestedSchema = Map.copyOf(requestedSchema);
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
+        this.mcpTracing = mcpTracing;
     }
 
     @JsonProperty
@@ -78,6 +80,14 @@ public class ElicitationRequestImpl implements ElicitationRequest {
             }
             schema.put("required", required);
             JsonObject params = new JsonObject().put("message", message).put("requestedSchema", schema);
+            if (mcpTracing != null) {
+                JsonObject meta = params.getJsonObject("_meta");
+                if (meta == null) {
+                    meta = new JsonObject();
+                    params.put("_meta", meta);
+                }
+                mcpTracing.injectMcpOtelContext(meta);
+            }
             sender.send(Messages.newRequest(requestId, McpMethod.ELICITATION_CREATE.jsonRpcName(), params));
             return future;
         });

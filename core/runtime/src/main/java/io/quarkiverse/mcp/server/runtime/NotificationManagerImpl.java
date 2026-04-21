@@ -78,7 +78,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             sender = mcpRequest.connection();
         }
         return new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null, null,
-                sender, null, responseHandlers, mcpRequest.serverName(), cancellationRequests);
+                sender, null, responseHandlers, mcpRequest.serverName(), cancellationRequests, mcpTracing);
     }
 
     @Override

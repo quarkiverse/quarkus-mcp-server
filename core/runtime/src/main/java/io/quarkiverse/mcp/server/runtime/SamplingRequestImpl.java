@@ -38,14 +38,17 @@ public class SamplingRequestImpl implements SamplingRequest {
     private final Map<String, Object> metadata;
     private final List<String> stopSequences;
 
+    private JsonObject meta;
+
     private final Sender sender;
     private final ResponseHandlers responseHandlers;
     private final Duration timeout;
+    private final McpTracing mcpTracing;
 
     SamplingRequestImpl(long maxTokens, List<SamplingMessage> messages, BigDecimal temperature, String systemPrompt,
             IncludeContext includeContext, ModelPreferences modelPreferences, Map<String, Object> metadata,
             List<String> stopSequences, Sender sender,
-            ResponseHandlers responseHandlers, Duration timeout) {
+            ResponseHandlers responseHandlers, Duration timeout, McpTracing mcpTracing) {
         this.maxTokens = maxTokens;
         this.messages = messages;
         this.temperature = temperature;
@@ -57,6 +60,7 @@ public class SamplingRequestImpl implements SamplingRequest {
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.timeout = timeout;
+        this.mcpTracing = mcpTracing;
     }
 
     @JsonProperty
@@ -107,6 +111,11 @@ public class SamplingRequestImpl implements SamplingRequest {
         return metadata;
     }
 
+    @JsonProperty("_meta")
+    public JsonObject meta() {
+        return meta;
+    }
+
     @Override
     public Uni<SamplingResponse> send() {
         AtomicLong id = new AtomicLong();
@@ -125,6 +134,12 @@ public class SamplingRequestImpl implements SamplingRequest {
                 future.complete(samplingResponse);
             });
             id.set(requestId);
+            if (mcpTracing != null) {
+                if (meta == null) {
+                    meta = new JsonObject();
+                }
+                mcpTracing.injectMcpOtelContext(meta);
+            }
             sender.send(Messages.newRequest(requestId, McpMethod.SAMPLING_CREATE_MESSAGE.jsonRpcName(), this));
             return future;
         });

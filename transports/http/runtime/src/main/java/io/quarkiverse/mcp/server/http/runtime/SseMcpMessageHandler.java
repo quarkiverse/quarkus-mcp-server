@@ -21,6 +21,7 @@ import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
+import io.quarkiverse.mcp.server.runtime.McpTracing;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -72,10 +73,12 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             McpMetadata metadata,
             Vertx vertx,
             Instance<McpMetrics> metrics,
+            Instance<McpTracing> tracing,
             Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
+                tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;

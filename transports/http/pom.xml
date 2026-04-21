@@ -14,5 +14,6 @@
         <module>deployment</module>
         <module>runtime</module>
         <module>integration-tests</module>
+        <module>tracing-integration-tests</module>
     </modules>
 </project>

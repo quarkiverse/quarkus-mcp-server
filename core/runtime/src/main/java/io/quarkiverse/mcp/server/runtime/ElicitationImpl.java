@@ -16,7 +16,8 @@ class ElicitationImpl implements Elicitation {
     static ElicitationImpl from(ArgumentProviders argProviders) {
         return new ElicitationImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.responseHandlers(),
-                argProviders.responseHandlers().getElicitationTimeout(argProviders.serverName()));
+                argProviders.responseHandlers().getElicitationTimeout(argProviders.serverName()),
+                argProviders.mcpTracing());
     }
 
     private final McpConnection connection;
@@ -27,11 +28,15 @@ class ElicitationImpl implements Elicitation {
 
     private final Duration defaultTimeout;
 
-    ElicitationImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout) {
+    private final McpTracing mcpTracing;
+
+    ElicitationImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout,
+            McpTracing mcpTracing) {
         this.connection = connection;
         this.sender = sender;
         this.responseHandlers = responseHandlers;
         this.defaultTimeout = timeout;
+        this.mcpTracing = mcpTracing;
     }
 
     @Override
@@ -84,7 +89,8 @@ class ElicitationImpl implements Elicitation {
             if (requestedSchema.isEmpty()) {
                 throw new IllegalStateException("requestedSchema must be set");
             }
-            return new ElicitationRequestImpl(message, requestedSchema, sender, responseHandlers, timeout);
+            return new ElicitationRequestImpl(message, requestedSchema, sender, responseHandlers, timeout,
+                    ElicitationImpl.this.mcpTracing);
         }
 
     }

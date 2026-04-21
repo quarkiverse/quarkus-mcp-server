@@ -35,7 +35,7 @@
 ** xref:reference-return-types.adoc[Return Types]
 ** xref:reference-configuration.adoc[Configuration]
 ** xref:reference-security.adoc[Security]
-** xref:reference-observability.adoc[Observability and Metrics]
+** xref:reference-observability.adoc[Observability - Tracing and Metrics]
 
 .Concepts
 ** xref:concepts-mcp-protocol.adoc[MCP Protocol]

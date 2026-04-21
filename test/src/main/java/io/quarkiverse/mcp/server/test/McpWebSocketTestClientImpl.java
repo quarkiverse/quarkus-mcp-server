@@ -34,7 +34,8 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
     McpWebSocketTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, null,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons);
+                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.openTelemetry);
         this.endpointUri = createEndpointUri(builder.baseUri, builder.endpointPath);
         LOG.debugf("McpWebSocketTestClient created with WebSocket endpoint: %s", endpointUri);
     }
@@ -143,8 +144,9 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
         }
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
             sendAndForget(message);
+            return null;
         }
 
     }
@@ -154,8 +156,9 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
         private final List<JsonObject> requests = new ArrayList<>();
 
         @Override
-        protected void doSend(JsonObject message) {
+        protected TracingHandle doSend(JsonObject message) {
             requests.add(message);
+            return null;
         }
 
         @Override

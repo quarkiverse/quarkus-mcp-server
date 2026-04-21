@@ -74,19 +74,42 @@ public record InitialRequest(Implementation implementation, String protocolVersi
         /**
          * The stdio transport.
          */
-        STDIO,
+        STDIO("pipe", null, null),
         /**
          * The HTTP/SSE transport from version 2024-11-05.
          */
-        SSE,
+        SSE("tcp", "http", "1.1"),
         /**
          * The Streamable HTTP transport from version 2025-03-26.
          */
-        STREAMABLE_HTTP,
+        STREAMABLE_HTTP("tcp", "http", "2"),
         /**
          * Unofficial WebSocket transport.
          */
-        WEBSOCKET,
+        WEBSOCKET("tcp", "websocket", null);
+
+        // Values according to https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/#recording-mcp-transport
+        private final String networkTransport;
+        private final String protocolName;
+        private final String protocolVersion;
+
+        Transport(String networkTransport, String protocolName, String protocolVersion) {
+            this.networkTransport = networkTransport;
+            this.protocolName = protocolName;
+            this.protocolVersion = protocolVersion;
+        }
+
+        public String getNetworkTransport() {
+            return networkTransport;
+        }
+
+        public String protocolName() {
+            return protocolName;
+        }
+
+        public String protocolVersion() {
+            return protocolVersion;
+        }
     }
 
 }

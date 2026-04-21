@@ -19,6 +19,7 @@ import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
+import io.quarkiverse.mcp.server.runtime.McpTracing;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -146,8 +147,11 @@ public class WebSocketMcpServerProcessor {
                     // Instance<McpMetrics>
                     ParamVar p16 = conc.parameter("metrics",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpMetrics.class))));
+                    // Instance<McpTracing>
+                    ParamVar p17 = conc.parameter("mcpTracing",
+                            GenericType.of(Instance.class, List.of(TypeArgument.of(McpTracing.class))));
                     // Instance<McpRequestValidator>
-                    ParamVar p17 = conc.parameter("mcpRequestValidator",
+                    ParamVar p18 = conc.parameter("mcpRequestValidator",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpRequestValidator.class))));
 
                     ConstructorDesc superConstructor = ConstructorDesc.of(WebSocketMcpMessageHandler.class,
@@ -168,10 +172,11 @@ public class WebSocketMcpServerProcessor {
                             List.class,
                             Instance.class,
                             Instance.class,
+                            Instance.class,
                             Instance.class);
                     conc.body(bc -> {
                         bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
-                                p13, p14, p15, p16, p17);
+                                p13, p14, p15, p16, p17, p18);
                         bc.return_();
                     });
                 });

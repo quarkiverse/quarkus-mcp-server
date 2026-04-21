@@ -45,7 +45,7 @@ class ServerFeaturesTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsList(p -> {
-                    assertEquals(4, p.size());
+                    assertEquals(5, p.size());
                     JsonObject schema = p.findByName("toLowerCase").inputSchema();
                     JsonObject properties = schema.getJsonObject("properties");
                     assertEquals(1, properties.size());
@@ -167,5 +167,4 @@ class ServerFeaturesTest {
         assertEquals(1, content.size());
         assertEquals("Hello Quarkus!", content.getJsonObject(0).getString("text"));
     }
-
 }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.vertx.core.json.JsonObject;
@@ -42,12 +43,28 @@ public class FilterContextImplTest {
             }
 
             @Override
+            public void prepareTracing(McpTracing mcpTracing, McpMethod method, JsonObject message,
+                    InitialRequest.Transport transport) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void setTracingErrorResponse(boolean toolError, Integer jsonRpcErrorCode, String errorMessage) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void endTracing(Throwable error) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public void contextStart() {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public void contextEnd() {
+            public void contextEnd(Throwable error) {
                 throw new UnsupportedOperationException();
             }
 

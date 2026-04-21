@@ -54,6 +54,7 @@ import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
+import io.quarkus.arc.Arc;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
@@ -86,6 +87,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     final CancellationRequests cancellationRequests;
 
+    final McpTracing mcpTracing;
+
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers,
             CancellationRequests cancellationRequests, McpServersRuntimeConfig config, McpMetadata metadata) {
@@ -97,6 +100,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         this.responseHandlers = responseHandlers;
         this.cancellationRequests = cancellationRequests;
         this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
+        jakarta.enterprise.inject.Instance<McpTracing> mcpTracingInstance = Arc.container().select(McpTracing.class);
+        this.mcpTracing = mcpTracingInstance.isResolvable() ? mcpTracingInstance.get() : null;
     }
 
     public Future<RESULT> execute(String id, FeatureExecutionContext executionContext) throws McpException {
@@ -149,7 +154,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
         return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
                 mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName(),
-                cancellationRequests);
+                cancellationRequests, mcpTracing);
     }
 
     record FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders) {

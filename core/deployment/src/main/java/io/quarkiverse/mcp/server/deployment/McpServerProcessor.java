@@ -116,6 +116,7 @@ import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
+import io.quarkiverse.mcp.server.runtime.tracing.McpTracingInstrumenter;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InstanceHandle;
@@ -124,6 +125,7 @@ import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
+import io.quarkus.arc.deployment.OpenTelemetrySdkBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem;
@@ -700,6 +702,14 @@ class McpServerProcessor {
             Optional<MetricsCapabilityBuildItem> metricsCapability) {
         if (metricsCapability.map(m -> m.metricsSupported(MetricsFactory.MICROMETER)).orElse(false)) {
             additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(MicrometerMcpMetrics.class));
+        }
+    }
+
+    @BuildStep
+    void addTracingSupport(BuildProducer<AdditionalBeanBuildItem> additionalBeans,
+            Optional<OpenTelemetrySdkBuildItem> openTelemetrySdk) {
+        if (openTelemetrySdk.filter(OpenTelemetrySdkBuildItem::isTracingBuildTimeEnabled).isPresent()) {
+            additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(McpTracingInstrumenter.class));
         }
     }
 

@@ -87,6 +87,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final McpMetrics mcpMetrics;
 
+    private final McpTracing mcpTracing;
+
     private final McpRequestValidator mcpRequestValidator;
 
     private final CancellationRequests cancellationRequests;
@@ -103,6 +105,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             List<InitialCheck> initialChecks,
             List<InitialResponseInfo> initialResponseInfos,
             McpMetrics mcpMetrics,
+            McpTracing mcpTracing,
             McpRequestValidator mcpRequestValidator,
             CancellationRequests cancellationRequests) {
         this.connectionManager = connectionManager;
@@ -126,6 +129,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.metadata = metadata;
         this.vertx = vertx;
         this.mcpMetrics = mcpMetrics;
+        this.mcpTracing = mcpTracing;
         this.mcpRequestValidator = mcpRequestValidator;
         this.cancellationRequests = cancellationRequests;
         this.ongoingRequests = ConcurrentHashMap.newKeySet();
@@ -203,23 +207,38 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return unsupportedMethod(message, mcpRequest);
         }
         long start = System.nanoTime();
-        Future<Void> ret;
-        if (mcpRequestValidator != null) {
-            ret = mcpRequestValidator.validate(message, mcpRequest, method)
-                    .compose(valid -> valid ? handleRequest(message, mcpRequest, method) : Future.succeededFuture());
-        } else {
-            ret = handleRequest(message, mcpRequest, method);
-        }
-        if (mcpMetrics != null) {
-            ret.onComplete(ar -> {
+        // Prepare tracing - starts the span immediately
+        mcpRequest.prepareTracing(mcpTracing, method, message, transport());
+
+        Future<Void> ret = handleRequest(message, mcpRequest, method);
+        ret.onComplete(ar -> {
+            if (mcpMetrics != null) {
                 mcpMetrics.mcpRequestCompleted(method, message, mcpRequest,
                         TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start), ar.cause());
-            });
-        }
+            }
+            // End the tracing span - contextEnd() may have already ended it,
+            // in which case this is a no-op since tracingSpan is set to null
+            mcpRequest.endTracing(ar.cause());
+        });
         return ret;
     }
 
-    Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
+    private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
+        if (mcpRequestValidator != null) {
+            return mcpRequestValidator.validate(message, mcpRequest, method)
+                    .compose(valid -> {
+                        if (valid) {
+                            return doHandleRequest(message, mcpRequest, method);
+                        }
+                        mcpRequest.setTracingErrorResponse(false, JsonRpcErrorCodes.INVALID_REQUEST,
+                                "Schema validation failed");
+                        return Future.succeededFuture();
+                    });
+        }
+        return doHandleRequest(message, mcpRequest, method);
+    }
+
+    private Future<Void> doHandleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
         return switch (mcpRequest.connection().status()) {
             case NEW -> initializeNew(method, message, mcpRequest);
             case INITIALIZING -> initializing(method, message, mcpRequest);
@@ -296,7 +315,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INTERNAL_ERROR, msg);
             }
         }).onComplete(r -> {
-            mcpRequest.contextEnd();
+            mcpRequest.contextEnd(r.cause());
         });
     }
 
@@ -378,7 +397,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
                         featureExecutionContext);
                 fu.onComplete(r -> {
-                    mcpRequest.contextEnd();
+                    mcpRequest.contextEnd(r.cause());
                     if (r.failed()) {
                         LOG.errorf(r.cause(), "Unable to call notification method: %s", notification);
                         ret.fail(r.cause());
@@ -433,7 +452,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
-                mcpRequest.contextEnd();
+                mcpRequest.contextEnd(r.cause());
                 if (ongoingId != null) {
                     ongoingRequests.remove(ongoingId);
                     cancellationRequests.remove(mcpRequest.connection(), message);

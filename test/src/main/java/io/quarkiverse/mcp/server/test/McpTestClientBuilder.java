@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.opentelemetry.api.OpenTelemetry;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
@@ -22,6 +23,7 @@ abstract class McpTestClientBuilder<BUILDER extends Builder<BUILDER>> implements
     protected Set<ClientCapability> clientCapabilities = Set.of();
     protected Set<Icon> icons;
     protected boolean autoPong = true;
+    protected OpenTelemetry openTelemetry;
 
     @Override
     public BUILDER setName(String clientName) {
@@ -92,6 +94,12 @@ abstract class McpTestClientBuilder<BUILDER extends Builder<BUILDER>> implements
     @Override
     public BUILDER setAutoPong(boolean val) {
         this.autoPong = val;
+        return self();
+    }
+
+    @Override
+    public BUILDER setTracing(OpenTelemetry openTelemetry) {
+        this.openTelemetry = openTelemetry;
         return self();
     }
 
