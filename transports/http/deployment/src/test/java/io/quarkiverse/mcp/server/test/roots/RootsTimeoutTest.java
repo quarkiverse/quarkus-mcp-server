@@ -56,6 +56,8 @@ public class RootsTimeoutTest extends McpServerTest {
         // But the client does not respond...
         assertTrue(MyTools.INIT_LATCH1.await(5, TimeUnit.SECONDS));
         assertNotNull(MyTools.ERROR1.get());
+        assertTrue(MyTools.INIT_LATCH2.await(5, TimeUnit.SECONDS));
+        assertNotNull(MyTools.ERROR2.get());
 
         assertFalse(responseHandlers.hasHandler(id1));
         assertFalse(responseHandlers.hasHandler(id2));

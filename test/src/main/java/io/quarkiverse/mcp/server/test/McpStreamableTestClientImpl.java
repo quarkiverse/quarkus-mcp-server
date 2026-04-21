@@ -111,6 +111,9 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         if (openSubsidiarySse) {
             client.connectSubsidiarySse(additionalHeaders(null));
+            // Wait for the subsidiary SSE stream to be established;
+            // the server sends a log notification when the stream opens
+            client.state.waitForNotifications(1);
             if (autoPong) {
                 client.setRequestConsumer(m -> {
                     String method = m.getString("method");
