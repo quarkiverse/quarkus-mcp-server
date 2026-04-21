@@ -157,6 +157,16 @@
         "doc",
         "code"
       ]
+    },
+    {
+      "login": "brunobat",
+      "name": "Bruno Baptista",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2318030?v=4",
+      "profile": "http://brunobat.com/about",
+      "contributions": [
+        "doc",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
