@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-16-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-17-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -110,6 +110,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/cescoffier"><img src="https://avatars.githubusercontent.com/u/402301?v=4?s=100" width="100px;" alt="Clement Escoffier"/><br /><sub><b>Clement Escoffier</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=cescoffier" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/rolfedh"><img src="https://avatars.githubusercontent.com/u/350907?v=4?s=100" width="100px;" alt="Rolfe Dlugy-Hegwer"/><br /><sub><b>Rolfe Dlugy-Hegwer</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=rolfedh" title="Documentation">📖</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=rolfedh" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://brunobat.com/about"><img src="https://avatars.githubusercontent.com/u/2318030?v=4?s=100" width="100px;" alt="Bruno Baptista"/><br /><sub><b>Bruno Baptista</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=brunobat" title="Documentation">📖</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=brunobat" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
