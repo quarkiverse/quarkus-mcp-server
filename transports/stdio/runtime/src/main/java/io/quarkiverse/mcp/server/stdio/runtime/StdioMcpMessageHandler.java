@@ -115,7 +115,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                                 json = Json.decodeValue(line);
                             } catch (Exception e) {
                                 String msg = "Unable to parse the JSON message";
-                                LOG.errorf(e, msg);
+                                LOG.warnf(e, msg);
                                 connection.sendError(null, JsonRpcErrorCodes.PARSE_ERROR, msg);
                                 return;
                             }

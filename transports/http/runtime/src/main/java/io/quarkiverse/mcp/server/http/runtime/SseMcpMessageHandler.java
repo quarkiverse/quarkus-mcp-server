@@ -94,19 +94,19 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
         HttpServerRequest request = ctx.request();
         String connectionId = ctx.pathParam("id");
         if (connectionId == null) {
-            LOG.errorf("Connection id is missing: %s", ctx.normalizedPath());
+            LOG.warnf("Connection id is missing: %s", ctx.normalizedPath());
             ctx.fail(400);
             return;
         }
         if (request.method() != HttpMethod.POST) {
             ctx.response().putHeader(HttpHeaders.ALLOW, "POST");
-            LOG.errorf("Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), connectionId);
+            LOG.warnf("Invalid HTTP method %s [connectionId: %s]", ctx.request().method(), connectionId);
             ctx.fail(405);
             return;
         }
         McpConnectionBase conn = connectionManager.get(connectionId);
         if (conn == null) {
-            LOG.errorf("Connection not found: %s", connectionId);
+            LOG.warnf("Connection not found: %s", connectionId);
             ctx.fail(404);
             return;
         }
@@ -122,7 +122,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             json = Json.decodeValue(ctx.body().buffer());
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
-            LOG.errorf(e, msg);
+            LOG.warnf(e, msg);
             connection.sendError(null, JsonRpcErrorCodes.PARSE_ERROR, msg);
             ctx.end();
             return;

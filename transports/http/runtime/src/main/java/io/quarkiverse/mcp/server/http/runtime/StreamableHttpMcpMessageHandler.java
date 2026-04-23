@@ -178,7 +178,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         List<String> accepts = ctx.request().headers().getAll(HttpHeaders.ACCEPT);
         if (!accepts(accepts, "application/json")
                 || !accepts(accepts, "text/event-stream")) {
-            LOG.errorf("Invalid Accept header: %s", accepts);
+            LOG.warnf("Invalid Accept header: %s", accepts);
             ctx.fail(400);
             return;
         }
@@ -194,7 +194,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     // We don't care about non-existent session when auto-init is enabled
                     connection = initConnection(serverName);
                 } else {
-                    LOG.errorf("Mcp session not found: %s", mcpSessionId);
+                    LOG.warnf("Mcp session not found: %s", mcpSessionId);
                     ctx.fail(404);
                     return;
                 }
@@ -210,7 +210,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             json = Json.decodeValue(ctx.body().buffer());
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
-            LOG.errorf(e, msg);
+            LOG.warnf(e, msg);
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.end(newError(null, JsonRpcErrorCodes.PARSE_ERROR, msg).toBuffer());
             return;
@@ -237,7 +237,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
         if (mcpProtocolVersion != null
                 && !SUPPORTED_PROTOCOL_VERSIONS.contains(mcpProtocolVersion)) {
-            LOG.errorf("Invalid MCP protocol header: %s", mcpProtocolVersion);
+            LOG.warnf("Invalid MCP protocol header: %s", mcpProtocolVersion);
             ctx.fail(400);
             return;
         }
@@ -285,13 +285,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         HttpServerRequest request = ctx.request();
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
-            LOG.errorf("%s header not found", MCP_SESSION_ID_HEADER);
+            LOG.warnf("%s header not found", MCP_SESSION_ID_HEADER);
             ctx.fail(405);
             return;
         }
         McpConnectionBase connection = connectionManager.get(mcpSessionId);
         if (connection == null) {
-            LOG.errorf("Mcp session not found: %s", mcpSessionId);
+            LOG.warnf("Mcp session not found: %s", mcpSessionId);
             ctx.fail(404);
             return;
         }
@@ -365,13 +365,13 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         HttpServerRequest request = ctx.request();
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
-            LOG.errorf("Mcp session id header is missing: %s", ctx.normalizedPath());
+            LOG.warnf("Mcp session id header is missing: %s", ctx.normalizedPath());
             ctx.fail(404);
             return;
         }
         McpConnectionBase connection = connectionManager.get(mcpSessionId);
         if (connection == null) {
-            LOG.errorf("Mcp session not found: %s", mcpSessionId);
+            LOG.warnf("Mcp session not found: %s", mcpSessionId);
             ctx.fail(404);
             return;
         }
