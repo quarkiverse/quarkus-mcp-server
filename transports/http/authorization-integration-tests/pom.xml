@@ -107,6 +107,7 @@
             <activation>
                 <property>
                     <name>test-containers</name>
+                    <value>true</value>
                 </property>
             </activation>
             <build>
