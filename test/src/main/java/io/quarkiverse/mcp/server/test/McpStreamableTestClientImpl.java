@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.runtime.Messages;
+import io.quarkiverse.mcp.server.test.McpAssured.ConnectFailureResponse;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
@@ -32,7 +33,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private final URI mcpEndpoint;
     private final boolean openSubsidiarySse;
-    private final boolean expectConnectFailure;
+    private final Consumer<ConnectFailureResponse> connectFailureConsumer;
 
     private volatile McpStreamableClient client;
     private volatile String mcpSessionId;
@@ -44,7 +45,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
         this.openSubsidiarySse = builder.openSubsidiarySse;
-        this.expectConnectFailure = builder.expectConnectFailure;
+        this.connectFailureConsumer = builder.connectFailureConsumer;
     }
 
     @Override
@@ -69,8 +70,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         try (TracingHandle ignored = startTracingSpan(initMessage, initHeaders)) {
             response = client.sendSync(initMessage.encode(), initHeaders);
         }
-        if (expectConnectFailure) {
+        if (connectFailureConsumer != null) {
             assertNotEquals(200, response.statusCode());
+            connectFailureConsumer
+                    .accept(new ConnectFailureResponse(response.statusCode(), response.headers().map()));
             return this;
         } else {
             assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
@@ -294,7 +297,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
         private BasicAuth basicAuth;
         private boolean openSubsidiarySse = false;
-        private boolean expectConnectFailure = false;
+        private Consumer<ConnectFailureResponse> connectFailureConsumer;
 
         @Override
         public McpStreamableTestClient.Builder setBaseUri(URI baseUri) {
@@ -342,8 +345,8 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         }
 
         @Override
-        public McpStreamableTestClient.Builder setExpectConnectFailure() {
-            this.expectConnectFailure = true;
+        public McpStreamableTestClient.Builder setExpectConnectFailure(Consumer<ConnectFailureResponse> assertFunction) {
+            this.connectFailureConsumer = assertFunction;
             return this;
         }
 

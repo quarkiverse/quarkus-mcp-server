@@ -465,7 +465,20 @@ public class McpAssured {
              *
              * @return self
              */
-            Builder setExpectConnectFailure();
+            default Builder setExpectConnectFailure() {
+                return setExpectConnectFailure(r -> {
+                });
+            }
+
+            /**
+             * Expects a connect failure and uses the provided assert function to verify the failure response.
+             * <p>
+             * Note that the client will not be connected after the invocation of {@link McpStreamableTestClient#connect()}.
+             *
+             * @param assertFunction
+             * @return self
+             */
+            Builder setExpectConnectFailure(Consumer<ConnectFailureResponse> assertFunction);
 
             /**
              *
@@ -1546,6 +1559,14 @@ public class McpAssured {
 
     public record McpError(int code, String message) {
 
+    }
+
+    public record ConnectFailureResponse(int statusCode, Map<String, List<String>> headers) {
+
+        public String firstHeader(String name) {
+            List<String> values = headers.get(name);
+            return values != null && !values.isEmpty() ? values.get(0) : null;
+        }
     }
 
 }

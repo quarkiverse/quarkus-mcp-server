@@ -42,6 +42,11 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         java-version: [ 17, 21, 25 ]
+        include:
+          - os: windows-latest
+            test-containers: "false"
+          - os: ubuntu-latest
+            test-containers: "true"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Prepare git
@@ -57,7 +62,7 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: mvn -B clean install -Dno-format
+        run: mvn -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }}
 
   build-native:
     name: Native / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
