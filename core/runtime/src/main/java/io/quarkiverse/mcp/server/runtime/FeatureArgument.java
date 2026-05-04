@@ -3,6 +3,10 @@ package io.quarkiverse.mcp.server.runtime;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import io.vertx.core.json.JsonObject;
 
@@ -14,7 +18,7 @@ public record FeatureArgument(String name,
         String defaultValue,
         Provider provider,
         JsonType expectedJsonType,
-        boolean isOptional) {
+        OptionalKind optionalKind) {
 
     // this constructor is used for McpMetadata
     public FeatureArgument(String name,
@@ -24,17 +28,21 @@ public record FeatureArgument(String name,
             java.lang.reflect.Type type,
             String defaultValue,
             Provider provider) {
-        this(name, title, description, required, type, defaultValue, provider, null, false);
+        this(name, title, description, required, type, defaultValue, provider, null, OptionalKind.NONE);
     }
 
     public FeatureArgument {
         if (Types.isOptional(type)) {
-            isOptional = true;
-            type = Types.getFirstActualTypeArgument(type);
+            optionalKind = OptionalKind.of(type);
+            type = Types.getOptionalValueType(type);
         }
         if (expectedJsonType == null) {
             expectedJsonType = expectedJsonTypeFrom(type);
         }
+    }
+
+    public boolean isOptional() {
+        return optionalKind != OptionalKind.NONE;
     }
 
     public JsonObject asJson() {
@@ -125,6 +133,30 @@ public record FeatureArgument(String name,
                 case COMPLETE_CONTEXT -> feature == Feature.PROMPT_COMPLETE || feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
                 default -> true;
             };
+        }
+    }
+
+    public enum OptionalKind {
+        NONE,
+        GENERIC,
+        INT,
+        LONG,
+        DOUBLE;
+
+        static OptionalKind of(java.lang.reflect.Type type) {
+            if (type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class)) {
+                return GENERIC;
+            }
+            if (OptionalInt.class.equals(type)) {
+                return INT;
+            }
+            if (OptionalLong.class.equals(type)) {
+                return LONG;
+            }
+            if (OptionalDouble.class.equals(type)) {
+                return DOUBLE;
+            }
+            return NONE;
         }
     }
 }

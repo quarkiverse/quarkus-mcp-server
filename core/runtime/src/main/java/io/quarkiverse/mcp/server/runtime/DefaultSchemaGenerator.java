@@ -139,7 +139,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     private void postProcessJsonNode(JsonNode jsonNode, Type type, String description, String defaultValue) {
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
-            if (Types.isOptional(type)) {
+            if (Types.isGenericOptional(type)) {
                 // The generated schema for Optional<List<String>> looks like:
                 // {"type":"object","properties":{"value":{"type":"array","items":{"type":"string"}}}}
                 // We need to extract the value property and replace the original object node
