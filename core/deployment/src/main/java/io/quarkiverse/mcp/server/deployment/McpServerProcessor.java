@@ -1522,7 +1522,7 @@ class McpServerProcessor {
                             if (requiredValue != null) {
                                 // Annotation value always takes precedence
                                 required = requiredValue.asBoolean();
-                            } else if (DotNames.OPTIONAL.equals(param.type().name())
+                            } else if (isOptionalType(param.type().name())
                                     || hasDefaultValue(param)) {
                                 // No annotation value is defined and Optional type is used or default value set
                                 required = false;
@@ -1531,7 +1531,7 @@ class McpServerProcessor {
                             if (defaultValueValue != null) {
                                 defaultValue = defaultValueValue.asString();
                             }
-                        } else if (DotNames.OPTIONAL.equals(param.type().name())) {
+                        } else if (isOptionalType(param.type().name())) {
                             // No annotation is defined and Optional type is used
                             required = false;
                         }
@@ -1710,6 +1710,13 @@ class McpServerProcessor {
         } else {
             return FeatureArgument.Provider.PARAMS;
         }
+    }
+
+    private static boolean isOptionalType(DotName name) {
+        return DotNames.OPTIONAL.equals(name)
+                || DotNames.OPTIONAL_INT.equals(name)
+                || DotNames.OPTIONAL_LONG.equals(name)
+                || DotNames.OPTIONAL_DOUBLE.equals(name);
     }
 
     private Var getMapper(BlockCreator bc, FeatureMethodBuildItem featureMethod) {

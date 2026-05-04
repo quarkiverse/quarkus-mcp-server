@@ -2,6 +2,9 @@ package io.quarkiverse.mcp.server.deployment;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import org.jboss.jandex.DotName;
 
@@ -86,6 +89,9 @@ class DotNames {
     static final DotName NON_BLOCKING = DotName.createSimple(NonBlocking.class);
     static final DotName NOTIFICATION = DotName.createSimple(Notification.class);
     static final DotName OPTIONAL = DotName.createSimple(Optional.class);
+    static final DotName OPTIONAL_INT = DotName.createSimple(OptionalInt.class);
+    static final DotName OPTIONAL_LONG = DotName.createSimple(OptionalLong.class);
+    static final DotName OPTIONAL_DOUBLE = DotName.createSimple(OptionalDouble.class);
     static final DotName PROGRESS = DotName.createSimple(Progress.class);
     static final DotName PROMPT = DotName.createSimple(Prompt.class);
     static final DotName PROMPT_ARG = DotName.createSimple(PromptArg.class);

@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -320,7 +323,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         if (arg.isOptional()) {
-            val = Optional.ofNullable(val);
+            val = switch (arg.optionalKind()) {
+                case GENERIC -> Optional.ofNullable(val);
+                case INT -> val == null ? OptionalInt.empty() : OptionalInt.of(((Number) val).intValue());
+                case LONG -> val == null ? OptionalLong.empty() : OptionalLong.of(((Number) val).longValue());
+                case DOUBLE -> val == null ? OptionalDouble.empty() : OptionalDouble.of(((Number) val).doubleValue());
+                default -> throw new IllegalStateException("Unexpected optional kind: " + arg.optionalKind());
+            };
         }
         return val;
     }
