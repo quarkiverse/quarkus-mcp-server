@@ -194,29 +194,18 @@ Understanding the MCP connection lifecycle helps you manage server state and res
 
 === Lifecycle States
 
-[source,text]
+[mermaid,mcp-lifecycle-states,svg]
 ----
-┌─────────────┐
-│   Created   │  Server process starts
-└──────┬──────┘
-       │
-       │ Client sends 'initialize'
-       ↓
-┌─────────────┐
-│ Initialized │  Capabilities negotiated
-└──────┬──────┘
-       │
-       │ Client sends 'initialized' notification
-       ↓
-┌─────────────┐
-│    Ready    │  Normal operation (tools/call, resources/read, etc.)
-└──────┬──────┘
-       │
-       │ Connection closed or client sends 'shutdown'
-       ↓
-┌─────────────┐
-│  Shutdown   │  Server cleans up and exits
-└─────────────┘
+%%{init: {'theme':'neutral'}}%%
+flowchart TD
+    Created["Created<br/>Server process starts"]
+    Initialized["Initialized<br/>Capabilities negotiated"]
+    Ready["Ready<br/>Normal operation<br/>(tools/call, resources/read, etc.)"]
+    Shutdown["Shutdown<br/>Server cleans up and exits"]
+
+    Created -->|"Client sends 'initialize'"| Initialized
+    Initialized -->|"Client sends 'initialized' notification"| Ready
+    Ready -->|"Connection closed or client sends 'shutdown'"| Shutdown
 ----
 
 NOTE: The exact sequence is not strictly enforced by the protocol, but this is the typical flow for most clients and servers.
@@ -304,57 +293,40 @@ See: https://modelcontextprotocol.io/specification/{spec-version}/server/prompts
 
 === Tool Call Flow
 
-[source,text]
+[mermaid,mcp-tool-call-flow,svg]
 ----
-Client                                    Server
-  │                                          │
-  │  1. initialize                           │
-  ├─────────────────────────────────────────>│
-  │                                          │
-  │  2. initialize response (capabilities)   │
-  │<─────────────────────────────────────────┤
-  │                                          │
-  │  3. initialized notification             │
-  ├─────────────────────────────────────────>│
-  │                                          │
-  │  4. tools/list                           │
-  ├─────────────────────────────────────────>│
-  │                                          │
-  │  5. tools/list response                  │
-  │<─────────────────────────────────────────┤
-  │                                          │
-  │  6. tools/call (name: "search")          │
-  ├─────────────────────────────────────────>│
-  │                                          │  [Tool executes]
-  │  7. notifications/progress (optional)    │
-  │<─────────────────────────────────────────┤
-  │                                          │
-  │  8. tools/call response (result)         │
-  │<─────────────────────────────────────────┤
-  │                                          │
+%%{init: {'theme':'neutral'}}%%
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. initialize
+    Server-->>Client: 2. initialize response (capabilities)
+    Client->>Server: 3. initialized notification
+    Client->>Server: 4. tools/list
+    Server-->>Client: 5. tools/list response
+    Client->>Server: 6. tools/call (name: "search")
+    Note over Server: Tool executes
+    Server-->>Client: 7. notifications/progress (optional)
+    Server-->>Client: 8. tools/call response (result)
 ----
 
 === Server-to-Client Request (Sampling)
 
-[source,text]
+[mermaid,mcp-sampling-flow,svg]
 ----
-Client                                    Server
-  │                                          │
-  │  tools/call (name: "analyze")            │
-  ├─────────────────────────────────────────>│
-  │                                          │  [Tool starts]
-  │                                          │  [Needs LLM help]
-  │  sampling/createMessage                  │
-  │<─────────────────────────────────────────┤
-  │                                          │
-  │  [Client asks LLM]                       │
-  │                                          │
-  │  sampling/createMessage response         │
-  ├─────────────────────────────────────────>│
-  │                                          │  [Tool continues]
-  │  tools/call response (result)            │
-  │<─────────────────────────────────────────┤
-  │                                          │
+%%{init: {'theme':'neutral'}}%%
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: tools/call (name: "analyze")
+    Note over Server: Tool starts<br/>Needs LLM help
+    Server-->>Client: sampling/createMessage
+    Note over Client: Client asks LLM
+    Client->>Server: sampling/createMessage response
+    Note over Server: Tool continues
+    Server-->>Client: tools/call response (result)
 ----
 
 
