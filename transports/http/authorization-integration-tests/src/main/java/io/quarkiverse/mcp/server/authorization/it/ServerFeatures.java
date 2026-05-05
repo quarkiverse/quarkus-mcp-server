@@ -2,8 +2,10 @@ package io.quarkiverse.mcp.server.authorization.it;
 
 import jakarta.inject.Inject;
 
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkus.security.PermissionsAllowed;
 import io.quarkus.security.identity.SecurityIdentity;
 
 public class ServerFeatures {
@@ -13,6 +15,18 @@ public class ServerFeatures {
 
     @Tool(name = "alpha-user-name-provider", description = "Provides a name of the current user in the Alpha realm")
     TextContent provideUserName() {
+        return new TextContent(identity.getPrincipal().getName());
+    }
+
+    @PermissionsAllowed("phone")
+    @Tool(name = "phone-scope-provider", description = "Provides data requiring the phone scope")
+    TextContent providePhoneData() {
+        return new TextContent("phone-data:" + identity.getPrincipal().getName());
+    }
+
+    @McpServer("beta")
+    @Tool(name = "beta-user-name-provider", description = "Provides a name of the current user via the beta server")
+    TextContent provideBetaUserName() {
         return new TextContent(identity.getPrincipal().getName());
     }
 }

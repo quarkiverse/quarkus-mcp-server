@@ -302,7 +302,8 @@
         "backchannel.logout.session.required": "true",
         "standard.token.exchange.enabled": "false",
         "oauth2.device.authorization.grant.enabled": "false",
-        "backchannel.logout.revoke.offline.tokens": "false"
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "access.token.lifespan": "3"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,
