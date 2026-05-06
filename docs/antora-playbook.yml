@@ -15,7 +15,7 @@ asciidoc:
   extensions:
     - asciidoctor-kroki
   attributes:
-    kroki-fetch-diagram: false
+    kroki-fetch-diagram: true
     page-related-doc-categories: ai,java,ml
     page-pagination: ''
     hide-uri-scheme: '@'
