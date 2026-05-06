@@ -15,6 +15,7 @@ import java.util.function.Function;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
@@ -25,6 +26,9 @@ import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.security.AuthenticationException;
+import io.quarkus.security.ForbiddenException;
+import io.quarkus.security.UnauthorizedException;
 import io.smallrye.config.SmallRyeConfig;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -33,6 +37,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.impl.ConnectionBase;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
@@ -98,6 +103,37 @@ public class HttpMcpServerRecorder {
                     LOG.debugf("Invalid HTTP method %s [server: %s]", method, serverName);
                     ctx.response().putHeader(HttpHeaders.ALLOW, "GET, POST, DELETE");
                     ctx.fail(405);
+                }
+            }
+        };
+    }
+
+    public Handler<RoutingContext> createAuthFailureHandler() {
+        return new Handler<RoutingContext>() {
+            @Override
+            public void handle(RoutingContext ctx) {
+                Throwable failure = ctx.failure();
+                if (failure instanceof AuthenticationException
+                        || failure instanceof UnauthorizedException
+                        || failure instanceof ForbiddenException) {
+                    ctx.response().setStatusCode(failure instanceof ForbiddenException ? 403 : 401);
+                    if (!ctx.request().isEnded()) {
+                        ctx.request().resume();
+                    }
+                    ctx.request().body().onComplete(ar -> {
+                        if (ar.succeeded() && ar.result() != null) {
+                            Integer id = new JsonObject(ar.result()).getInteger("id");
+                            JsonObject error = new JsonObject()
+                                    .put("jsonrpc", "2.0")
+                                    .put("id", id)
+                                    .put("error", new JsonObject()
+                                            .put("code", JsonRpcErrorCodes.SECURITY_ERROR)
+                                            .put("message", failure.toString()));
+                            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(error.toBuffer());
+                        }
+                    });
+                } else {
+                    ctx.next();
                 }
             }
         };

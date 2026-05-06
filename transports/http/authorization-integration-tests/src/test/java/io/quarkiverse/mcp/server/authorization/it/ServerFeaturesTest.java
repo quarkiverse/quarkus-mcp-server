@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.awaitility.Awaitility;
 import org.htmlunit.TextPage;
@@ -83,8 +84,8 @@ class ServerFeaturesTest {
     void testToolExpiredToken() throws Exception {
         String accessToken = getAccessToken();
 
-        Awaitility.await().atMost(6, java.util.concurrent.TimeUnit.SECONDS)
-                .pollInterval(1, java.util.concurrent.TimeUnit.SECONDS)
+        Awaitility.await().atMost(6, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
                     McpAssured.newStreamableClient()
                             .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
@@ -110,6 +111,29 @@ class ServerFeaturesTest {
                 })
                 .build()
                 .connect();
+    }
+
+    @Test
+    void testExpiredTokenAfterConnect() throws Exception {
+        String accessToken = getAccessToken();
+
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + accessToken))
+                .build()
+                .connect();
+
+        Awaitility.await().atMost(6, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    client.when()
+                            .toolsCall("alpha-user-name-provider")
+                            .withErrorAssert(error -> {
+                                assertTrue(error.message().contains("AuthenticationFailedException"));
+                            })
+                            .send()
+                            .thenAssertResults();
+                });
     }
 
     @Test
