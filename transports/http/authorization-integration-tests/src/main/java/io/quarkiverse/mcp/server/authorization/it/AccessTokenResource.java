@@ -29,4 +29,11 @@ public class AccessTokenResource {
     public String getAccessTokenNoAudience() {
         return accessToken.getToken();
     }
+
+    @GET
+    @Path("/access-token-phone-scope")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String getAccessTokenPhoneScope() {
+        return accessToken.getToken();
+    }
 }

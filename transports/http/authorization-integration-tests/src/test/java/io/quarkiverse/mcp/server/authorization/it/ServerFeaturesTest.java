@@ -3,9 +3,11 @@ package io.quarkiverse.mcp.server.authorization.it;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
+import org.awaitility.Awaitility;
 import org.htmlunit.TextPage;
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlForm;
@@ -33,7 +35,7 @@ class ServerFeaturesTest {
                 .connect();
         client.when()
                 .toolsList(p -> {
-                    assertEquals(1, p.size());
+                    assertEquals(2, p.size());
                     assertNotNull(p.findByName("alpha-user-name-provider"));
                 })
                 .toolsCall("alpha-user-name-provider", Map.of(), r -> {
@@ -73,6 +75,105 @@ class ServerFeaturesTest {
                 .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
                         .add("Authorization", "Bearer " + accessToken))
                 .setExpectConnectFailure()
+                .build()
+                .connect();
+    }
+
+    @Test
+    void testToolExpiredToken() throws Exception {
+        String accessToken = getAccessToken();
+
+        Awaitility.await().atMost(6, java.util.concurrent.TimeUnit.SECONDS)
+                .pollInterval(1, java.util.concurrent.TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    McpAssured.newStreamableClient()
+                            .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                                    .add("Authorization", "Bearer " + accessToken))
+                            .setExpectConnectFailure(r -> {
+                                assertEquals(401, r.statusCode());
+                            })
+                            .build()
+                            .connect();
+                });
+    }
+
+    @Test
+    void testToolInvalidSignature() throws Exception {
+        String accessToken = getAccessToken();
+        String invalidToken = accessToken.substring(0, accessToken.lastIndexOf('.')) + ".invalid-signature";
+
+        McpAssured.newStreamableClient()
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + invalidToken))
+                .setExpectConnectFailure(r -> {
+                    assertEquals(401, r.statusCode());
+                })
+                .build()
+                .connect();
+    }
+
+    @Test
+    void testToolPhoneScopeAfterConnect() throws Exception {
+        String accessToken = getAccessToken("http://localhost:8081/access-token-phone-scope");
+
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + accessToken))
+                .build()
+                .connect();
+        client.when()
+                .toolsCall("phone-scope-provider", Map.of(), r -> {
+                    assertEquals("phone-data:alice", r.firstContent().asText().text());
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testToolUnsupportedScopeAfterConnect() throws Exception {
+        String accessToken = getAccessToken();
+
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + accessToken))
+                .build()
+                .connect();
+        client.when()
+                .toolsCall("phone-scope-provider")
+                .withErrorAssert(error -> {
+                    assertTrue(error.message().contains("ForbiddenException"));
+                })
+                .send()
+                .thenAssertResults();
+    }
+
+    @Test
+    void testBetaToolWithPhoneScope() throws Exception {
+        String accessToken = getAccessToken("http://localhost:8081/access-token-phone-scope");
+
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setMcpPath("/beta/mcp")
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + accessToken))
+                .build()
+                .connect();
+        client.when()
+                .toolsCall("beta-user-name-provider", Map.of(), r -> {
+                    assertEquals("alice", r.firstContent().asText().text());
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testBetaToolWithoutPhoneScope() throws Exception {
+        String accessToken = getAccessToken();
+
+        McpAssured.newStreamableClient()
+                .setMcpPath("/beta/mcp")
+                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
+                        .add("Authorization", "Bearer " + accessToken))
+                .setExpectConnectFailure(r -> {
+                    assertEquals(403, r.statusCode());
+                })
                 .build()
                 .connect();
     }
