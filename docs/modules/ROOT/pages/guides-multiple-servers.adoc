@@ -264,6 +264,8 @@ quarkus.http.auth.permission.public.paths=/public/mcp/*
 quarkus.http.auth.permission.public.policy=permit
 ----
 
+Define the per-server tools:
+
 [source,java]
 ----
 public class MyFeatures {
