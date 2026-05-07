@@ -33,14 +33,14 @@ public class InvalidArgumentTypeProtocolErrorTest extends McpServerTest {
                 .withArguments(Map.of("price", true, "timeUnit", TimeUnit.DAYS, "isActive", true))
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
-                    assertEquals("Invalid argument [price] - value does not match the expected JSON type: number", e.message());
+                    assertEquals("Invalid argument [price] - unable to convert value", e.message());
                 })
                 .send()
                 .toolsCall("bravo")
                 .withArguments(Map.of("price", 1, "timeUnit", TimeUnit.DAYS, "isActive", "hello"))
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
-                    assertEquals("Invalid argument [isActive] - value does not match the expected JSON type: boolean",
+                    assertEquals("Invalid argument [isActive] - unable to convert value",
                             e.message());
                 })
                 .send()
@@ -48,7 +48,7 @@ public class InvalidArgumentTypeProtocolErrorTest extends McpServerTest {
                 .withArguments(Map.of("price", 1, "timeUnit", "AGES", "isActive", true))
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
-                    assertEquals("Invalid argument [timeUnit] - AGES is not an expected enum constant",
+                    assertEquals("Invalid argument [timeUnit] - unable to convert value",
                             e.message());
                 })
                 .send()
@@ -57,7 +57,7 @@ public class InvalidArgumentTypeProtocolErrorTest extends McpServerTest {
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals(
-                            "Invalid argument [pojo] - value does not match the expected JSON type: object",
+                            "Invalid argument [pojo] - unable to convert value",
                             e.message());
                 })
                 .send()
@@ -70,7 +70,7 @@ public class InvalidArgumentTypeProtocolErrorTest extends McpServerTest {
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code());
                     assertEquals(
-                            "Invalid argument [pojos] - unable to convert JSON array",
+                            "Invalid argument [pojos] - unable to convert value",
                             e.message());
                 })
                 .send()

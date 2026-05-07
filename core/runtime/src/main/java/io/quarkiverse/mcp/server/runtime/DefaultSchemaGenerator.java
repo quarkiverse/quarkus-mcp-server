@@ -7,6 +7,7 @@ import java.util.Map;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.victools.jsonschema.generator.Option;
 import com.github.victools.jsonschema.generator.OptionPreset;
@@ -35,8 +36,9 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
     public DefaultSchemaGenerator(@All List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers,
+            ObjectMapper objectMapper,
             McpMetadata metadata) {
-        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers);
+        this.schemaGenerator = constructSchemaGenerator(objectMapper, schemaGeneratorConfigCustomizers);
         this.toolArgumentHolders = metadata.toolArgumentHolders();
         this.defaultValueConverters = metadata.defaultValueConverters();
     }
@@ -102,8 +104,9 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     }
 
     private static SchemaGenerator constructSchemaGenerator(
+            ObjectMapper objectMapper,
             List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
-        var configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON)
+        var configBuilder = new SchemaGeneratorConfigBuilder(objectMapper, SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON)
                 .without(Option.SCHEMA_VERSION_INDICATOR);
         for (SchemaGeneratorConfigCustomizer customizer : schemaGeneratorConfigCustomizers) {
             customizer.customize(configBuilder);

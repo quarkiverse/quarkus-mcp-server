@@ -145,6 +145,8 @@ By defining a dependency on `com.github.victools:jsonschema-module-jackson`, the
 The same goes for `com.github.victools:jsonschema-module-jakarta-validation` and `com.github.victools:jsonschema-module-swagger-2`.
 See xref:reference-configuration.adoc[Configuration Reference] for relevant configuration properties.
 
+NOTE: The Jackson module only handles Jackson annotations (such as `@JsonProperty` and `@JsonPropertyDescription`). Custom serializers registered programmatically via `ObjectMapperCustomizer` are not reflected in the generated schema. If a tool argument uses a type with a custom serializer, use a custom `InputSchemaGenerator` to provide the correct schema. See the example below.
+
 However, it is also possible to override the default behavior.
 First, you can customize the input schema generation on the method level, using a custom `io.quarkiverse.mcp.server.InputSchemaGenerator` together with `Tool.InputSchema#generator()`.
 
