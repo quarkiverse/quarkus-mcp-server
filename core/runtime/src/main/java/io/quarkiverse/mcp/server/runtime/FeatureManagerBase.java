@@ -277,7 +277,6 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return new McpException(message, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
-    @SuppressWarnings("unchecked")
     private Object handleParam(FeatureMetadata<?> metadata, String serverName, FeatureArgument arg, Object val) {
         if (val == null) {
             if (arg.defaultValue() != null) {
@@ -287,38 +286,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             if (val == null && arg.required()) {
                 throw invalidArgument(metadata, serverName, "Missing required argument: " + arg.name());
             }
-        } else if (!arg.isValid(val)) {
-            throw invalidArgument(metadata, serverName,
-                    "Invalid argument [%s] - value does not match the expected JSON type: %s".formatted(arg.name(),
-                            arg.expectedJsonType().toString().toLowerCase()));
-        } else {
-            if (val instanceof Map map) {
-                // json object
-                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
-                try {
-                    val = mapper.convertValue(map, javaType);
-                } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata, serverName,
-                            "Invalid argument [%s] - unable to convert JSON object".formatted(arg.name()));
-                }
-            } else if (val instanceof List list) {
-                // json array
-                JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
-                try {
-                    val = mapper.convertValue(list, javaType);
-                } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata, serverName,
-                            "Invalid argument [%s] - unable to convert JSON array".formatted(arg.name()));
-                }
-            } else if (arg.type() instanceof Class clazz && clazz.isEnum()) {
-                try {
-                    val = Enum.valueOf(clazz, val.toString());
-                } catch (IllegalArgumentException e) {
-                    throw invalidArgument(metadata, serverName,
-                            "Invalid argument [%s] - %s is not an expected enum constant".formatted(arg.name(), val));
-                }
-            } else if (val instanceof Number num) {
-                val = coerceNumber(num, arg.type());
+        } else if (!isAssignable(val, arg.type())) {
+            JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
+            try {
+                val = mapper.convertValue(val, javaType);
+            } catch (IllegalArgumentException e) {
+                throw invalidArgument(metadata, serverName,
+                        "Invalid argument [%s] - unable to convert value".formatted(arg.name()));
             }
         }
 
@@ -334,21 +308,16 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return val;
     }
 
-    private Object coerceNumber(Number num, Type argType) {
-        if (Integer.class.equals(argType) || int.class.equals(argType)) {
-            return num instanceof Integer ? num : num.intValue();
-        } else if (Long.class.equals(argType) || long.class.equals(argType)) {
-            return num instanceof Long ? num : num.longValue();
-        } else if (Short.class.equals(argType) || short.class.equals(argType)) {
-            return num instanceof Short ? num : num.shortValue();
-        } else if (Byte.class.equals(argType) || byte.class.equals(argType)) {
-            return num instanceof Byte ? num : num.byteValue();
-        } else if (Float.class.equals(argType) || float.class.equals(argType)) {
-            return num instanceof Float ? num : num.floatValue();
-        } else if (Double.class.equals(argType) || double.class.equals(argType)) {
-            return num instanceof Double ? num : num.doubleValue();
+    private static boolean isAssignable(Object val, Type type) {
+        if (type instanceof Class<?> clazz) {
+            if (clazz.isPrimitive()) {
+                clazz = (Class<?>) box(clazz);
+            }
+            return clazz.isInstance(val);
         }
-        return num;
+        // Parameterized types (e.g. List<MyPojo>) always need Jackson
+        // to handle element-level conversion
+        return false;
     }
 
     protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpRequest mcpRequest, JsonObject message);
