@@ -25,7 +25,7 @@ All MCP features are CDI beans, enabling dependency injection, interceptors, and
 
 **Reactive Foundation**::
 Built on SmallRye Mutiny and Eclipse Vert.x for non-blocking I/O, supporting both imperative and reactive programming models. Async operations don't block threads.
-The MCP server also support virtual threads when running on Java 21+, allowing for a more traditional blocking programming style without sacrificing scalability.
+The MCP server also supports virtual threads when running on Java 21+, allowing for a more traditional blocking programming style without sacrificing scalability.
 
 == CDI Integration
 
@@ -291,7 +291,7 @@ However, if the HTTP transport is used then all MCP requests will have the same 
 
 == Schema Generation
 
-JSON schemas for tools are generated at **runtime**  using the https://github.com/victools/jsonschema-generator[Victools JSON Schema Generator].
+JSON schemas for tools are generated at **runtime** using the https://github.com/victools/jsonschema-generator[Victools JSON Schema Generator].
 
 
 === Caching schemas
