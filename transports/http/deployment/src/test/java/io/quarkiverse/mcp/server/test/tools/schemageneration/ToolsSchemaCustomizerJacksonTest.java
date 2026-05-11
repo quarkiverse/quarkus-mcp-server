@@ -3,23 +3,38 @@ package io.quarkiverse.mcp.server.test.tools.schemageneration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import jakarta.inject.Singleton;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
+import io.quarkiverse.mcp.server.InputSchemaGenerator;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.Tool.InputSchema;
 import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
+import io.quarkus.jackson.ObjectMapperCustomizer;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
 
@@ -29,7 +44,8 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig(2000)
             .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "true")
             .withApplicationRoot(
-                    root -> root.addClasses(MyToolWithJacksonAnnotatedType.class));
+                    root -> root.addClasses(MyToolWithJacksonAnnotatedType.class, CustomItem.class,
+                            CustomItemCustomizer.class, CustomItemSchemaGenerator.class));
 
     @Test
     public void testSchemaGenerationWithJacksonAnnotation() {
@@ -37,7 +53,7 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
                 .build()
                 .connect();
         client.when().toolsList(page -> {
-            assertEquals(2, page.tools().size());
+            assertEquals(3, page.tools().size());
 
             ToolInfo addProducts = page.findByName("add-products");
             JsonObject addProductsSchema = addProducts.inputSchema();
@@ -52,6 +68,16 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
             ToolInfo addProduct = page.findByName("addProduct");
             JsonObject addProductSchema = addProduct.inputSchema();
             assertProductType(addProductSchema.getJsonObject("properties").getJsonObject("product"));
+
+            // CustomItem uses a custom Jackson serializer that writes a plain JSON string.
+            // The victools JacksonModule does not introspect programmatic serializers,
+            // so a custom InputSchemaGenerator is used as a workaround.
+            ToolInfo customItemTool = page.findByName("customItemTool");
+            JsonObject customItemSchema = customItemTool.inputSchema();
+            assertHasPropertyCount(customItemSchema, 1);
+            assertHasRequiredProperties(customItemSchema, Set.of("item"));
+            assertHasPropertyWithNameTypeDescription(customItemSchema, "item", "string",
+                    "Custom item in the format 'name:value'");
 
         }).thenAssertResults();
     }
@@ -102,6 +128,13 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
         String addProduct(Product product) {
             return "yes";
         }
+
+        // The victools JacksonModule only handles Jackson annotations, not custom serializers
+        // registered programmatically via SimpleModule. Use a custom InputSchemaGenerator as a workaround.
+        @Tool(inputSchema = @InputSchema(generator = CustomItemSchemaGenerator.class))
+        String customItemTool(CustomItem item) {
+            return item.toString();
+        }
     }
 
     public static class Product {
@@ -119,5 +152,47 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
 
         @JsonProperty(value = "price", required = true)
         private BigDecimal price;
+    }
+
+    public record CustomItem(String name, int value) {
+    }
+
+    @Singleton
+    public static class CustomItemSchemaGenerator implements InputSchemaGenerator<Object> {
+
+        @Override
+        public Object generate(ToolManager.ToolInfo tool) {
+            return new JsonObject()
+                    .put("type", "object")
+                    .put("properties", new JsonObject()
+                            .put("item", new JsonObject()
+                                    .put("type", "string")
+                                    .put("description", "Custom item in the format 'name:value'")))
+                    .put("required", List.of("item"));
+        }
+    }
+
+    @Singleton
+    public static class CustomItemCustomizer implements ObjectMapperCustomizer {
+
+        @Override
+        public void customize(ObjectMapper mapper) {
+            SimpleModule module = new SimpleModule();
+            module.addSerializer(CustomItem.class, new JsonSerializer<CustomItem>() {
+                @Override
+                public void serialize(CustomItem item, JsonGenerator gen, SerializerProvider serializers)
+                        throws IOException {
+                    gen.writeString(item.name() + ":" + item.value());
+                }
+            });
+            module.addDeserializer(CustomItem.class, new JsonDeserializer<CustomItem>() {
+                @Override
+                public CustomItem deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                    String[] parts = p.getText().split(":");
+                    return new CustomItem(parts[0], Integer.parseInt(parts[1]));
+                }
+            });
+            mapper.registerModule(module);
+        }
     }
 }
