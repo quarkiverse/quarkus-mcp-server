@@ -63,3 +63,6 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 release.properties
 /.claude/
+
+# Node
+node_modules/
