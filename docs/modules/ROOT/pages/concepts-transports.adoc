@@ -9,7 +9,7 @@ This page explains the transport mechanisms available for MCP communication.
 
 The MCP specification currently defines two standard transports for client-server communication.
 The `stdio` transport starts an MCP server as a subprocess and communicates over standard `in` and `out`.
-The `HTTP` transports connects to a running HTTP server.
+The `HTTP` transport connects to a running HTTP server.
 The `HTTP` transport is defined in two variants: the "Streamable HTTP" variant (introduced in the protocol version 2025-03-26) replaces the "HTTP/SSE" transport (introduced in protocol version 2024-11-05).
 The "HTTP/SSE" transport is considered deprecated, but it's still supported by most clients and servers.
 
