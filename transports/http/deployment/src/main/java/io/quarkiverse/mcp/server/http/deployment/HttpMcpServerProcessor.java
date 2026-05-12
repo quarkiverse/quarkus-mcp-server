@@ -75,6 +75,10 @@ public class HttpMcpServerProcessor {
                     .withRouteCustomizer(recorder.addBodyHandler(bodyHandler.getHandler()))
                     .withRequestHandler(recorder.createMcpEndpointHandler(endpoint.serverName))
                     .build());
+            routes.produce(RouteBuildItem.newFrameworkRoute(endpoint.mcpPath)
+                    .withRequestHandler(recorder.createAuthFailureHandler())
+                    .asFailureRoute()
+                    .build());
             // SSE/HTTP transport
             routes.produce(RouteBuildItem.newFrameworkRoute(endpoint.ssePath)
                     .withRequestHandler(recorder.createSseEndpointHandler(endpoint.mcpPath, endpoint.serverName))
