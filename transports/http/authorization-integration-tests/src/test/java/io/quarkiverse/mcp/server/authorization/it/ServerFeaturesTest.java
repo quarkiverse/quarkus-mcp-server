@@ -166,6 +166,7 @@ class ServerFeaturesTest {
     @Test
     void testBetaToolWithoutPhoneScope() throws Exception {
         String accessToken = getAccessToken();
+        String authServerUrl = given().get("/auth-server-url").then().statusCode(200).extract().asString();
 
         McpAssured.newStreamableClient()
                 .setMcpPath("/beta/mcp")
@@ -173,6 +174,24 @@ class ServerFeaturesTest {
                         .add("Authorization", "Bearer " + accessToken))
                 .setExpectConnectFailure(r -> {
                     assertEquals(403, r.statusCode());
+
+                    String wwwAuthenticate = r.firstHeader("www-authenticate");
+                    assertNotNull(wwwAuthenticate, "WWW-Authenticate header missing from 403 response");
+
+                    assertTrue(wwwAuthenticate.contains("error=\"insufficient_scope\""),
+                            "Expected error=\"insufficient_scope\" in: " + wwwAuthenticate);
+                    assertTrue(wwwAuthenticate.contains("scope=\"phone\""),
+                            "Expected scope=\"phone\" in: " + wwwAuthenticate);
+
+                    String resourceMetadataUrl = extractResourceMetadata(wwwAuthenticate);
+                    assertNotNull(resourceMetadataUrl,
+                            "Expected resource_metadata in: " + wwwAuthenticate);
+
+                    String metadata = given().get(resourceMetadataUrl).then().statusCode(200).extract().asString();
+                    JsonObject metadataJson = new JsonObject(metadata);
+                    JsonArray authServers = metadataJson.getJsonArray("authorization_servers");
+                    assertEquals(1, authServers.size());
+                    assertEquals(authServerUrl, authServers.getString(0));
                 })
                 .build()
                 .connect();

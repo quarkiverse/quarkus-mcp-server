@@ -1,0 +1,10 @@
+name: MCP Server - OIDC
+description: OIDC integration for the MCP server.
+metadata:
+  keywords:
+    - mcp, oidc
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
+  categories:
+    - "security"
+    - "oidc"
+  status: "experimental"
