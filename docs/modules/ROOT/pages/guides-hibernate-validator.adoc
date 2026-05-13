@@ -11,13 +11,14 @@ Additionally, the extension adds a transitive dependency on `com.github.victools
 If you want to use the Hibernate Validator integration in your application you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-hibernate-validator` extension to your build file first.
 For instance, with Maven, add the following dependency to your POM file:
 
-```xml
+[source,xml,subs=attributes+]
+----
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-hibernate-validator</artifactId>
     <version>${quarkus-mcp.version}</version>
 </dependency>
-```
+----
 
 Then you can use constraint annotations to define constraints for the tool arguments.
 
