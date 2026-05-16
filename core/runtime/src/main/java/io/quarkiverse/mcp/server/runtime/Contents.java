@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -15,6 +17,9 @@ import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolResultContent;
+import io.quarkiverse.mcp.server.ToolUseContent;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class Contents {
@@ -32,8 +37,40 @@ public final class Contents {
             case RESOURCE_LINK -> new ResourceLink(content.getString("uri"), content.getString("mimeType"),
                     content.getString("name"), content.getString("title"), content.getString("description"),
                     content.getInteger("size"), parseMeta(content), parseAnnotations(content));
+            case TOOL_USE -> new ToolUseContent(content.getString("id"), content.getString("name"),
+                    content.getJsonObject("input") != null ? content.getJsonObject("input").getMap() : Map.of(),
+                    parseMeta(content));
+            case TOOL_RESULT -> new ToolResultContent(content.getString("toolUseId"),
+                    parseContentBlocks(content.getValue("content")),
+                    content.getJsonObject("structuredContent") != null ? content.getJsonObject("structuredContent").getMap()
+                            : null,
+                    content.containsKey("isError") ? content.getBoolean("isError") : null, parseMeta(content));
             default -> throw new IllegalArgumentException("Unexpected value: " + contentType);
         };
+    }
+
+    public static List<Content> parseSamplingMessageContents(Object value) {
+        if (value instanceof JsonObject json) {
+            return List.of(parseContent(json));
+        }
+        if (value instanceof JsonArray array) {
+            List<Content> ret = new ArrayList<>(array.size());
+            for (Object item : array) {
+                ret.add(parseContent((JsonObject) item));
+            }
+            return List.copyOf(ret);
+        }
+        throw new IllegalStateException("Unsupported sampling content: " + value);
+    }
+
+    static List<Content> parseContentBlocks(Object value) {
+        List<Content> ret = parseSamplingMessageContents(value);
+        for (Content item : ret) {
+            if (item instanceof ToolUseContent || item instanceof ToolResultContent) {
+                throw new IllegalStateException("Tool result content may contain only plain content blocks");
+            }
+        }
+        return ret;
     }
 
     public static ResourceContents parseResourceContents(JsonObject resourceContent) {

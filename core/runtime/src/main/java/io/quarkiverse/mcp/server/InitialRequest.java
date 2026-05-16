@@ -45,6 +45,14 @@ public record InitialRequest(Implementation implementation, String protocolVersi
     }
 
     /**
+     * @return {@code true} if the client supports sampling with tools
+     */
+    public boolean supportsSamplingTools() {
+        ClientCapability capability = capability(ClientCapability.SAMPLING);
+        return capability != null && capability.properties().containsKey("tools");
+    }
+
+    /**
      * @return {@code true} if the client supports the {@link ClientCapability#ROOTS} capability
      */
     public boolean supportsRoots() {
@@ -62,12 +70,19 @@ public record InitialRequest(Implementation implementation, String protocolVersi
      * @return {@code true} if the client supports the specified capability
      */
     public boolean supportsCapability(String name) {
+        return capability(name) != null;
+    }
+
+    /**
+     * @return the capability with the specified name, or {@code null}
+     */
+    public ClientCapability capability(String name) {
         for (ClientCapability capability : clientCapabilities) {
             if (capability.name().equals(name)) {
-                return true;
+                return capability;
             }
         }
-        return false;
+        return null;
     }
 
     public enum Transport {

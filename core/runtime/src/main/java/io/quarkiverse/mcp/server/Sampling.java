@@ -16,6 +16,14 @@ public interface Sampling {
     boolean isSupported();
 
     /**
+     * @return {@code true} if the client supports sampling with tools, {@code false} otherwise
+     * @see InitialRequest
+     */
+    default boolean isToolCallingSupported() {
+        return false;
+    }
+
+    /**
      * @return a new sampling request builder
      * @throws IllegalStateException if the client does not support the {@value ClientCapability#SAMPLING} capability
      */
