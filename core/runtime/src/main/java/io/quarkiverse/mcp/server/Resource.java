@@ -93,7 +93,7 @@ public @interface Resource {
     @Target(ElementType.ANNOTATION_TYPE)
     public @interface Annotations {
 
-        Role audience();
+        Role[] audience();
 
         String lastModified() default "";
 
