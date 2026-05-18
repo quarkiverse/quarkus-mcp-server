@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -85,7 +86,11 @@ public sealed interface Content
      * @param lastModified (may be {@code null})
      * @param priority (may be {@code null})
      */
-    public record Annotations(Role audience, String lastModified, Double priority) {
+    public record Annotations(List<Role> audience, String lastModified, Double priority) {
+
+        public Annotations(Role audience, String lastModified, Double priority) {
+            this(List.of(audience), lastModified, priority);
+        }
     }
 
     public enum Type {

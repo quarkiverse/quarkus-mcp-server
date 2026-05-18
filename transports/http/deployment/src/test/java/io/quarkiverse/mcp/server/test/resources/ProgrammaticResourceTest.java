@@ -65,7 +65,7 @@ public class ProgrammaticResourceTest extends McpServerTest {
                     assertNotNull(alpha);
                     assertEquals(1, alpha.size());
                     assertNotNull(alpha.annotations());
-                    assertEquals(Role.ASSISTANT, alpha.annotations().audience());
+                    assertEquals(Role.ASSISTANT, alpha.annotations().audience().get(0));
                     assertEquals(0.9, alpha.annotations().priority());
                 })
                 .resourcesRead("file:///alpha", r -> assertEquals("2", r.contents().get(0).asText().text()))
