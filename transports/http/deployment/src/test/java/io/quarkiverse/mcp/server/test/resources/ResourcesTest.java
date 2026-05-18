@@ -43,7 +43,7 @@ public class ResourcesTest extends McpServerTest {
         assertNotNull(annotations);
         assertFalse(annotations.containsKey("lastModified"),
                 "annotations must not contain 'lastModified' key when lastModified is not set");
-        assertEquals("user", annotations.getString("audience"));
+        assertEquals("user", annotations.getJsonArray("audience").getString(0));
         assertEquals(0.5, annotations.getDouble("priority"));
     }
 
@@ -59,7 +59,7 @@ public class ResourcesTest extends McpServerTest {
                     assertEquals("Alpha...", alpha.title());
                     assertEquals(15, alpha.size());
                     assertNotNull(alpha.annotations());
-                    assertEquals(Role.USER, alpha.annotations().audience());
+                    assertEquals(Role.USER, alpha.annotations().audience().get(0));
                     assertEquals(0.5, alpha.annotations().priority());
                     assertEquals("bravo", p.findByUri("file:///project/bravo").name());
                     assertEquals("uni_alpha", p.findByUri("file:///project/uni_alpha").name());
