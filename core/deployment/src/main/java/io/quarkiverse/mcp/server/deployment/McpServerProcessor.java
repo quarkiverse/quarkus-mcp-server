@@ -772,10 +772,16 @@ class McpServerProcessor {
         if (annotationsValue != null) {
             AnnotationInstance annotationsAnnotation = annotationsValue.asNested();
             AnnotationValue audienceValue = annotationsAnnotation.value("audience");
+            List<Role> audience = List.of();
+            if (audienceValue != null) {
+                audience = new ArrayList<>();
+                for (String r : audienceValue.asEnumArray()) {
+                    audience.add(Role.valueOf(r));
+                }
+            }
             AnnotationValue lastModifiedValue = annotationsAnnotation.value("lastModified");
             AnnotationValue priorityValue = annotationsAnnotation.value("priority");
-            return new Content.Annotations(audienceValue != null ? Role.valueOf(audienceValue.asEnum()) : null,
-                    lastModifiedValue != null ? lastModifiedValue.asString() : null,
+            return new Content.Annotations(audience, lastModifiedValue != null ? lastModifiedValue.asString() : null,
                     priorityValue != null ? priorityValue.asDouble() : null);
         }
         return null;
@@ -1577,11 +1583,12 @@ class McpServerProcessor {
                 LocalVar resourceAnnotations;
                 if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
                         && featureMethod.getResourceAnnotations() != null) {
-                    // new Annotations(Role audience, String lastModified, Double priority)
+                    // new Annotations(List<Role> audience, String lastModified, Double priority)
                     Content.Annotations annotations = featureMethod.getResourceAnnotations();
                     resourceAnnotations = bc.localVar("resourceAnnotations", bc.new_(
-                            ConstructorDesc.of(Content.Annotations.class, Role.class, String.class, Double.class),
-                            annotations.audience() == null ? Const.ofNull(Role.class) : Const.of(annotations.audience()),
+                            ConstructorDesc.of(Content.Annotations.class, List.class, String.class, Double.class),
+                            annotations.audience() == null ? Const.ofNull(List.class)
+                                    : bc.listOf(annotations.audience(), Const::of),
                             annotations.lastModified() == null ? Const.ofNull(String.class)
                                     : Const.of(annotations.lastModified()),
                             annotations.priority() == null ? Const.ofNull(Double.class) : Const.of(annotations.priority())));

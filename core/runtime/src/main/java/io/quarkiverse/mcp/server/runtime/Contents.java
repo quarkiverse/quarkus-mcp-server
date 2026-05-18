@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -15,6 +17,7 @@ import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class Contents {
@@ -65,9 +68,16 @@ public final class Contents {
         if (annotations == null) {
             return null;
         }
-        return new Content.Annotations(
-                annotations.containsKey("audience") ? Role.valueOf(annotations.getString("audience").toUpperCase()) : null,
-                annotations.getString("lastModified"), annotations.getDouble("priority"));
+        List<Role> audience = List.of();
+        JsonArray audienceValue = annotations.getJsonArray("audience");
+        if (audienceValue != null) {
+            audience = new ArrayList<Role>(audienceValue.size());
+            for (int i = 0; i < audienceValue.size(); i++) {
+                audience.add(Role.valueOf(audienceValue.getString(i).toUpperCase()));
+            }
+        }
+        return new Content.Annotations(List.copyOf(audience), annotations.getString("lastModified"),
+                annotations.getDouble("priority"));
     }
 
 }
