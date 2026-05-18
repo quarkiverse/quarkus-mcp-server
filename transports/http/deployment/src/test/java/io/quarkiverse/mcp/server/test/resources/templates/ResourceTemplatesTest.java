@@ -43,7 +43,7 @@ public class ResourceTemplatesTest extends McpServerTest {
         assertEquals("customValue", foxtrotTemplate.metadata().get(MetaKey.of("customField")));
         ResourceTemplateManager.ResourceTemplateInfo golfTemplate = manager.getResourceTemplate("golf", McpServer.DEFAULT);
         assertNotNull(golfTemplate);
-        assertEquals(Role.ASSISTANT, golfTemplate.annotations().orElseThrow().audience());
+        assertEquals(Role.ASSISTANT, golfTemplate.annotations().orElseThrow().audience().get(0));
         assertEquals(0.7, golfTemplate.annotations().orElseThrow().priority());
         assertEquals("2024-01-15T10:30:00Z", golfTemplate.annotations().orElseThrow().lastModified());
 
@@ -55,7 +55,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                     ResourceTemplateInfo alpha = p.findByUriTemplate("file:///{path}");
                     assertEquals("Alpha...", alpha.title());
                     assertNotNull(alpha.annotations());
-                    assertEquals(Role.USER, alpha.annotations().audience());
+                    assertEquals(Role.USER, alpha.annotations().audience().get(0));
                     assertEquals(0.5, alpha.annotations().priority());
 
                     ResourceTemplateInfo foxtrot = p.findByUriTemplate("file:///foxtrot/{path}");
@@ -76,7 +76,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                     assertEquals("Resource with lastModified annotation", golf.description());
                     assertEquals("text/plain", golf.mimeType());
                     assertNotNull(golf.annotations());
-                    assertEquals(Role.ASSISTANT, golf.annotations().audience());
+                    assertEquals(Role.ASSISTANT, golf.annotations().audience().get(0));
                     assertEquals("2024-01-15T10:30:00Z", golf.annotations().lastModified());
                     assertEquals(0.7, golf.annotations().priority());
                 })

@@ -58,7 +58,7 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                     assertEquals(1, p.size());
                     ResourceTemplateInfo alpha = p.findByUriTemplate("file:///alpha/{foo}");
                     assertNotNull(alpha.annotations());
-                    assertEquals(Role.ASSISTANT, alpha.annotations().audience());
+                    assertEquals(Role.ASSISTANT, alpha.annotations().audience().get(0));
                     assertEquals(0.9, alpha.annotations().priority());
                 })
                 .resourcesRead("file:///alpha/ok", r -> assertEquals("ok", r.contents().get(0).asText().text()))
