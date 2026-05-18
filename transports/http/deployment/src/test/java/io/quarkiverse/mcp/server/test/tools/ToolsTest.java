@@ -83,7 +83,7 @@ public class ToolsTest extends McpServerTest {
                     assertEquals(10, t._meta().entrySet().iterator().next().getValue());
                     // content annotations
                     assertNotNull(t.annotations());
-                    assertEquals(Role.ASSISTANT, t.annotations().audience());
+                    assertEquals(Role.ASSISTANT, t.annotations().audience().get(0));
                     assertEquals("2025-08-26T08:40:00Z", t.annotations().lastModified());
                     assertEquals(0.5, t.annotations().priority());
                     // result _meta

@@ -152,6 +152,7 @@ import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
 import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
+import io.quarkus.gizmo.Gizmo.JdkList;
 import io.quarkus.gizmo.Gizmo.JdkList.JdkListInstance;
 import io.quarkus.gizmo.Gizmo.JdkMap.JdkMapInstance;
 import io.quarkus.gizmo.MethodCreator;
@@ -697,10 +698,16 @@ class McpServerProcessor {
         if (annotationsValue != null) {
             AnnotationInstance annotationsAnnotation = annotationsValue.asNested();
             AnnotationValue audienceValue = annotationsAnnotation.value("audience");
+            List<Role> audience = List.of();
+            if (audienceValue != null) {
+                audience = new ArrayList<>();
+                for (String r : audienceValue.asEnumArray()) {
+                    audience.add(Role.valueOf(r));
+                }
+            }
             AnnotationValue lastModifiedValue = annotationsAnnotation.value("lastModified");
             AnnotationValue priorityValue = annotationsAnnotation.value("priority");
-            return new Content.Annotations(audienceValue != null ? Role.valueOf(audienceValue.asEnum()) : null,
-                    lastModifiedValue != null ? lastModifiedValue.asString() : null,
+            return new Content.Annotations(audience, lastModifiedValue != null ? lastModifiedValue.asString() : null,
                     priorityValue != null ? priorityValue.asDouble() : null);
         }
         return null;
@@ -1386,6 +1393,7 @@ class McpServerProcessor {
                     provider);
             Gizmo.listOperations(metaMethod).on(args).add(arg);
         }
+
         ResultHandle toolAnnotations;
         if (featureMethod.isTool() && featureMethod.getToolAnnotations() != null) {
             ToolAnnotations annotations = featureMethod.getToolAnnotations();
@@ -1405,9 +1413,20 @@ class McpServerProcessor {
         if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
                 && featureMethod.getResourceAnnotations() != null) {
             Content.Annotations annotations = featureMethod.getResourceAnnotations();
+            ResultHandle audience;
+            if (annotations.audience() == null) {
+                audience = metaMethod.loadNull();
+            } else {
+                ResultHandle list = Gizmo.newArrayList(metaMethod);
+                JdkList listOps = Gizmo.listOperations(metaMethod);
+                for (Role role : annotations.audience()) {
+                    listOps.on(list).add(metaMethod.load(role));
+                }
+                audience = listOps.copyOf(list);
+            }
             resourceAnnotations = metaMethod.newInstance(
-                    MethodDescriptor.ofConstructor(Content.Annotations.class, Role.class, String.class, Double.class),
-                    annotations.audience() == null ? metaMethod.loadNull() : metaMethod.load(annotations.audience()),
+                    MethodDescriptor.ofConstructor(Content.Annotations.class, List.class, String.class, Double.class),
+                    audience,
                     annotations.lastModified() == null ? metaMethod.loadNull() : metaMethod.load(annotations.lastModified()),
                     annotations.priority() == null ? metaMethod.loadNull() : metaMethod.load(annotations.priority()));
         } else {

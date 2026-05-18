@@ -31,7 +31,7 @@ public class ResourceTemplatesTest extends McpServerTest {
                     ResourceTemplateInfo alpha = p.findByUriTemplate("file:///{path}");
                     assertEquals("Alpha...", alpha.title());
                     assertNotNull(alpha.annotations());
-                    assertEquals(Role.USER, alpha.annotations().audience());
+                    assertEquals(Role.USER, alpha.annotations().audience().get(0));
                     assertEquals(0.5, alpha.annotations().priority());
                 })
                 .resourcesRead("file:///bar", r -> assertEquals("foo:bar", r.contents().get(0).asText().text()))
