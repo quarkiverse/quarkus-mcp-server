@@ -7,6 +7,7 @@ import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ROOTS;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.SAMPLING;
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
@@ -33,6 +35,7 @@ import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
@@ -97,17 +100,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
     public static final String MCP_PROTOCOL_VERSION_HEADER = "Mcp-Protocol-Version";
     public static final String AUTO_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
-
-    private static final InitialRequest AUTO_INIT_REQUEST = new InitialRequest(
-            new Implementation(AUTO_INIT_IMPL_NAME, "1", null),
-            // MCP spec: "if the server does not receive an MCP-Protocol-Version header,
-            // and has no other way to identify the version - for example,
-            // by relying on the protocol version negotiated during initialization
-            // - the server SHOULD assume protocol version 2025-03-26"
-            SUPPORTED_PROTOCOL_VERSIONS.get(2),
-            List.of(),
-            Transport.STREAMABLE_HTTP,
-            true);
+    private static final Implementation AUTO_INIT_IMPLEMENTATION = new Implementation(AUTO_INIT_IMPL_NAME, "1", null);
 
     private final McpMetadata metadata;
 
@@ -349,14 +342,50 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             // Note that this is inconsistent with initial handshake where the latest supported version is used
             String version = mcpRequest.mcpProtocolVersion;
             if (version == null) {
-                return AUTO_INIT_REQUEST;
+                version = SUPPORTED_PROTOCOL_VERSIONS.get(2);
             }
+
+            // Try to find the clientInfo and clientCapabilities in _meta
+            Implementation implementation = AUTO_INIT_IMPLEMENTATION;
+            List<ClientCapability> clientCapabilities = List.of();
+            JsonObject meta = findMeta(mcpRequest.json());
+            if (meta != null) {
+                JsonObject clientInfo = meta.getJsonObject(MetaKey.CLIENT_INFO.toString());
+                if (clientInfo != null) {
+                    implementation = Messages.decodeImplementation(clientInfo);
+                }
+                JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
+                if (capabilities != null) {
+                    List<ClientCapability> decoded = new ArrayList<>();
+                    for (String name : capabilities.fieldNames()) {
+                        decoded.add(new ClientCapability(name, Map.of()));
+                    }
+                    clientCapabilities = List.copyOf(decoded);
+                }
+            }
+
             return new InitialRequest(
-                    AUTO_INIT_REQUEST.implementation(),
+                    implementation,
                     version,
-                    List.of(),
+                    clientCapabilities,
                     Transport.STREAMABLE_HTTP,
                     true);
+        }
+        return null;
+    }
+
+    private static JsonObject findMeta(Object json) {
+        JsonObject message = null;
+        if (json instanceof JsonObject jsonObject) {
+            message = jsonObject;
+        } else if (json instanceof JsonArray jsonArray && !jsonArray.isEmpty()) {
+            message = jsonArray.getJsonObject(0);
+        }
+        if (message != null) {
+            JsonObject params = Messages.getParams(message);
+            if (params != null) {
+                return params.getJsonObject("_meta");
+            }
         }
         return null;
     }

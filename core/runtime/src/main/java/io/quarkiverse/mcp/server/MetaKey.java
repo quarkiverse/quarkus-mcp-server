@@ -13,6 +13,20 @@ import com.fasterxml.jackson.annotation.JsonValue;
  */
 public record MetaKey(String prefix, String name) {
 
+    private static final Pattern NAME_PATTERN = Pattern.compile("[a-zA-Z0-9][a-zA-Z0-9_.-]*[a-zA-Z0-9]");
+    private static final Pattern PREFIX_PATTERN = Pattern
+            .compile("([a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9])+(\\.[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9])*/");
+
+    /**
+     * The {@code io.modelcontextprotocol/clientInfo} key.
+     */
+    public static final MetaKey CLIENT_INFO = new MetaKey("io.modelcontextprotocol/", "clientInfo");
+
+    /**
+     * The {@code io.modelcontextprotocol/clientCapabilities} key.
+     */
+    public static final MetaKey CLIENT_CAPABILITIES = new MetaKey("io.modelcontextprotocol/", "clientCapabilities");
+
     /**
      * Create a new key from the specified string value, i.e. from {@code foo.bar/myKey}.
      *
@@ -69,10 +83,6 @@ public record MetaKey(String prefix, String name) {
         }
         return prefix + name;
     }
-
-    static final Pattern NAME_PATTERN = Pattern.compile("[a-zA-Z0-9][a-zA-Z0-9_.-]*[a-zA-Z0-9]");
-    static final Pattern PREFIX_PATTERN = Pattern
-            .compile("([a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9])+(\\.[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9])*/");
 
     public static boolean isValidName(String value) {
         if (value == null || value.isBlank()) {
