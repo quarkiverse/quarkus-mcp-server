@@ -39,7 +39,7 @@
   </scm>
 
     <properties>
-        <quarkus.version>3.33.2</quarkus.version>
+        <quarkus.version>3.36.0</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.300.0</sundrio.version>
         <swagger-annotations.version>2.2.50</swagger-annotations.version>
