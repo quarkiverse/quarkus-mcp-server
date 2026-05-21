@@ -25,7 +25,6 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionManager;
-import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialCheck;
@@ -103,14 +102,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private static final Implementation AUTO_INIT_IMPLEMENTATION = new Implementation(AUTO_INIT_IMPL_NAME, "1", null);
 
     private final McpMetadata metadata;
-
     private final CurrentVertxRequest currentVertxRequest;
-
     private final CurrentIdentityAssociation currentIdentityAssociation;
-
     private final McpHttpServersRuntimeConfig httpConfig;
 
-    // precomputed maps, feature -> forceSse
+    // Precomputed maps for eager SSE init (lazySseInit=false), null when lazy
     private final Map<FeatureKey, Boolean> toolsForceSse;
     private final Map<FeatureKey, Boolean> promptsForceSse;
     private final Map<FeatureKey, Boolean> resourcesForceSse;
@@ -149,13 +145,31 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.httpConfig = runtimeConfig;
         checkCorsConfig(config);
 
-        // Precompute forceSse scan results for declarative features
-        this.toolsForceSse = precomputeForceSse(metadata.tools());
-        this.promptsForceSse = precomputeForceSse(metadata.prompts());
-        this.resourcesForceSse = precomputeForceSse(metadata.resources(), fm -> fm.info().uri());
-        this.resourceTemplatesForceSse = precomputeForceSse(metadata.resourceTemplates());
-        this.completionsForceSse = precomputeCompletionForceSse(
-                Stream.concat(metadata.promptCompletions().stream(), metadata.resourceTemplateCompletions().stream()).toList());
+        // Precompute forceSse maps only when eager SSE init is configured
+        if (hasEagerSseInit(runtimeConfig)) {
+            this.toolsForceSse = precomputeForceSse(metadata.tools());
+            this.promptsForceSse = precomputeForceSse(metadata.prompts());
+            this.resourcesForceSse = precomputeForceSse(metadata.resources(), fm -> fm.info().uri());
+            this.resourceTemplatesForceSse = precomputeForceSse(metadata.resourceTemplates());
+            this.completionsForceSse = precomputeCompletionForceSse(
+                    Stream.concat(metadata.promptCompletions().stream(), metadata.resourceTemplateCompletions().stream())
+                            .toList());
+        } else {
+            this.toolsForceSse = null;
+            this.promptsForceSse = null;
+            this.resourcesForceSse = null;
+            this.resourceTemplatesForceSse = null;
+            this.completionsForceSse = null;
+        }
+    }
+
+    private static boolean hasEagerSseInit(McpHttpServersRuntimeConfig runtimeConfig) {
+        for (var config : runtimeConfig.servers().values()) {
+            if (!config.http().streamable().lazySseInit()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -234,13 +248,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ctx.fail(400);
             return;
         }
+        boolean lazySseInit = computeLazySseInit(serverName, json);
         HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, json, connection, securitySupport, ctx.response(),
-                mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion);
+                mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
         try {
-            ScanResult result = scan(mcpRequest);
-            if (result.forceSseInit()) {
-                mcpRequest.initiateSse();
-            }
+            boolean containsRequest = scan(mcpRequest);
             handle(mcpRequest).onComplete(ar -> {
                 if (ar.succeeded()) {
                     if (mcpRequest.sse.get()) {
@@ -248,7 +260,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                         ctx.response().end();
                     } else {
                         if (!ctx.response().ended()) {
-                            if (!result.containsRequest()) {
+                            if (!containsRequest) {
                                 // If the input consists solely of responses/notifications
                                 // then the server MUST return HTTP status 202
                                 ctx.response().setStatusCode(202).end();
@@ -463,48 +475,71 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ROOTS,
             ELICITATION);
 
-    record ScanResult(boolean forceSseInit, boolean containsRequest) {
+    private boolean computeLazySseInit(String serverName, Object json) {
+        if (!httpConfig.servers().get(serverName).http().streamable().lazySseInit()) {
+            return false;
+        }
+        if (json instanceof JsonObject message) {
+            return Messages.isRequest(message) && isForceSseMethod(message);
+        } else if (json instanceof JsonArray batch) {
+            if (!Messages.isResponse(batch.getJsonObject(0)) && batch.size() == 1) {
+                JsonObject message = batch.getJsonObject(0);
+                return Messages.isRequest(message) && isForceSseMethod(message);
+            }
+        }
+        return false;
     }
 
-    private ScanResult scan(HttpMcpRequest mcpRequest) {
-        // Scan the request payload and attempt to identify messages that should force SSE init
-        // such as a tool call with the Progress param
-        boolean forceSseInit = false;
+    /**
+     * Scans the request payload and returns {@code true} if it contains at least one JSON-RPC request.
+     * <p>
+     * For batches with 2+ requests/notifications, SSE is eagerly initialized because multiple responses need streaming.
+     * For single requests in {@link #FORCE_SSE_METHODS}:
+     * <ul>
+     * <li>If lazy SSE init is enabled (default), SSE is initialized lazily in {@link HttpMcpRequest#send(JsonObject)}
+     * when a non-response message is actually sent.</li>
+     * <li>If lazy SSE init is disabled, SSE is initialized eagerly based on the declared parameters of the feature.</li>
+     * </ul>
+     */
+    private boolean scan(HttpMcpRequest mcpRequest) {
         boolean containsRequest = false;
         if (mcpRequest.json() instanceof JsonObject message) {
-            // Single message
             containsRequest = Messages.isRequest(message);
-            forceSseInit = forceSse(mcpRequest, message, containsRequest);
+            if (containsRequest
+                    && !mcpRequest.lazySseInit
+                    && forceSseEager(mcpRequest, message)) {
+                mcpRequest.initiateSse();
+            }
         } else if (mcpRequest.json() instanceof JsonArray batch) {
-            // Batch of messages
             if (!Messages.isResponse(batch.getJsonObject(0))) {
-                // The batch contains at least 2 requests/notifications
-                // or exactly 1 request that forces SSE init
                 if (batch.size() > 1) {
-                    forceSseInit = true;
-                    for (Object e : batch) {
-                        if (e instanceof JsonObject message && Messages.isRequest(message)) {
-                            containsRequest = true;
-                            break;
-                        }
-                    }
-                } else {
+                    // The batch contains at least 2 requests/notifications - force SSE eagerly
+                    mcpRequest.initiateSse();
+                } else if (!mcpRequest.lazySseInit) {
                     JsonObject message = batch.getJsonObject(0);
-                    containsRequest = Messages.isRequest(message);
-                    forceSseInit = forceSse(mcpRequest, message, containsRequest);
+                    if (Messages.isRequest(message) && forceSseEager(mcpRequest, message)) {
+                        mcpRequest.initiateSse();
+                    }
+                }
+                for (Object e : batch) {
+                    if (e instanceof JsonObject message && Messages.isRequest(message)) {
+                        containsRequest = true;
+                        break;
+                    }
                 }
             }
         }
-        return new ScanResult(forceSseInit, containsRequest);
+        return containsRequest;
     }
 
-    private boolean forceSse(HttpMcpRequest mcpRequest, JsonObject message, boolean isRequest) {
-        if (!isRequest) {
-            return false;
-        }
+    private static boolean isForceSseMethod(JsonObject message) {
         McpMethod method = McpMethod.from(message.getString("method"));
-        if (method != null
-                && FORCE_SSE_METHODS.contains(method)) {
+        return method != null && FORCE_SSE_METHODS.contains(method);
+    }
+
+    private boolean forceSseEager(HttpMcpRequest mcpRequest, JsonObject message) {
+        McpMethod method = McpMethod.from(message.getString("method"));
+        if (method != null && FORCE_SSE_METHODS.contains(method)) {
             JsonObject params = Messages.getParams(message);
             String serverName = mcpRequest.serverName();
             if (params != null) {
@@ -555,7 +590,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             if (forceSse != null) {
                 return forceSse;
             }
-            // Also try resource templates
             ResourceTemplateManager.ResourceTemplateInfo rti = resourceTemplateManager.findMatching(resourceUri, serverName);
             if (rti != null && rti.isMethod()) {
                 forceSse = resourceTemplatesForceSse.get(new FeatureKey(rti.name(), serverName));
@@ -567,7 +601,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             if (info != null) {
                 return !info.isMethod() && !skipSseInit(info);
             } else {
-                // Also try resource templates
                 if (rti == null) {
                     rti = resourceTemplateManager.findMatching(resourceUri, serverName);
                 }
@@ -586,20 +619,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             String argumentName = argument != null ? argument.getString("name") : null;
             if (referenceName != null && argumentName != null) {
                 if (Messages.isPromptRef(referenceType)) {
-                    return forceSseCompletion(serverName, referenceName, argumentName, metadata.promptCompletions(),
-                            promptCompletionManager);
+                    return forceSseCompletion(serverName, referenceName, argumentName, promptCompletionManager);
                 } else if (Messages.isResourceRef(referenceType)) {
-                    return forceSseCompletion(serverName, referenceName, argumentName, metadata.resourceTemplateCompletions(),
-                            resourceTemplateCompletionManager);
+                    return forceSseCompletion(serverName, referenceName, argumentName, resourceTemplateCompletionManager);
                 }
             }
         }
         return false;
-
     }
 
     private boolean forceSseCompletion(String serverName, String referenceName, String argumentName,
-            List<FeatureMetadata<CompletionResponse>> completions, CompletionManager completionManager) {
+            CompletionManager completionManager) {
         Boolean forceSse = completionsForceSse.get(forceSseCompletionKey(referenceName, serverName, argumentName));
         if (forceSse != null) {
             return forceSse;
@@ -627,15 +657,19 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final String mcpProtocolVersion;
 
+        final boolean lazySseInit;
+
         public HttpMcpRequest(String serverName, Object json, StreamableHttpMcpConnection connection,
                 SecuritySupport securitySupport,
                 HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
-                CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion) {
+                CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion,
+                boolean lazySseInit) {
             super(serverName, json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;
             this.mcpProtocolVersion = mcpProtocolVersion;
+            this.lazySseInit = lazySseInit;
         }
 
         @Override
@@ -658,19 +692,28 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 return Future.succeededFuture();
             }
             messageSent(message);
-            if (sse.get()) {
-                // Forced SSE mode, such as @Tool method with "Sampling" param
-                // "write" is async and synchronized over http connection, and should be thread-safe
-                return response.write("event: message\ndata: " + message.encode() + "\n\n");
-            } else {
-                if (!Messages.isResponse(message)) {
-                    // Try to use a subsidiary SSE
-                    LOG.debugf("Not a response - try to use a subsidiary SSE channel instead");
-                    return connection().send(message);
+            if (Messages.isResponse(message)) {
+                if (sse.get()) {
+                    // SSE mode - stream as event
+                    // "write" is async and synchronized over http connection, and should be thread-safe
+                    return response.write("event: message\ndata: " + message.encode() + "\n\n");
                 } else {
                     response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
                     return response.end(message.toBuffer());
                 }
+            } else {
+                if (sse.get()) {
+                    // SSE mode already active
+                    return response.write("event: message\ndata: " + message.encode() + "\n\n");
+                }
+                if (lazySseInit) {
+                    // Lazily initialize SSE - headers are not committed until the first write
+                    initiateSse();
+                    return response.write("event: message\ndata: " + message.encode() + "\n\n");
+                }
+                // Try to use a subsidiary SSE
+                LOG.debugf("Not a response - try to use a subsidiary SSE channel instead");
+                return connection().send(message);
             }
         }
 

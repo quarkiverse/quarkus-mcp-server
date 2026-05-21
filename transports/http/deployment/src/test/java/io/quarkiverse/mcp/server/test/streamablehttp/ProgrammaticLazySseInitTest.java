@@ -35,12 +35,11 @@ import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
 
-public class TransportHintSkipSseTest extends McpServerTest {
+public class ProgrammaticLazySseInitTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClasses(TransportHintSkipSseTest.class))
-            .overrideConfigKey("quarkus.mcp.server.http.streamable.lazy-sse-init", "false");
+            .withApplicationRoot(root -> root.addClasses(ProgrammaticLazySseInitTest.class));
 
     @Inject
     ToolManager toolManager;
@@ -62,22 +61,37 @@ public class TransportHintSkipSseTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         HttpClient httpClient = HttpClient.newHttpClient();
 
+        // Deprecated hint is a no-op - still returns application/json
         toolManager.newTool("skipSseTool")
-                .setDescription("Tool that skips SSE init")
+                .setDescription("Tool with deprecated hint")
                 .addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)
                 .setHandler(args -> ToolResponse.success("no-sse"))
                 .register();
 
-        toolManager.newTool("forceSseTool")
-                .setDescription("Tool that forces SSE init")
-                .setHandler(args -> ToolResponse.success("with-sse"))
+        // Without hint - also returns application/json because handler doesn't use SSE-dependent APIs
+        toolManager.newTool("noSseTool")
+                .setDescription("Tool without SSE-dependent APIs")
+                .setHandler(args -> ToolResponse.success("no-sse"))
+                .register();
+
+        // Handler uses Progress - lazily triggers SSE
+        toolManager.newTool("sseTool")
+                .setDescription("Tool with progress")
+                .setHandler(args -> {
+                    args.progress().notificationBuilder().setTotal(1).setProgress(1).build().sendAndForget();
+                    return ToolResponse.success("with-sse");
+                })
                 .register();
 
         assertContentType(httpClient, client, "application/json",
                 newMessage("tools/call", new JsonObject().put("name", "skipSseTool").put("arguments", Map.of())));
 
+        assertContentType(httpClient, client, "application/json",
+                newMessage("tools/call", new JsonObject().put("name", "noSseTool").put("arguments", Map.of())));
+
         assertContentType(httpClient, client, "text/event-stream",
-                newMessage("tools/call", new JsonObject().put("name", "forceSseTool").put("arguments", Map.of())));
+                newMessage("tools/call", new JsonObject().put("name", "sseTool").put("arguments", Map.of())
+                        .put("_meta", new JsonObject().put("progressToken", "t1"))));
     }
 
     @Test
@@ -85,22 +99,13 @@ public class TransportHintSkipSseTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        promptManager.newPrompt("skipSsePrompt")
-                .setDescription("Prompt that skips SSE init")
-                .addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)
-                .setHandler(args -> new PromptResponse("test", List.of(PromptMessage.withUserRole("hello"))))
-                .register();
-
-        promptManager.newPrompt("forceSsePrompt")
-                .setDescription("Prompt that forces SSE init")
+        promptManager.newPrompt("noSsePrompt")
+                .setDescription("Prompt without SSE-dependent APIs")
                 .setHandler(args -> new PromptResponse("test", List.of(PromptMessage.withUserRole("hello"))))
                 .register();
 
         assertContentType(httpClient, client, "application/json",
-                newMessage("prompts/get", new JsonObject().put("name", "skipSsePrompt")));
-
-        assertContentType(httpClient, client, "text/event-stream",
-                newMessage("prompts/get", new JsonObject().put("name", "forceSsePrompt")));
+                newMessage("prompts/get", new JsonObject().put("name", "noSsePrompt")));
     }
 
     @Test
@@ -108,26 +113,15 @@ public class TransportHintSkipSseTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        resourceManager.newResource("skipSseResource")
-                .setUri("test:///skip-sse")
-                .setDescription("Resource that skips SSE init")
-                .addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)
+        resourceManager.newResource("noSseResource")
+                .setUri("test:///no-sse")
+                .setDescription("Resource without SSE-dependent APIs")
                 .setHandler(
                         args -> new ResourceResponse(List.of(TextResourceContents.create(args.requestUri().value(), "no-sse"))))
                 .register();
 
-        resourceManager.newResource("forceSseResource")
-                .setUri("test:///force-sse")
-                .setDescription("Resource that forces SSE init")
-                .setHandler(args -> new ResourceResponse(
-                        List.of(TextResourceContents.create(args.requestUri().value(), "with-sse"))))
-                .register();
-
         assertContentType(httpClient, client, "application/json",
-                newMessage("resources/read", new JsonObject().put("uri", "test:///skip-sse")));
-
-        assertContentType(httpClient, client, "text/event-stream",
-                newMessage("resources/read", new JsonObject().put("uri", "test:///force-sse")));
+                newMessage("resources/read", new JsonObject().put("uri", "test:///no-sse")));
     }
 
     @Test
@@ -135,7 +129,6 @@ public class TransportHintSkipSseTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        // Register a prompt with an argument (needed as completion reference)
         promptManager.newPrompt("completionPrompt")
                 .setDescription("Prompt for completion test")
                 .addArgument("arg1", null, "test argument", false, null)
@@ -144,7 +137,6 @@ public class TransportHintSkipSseTest extends McpServerTest {
 
         promptCompletionManager.newCompletion("completionPrompt")
                 .setArgumentName("arg1")
-                .addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)
                 .setHandler(args -> new CompletionResponse(List.of("a", "b"), 2, false))
                 .register();
 
@@ -152,23 +144,6 @@ public class TransportHintSkipSseTest extends McpServerTest {
                 newMessage("completion/complete", new JsonObject()
                         .put("ref", new JsonObject().put("type", "ref/prompt").put("name", "completionPrompt"))
                         .put("argument", new JsonObject().put("name", "arg1").put("value", "a"))));
-
-        // Register another prompt + completion without hint
-        promptManager.newPrompt("completionPrompt2")
-                .setDescription("Prompt for completion test 2")
-                .addArgument("arg1", null, "test argument", false, null)
-                .setHandler(args -> new PromptResponse("test", List.of(PromptMessage.withUserRole("hello"))))
-                .register();
-
-        promptCompletionManager.newCompletion("completionPrompt2")
-                .setArgumentName("arg1")
-                .setHandler(args -> new CompletionResponse(List.of("c", "d"), 2, false))
-                .register();
-
-        assertContentType(httpClient, client, "text/event-stream",
-                newMessage("completion/complete", new JsonObject()
-                        .put("ref", new JsonObject().put("type", "ref/prompt").put("name", "completionPrompt2"))
-                        .put("argument", new JsonObject().put("name", "arg1").put("value", "c"))));
     }
 
     @Test
@@ -176,26 +151,15 @@ public class TransportHintSkipSseTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        resourceTemplateManager.newResourceTemplate("skipSseTemplate")
-                .setUriTemplate("test:///skip-sse/{id}")
-                .setDescription("Resource template that skips SSE init")
-                .addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)
+        resourceTemplateManager.newResourceTemplate("noSseTemplate")
+                .setUriTemplate("test:///no-sse/{id}")
+                .setDescription("Resource template without SSE-dependent APIs")
                 .setHandler(args -> new ResourceResponse(
                         List.of(TextResourceContents.create(args.requestUri().value(), "no-sse"))))
                 .register();
 
-        resourceTemplateManager.newResourceTemplate("forceSseTemplate")
-                .setUriTemplate("test:///force-sse/{id}")
-                .setDescription("Resource template that forces SSE init")
-                .setHandler(args -> new ResourceResponse(
-                        List.of(TextResourceContents.create(args.requestUri().value(), "with-sse"))))
-                .register();
-
         assertContentType(httpClient, client, "application/json",
-                newMessage("resources/read", new JsonObject().put("uri", "test:///skip-sse/1")));
-
-        assertContentType(httpClient, client, "text/event-stream",
-                newMessage("resources/read", new JsonObject().put("uri", "test:///force-sse/1")));
+                newMessage("resources/read", new JsonObject().put("uri", "test:///no-sse/1")));
     }
 
     private void assertContentType(HttpClient httpClient, McpStreamableTestClient client, String expectedContentType,

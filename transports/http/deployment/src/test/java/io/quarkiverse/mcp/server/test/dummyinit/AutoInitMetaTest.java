@@ -90,22 +90,15 @@ public class AutoInitMetaTest extends McpServerTest {
         client.disconnect();
 
         // Send a tools/call without _meta; sampling is not supported
-        CompletableFuture<JsonObject> toolResponse = new CompletableFuture<>();
+        // With lazy SSE init (default), the response is JSON because no SSE-dependent API is used
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        httpClient.sendAsync(
+        var httpResponse = httpClient.send(
                 autoInitRequest(endpoint, toolsCallWithoutMeta("info", 2), null),
-                BodyHandlers.fromLineSubscriber(
-                        new SseEventSubscriber(event -> {
-                            if ("message".equals(event.name())) {
-                                JsonObject json = new JsonObject(event.data());
-                                if (json.containsKey("result")) {
-                                    toolResponse.complete(json);
-                                }
-                            }
-                        })));
+                BodyHandlers.ofString());
 
-        JsonObject response = toolResponse.get(5, TimeUnit.SECONDS);
+        assertEquals(200, httpResponse.statusCode());
+        JsonObject response = new JsonObject(httpResponse.body());
         String text = response.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text");
         assertEquals(StreamableHttpMcpMessageHandler.AUTO_INIT_IMPL_NAME + ":1:2025-03-26:not supported", text);
     }
