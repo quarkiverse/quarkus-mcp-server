@@ -150,5 +150,36 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init[`+++quarkus.mcp.server.http.streamable.lazy-sse-init+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.http.streamable.lazy-sse-init+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".http.streamable.lazy-sse-init+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".http.streamable.lazy-sse-init+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true` then SSE initialization is performed lazily, only when an SSE-dependent API
+(such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) is actually used during
+request processing.
+
+If set to `false` then SSE initialization is performed eagerly, based on the declared parameters
+of the feature method. This was the default behavior before Quarkus MCP Server 1.13.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_HTTP_STREAMABLE_LAZY_SSE_INIT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_HTTP_STREAMABLE_LAZY_SSE_INIT+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 |===
 

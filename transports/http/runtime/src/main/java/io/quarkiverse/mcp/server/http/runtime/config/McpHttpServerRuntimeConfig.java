@@ -44,6 +44,19 @@ public interface McpHttpServerRuntimeConfig {
             @WithDefault("false")
             boolean autoInit();
 
+            /**
+             * If set to `true` then SSE initialization is performed lazily, only when an SSE-dependent API
+             * (such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) is actually used during
+             * request processing.
+             *
+             * If set to `false` then SSE initialization is performed eagerly, based on the declared parameters
+             * of the feature method. This was the default behavior before Quarkus MCP Server 1.13.
+             *
+             * @asciidoclet
+             */
+            @WithDefault("true")
+            boolean lazySseInit();
+
         }
 
     }
