@@ -13,7 +13,7 @@
 
     <properties>
         <skipITs>true</skipITs>
-        <htmlunit.version>4.21.0</htmlunit.version>
+        <htmlunit.version>5.0.0</htmlunit.version>
     </properties>
 
     <dependencies>
