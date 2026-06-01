@@ -25,14 +25,14 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
 
     private final Vertx vertx;
 
-    private final ResponseHandlers responseHandlers;
+    private final RequestIdGenerator idGenerator;
 
     private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
 
-    public ConnectionManager(Vertx vertx, ResponseHandlers responseHandlers, McpServersRuntimeConfig servers,
+    public ConnectionManager(Vertx vertx, RequestIdGenerator idGenerator, McpServersRuntimeConfig servers,
             McpMetadata metadata, Instance<McpMetrics> metrics) {
         this.vertx = vertx;
-        this.responseHandlers = responseHandlers;
+        this.idGenerator = idGenerator;
         // We use the minimal timeout divided by two to specify the delay to fire the check
         // For example, if there are two server configs; the first defines the timeout 10 mins and the second 30 mins,
         // then we fire the check every 5 mins
@@ -70,7 +70,7 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
             timerId = vertx.setPeriodic(connection.autoPingInterval().get().toMillis(), new Handler<Long>() {
                 @Override
                 public void handle(Long timerId) {
-                    connection.send(Messages.newPing(responseHandlers.nextId()));
+                    connection.send(Messages.newPing(idGenerator.nextId()));
                 }
             });
         }

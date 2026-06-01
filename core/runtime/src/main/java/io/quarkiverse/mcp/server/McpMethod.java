@@ -30,6 +30,7 @@ public enum McpMethod {
     ROOTS_LIST("roots/list"),
     SAMPLING_CREATE_MESSAGE("sampling/createMessage"),
     ELICITATION_CREATE("elicitation/create"),
+    NOTIFICATIONS_ELICITATION_COMPLETE("notifications/elicitation/complete"),
 
     // non-standard methods
     Q_CLOSE("q/close"),

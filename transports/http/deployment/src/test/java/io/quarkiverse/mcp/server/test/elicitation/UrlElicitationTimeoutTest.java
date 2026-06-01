@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.Duration;
 import java.util.List;
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Elicitation;
-import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.ElicitationCompletion;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -30,7 +31,7 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
-public class ElicitationTimeoutTest extends McpServerTest {
+public class UrlElicitationTimeoutTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
@@ -39,46 +40,61 @@ public class ElicitationTimeoutTest extends McpServerTest {
     @Inject
     ServerRequests serverRequests;
 
+    @Inject
+    ElicitationCompletion elicitationCompletion;
+
     @Test
-    public void testElicitation() throws InterruptedException {
+    public void testUrlElicitationTimeout() throws InterruptedException {
         McpSseTestClient client = McpAssured.newSseClient()
-                .setClientCapabilities(new ClientCapability(ClientCapability.ELICITATION, Map.of()))
+                .setClientCapabilities(
+                        new ClientCapability(ClientCapability.ELICITATION, Map.of("form", Map.of(), "url", Map.of())))
                 .build()
                 .connect();
 
         JsonObject request = client.newRequest("tools/call")
                 .put("params", new JsonObject()
-                        .put("name", "elicitationDefaultTimeout"));
+                        .put("name", "urlElicitationTimeout"));
         client.sendAndForget(request);
 
-        // The server should send an elicitation request
+        // The server should send a URL mode elicitation request
         List<JsonObject> requests = client.waitForRequests(1).requests();
         assertEquals("elicitation/create", requests.get(0).getString("method"));
+        assertEquals("url", requests.get(0).getJsonObject("params").getString("mode"));
         Long id = requests.get(0).getLong("id");
+        String elicitationId = requests.get(0).getJsonObject("params").getString("elicitationId");
+
         // But the client does not respond...
-        assertTrue(MyTools.INIT_LATCH1.await(5, TimeUnit.SECONDS));
-        assertNotNull(MyTools.ERROR1.get());
+        assertTrue(MyTools.LATCH.await(5, TimeUnit.SECONDS));
+        assertNotNull(MyTools.ERROR.get());
         assertFalse(serverRequests.hasResponseHandler(id));
+
+        // The pending elicitation entry should also be cleaned up
+        assertFalse(serverRequests.hasPendingElicitation(elicitationId));
+        try {
+            elicitationCompletion.send(elicitationId);
+            fail("Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Singleton
     public static class MyTools {
 
-        static final CountDownLatch INIT_LATCH1 = new CountDownLatch(1);
-        static final AtomicReference<Throwable> ERROR1 = new AtomicReference<>();
+        static final CountDownLatch LATCH = new CountDownLatch(1);
+        static final AtomicReference<Throwable> ERROR = new AtomicReference<>();
 
         @Tool
-        Uni<String> elicitationDefaultTimeout(Elicitation elicitation) {
-            return elicitation.requestBuilder()
-                    .setMessage("What's your github account?")
-                    .addSchemaProperty("username", new StringSchema())
+        Uni<String> urlElicitationTimeout(Elicitation elicitation) {
+            return elicitation.urlRequestBuilder()
+                    .setMessage("Please authorize")
+                    .setUrl("https://example.com/authorize")
                     .setTimeout(Duration.ofSeconds(1))
                     .build().send()
                     .onFailure().recoverWithItem(t -> {
-                        ERROR1.set(t);
+                        ERROR.set(t);
                         return null;
                     })
-                    .eventually(() -> INIT_LATCH1.countDown())
+                    .eventually(() -> LATCH.countDown())
                     .replaceWith("nok");
         }
 

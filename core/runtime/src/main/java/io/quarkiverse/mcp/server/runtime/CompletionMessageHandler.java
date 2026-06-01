@@ -36,7 +36,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
 
         ArgumentProviders argProviders = new ArgumentProviders(message,
                 Map.of(argumentName, argument.getString("value")), mcpRequest.connection(), id, null, sender,
-                Messages.getProgressToken(message), manager.responseHandlers, mcpRequest.serverName(),
+                Messages.getProgressToken(message), manager.serverRequests, mcpRequest.serverName(),
                 manager.cancellationRequests, manager.mcpTracing);
 
         try {

@@ -34,11 +34,12 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             McpServersRuntimeConfig config,
             McpMetadata metadata) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, serverRequests, cancellationRequests,
+                config,
                 metadata);
         this.completions = new ConcurrentHashMap<>();
     }

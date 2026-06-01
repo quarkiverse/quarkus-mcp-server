@@ -180,12 +180,19 @@ public class MyTools {
 
 == Elicitation
 
-Elicitation allows the server to request additional information from the client using a form-like interface.
-This is useful for collecting structured input from users.
+Elicitation allows the server to request additional information from the client.
+It supports two modes:
 
-=== Checking Elicitation Support
+* **Form mode** — collects structured data from users with a form-like interface.
+* **URL mode** — directs users to an external URL for sensitive interactions (API keys, OAuth, payments) that must not pass through the MCP client.
 
-Before using elicitation, check if the client supports it.
+=== Form Mode Elicitation
+
+Form mode elicitation is used for collecting structured, non-sensitive input from users.
+
+==== Checking Form Mode Support
+
+Before using form mode elicitation, check if the client supports it.
 This is negotiated during the MCP connection initialization.
 
 [source,java]
@@ -197,18 +204,18 @@ public class MyTools {
 
     @Tool(description = "Request user input")
     String requestInfo(Elicitation elicitation) {
-        if (elicitation.isSupported()) { // <1>
-            // Use elicitation
-            return "Elicitation is available";
+        if (elicitation.isFormModeSupported()) { // <1>
+            // Use form mode elicitation
+            return "Form mode elicitation is available";
         } else {
-            return "Elicitation not supported by this client";
+            return "Form mode elicitation not supported by this client";
         }
     }
 }
 ----
-<1> Check if the client supports the elicitation capability.
+<1> Check if the client supports the form mode of the elicitation capability.
 
-=== Basic Elicitation Request
+==== Basic Form Mode Request
 
 Request structured input from the user:
 
@@ -224,8 +231,8 @@ public class MyTools {
 
     @Tool(description = "Get user information")
     String getUserInfo(Elicitation elicitation) {
-        if (!elicitation.isSupported()) {
-            return "Elicitation not supported";
+        if (!elicitation.isFormModeSupported()) {
+            return "Form mode not supported";
         }
 
         ElicitationRequest request = elicitation.requestBuilder() // <1>
@@ -253,11 +260,11 @@ public class MyTools {
 <5> Check if the user accepted or cancelled.
 <6> Extract the values from the response.
 
-=== Schema Types
+==== Schema Types
 
-Elicitation supports various schema types for different input types:
+Form mode elicitation supports various schema types for different input types:
 
-==== String Input
+===== String Input
 
 [source,java]
 ----
@@ -288,7 +295,7 @@ StringSchema.builder()
     .build()
 ----
 
-==== Number Input
+===== Number Input
 
 [source,java]
 ----
@@ -317,7 +324,7 @@ NumberSchema.builder()
     .build()
 ----
 
-==== Integer Input
+===== Integer Input
 
 [source,java]
 ----
@@ -334,7 +341,7 @@ IntegerSchema.builder()
     .build()
 ----
 
-==== Boolean Input
+===== Boolean Input
 
 [source,java]
 ----
@@ -360,7 +367,7 @@ BooleanSchema.builder()
     .build()
 ----
 
-==== Enum/Select Input
+===== Enum/Select Input
 
 [source,java]
 ----
@@ -392,7 +399,7 @@ SingleSelectEnumSchema.builder(List.of("s", "m", "l"))
     .build()
 ----
 
-==== Multi-select Input
+===== Multi-select Input
 
 [source,java]
 ----
@@ -416,7 +423,7 @@ MultiSelectEnumSchema.builder(List.of("java", "python", "javascript", "go"))
     .build()
 ----
 
-=== Complete Elicitation Example
+==== Complete Form Mode Example
 
 [source,java]
 ----
@@ -429,7 +436,7 @@ public class MyTools {
 
     @Tool(description = "User registration form")
     String registerUser(Elicitation elicitation) {
-        if (!elicitation.isSupported()) {
+        if (!elicitation.isFormModeSupported()) {
             return "Not supported";
         }
 
@@ -459,7 +466,7 @@ public class MyTools {
 }
 ----
 
-=== Async Elicitation
+==== Async Form Mode Elicitation
 
 For non-blocking operations:
 
@@ -474,7 +481,7 @@ public class MyTools {
 
     @Tool(description = "Async elicitation")
     Uni<String> asyncElicitation(Elicitation elicitation) {
-        if (!elicitation.isSupported()) {
+        if (!elicitation.isFormModeSupported()) {
             return Uni.createFrom().item("Not supported");
         }
 
@@ -494,6 +501,139 @@ public class MyTools {
 }
 ----
 <1> Returns `Uni<ElicitationResponse>` for async processing.
+
+=== URL Mode Elicitation
+
+URL mode elicitation directs users to an external URL for out-of-band interactions.
+This is required for sensitive data like API keys, OAuth flows, or payment processing — the MCP spec prohibits collecting such information via form mode.
+
+==== Checking URL Mode Support
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Check elicitation modes")
+    String checkModes(Elicitation elicitation) {
+        if (elicitation.isFormModeSupported()) { // <1>
+            return "Form mode available";
+        }
+        if (elicitation.isUrlModeSupported()) { // <2>
+            return "URL mode available";
+        }
+        return "No elicitation support";
+    }
+}
+----
+<1> Check if the client supports form mode elicitation.
+<2> Check if the client supports URL mode elicitation.
+
+==== Basic URL Mode Request
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.UrlElicitationRequest;
+import io.quarkiverse.mcp.server.Tool;
+import io.smallrye.mutiny.Uni;
+import java.time.Duration;
+
+public class MyTools {
+
+    @Tool(description = "Request API key via URL")
+    Uni<String> requestApiKey(Elicitation elicitation) {
+        if (!elicitation.isUrlModeSupported()) {
+            return Uni.createFrom().item("URL mode not supported");
+        }
+
+        UrlElicitationRequest request = elicitation.urlRequestBuilder() // <1>
+            .setMessage("Please provide your API key") // <2>
+            .setUrl("https://myserver.example.com/provide-key") // <3>
+            .setCompletionTimeout(Duration.ofMinutes(15)) // <4>
+            .build();
+
+        String elicitationId = request.elicitationId(); // <5>
+
+        return request.send() // <6>
+            .map(response -> {
+                if (response.actionAccepted()) {
+                    return "User consented to open the URL";
+                } else {
+                    return "User declined";
+                }
+            });
+    }
+}
+----
+<1> Create a URL mode elicitation request builder.
+<2> Set the message explaining why the interaction is needed.
+<3> Set the URL that the user should navigate to.
+<4> Set the completion timeout — how long the server keeps the pending elicitation entry waiting for `ElicitationCompletion.send()`. Defaults to the value of `quarkus.mcp.server.elicitation.default-completion-timeout` (10 minutes). Expired entries are checked every minute, so the effective minimum is approximately one minute.
+<5> The elicitation ID is auto-generated and can be used to correlate with completion notifications.
+<6> The response indicates whether the user consented to navigate to the URL, not whether the interaction is complete.
+
+==== Completion Notifications
+
+After the user completes the out-of-band interaction (e.g., submits credentials on your web page), the server can notify the client by injecting `ElicitationCompletion`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ElicitationCompletion;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+
+@Path("/api-key-callback")
+public class ApiKeyCallbackResource {
+
+    @Inject
+    ElicitationCompletion elicitationCompletion; // <1>
+
+    @POST
+    @Path("/{elicitationId}")
+    public void onApiKeyProvided(@PathParam("elicitationId") String elicitationId) {
+        // Store the API key securely...
+
+        elicitationCompletion.send(elicitationId); // <2>
+    }
+}
+----
+<1> `ElicitationCompletion` is a CDI bean that can be injected from any context.
+<2> Sends a `notifications/elicitation/complete` notification to the client that initiated the elicitation.
+
+==== URL Elicitation Required Error
+
+When a tool cannot proceed without URL mode elicitation, it can throw `UrlElicitationRequiredException`.
+This is automatically converted to a JSON-RPC error with code `-32042`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
+
+public class MyTools {
+
+    @Tool(description = "Access external service")
+    String accessService() {
+        if (!hasStoredCredentials()) {
+            var builder = UrlElicitationRequiredException.builder()
+                .setMessage("Authorization required");
+            String id = builder.addElicitation( // <1>
+                "https://myserver.example.com/authorize",
+                "Please authorize access to the service");
+            // Store the elicitation ID for later correlation...
+            throw builder.build(); // <2>
+        }
+        return "Service response";
+    }
+}
+----
+<1> `addElicitation()` returns the auto-generated elicitation ID.
+<2> The exception is converted to a `-32042` error with the elicitation details in the error data.
 
 == Roots
 
@@ -644,8 +784,14 @@ Configure timeouts for client integration features in `application.properties`:
 # Sampling timeout (default: 30s)
 quarkus.mcp.server.sampling.default-timeout=30s
 
-# Elicitation timeout (default: 5m)
-quarkus.mcp.server.elicitation.default-timeout=5m
+# Elicitation response timeout (default: 60s)
+quarkus.mcp.server.elicitation.default-timeout=60s
+
+# Elicitation completion timeout (default: 10m)
+# How long the server keeps pending URL mode elicitation entries
+# waiting for ElicitationCompletion.send().
+# Expired entries are checked every minute.
+quarkus.mcp.server.elicitation.default-completion-timeout=10m
 
 # Roots timeout (default: 10s)
 quarkus.mcp.server.roots.default-timeout=10s

@@ -53,21 +53,53 @@ public record InitialRequest(Implementation implementation, String protocolVersi
 
     /**
      * @return {@code true} if the client supports the {@link ClientCapability#ELICITATION} capability
+     * @deprecated use {@link #supportsElicitationFormMode()} or {@link #supportsElicitationUrlMode()} instead
      */
+    @Deprecated(forRemoval = true)
     public boolean supportsElicitation() {
         return supportsCapability(ClientCapability.ELICITATION);
+    }
+
+    /**
+     * For backwards compatibility, an empty elicitation capability object is equivalent to declaring support for form mode
+     * only.
+     *
+     * @return {@code true} if the client supports the form mode of the {@link ClientCapability#ELICITATION} capability
+     */
+    public boolean supportsElicitationFormMode() {
+        ClientCapability elicitation = getCapability(ClientCapability.ELICITATION);
+        if (elicitation == null) {
+            return false;
+        }
+        // Empty properties = form mode only (backwards compatibility)
+        return elicitation.properties().isEmpty() || elicitation.properties().containsKey("form");
+    }
+
+    /**
+     * @return {@code true} if the client supports the URL mode of the {@link ClientCapability#ELICITATION} capability
+     */
+    public boolean supportsElicitationUrlMode() {
+        ClientCapability elicitation = getCapability(ClientCapability.ELICITATION);
+        return elicitation != null && elicitation.properties().containsKey("url");
     }
 
     /**
      * @return {@code true} if the client supports the specified capability
      */
     public boolean supportsCapability(String name) {
+        return getCapability(name) != null;
+    }
+
+    /**
+     * @return the capability with the given name, or {@code null}
+     */
+    public ClientCapability getCapability(String name) {
         for (ClientCapability capability : clientCapabilities) {
             if (capability.name().equals(name)) {
-                return true;
+                return capability;
             }
         }
-        return false;
+        return null;
     }
 
     public enum Transport {

@@ -9,6 +9,7 @@ public final class JsonRpcErrorCodes {
     public static final int INVALID_REQUEST = -32600;
     public static final int PARSE_ERROR = -32700;
     public static final int SECURITY_ERROR = -32001;
+    public static final int URL_ELICITATION_REQUIRED = -32042;
 
     private JsonRpcErrorCodes() {
     }

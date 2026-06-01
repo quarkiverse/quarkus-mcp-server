@@ -5,7 +5,11 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
+import io.quarkiverse.mcp.server.UrlElicitationRequiredException.ElicitationEntry;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public abstract class MessageHandler {
 
@@ -13,7 +17,20 @@ public abstract class MessageHandler {
 
     protected Future<Void> handleFailure(Object requestId, Sender sender, McpRequest mcpRequest, Throwable cause,
             Logger logger, String errorMessage, String featureId) {
-        if (cause instanceof McpException mcp) {
+        if (cause instanceof UrlElicitationRequiredException urlElicitation) {
+            mcpRequest.setTracingErrorResponse(false, urlElicitation.getJsonRpcErrorCode(), urlElicitation.getMessage());
+            JsonArray elicitations = new JsonArray();
+            for (ElicitationEntry entry : urlElicitation.elicitations()) {
+                elicitations.add(new JsonObject()
+                        .put("mode", "url")
+                        .put("elicitationId", entry.elicitationId())
+                        .put("url", entry.url())
+                        .put("message", entry.message()));
+            }
+            JsonObject data = new JsonObject().put("elicitations", elicitations);
+            return sender.send(
+                    Messages.newError(requestId, urlElicitation.getJsonRpcErrorCode(), urlElicitation.getMessage(), data));
+        } else if (cause instanceof McpException mcp) {
             mcpRequest.setTracingErrorResponse(false, mcp.getJsonRpcErrorCode(), mcp.getMessage());
             return sender.sendError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage());
         } else if (cause instanceof Cancellation.OperationCancellationException) {

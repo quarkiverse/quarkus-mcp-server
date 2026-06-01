@@ -73,7 +73,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
 
-    private final ResponseHandlers responseHandlers;
+    private final ServerRequests serverRequests;
     private final List<InitialCheck> initialChecks;
     private final List<InitialResponseInfo> initialResponseInfos;
 
@@ -100,7 +100,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             McpMetadata metadata, Vertx vertx,
             List<InitialCheck> initialChecks,
             List<InitialResponseInfo> initialResponseInfos,
@@ -122,7 +122,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager, config);
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompletionManager);
         this.notificationManager = notificationManager;
-        this.responseHandlers = responseHandlers;
+        this.serverRequests = serverRequests;
         this.initialChecks = initialChecks;
         this.initialResponseInfos = initialResponseInfos;
         this.config = config;
@@ -198,7 +198,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     protected abstract InitialRequest.Transport transport();
 
     private Future<Void> handleResponse(JsonObject message) {
-        return responseHandlers.handleResponse(Messages.getId(message), message);
+        return serverRequests.handleResponse(Messages.getId(message), message);
     }
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
@@ -600,8 +600,17 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         JsonObject capabilities = params.getJsonObject("capabilities");
         if (capabilities != null) {
             for (String name : capabilities.fieldNames()) {
-                // TODO capability properties
-                clientCapabilities.add(new ClientCapability(name, Map.of()));
+                Map<String, Object> properties;
+                Object value = capabilities.getValue(name);
+                if (value instanceof JsonObject obj && !obj.isEmpty()) {
+                    properties = new HashMap<>();
+                    for (String key : obj.fieldNames()) {
+                        properties.put(key, obj.getValue(key));
+                    }
+                } else {
+                    properties = Map.of();
+                }
+                clientCapabilities.add(new ClientCapability(name, properties));
             }
         }
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());

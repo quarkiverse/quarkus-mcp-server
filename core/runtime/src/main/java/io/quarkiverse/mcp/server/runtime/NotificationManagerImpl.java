@@ -39,10 +39,11 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, serverRequests, cancellationRequests,
+                config,
                 metadata);
         this.notifications = new ConcurrentHashMap<>();
         for (FeatureMetadata<Void> notification : metadata.notifications()) {
@@ -78,7 +79,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
             sender = mcpRequest.connection();
         }
         return new ArgumentProviders(message, Map.of(), mcpRequest.connection(), null, null,
-                sender, null, responseHandlers, mcpRequest.serverName(), cancellationRequests, mcpTracing);
+                sender, null, serverRequests, mcpRequest.serverName(), cancellationRequests, mcpTracing);
     }
 
     @Override
