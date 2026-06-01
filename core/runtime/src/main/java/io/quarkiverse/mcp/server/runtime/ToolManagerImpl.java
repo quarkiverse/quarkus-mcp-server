@@ -93,7 +93,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<ToolFilter> filters,
             @Any Instance<ToolInputGuardrail> inputGuardrails,
@@ -105,7 +105,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<OutputSchemaGenerator> outputSchemaGenerator,
             McpServersBuildTimeConfig buildTimeConfig,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, serverRequests, cancellationRequests,
+                config,
                 metadata);
         this.tools = new ConcurrentHashMap<>();
         this.inputGuardrails = inputGuardrails;

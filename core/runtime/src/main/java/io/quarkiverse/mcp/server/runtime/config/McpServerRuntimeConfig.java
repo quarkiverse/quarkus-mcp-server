@@ -334,6 +334,15 @@ public interface McpServerRuntimeConfig {
          */
         @WithDefault("60s")
         Duration defaultTimeout();
+
+        /**
+         * The default timeout for a URL mode elicitation completion. This is the maximum time the server will keep a pending
+         * elicitation entry waiting for an external service to call
+         * {@link io.quarkiverse.mcp.server.ElicitationCompletion#send}.
+         * Negative and zero durations imply no timeout.
+         */
+        @WithDefault("10m")
+        Duration defaultCompletionTimeout();
     }
 
 }

@@ -22,7 +22,7 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.Roots;
-import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -38,7 +38,7 @@ public class RootsTimeoutTest extends McpServerTest {
             .overrideConfigKey("quarkus.mcp.server.roots.default-timeout", "1s");
 
     @Inject
-    ResponseHandlers responseHandlers;
+    ServerRequests serverRequests;
 
     @Test
     public void testRoots() throws InterruptedException {
@@ -59,8 +59,8 @@ public class RootsTimeoutTest extends McpServerTest {
         assertTrue(MyTools.INIT_LATCH2.await(5, TimeUnit.SECONDS));
         assertNotNull(MyTools.ERROR2.get());
 
-        assertFalse(responseHandlers.hasHandler(id1));
-        assertFalse(responseHandlers.hasHandler(id2));
+        assertFalse(serverRequests.hasResponseHandler(id1));
+        assertFalse(serverRequests.hasResponseHandler(id2));
     }
 
     @Singleton

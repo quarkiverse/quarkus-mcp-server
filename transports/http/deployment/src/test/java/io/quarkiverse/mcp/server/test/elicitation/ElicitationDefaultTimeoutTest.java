@@ -22,7 +22,7 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -38,7 +38,7 @@ public class ElicitationDefaultTimeoutTest extends McpServerTest {
             .overrideConfigKey("quarkus.mcp.server.elicitation.default-timeout", "1s");
 
     @Inject
-    ResponseHandlers responseHandlers;
+    ServerRequests serverRequests;
 
     @Test
     public void testElicitation() throws InterruptedException {
@@ -59,7 +59,7 @@ public class ElicitationDefaultTimeoutTest extends McpServerTest {
         // But the client does not respond...
         assertTrue(MyTools.INIT_LATCH1.await(5, TimeUnit.SECONDS));
         assertNotNull(MyTools.ERROR1.get());
-        assertFalse(responseHandlers.hasHandler(id));
+        assertFalse(serverRequests.hasResponseHandler(id));
     }
 
     @Singleton

@@ -26,8 +26,8 @@ import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
-import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
+import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.websocket.runtime.WebSocketMcpMessageHandler.WebSocketMcpRequest;
@@ -61,7 +61,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             McpMetadata metadata,
             Vertx vertx,
@@ -72,7 +72,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             Instance<McpTracing> tracing,
             Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, responseHandlers, metadata, vertx,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);

@@ -41,14 +41,14 @@ public class SamplingRequestImpl implements SamplingRequest {
     private JsonObject meta;
 
     private final Sender sender;
-    private final ResponseHandlers responseHandlers;
+    private final ServerRequests serverRequests;
     private final Duration timeout;
     private final McpTracing mcpTracing;
 
     SamplingRequestImpl(long maxTokens, List<SamplingMessage> messages, BigDecimal temperature, String systemPrompt,
             IncludeContext includeContext, ModelPreferences modelPreferences, Map<String, Object> metadata,
             List<String> stopSequences, Sender sender,
-            ResponseHandlers responseHandlers, Duration timeout, McpTracing mcpTracing) {
+            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing) {
         this.maxTokens = maxTokens;
         this.messages = messages;
         this.temperature = temperature;
@@ -58,7 +58,7 @@ public class SamplingRequestImpl implements SamplingRequest {
         this.metadata = metadata;
         this.stopSequences = stopSequences;
         this.sender = sender;
-        this.responseHandlers = responseHandlers;
+        this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
     }
@@ -121,7 +121,7 @@ public class SamplingRequestImpl implements SamplingRequest {
         AtomicLong id = new AtomicLong();
         Uni<SamplingResponse> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<SamplingResponse> future = new CompletableFuture<SamplingResponse>();
-            Long requestId = responseHandlers.newRequest(m -> {
+            Long requestId = serverRequests.newRequest(m -> {
                 JsonObject result = m.getJsonObject("result");
                 if (result == null) {
                     throw new IllegalStateException("Invalid sampling response: " + m);
@@ -148,7 +148,7 @@ public class SamplingRequestImpl implements SamplingRequest {
                     .after(timeout).fail()
                     .onFailure(TimeoutException.class).invoke(te -> {
                         long requestId = id.get();
-                        if (requestId != 0 && responseHandlers.remove(requestId)) {
+                        if (requestId != 0 && serverRequests.removeResponseHandler(requestId)) {
                             LOG.debugf("Response handler for %s removed due to timeout", requestId);
                         }
                     });

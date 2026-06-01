@@ -15,7 +15,7 @@ record ArgumentProviders(
         String uri,
         Sender sender,
         Object progressToken,
-        ResponseHandlers responseHandlers,
+        ServerRequests serverRequests,
         String serverName,
         CancellationRequests cancellationRequests,
         McpTracing mcpTracing) {

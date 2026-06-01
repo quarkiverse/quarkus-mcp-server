@@ -26,12 +26,20 @@ public class Messages {
     }
 
     public static JsonObject newError(Object id, int code, String message) {
+        return newError(id, code, message, null);
+    }
+
+    public static JsonObject newError(Object id, int code, String message, Object data) {
+        JsonObject error = new JsonObject()
+                .put("code", code)
+                .put("message", message);
+        if (data != null) {
+            error.put("data", data);
+        }
         JsonObject response = new JsonObject();
         response.put("jsonrpc", JsonRpc.VERSION);
         response.put("id", id);
-        response.put("error", new JsonObject()
-                .put("code", code)
-                .put("message", message));
+        response.put("error", error);
         return response;
     }
 

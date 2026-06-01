@@ -86,21 +86,21 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     // used to ensure atomic registration of features across multiple server keys
     protected final Lock registrationLock = new ReentrantLock();
 
-    final ResponseHandlers responseHandlers;
+    final ServerRequests serverRequests;
 
     final CancellationRequests cancellationRequests;
 
     final McpTracing mcpTracing;
 
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
-            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ResponseHandlers responseHandlers,
+            Instance<CurrentIdentityAssociation> currentIdentityAssociation, ServerRequests serverRequests,
             CancellationRequests cancellationRequests, McpServersRuntimeConfig config, McpMetadata metadata) {
         this.vertx = vertx;
         this.mapper = mapper;
         this.connectionManager = connectionManager;
         this.loggers = new ConcurrentHashMap<>();
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
-        this.responseHandlers = responseHandlers;
+        this.serverRequests = serverRequests;
         this.cancellationRequests = cancellationRequests;
         this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
         jakarta.enterprise.inject.Instance<McpTracing> mcpTracingInstance = Arc.container().select(McpTracing.class);
@@ -156,7 +156,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         Object id = Messages.getId(message);
         Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
         return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
-                mcpRequest.sender(), getProgressToken(message), responseHandlers, mcpRequest.serverName(),
+                mcpRequest.sender(), getProgressToken(message), serverRequests, mcpRequest.serverName(),
                 cancellationRequests, mcpTracing);
     }
 

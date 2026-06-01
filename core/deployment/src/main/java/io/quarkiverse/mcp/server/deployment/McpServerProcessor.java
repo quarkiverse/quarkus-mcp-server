@@ -102,14 +102,15 @@ import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
+import io.quarkiverse.mcp.server.runtime.RequestIdGenerator;
 import io.quarkiverse.mcp.server.runtime.ResourceContentsEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
-import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.SamplingRequestImpl;
+import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
@@ -210,7 +211,8 @@ class McpServerProcessor {
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
-        unremovable.addBeanClass(ResponseHandlers.class);
+        unremovable.addBeanClass(ServerRequests.class);
+        unremovable.addBeanClass(RequestIdGenerator.class);
         unremovable.addBeanClass(CancellationRequests.class);
         unremovable.addBeanClass(DefaultSchemaGenerator.class);
         unremovable.addBeanClass(McpObjectMapperCustomizer.class);

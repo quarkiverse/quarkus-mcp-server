@@ -29,16 +29,16 @@ public class ElicitationRequestImpl implements ElicitationRequest {
     private final Map<String, PrimitiveSchema> requestedSchema;
 
     private final Sender sender;
-    private final ResponseHandlers responseHandlers;
+    private final ServerRequests serverRequests;
     private final Duration timeout;
     private final McpTracing mcpTracing;
 
     ElicitationRequestImpl(String message, Map<String, PrimitiveSchema> requestedSchema, Sender sender,
-            ResponseHandlers responseHandlers, Duration timeout, McpTracing mcpTracing) {
+            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing) {
         this.message = message;
         this.requestedSchema = Map.copyOf(requestedSchema);
         this.sender = sender;
-        this.responseHandlers = responseHandlers;
+        this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
     }
@@ -59,7 +59,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
         AtomicLong id = new AtomicLong();
         Uni<ElicitationResponse> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<ElicitationResponse> future = new CompletableFuture<ElicitationResponse>();
-            Long requestId = responseHandlers.newRequest(m -> {
+            Long requestId = serverRequests.newRequest(m -> {
                 JsonObject result = m.getJsonObject("result");
                 if (result == null) {
                     throw new IllegalStateException("Invalid elicitation response: " + m);
@@ -79,7 +79,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
                 properties.put(e.getKey(), e.getValue().asJson());
             }
             schema.put("required", required);
-            JsonObject params = new JsonObject().put("message", message).put("requestedSchema", schema);
+            JsonObject params = new JsonObject().put("mode", "form").put("message", message).put("requestedSchema", schema);
             if (mcpTracing != null) {
                 JsonObject meta = params.getJsonObject("_meta");
                 if (meta == null) {
@@ -96,7 +96,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
                     .after(timeout).fail()
                     .onFailure(TimeoutException.class).invoke(te -> {
                         long requestId = id.get();
-                        if (requestId != 0 && responseHandlers.remove(requestId)) {
+                        if (requestId != 0 && serverRequests.removeResponseHandler(requestId)) {
                             LOG.debugf("Response handler for %s removed due to timeout", requestId);
                         }
                     });

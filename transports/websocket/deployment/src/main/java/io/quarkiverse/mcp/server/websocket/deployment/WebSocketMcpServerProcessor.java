@@ -26,7 +26,7 @@ import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
-import io.quarkiverse.mcp.server.runtime.ResponseHandlers;
+import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.websocket.runtime.WebSocketMcpMessageHandler;
@@ -127,7 +127,7 @@ public class WebSocketMcpServerProcessor {
                     ParamVar p7 = conc.parameter("resourceTemplateCompletionManager",
                             ResourceTemplateCompletionManagerImpl.class);
                     ParamVar p8 = conc.parameter("notificationManager", NotificationManagerImpl.class);
-                    ParamVar p9 = conc.parameter("responseHandlers", ResponseHandlers.class);
+                    ParamVar p9 = conc.parameter("serverRequests", ServerRequests.class);
                     ParamVar p10 = conc.parameter("cancellationRequests", CancellationRequests.class);
                     ParamVar p11 = conc.parameter("mcpMetadata", McpMetadata.class);
                     ParamVar p12 = conc.parameter("vertx", Vertx.class);
@@ -164,7 +164,7 @@ public class WebSocketMcpServerProcessor {
                             ResourceTemplateManagerImpl.class,
                             ResourceTemplateCompletionManagerImpl.class,
                             NotificationManagerImpl.class,
-                            ResponseHandlers.class,
+                            ServerRequests.class,
                             CancellationRequests.class,
                             McpMetadata.class,
                             Vertx.class,

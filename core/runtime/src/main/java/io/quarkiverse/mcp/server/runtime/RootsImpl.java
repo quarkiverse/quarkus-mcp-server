@@ -23,7 +23,8 @@ class RootsImpl implements Roots {
 
     static RootsImpl from(ArgumentProviders argProviders) {
         return new RootsImpl(argProviders.connection(), argProviders.sender(),
-                argProviders.responseHandlers(), argProviders.responseHandlers().getRootsTimeout(argProviders.serverName()),
+                argProviders.serverRequests(),
+                argProviders.serverRequests().getRootsTimeout(argProviders.serverName()),
                 argProviders.mcpTracing());
     }
 
@@ -31,17 +32,17 @@ class RootsImpl implements Roots {
 
     private final Sender sender;
 
-    private final ResponseHandlers responseHandlers;
+    private final ServerRequests serverRequests;
 
     private final Duration timeout;
 
     private final McpTracing mcpTracing;
 
-    RootsImpl(McpConnection connection, Sender sender, ResponseHandlers responseHandlers, Duration timeout,
+    RootsImpl(McpConnection connection, Sender sender, ServerRequests serverRequests, Duration timeout,
             McpTracing mcpTracing) {
         this.connection = connection;
         this.sender = sender;
-        this.responseHandlers = responseHandlers;
+        this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
     }
@@ -65,7 +66,7 @@ class RootsImpl implements Roots {
         AtomicLong id = new AtomicLong();
         Uni<List<Root>> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<List<Root>> future = new CompletableFuture<List<Root>>();
-            Long requestId = responseHandlers.newRequest(m -> {
+            Long requestId = serverRequests.newRequest(m -> {
                 JsonObject result = m.getJsonObject("result");
                 JsonArray roots = result.getJsonArray("roots");
                 List<Root> list = new ArrayList<>(roots.size());
@@ -96,7 +97,7 @@ class RootsImpl implements Roots {
                     .after(timeout).fail()
                     .onFailure(TimeoutException.class).invoke(te -> {
                         long requestId = id.get();
-                        if (requestId != 0 && responseHandlers.remove(requestId)) {
+                        if (requestId != 0 && serverRequests.removeResponseHandler(requestId)) {
                             LOG.debugf("Response handler for %s removed due to timeout", requestId);
                         }
                     });

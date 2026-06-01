@@ -59,12 +59,13 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             ObjectMapper mapper,
             ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
-            ResponseHandlers responseHandlers,
+            ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<PromptFilter> filters,
             @Any Instance<IconsProvider> iconsProviders,
             McpServersRuntimeConfig config) {
-        super(vertx, mapper, connectionManager, currentIdentityAssociation, responseHandlers, cancellationRequests, config,
+        super(vertx, mapper, connectionManager, currentIdentityAssociation, serverRequests, cancellationRequests,
+                config,
                 metadata);
         this.prompts = new ConcurrentHashMap<>();
         for (FeatureMetadata<PromptResponse> f : metadata.prompts()) {
