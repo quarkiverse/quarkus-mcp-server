@@ -52,6 +52,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
@@ -66,18 +67,21 @@ import io.quarkiverse.mcp.server.MetaField;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
+import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
@@ -819,7 +823,7 @@ class McpServerProcessor {
         ResultHandle retPrompts = Gizmo.newArrayList(promptsMethod);
         for (FeatureMethodBuildItem prompt : featureMethods.stream().filter(FeatureMethodBuildItem::isPrompt).toList()) {
             processFeatureMethod(counter, metadataCreator, promptsMethod, prompt, retPrompts,
-                    DotNames.PROMPT_ARG);
+                    DotNames.PROMPT_ARG, PromptArg.ELEMENT_NAME);
         }
         promptsMethod.returnValue(retPrompts);
 
@@ -829,7 +833,7 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem promptCompletion : featureMethods.stream().filter(FeatureMethodBuildItem::isPromptComplete)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, promptCompletionsMethod, promptCompletion, retPromptCompletions,
-                    DotNames.COMPLETE_ARG);
+                    DotNames.COMPLETE_ARG, CompleteArg.ELEMENT_NAME);
         }
         promptCompletionsMethod.returnValue(retPromptCompletions);
 
@@ -839,7 +843,8 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
             processFeatureMethod(counter, metadataCreator, toolsMethod, tool, retTools,
                     tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL) ? DotNames.LANGCHAIN4J_P
-                            : DotNames.TOOL_ARG);
+                            : DotNames.TOOL_ARG,
+                    ToolArg.ELEMENT_NAME);
         }
         toolsMethod.returnValue(retTools);
 
@@ -848,7 +853,7 @@ class McpServerProcessor {
         ResultHandle retResources = Gizmo.newArrayList(resourcesMethod);
         for (FeatureMethodBuildItem resource : featureMethods.stream().filter(FeatureMethodBuildItem::isResource).toList()) {
             processFeatureMethod(counter, metadataCreator, resourcesMethod, resource, retResources,
-                    null);
+                    null, null);
         }
         resourcesMethod.returnValue(retResources);
 
@@ -858,7 +863,7 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem resourceTemplate : featureMethods.stream()
                 .filter(FeatureMethodBuildItem::isResourceTemplate).toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplatesMethod, resourceTemplate, retResourceTemplates,
-                    DotNames.RESOURCE_TEMPLATE_ARG);
+                    DotNames.RESOURCE_TEMPLATE_ARG, ResourceTemplateArg.ELEMENT_NAME);
         }
         resourceTemplatesMethod.returnValue(retResourceTemplates);
 
@@ -871,7 +876,7 @@ class McpServerProcessor {
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, resourceTemplateCompletionsMethod, resourceTemplateCompletion,
                     retResourceTemplateCompletions,
-                    DotNames.COMPLETE_ARG);
+                    DotNames.COMPLETE_ARG, CompleteArg.ELEMENT_NAME);
         }
         resourceTemplateCompletionsMethod.returnValue(retResourceTemplateCompletions);
 
@@ -881,7 +886,7 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem notification : featureMethods.stream().filter(FeatureMethodBuildItem::isNotification)
                 .toList()) {
             processFeatureMethod(counter, metadataCreator, notificationsMethod, notification, retNotifications,
-                    null);
+                    null, null);
         }
         notificationsMethod.returnValue(retNotifications);
 
@@ -1278,13 +1283,21 @@ class McpServerProcessor {
 
         List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
         for (MethodParameterInfo param : parameters) {
+            String paramName = param.name();
+            AnnotationInstance resourceTemplateArg = param.annotation(DotNames.RESOURCE_TEMPLATE_ARG);
+            if (resourceTemplateArg != null) {
+                AnnotationValue nameValue = resourceTemplateArg.value("name");
+                if (nameValue != null && !ResourceTemplateArg.ELEMENT_NAME.equals(nameValue.asString())) {
+                    paramName = nameValue.asString();
+                }
+            }
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
                         "Resource template method must only consume String parameters: " + methodDesc(method));
             }
-            if (!variableMatcher.variables().contains(param.name())) {
+            if (!variableMatcher.variables().contains(paramName)) {
                 throw new IllegalStateException(
-                        "Parameter [" + param.name() + "] does not match an URI template variable: "
+                        "Parameter [" + paramName + "] does not match an URI template variable: "
                                 + methodDesc(method));
             }
         }
@@ -1322,7 +1335,7 @@ class McpServerProcessor {
 
     private void processFeatureMethod(AtomicInteger counter, ClassCreator clazz, MethodCreator method,
             FeatureMethodBuildItem featureMethod, ResultHandle retList,
-            DotName argAnnotationName) {
+            DotName argAnnotationName, String argNameSentinel) {
         String methodName = "meta$" + counter.incrementAndGet();
         MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
 
@@ -1343,7 +1356,8 @@ class McpServerProcessor {
                     } else {
                         nameValue = argAnnotation.value("name");
                     }
-                    if (nameValue != null) {
+                    if (nameValue != null
+                            && (argNameSentinel == null || !argNameSentinel.equals(nameValue.asString()))) {
                         name = nameValue.asString();
                     }
                     AnnotationValue titleValue = argAnnotation.value("title");

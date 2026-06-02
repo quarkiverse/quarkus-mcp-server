@@ -27,7 +27,7 @@ public class ResourceTemplatesTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
         client.when()
                 .resourcesTemplatesList(p -> {
-                    assertEquals(5, p.size());
+                    assertEquals(6, p.size());
                     ResourceTemplateInfo alpha = p.findByUriTemplate("file:///{path}");
                     assertEquals("Alpha...", alpha.title());
                     assertNotNull(alpha.annotations());
@@ -45,6 +45,8 @@ public class ResourceTemplatesTest extends McpServerTest {
                 .resourcesRead("file:///echo/bar")
                 .withErrorAssert(error -> assertEquals(JsonRpcErrorCodes.INTERNAL_ERROR, error.code()))
                 .send()
+                .resourcesRead("file:///hotel/alice/42",
+                        r -> assertEquals("alice:42", r.contents().get(0).asText().text()))
                 .thenAssertResults();
     }
 
