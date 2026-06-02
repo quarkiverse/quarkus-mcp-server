@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.sse.it;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.inject.Inject;
 
@@ -22,6 +24,7 @@ import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolManager;
 import io.smallrye.mutiny.Uni;
 
 public class ServerFeatures {
@@ -29,6 +32,10 @@ public class ServerFeatures {
     @Inject
     CodeService codeService;
 
+    @Inject
+    ToolManager toolManager;
+
+    @Deprecated(since = "1.0")
     @Icons(ToolIcons.class)
     @Tool
     TextContent toLowerCase(String value) {
@@ -78,6 +85,22 @@ public class ServerFeatures {
     @Tool
     TextContent failingTool(String value) {
         throw new RuntimeException("Tool execution failed: " + value);
+    }
+
+    @Tool
+    String methodInfo(String toolName) {
+        ToolManager.ToolInfo info = toolManager.getTool(toolName);
+        if (info == null) {
+            return "not found";
+        }
+        Optional<Method> method = info.method();
+        if (method.isEmpty()) {
+            return "no method";
+        }
+        Method m = method.get();
+        Deprecated deprecated = m.getAnnotation(Deprecated.class);
+        String annotation = deprecated != null ? "@Deprecated(since=" + deprecated.since() + ")" : "";
+        return m.getDeclaringClass().getName() + "#" + m.getName() + annotation;
     }
 
     @Tool

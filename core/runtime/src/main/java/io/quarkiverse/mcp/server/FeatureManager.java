@@ -1,7 +1,9 @@
 package io.quarkiverse.mcp.server;
 
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -50,6 +52,14 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
          * @return {@code true} if backed by a business method of a CDI bean, {@code false} otherwise
          */
         boolean isMethod();
+
+        /**
+         * @return the business method of a CDI bean, or an empty {@link Optional} for programmatically registered features
+         * @see #isMethod()
+         */
+        default Optional<Method> method() {
+            return Optional.empty();
+        }
 
         /**
          * @return the timestamp when this feature was registered
