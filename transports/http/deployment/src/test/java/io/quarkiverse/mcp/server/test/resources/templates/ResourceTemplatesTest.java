@@ -50,7 +50,7 @@ public class ResourceTemplatesTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .resourcesTemplatesList(p -> {
-                    assertEquals(7, p.size());
+                    assertEquals(8, p.size());
 
                     ResourceTemplateInfo alpha = p.findByUriTemplate("file:///{path}");
                     assertEquals("Alpha...", alpha.title());
@@ -94,6 +94,8 @@ public class ResourceTemplatesTest extends McpServerTest {
                 .resourcesRead("file:///foxtrot/test",
                         r -> assertEquals("{\"path\":\"test\"}", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///golf/123", r -> assertEquals("golf-123", r.contents().get(0).asText().text()))
+                .resourcesRead("file:///hotel/alice/42",
+                        r -> assertEquals("alice:42", r.contents().get(0).asText().text()))
                 .thenAssertResults();
     }
 
