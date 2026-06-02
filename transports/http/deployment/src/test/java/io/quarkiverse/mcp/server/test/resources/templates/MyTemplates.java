@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 
@@ -48,6 +49,12 @@ public class MyTemplates {
     @ResourceTemplate(uriTemplate = "file:///echo/{foo}")
     TextResourceContents echo(String foo, RequestUri uri) {
         return TextResourceContents.create(uri.value(), foo);
+    }
+
+    @ResourceTemplate(uriTemplate = "file:///hotel/{userName}/{itemId}")
+    TextResourceContents hotel(@ResourceTemplateArg(name = "userName") String user,
+            @ResourceTemplateArg(name = "itemId") String item, RequestUri uri) {
+        return TextResourceContents.create(uri.value(), user + ":" + item);
     }
 
 }
