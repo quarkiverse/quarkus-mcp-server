@@ -1,4 +1,4 @@
-:project-version: 1.10.5
+:project-version: 1.10.6
 
 :examples-dir: ./../examples/
 :spec-version: 2025-11-25
