@@ -153,6 +153,7 @@ import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
 import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
@@ -1171,7 +1172,8 @@ class McpServerProcessor {
     void registerForReflection(List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies) {
+            BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies,
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
         // JsonObject.encode() may use Jackson under the hood which requires reflection
         for (FeatureMethodBuildItem m : featureMethods) {
             org.jboss.jandex.Type returnType = m.getMethod().returnType();
@@ -1189,6 +1191,7 @@ class McpServerProcessor {
                     reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
                 }
             }
+            reflectiveMethods.produce(new ReflectiveMethodBuildItem(true, m.getMethod()));
         }
 
         // Register all default value converters
@@ -1674,6 +1677,7 @@ class McpServerProcessor {
                         Const.of(featureMethod.getSize()),
                         args,
                         Const.of(featureMethod.getMethod().declaringClass().name().toString()),
+                        Const.of(featureMethod.getMethod().name()),
                         toolAnnotations,
                         resourceAnnotations,
                         serverNames,

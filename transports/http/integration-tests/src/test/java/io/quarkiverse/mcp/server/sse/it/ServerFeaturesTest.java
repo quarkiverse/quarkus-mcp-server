@@ -45,7 +45,7 @@ class ServerFeaturesTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .toolsList(p -> {
-                    assertEquals(5, p.size());
+                    assertEquals(6, p.size());
                     JsonObject schema = p.findByName("toLowerCase").inputSchema();
                     JsonObject properties = schema.getJsonObject("properties");
                     assertEquals(1, properties.size());
@@ -74,6 +74,18 @@ class ServerFeaturesTest {
                     assertEquals(1, icons.size());
                     assertEquals("file://tool-icon", icons.getJsonObject(0).getString("src"));
                     assertEquals("image/png", icons.getJsonObject(0).getString("mimeType"));
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testMethodInfo() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                .toolsCall("methodInfo", Map.of("toolName", "toLowerCase"), r -> {
+                    assertEquals(
+                            "io.quarkiverse.mcp.server.sse.it.ServerFeatures#toLowerCase@Deprecated(since=1.0)",
+                            r.firstContent().asText().text());
                 })
                 .thenAssertResults();
     }

@@ -3,6 +3,8 @@ package io.quarkiverse.mcp.server.runtime;
 import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
 import static io.quarkiverse.mcp.server.runtime.Messages.getProgressToken;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.HashMap;
@@ -406,6 +408,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         private final Instance<IconsProvider> iconsProviders;
         protected final IconsProvider iconsProvider;
 
+        private volatile Optional<Method> method;
+
         FeatureMetadataInvoker(FeatureMetadata<RESPONSE> metadata, Instance<IconsProvider> iconsProviders) {
             this.metadata = metadata;
             this.createdAt = Timestamps.next();
@@ -420,6 +424,48 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         public Instant createdAt() {
             return createdAt;
+        }
+
+        public Optional<Method> method() {
+            Optional<Method> ret = method;
+            if (ret == null) {
+                ret = resolveMethod();
+                method = ret;
+            }
+            return ret;
+        }
+
+        private Optional<Method> resolveMethod() {
+            FeatureMethodInfo info = metadata.info();
+            Class<?>[] paramTypes = info.arguments().stream()
+                    .map(this::parameterType)
+                    .toArray(Class<?>[]::new);
+            try {
+                Class<?> declaringClass = Thread.currentThread().getContextClassLoader().loadClass(info.declaringClassName());
+                return Optional.of(declaringClass.getDeclaredMethod(info.methodName(), paramTypes));
+            } catch (NoSuchMethodException | ClassNotFoundException e) {
+                LOG.errorf(e, "Unable to resolve method: %s#%s", info.declaringClassName(), info.methodName());
+                return Optional.empty();
+            }
+        }
+
+        private Class<?> parameterType(FeatureArgument arg) {
+            return switch (arg.optionalKind()) {
+                case GENERIC -> Optional.class;
+                case INT -> OptionalInt.class;
+                case LONG -> OptionalLong.class;
+                case DOUBLE -> OptionalDouble.class;
+                case NONE -> rawType(arg.type());
+            };
+        }
+
+        private Class<?> rawType(Type type) {
+            if (type instanceof Class<?> c) {
+                return c;
+            } else if (type instanceof ParameterizedType pt) {
+                return (Class<?>) pt.getRawType();
+            }
+            throw new IllegalArgumentException("Unsupported type: " + type);
         }
 
         @Override
