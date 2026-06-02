@@ -13,6 +13,7 @@ import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource.Annotations;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplate;
+import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.vertx.core.json.JsonObject;
@@ -65,6 +66,12 @@ public class MyTemplates {
     @ResourceTemplate(uriTemplate = "file:///golf/{id}", title = "Golf Resource", description = "Resource with lastModified annotation", mimeType = "text/plain", annotations = @Annotations(audience = Role.ASSISTANT, lastModified = "2024-01-15T10:30:00Z", priority = 0.7))
     TextResourceContents golf(String id) {
         return TextResourceContents.create("file:///golf/" + id, "golf-" + id);
+    }
+
+    @ResourceTemplate(uriTemplate = "file:///hotel/{userName}/{itemId}")
+    TextResourceContents hotel(@ResourceTemplateArg(name = "userName") String user,
+            @ResourceTemplateArg(name = "itemId") String item, RequestUri uri) {
+        return TextResourceContents.create(uri.value(), user + ":" + item);
     }
 
 }

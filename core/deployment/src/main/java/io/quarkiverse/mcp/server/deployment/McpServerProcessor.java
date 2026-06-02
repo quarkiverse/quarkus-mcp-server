@@ -53,6 +53,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
@@ -67,18 +68,21 @@ import io.quarkiverse.mcp.server.MetaField;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ModelHint;
 import io.quarkiverse.mcp.server.ModelPreferences;
+import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceFilter;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
 import io.quarkiverse.mcp.server.Role;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
@@ -912,7 +916,10 @@ class McpServerProcessor {
                             .toList()) {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
-                                bc.invokeVirtual(processFeatureMethod(counter, cc, prompt, DotNames.PROMPT_ARG), cc.this_()));
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, prompt, DotNames.PROMPT_ARG,
+                                                PromptArg.ELEMENT_NAME),
+                                        cc.this_()));
                     }
                     bc.return_(ret);
                 });
@@ -929,7 +936,9 @@ class McpServerProcessor {
                             .toList()) {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
-                                bc.invokeVirtual(processFeatureMethod(counter, cc, promptCompletion, DotNames.COMPLETE_ARG),
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, promptCompletion, DotNames.COMPLETE_ARG,
+                                                CompleteArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -950,7 +959,8 @@ class McpServerProcessor {
                                 bc.invokeVirtual(processFeatureMethod(counter, cc, tool,
                                         tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)
                                                 ? DotNames.LANGCHAIN4J_P
-                                                : DotNames.TOOL_ARG),
+                                                : DotNames.TOOL_ARG,
+                                        ToolArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -968,7 +978,7 @@ class McpServerProcessor {
                             .toList()) {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
-                                bc.invokeVirtual(processFeatureMethod(counter, cc, resource, null),
+                                bc.invokeVirtual(processFeatureMethod(counter, cc, resource, null, null),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -987,7 +997,8 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, resourceTemplate, DotNames.RESOURCE_TEMPLATE_ARG),
+                                        processFeatureMethod(counter, cc, resourceTemplate, DotNames.RESOURCE_TEMPLATE_ARG,
+                                                ResourceTemplateArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1006,7 +1017,8 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, resourceTemplateCompletion, DotNames.COMPLETE_ARG),
+                                        processFeatureMethod(counter, cc, resourceTemplateCompletion, DotNames.COMPLETE_ARG,
+                                                CompleteArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1025,7 +1037,7 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, notification, null),
+                                        processFeatureMethod(counter, cc, notification, null, null),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1449,13 +1461,21 @@ class McpServerProcessor {
 
         List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
         for (MethodParameterInfo param : parameters) {
+            String paramName = param.name();
+            AnnotationInstance resourceTemplateArg = param.annotation(DotNames.RESOURCE_TEMPLATE_ARG);
+            if (resourceTemplateArg != null) {
+                AnnotationValue nameValue = resourceTemplateArg.value("name");
+                if (nameValue != null && !ResourceTemplateArg.ELEMENT_NAME.equals(nameValue.asString())) {
+                    paramName = nameValue.asString();
+                }
+            }
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
                         "Resource template method must only consume String parameters: " + methodDesc(method));
             }
-            if (!variableMatcher.variables().contains(param.name())) {
+            if (!variableMatcher.variables().contains(paramName)) {
                 throw new IllegalStateException(
-                        "Parameter [" + param.name() + "] does not match an URI template variable: "
+                        "Parameter [" + paramName + "] does not match an URI template variable: "
                                 + methodDesc(method));
             }
         }
@@ -1492,7 +1512,7 @@ class McpServerProcessor {
     }
 
     private MethodDesc processFeatureMethod(AtomicInteger counter, ClassCreator cc,
-            FeatureMethodBuildItem featureMethod, DotName argAnnotationName) {
+            FeatureMethodBuildItem featureMethod, DotName argAnnotationName, String argNameSentinel) {
         return cc.method("meta$" + counter.incrementAndGet(), mc -> {
             mc.returning(FeatureMetadata.class);
 
@@ -1515,7 +1535,8 @@ class McpServerProcessor {
                             } else {
                                 nameValue = argAnnotation.value("name");
                             }
-                            if (nameValue != null) {
+                            if (nameValue != null
+                                    && (argNameSentinel == null || !argNameSentinel.equals(nameValue.asString()))) {
                                 name = nameValue.asString();
                             }
                             AnnotationValue titleValue = argAnnotation.value("title");
