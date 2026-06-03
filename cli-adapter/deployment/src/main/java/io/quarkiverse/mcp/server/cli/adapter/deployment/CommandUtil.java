@@ -96,7 +96,13 @@ class CommandUtil {
             a.annotations(DotNames.OPTION).forEach(o -> {
                 String[] names = o.value("names").asStringArray();
                 if (names.length != 0) {
-                    options.put(names[0], a);
+                    String longest = names[0];
+                    for (int i = 1; i < names.length; i++) {
+                        if (names[i].length() > longest.length()) {
+                            longest = names[i];
+                        }
+                    }
+                    options.put(longest, a);
                 }
             });
         });

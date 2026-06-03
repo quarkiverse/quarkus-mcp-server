@@ -19,7 +19,7 @@ public class McpAdapter {
     public static Integer startMcp() {
         PrintStream stdout = System.out;
         try {
-            StdioMcpMessageHandler mcpMessageHandler = Arc.container().instance(StdioMcpMessageHandler.class).get();
+            StdioMcpMessageHandler mcpMessageHandler = Arc.requireContainer().instance(StdioMcpMessageHandler.class).get();
             System.setOut(new PrintStream(OutputStream.nullOutputStream()));
             mcpMessageHandler.initialize(stdout);
             Quarkus.waitForExit();
