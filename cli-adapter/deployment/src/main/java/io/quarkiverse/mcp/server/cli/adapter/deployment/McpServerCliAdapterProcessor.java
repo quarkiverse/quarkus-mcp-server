@@ -91,7 +91,7 @@ class McpServerCliAdapterProcessor {
 
         Optional<DotName> topCommand = CommandUtil.findTopCommand(index);
         topCommand.ifPresentOrElse(dotName -> {
-            // Top command has been found, then collect all subcommanS
+            // Top command has been found, then collect all subcommands
             ClassInfo classInfo = index.getClassByName(dotName);
             if (classInfo != null) {
                 commandClasses.putAll(collectCommandClassNames(index, classInfo));
@@ -313,7 +313,7 @@ class McpServerCliAdapterProcessor {
 
             for (Entry<String, FieldInfo> entry : options.entrySet()) {
                 FieldInfo option = entry.getValue();
-                String optionName = option.name().toString();
+                String optionName = entry.getKey();
                 String optionDescription = String.join("\n",
                         option.annotation(DotNames.OPTION).value("description").asStringArray());
 

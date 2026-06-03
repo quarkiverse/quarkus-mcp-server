@@ -16,6 +16,7 @@ The CLI adapter bridges Quarkus CLI commands and MCP by:
 * Handling standard input/output for MCP communication
 
 This means your CLI application can run in two modes:
+
 - Normal CLI mode: Traditional command-line interface (script, manual invocation)
 - MCP mode: Exposes commands as tools to MCP clients (with `--mcp` flag)
 
@@ -206,8 +207,8 @@ The command becomes available as an MCP tool:
 |`String language` → `"language": {"type": "string"}`
 
 |`@Option`
-|Tool argument
-|`@Option(names = "-f") String format` → `"format": {...}`
+|Tool argument (named after the longest option name)
+|`@Option(names = {"-f", "--format"}) String fmt` → `"format": {...}`
 
 |Default value
 |Argument default
@@ -266,6 +267,7 @@ class LintCommand implements Callable<Integer> {
 ----
 
 Each subcommand becomes an MCP tool:
+
 - `formatcommand` - Format source code
 - `lintcommand` - Lint source code
 - `testcommand` - Run tests
@@ -307,17 +309,23 @@ Commands will be discovered by AI based on their descriptions:
 
 === Use Meaningful Parameter Names
 
-Parameter names become argument names in the tool schema:
+`@Parameters` field names become argument names in the tool schema:
 
 [source,java]
 ----
 @Parameters(description = "Source file to analyze")
 String sourceFile; // <1>
-
-// Not as clear:
-// String file;
 ----
-<1> Descriptive names make the tool easier to use.
+<1> Descriptive field names make the tool easier to use.
+
+For `@Option`, the MCP argument name is derived from the longest option name (with leading dashes stripped), not from the Java field name:
+
+[source,java]
+----
+@Option(names = {"-f", "--format"}, description = "Output format")
+String outputFormat; // <1>
+----
+<1> The MCP argument name will be `format` (from `--format`), not `outputFormat`.
 
 === Set Sensible Defaults
 
@@ -358,5 +366,6 @@ public Integer call() {
 * STDIO transport only: The CLI adapter uses standard input/output for MCP communication
 * Synchronous execution: Each tool call blocks until the command completes
 * No streaming: Tool responses are returned only after the command finishes
+* No concurrent tool calls: The CLI adapter redirects `System.out` to capture command output, which is not safe under concurrent execution. MCP clients should not send multiple tool call requests in parallel
 
 For more advanced MCP server features (HTTP transport, streaming, multiple clients), consider implementing tools directly with the standard MCP server annotations.

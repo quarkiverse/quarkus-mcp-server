@@ -31,11 +31,16 @@ public class ServerFeaturesIT {
                         assertNotNull(tool);
                         assertNotNull(tool.inputSchema());
                         var properties = tool.inputSchema().getJsonObject("properties");
-                        assertEquals(1, properties.size());
+                        assertEquals(2, properties.size());
                         assertNotNull(properties.getJsonObject("language"));
                         assertEquals("string", properties.getJsonObject("language").getString("type"));
+                        // Verify the @Option parameter name derives from the longest CLI option name,
+                        // not the Java field name ("codeStyle") or the short form ("s")
+                        assertNotNull(properties.getJsonObject("style"),
+                                "Option parameter should be named 'style' (from --style), not 'codeStyle' (field name)");
+                        assertEquals("string", properties.getJsonObject("style").getString("type"));
                     })
-                    .toolsCall("codeservicecommand", Map.of("language", "java"), response -> {
+                    .toolsCall("codeservicecommand", Map.of("language", "java", "style", "plain"), response -> {
                         assertFalse(response.isError());
                         assertEquals(1, response.content().size());
                         assertEquals("System.out.println(\"Hello world!\");",
