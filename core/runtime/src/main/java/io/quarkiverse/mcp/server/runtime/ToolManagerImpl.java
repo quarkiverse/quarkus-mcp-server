@@ -439,6 +439,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public void setArguments(JsonObject arguments) {
+            if (arguments == null) {
+                arguments = new JsonObject();
+            }
             JsonObject newArgs = new JsonObject(Map.copyOf(arguments.getMap()));
             this.arguments.set(newArgs);
         }
