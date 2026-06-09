@@ -401,7 +401,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         ToolInputContextImpl(ToolInfo tool, JsonObject message, McpRequest request) {
             super(tool, message, request);
             this.arguments = new AtomicReference<>();
-            setArguments(Messages.getArguments(getParams(message)));
+            JsonObject args = Messages.getArguments(getParams(message));
+            setArguments(args != null ? args : new JsonObject());
         }
 
         @Override
@@ -411,7 +412,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public void setArguments(JsonObject arguments) {
-            JsonObject newArgs = new JsonObject(Map.copyOf(arguments.getMap()));
+            JsonObject newArgs = new JsonObject(Map.copyOf(Objects.requireNonNull(arguments).getMap()));
             this.arguments.set(newArgs);
         }
 
