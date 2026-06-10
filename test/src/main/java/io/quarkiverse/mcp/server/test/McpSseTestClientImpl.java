@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -45,7 +44,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     private static final Logger LOG = Logger.getLogger(McpSseTestClientImpl.class);
 
     private final URI sseEndpoint;
-    private final HttpClient httpClient;
     private final boolean expectSseConnectionFailure;
 
     private volatile McpSseClient client;
@@ -57,7 +55,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 builder.openTelemetry);
         this.sseEndpoint = createEndpointUri(builder.baseUri, builder.ssePath);
         this.expectSseConnectionFailure = builder.expectSseConnectionFailure;
-        this.httpClient = HttpClient.newHttpClient();
         LOG.debugf("McpSseTestClient created with SSE endpoint: %s", sseEndpoint);
     }
 
@@ -92,7 +89,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
 
         // Normally, the CF returned from the connect method never completes
-        CompletableFuture<java.net.http.HttpResponse<Void>> cf = client.connect(headers);
+        CompletableFuture<java.net.http.HttpResponse<Void>> cf = client.connect(HttpClients.getDefault(), headers);
         if (expectSseConnectionFailure) {
             try {
                 java.net.http.HttpResponse<Void> response = cf.get(5, TimeUnit.SECONDS);
@@ -392,7 +389,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         if (messageEndpoint == null) {
             throw new IllegalStateException("Message endpoint not ready");
         }
-        return httpClient.sendAsync(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+        return HttpClients.getDefault().sendAsync(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
     }
 
     private HttpResponse sendSync(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
@@ -401,7 +398,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
         java.net.http.HttpResponse<String> r;
         try {
-            r = httpClient.send(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+            r = HttpClients.getDefault().send(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
             MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
             for (Entry<String, List<String>> e : r.headers().map().entrySet()) {
                 for (String val : e.getValue()) {

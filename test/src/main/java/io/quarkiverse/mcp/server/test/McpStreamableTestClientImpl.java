@@ -86,7 +86,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         LOG.infof("Mcp-Session-Id received: %s", mcpSessionId);
 
         JsonObject initResponse = new JsonObject(response.body());
-        client.state.responses.add(initResponse);
+        client.state.addResponse(initResponse);
         JsonObject initResult = assertResultResponse(initMessage, initResponse);
         assertNotNull(initResult);
 

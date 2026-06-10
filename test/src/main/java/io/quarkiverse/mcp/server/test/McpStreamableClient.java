@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -18,14 +17,12 @@ import io.vertx.core.json.JsonObject;
 
 class McpStreamableClient extends SseClient {
 
-    final HttpClient httpClient;
     final URI mcpEndpoint;
     final McpClientState state;
     final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
 
     McpStreamableClient(URI mcpEndpoint) {
         super(mcpEndpoint);
-        this.httpClient = HttpClient.newHttpClient();
         this.mcpEndpoint = mcpEndpoint;
         this.state = new McpClientState();
     }
@@ -59,7 +56,7 @@ class McpStreamableClient extends SseClient {
 
     private HttpResponse<String> doSend(HttpRequest request) {
         try {
-            return httpClient.send(request, BodyHandlers.ofString());
+            return HttpClients.getDefault().send(request, BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted");
@@ -69,13 +66,14 @@ class McpStreamableClient extends SseClient {
     }
 
     void send(String body, MultiMap headers) {
-        McpStremableRequest request = new McpStremableRequest(httpClient, mcpEndpoint, headers, state.responses::add,
+        McpStremableRequest request = new McpStremableRequest(HttpClients.getDefault(), mcpEndpoint, headers,
+                state::addResponse,
                 state.notifications::add, state.requests::add);
         request.send(body);
     }
 
     CompletableFuture<HttpResponse<Void>> connectSubsidiarySse(MultiMap headers) {
-        return connect(httpClient, headers);
+        return connect(HttpClients.getDefault(), headers);
     }
 
     @Override
@@ -84,7 +82,7 @@ class McpStreamableClient extends SseClient {
             JsonObject json = new JsonObject(event.data());
             if (json.getValue("id") != null) {
                 if (json.containsKey("result") || json.containsKey("error")) {
-                    state.responses.add(json);
+                    state.addResponse(json);
                 } else {
                     state.requests.add(json);
                 }

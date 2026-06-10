@@ -28,7 +28,7 @@ class McpSseClient extends SseClient {
     }
 
     public SseEvent waitForFirstEvent() {
-        Awaitility.await().until(() -> !allEvents.isEmpty());
+        Awaitility.await().pollInterval(McpClientState.POLL_INTERVAL).until(() -> !allEvents.isEmpty());
         return allEvents.get(0);
     }
 
@@ -39,7 +39,7 @@ class McpSseClient extends SseClient {
             JsonObject json = new JsonObject(event.data());
             if (json.containsKey("id")) {
                 if (json.containsKey("result") || json.containsKey("error")) {
-                    state.responses.add(json);
+                    state.addResponse(json);
                 } else {
                     // Request from the server
                     state.requests.add(json);
