@@ -104,7 +104,7 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
                     JsonObject json = new JsonObject(line);
                     if (json.containsKey("id")) {
                         if (json.containsKey("result") || json.containsKey("error")) {
-                            state.responses.add(json);
+                            state.addResponse(json);
                         } else {
                             // Request from the server
                             state.requests.add(json);
