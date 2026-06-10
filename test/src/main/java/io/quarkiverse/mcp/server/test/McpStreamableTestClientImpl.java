@@ -40,7 +40,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private McpStreamableTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.autoPong, builder.authorization, builder.title, builder.description, builder.websiteUrl, builder.icons,
                 builder.openTelemetry);
         this.mcpEndpoint = createEndpointUri(builder.baseUri, builder.mcpPath);
         this.client = new McpStreamableClient(mcpEndpoint);
@@ -65,7 +65,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         }
         JsonObject initMessage = newInitMessage();
         MultiMap initHeaders = additionalHeaders.apply(initMessage);
-        addAuthorizationHeader(initHeaders, clientBasicAuth);
+        addAuthorizationHeader(initHeaders, clientAuthorization);
         HttpResponse<String> response;
         try (TracingHandle ignored = startTracingSpan(initMessage, initHeaders)) {
             response = client.sendSync(initMessage.encode(), initHeaders);
@@ -131,7 +131,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
         MultiMap headers = additionalHeaders(nofitication);
-        addAuthorizationHeader(headers, clientBasicAuth);
+        addAuthorizationHeader(headers, clientAuthorization);
         try (TracingHandle ignored = startTracingSpan(nofitication, headers)) {
             response = client.sendSync(nofitication.encode(), headers);
         }
@@ -187,34 +187,34 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     public void sendAndForget(JsonObject message) {
         MultiMap headers = additionalHeaders(message);
         try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
-            send(message, headers, clientBasicAuth);
+            send(message, headers, clientAuthorization);
         }
     }
 
-    private void send(JsonObject message, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        send(message.encode(), additionalHeaders, basicAuth);
+    private void send(JsonObject message, MultiMap additionalHeaders, Authorization authorization) {
+        send(message.encode(), additionalHeaders, authorization);
     }
 
-    private void send(JsonArray batch, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        send(batch.encode(), additionalHeaders, basicAuth);
+    private void send(JsonArray batch, MultiMap additionalHeaders, Authorization authorization) {
+        send(batch.encode(), additionalHeaders, authorization);
     }
 
-    private void send(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+    private void send(String data, MultiMap additionalHeaders, Authorization authorization) {
         if (!connected.get()) {
             throw new IllegalStateException("Client is not connected");
         }
-        addAuthorizationHeader(additionalHeaders, basicAuth);
+        addAuthorizationHeader(additionalHeaders, authorization);
         client.send(data, additionalHeaders);
     }
 
     class McpStreamableAssertImpl extends McpAssertBase implements McpStreamableAssert {
 
         protected final AtomicReference<MultiMap> additionalHeaders;
-        protected final AtomicReference<BasicAuth> basicAuth;
+        protected final AtomicReference<Authorization> authorization;
 
         private McpStreamableAssertImpl() {
             this.additionalHeaders = new AtomicReference<>();
-            this.basicAuth = new AtomicReference<>();
+            this.authorization = new AtomicReference<>();
         }
 
         @Override
@@ -225,13 +225,13 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         @Override
         public McpStreamableAssert basicAuth(String username, String password) {
-            this.basicAuth.set(new BasicAuth(username, password));
+            this.authorization.set(Authorization.basic(username, password));
             return this;
         }
 
         @Override
         public McpStreamableAssert noBasicAuth() {
-            this.basicAuth.set(new BasicAuth(null, null));
+            this.authorization.set(Authorization.none());
             return this;
         }
 
@@ -242,11 +242,11 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
         protected TracingHandle doSend(JsonObject message) {
             try (TracingHandle tracingHandle = startTracingSpan(message, additionalHeaders(message))) {
-                BasicAuth basicAuth = this.basicAuth.get();
-                if (basicAuth == null) {
-                    basicAuth = clientBasicAuth;
+                Authorization authorization = this.authorization.get();
+                if (authorization == null) {
+                    authorization = clientAuthorization;
                 }
-                send(message, additionalHeaders(message), basicAuth);
+                send(message, additionalHeaders(message), authorization);
             }
             return null;
         }
@@ -279,11 +279,11 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             if (additionalHeaders != null) {
                 headers.addAll(additionalHeaders);
             }
-            BasicAuth basicAuth = this.basicAuth.get();
-            if (basicAuth == null) {
-                basicAuth = clientBasicAuth;
+            Authorization authorization = this.authorization.get();
+            if (authorization == null) {
+                authorization = clientAuthorization;
             }
-            send(batch, headers, basicAuth);
+            send(batch, headers, authorization);
             return super.thenAssertResults();
         }
 
@@ -295,7 +295,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         private String mcpPath = "/mcp";
         private URI baseUri = McpAssured.baseUri;
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
-        private BasicAuth basicAuth;
+        private Authorization authorization;
         private boolean openSubsidiarySse = false;
         private Consumer<ConnectFailureResponse> connectFailureConsumer;
 
@@ -334,7 +334,16 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
             if (password == null) {
                 throw mustNotBeNull("password");
             }
-            this.basicAuth = new BasicAuth(username, password);
+            this.authorization = Authorization.basic(username, password);
+            return this;
+        }
+
+        @Override
+        public McpStreamableTestClient.Builder setBearerToken(String token) {
+            if (token == null) {
+                throw mustNotBeNull("token");
+            }
+            this.authorization = Authorization.bearer(token);
             return this;
         }
 

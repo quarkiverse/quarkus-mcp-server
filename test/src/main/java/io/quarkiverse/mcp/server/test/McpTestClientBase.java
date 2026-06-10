@@ -64,7 +64,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected final Set<ClientCapability> clientCapabilities;
     protected final Function<JsonObject, MultiMap> additionalHeaders;
     protected final boolean autoPong;
-    protected final BasicAuth clientBasicAuth;
+    protected final Authorization clientAuthorization;
     protected final OpenTelemetry openTelemetry;
 
     protected final AtomicBoolean connected;
@@ -76,7 +76,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected Set<Icon> icons;
 
     McpTestClientBase(String name, String version, String protocolVersion, Set<ClientCapability> clientCapabilities,
-            Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, BasicAuth clientBasicAuth,
+            Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, Authorization clientAuthorization,
             String title, String description, String websiteUrl, Set<Icon> icons, OpenTelemetry openTelemetry) {
         this.name = name;
         this.version = version;
@@ -84,7 +84,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         this.clientCapabilities = clientCapabilities;
         this.additionalHeaders = additionalHeaders;
         this.autoPong = autoPong;
-        this.clientBasicAuth = clientBasicAuth;
+        this.clientAuthorization = clientAuthorization;
         this.openTelemetry = openTelemetry;
         this.connected = new AtomicBoolean();
         this.title = title;
@@ -387,17 +387,31 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         return URI.create(endpointUri);
     }
 
-    record BasicAuth(String username, String password) {
+    /**
+     * The value of the {@code Authorization} header, e.g. the {@code Basic} or {@code Bearer} scheme.
+     */
+    record Authorization(String headerValue) {
+
+        static Authorization basic(String username, String password) {
+            return new Authorization(getBasicAuthenticationHeader(username, password));
+        }
+
+        static Authorization bearer(String token) {
+            return new Authorization("Bearer " + token);
+        }
+
+        static Authorization none() {
+            return new Authorization(null);
+        }
 
         boolean isEmpty() {
-            return username == null;
+            return headerValue == null;
         }
     }
 
-    protected void addAuthorizationHeader(MultiMap headers, BasicAuth basicAuth) {
-        if (basicAuth != null) {
-            headers.add(HEADER_AUTHORIZATION,
-                    McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
+    protected void addAuthorizationHeader(MultiMap headers, Authorization authorization) {
+        if (authorization != null && !authorization.isEmpty()) {
+            headers.add(HEADER_AUTHORIZATION, authorization.headerValue());
         }
     }
 

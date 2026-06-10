@@ -37,7 +37,7 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
     McpWebSocketTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, null,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.autoPong, builder.authorization, builder.title, builder.description, builder.websiteUrl, builder.icons,
                 builder.openTelemetry);
         this.endpointUri = createEndpointUri(builder.baseUri, builder.endpointPath);
         LOG.debugf("McpWebSocketTestClient created with WebSocket endpoint: %s", endpointUri);
@@ -60,10 +60,7 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
             }
             // TODO additional headers
             MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-            if (clientBasicAuth != null) {
-                headers.add(HEADER_AUTHORIZATION,
-                        McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
-            }
+            addAuthorizationHeader(headers, clientAuthorization);
 
             client = new McpWebSocketClient(endpointUri, vertx, headers);
         }
@@ -187,12 +184,21 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
         private String endpointPath = "/mcp/ws";
         private URI baseUri = McpAssured.baseUri;
-        private BasicAuth basicAuth;
+        private Authorization authorization;
 
         @Override
         public McpWebSocketTestClient.Builder setBasicAuth(String username,
                 String password) {
-            this.basicAuth = new BasicAuth(username, password);
+            this.authorization = Authorization.basic(username, password);
+            return this;
+        }
+
+        @Override
+        public McpWebSocketTestClient.Builder setBearerToken(String token) {
+            if (token == null) {
+                throw mustNotBeNull("token");
+            }
+            this.authorization = Authorization.bearer(token);
             return this;
         }
 
