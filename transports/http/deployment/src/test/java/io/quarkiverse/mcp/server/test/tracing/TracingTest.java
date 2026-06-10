@@ -49,6 +49,8 @@ public class TracingTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
+            // OTel is disabled by default
+            .overrideConfigKey("quarkus.otel.enabled", "true")
             .overrideConfigKey("quarkus.otel.bsp.schedule.delay", "100ms")
             .overrideConfigKey("quarkus.otel.metrics.exporter", "none")
             .overrideConfigKey("quarkus.otel.logs.exporter", "none")

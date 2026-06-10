@@ -3,6 +3,9 @@ package io.quarkiverse.mcp.server.test;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -38,7 +41,7 @@ class McpWebSocketClient {
             JsonObject json = new JsonObject(b);
             if (json.containsKey("id")) {
                 if (json.containsKey("result") || json.containsKey("error")) {
-                    state.responses.add(json);
+                    state.addResponse(json);
                 } else {
                     // Request from the server
                     state.requests.add(json);
@@ -56,8 +59,15 @@ class McpWebSocketClient {
         connectOptions.setPort(endpointUri.getPort());
         connectOptions.setHost(endpointUri.getHost());
         connectOptions.setURI(endpointUri.getPath());
-        webSocket.connect(connectOptions).toCompletionStage()
-                .toCompletableFuture().join();
+        try {
+            webSocket.connect(connectOptions).toCompletionStage()
+                    .toCompletableFuture().get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while connecting WebSocket", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to connect WebSocket", e);
+        }
     }
 
     Future<Void> send(String message) {
@@ -66,7 +76,15 @@ class McpWebSocketClient {
 
     void disconnect() {
         messages.clear();
-        webSocket.close().toCompletionStage().toCompletableFuture().join();
+        try {
+            webSocket.close().toCompletionStage()
+                    .toCompletableFuture().get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while closing WebSocket", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to close WebSocket", e);
+        }
     }
 
 }

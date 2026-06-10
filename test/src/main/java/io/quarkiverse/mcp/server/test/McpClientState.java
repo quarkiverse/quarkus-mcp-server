@@ -1,6 +1,9 @@
 package io.quarkiverse.mcp.server.test;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,16 +14,28 @@ import io.vertx.core.json.JsonObject;
 
 final class McpClientState {
 
+    static final Duration POLL_INTERVAL = Duration.ofMillis(50);
+
     final AtomicInteger requestIdGenerator;
     final List<JsonObject> requests;
     final List<JsonObject> responses;
+    final ConcurrentMap<Integer, JsonObject> responseMap;
     final List<JsonObject> notifications;
 
     McpClientState() {
         this.requestIdGenerator = new AtomicInteger();
         this.requests = new CopyOnWriteArrayList<>();
         this.responses = new CopyOnWriteArrayList<>();
+        this.responseMap = new ConcurrentHashMap<>();
         this.notifications = new CopyOnWriteArrayList<>();
+    }
+
+    void addResponse(JsonObject response) {
+        responses.add(response);
+        Integer id = response.getInteger("id");
+        if (id != null) {
+            responseMap.put(id, response);
+        }
     }
 
     public int nextRequestId() {
@@ -32,38 +47,33 @@ final class McpClientState {
         if (lastId == 0) {
             return null;
         }
-        Awaitility.await().until(() -> responses.stream().anyMatch(r -> r.getInteger("id") == lastId));
-        return responses.stream().filter(r -> r.getInteger("id") == lastId).findFirst().orElseThrow();
+        Awaitility.await().pollInterval(POLL_INTERVAL).until(() -> responseMap.containsKey(lastId));
+        return responseMap.get(lastId);
     }
 
     public List<JsonObject> waitForNotifications(int count) {
-        Awaitility.await().until(() -> notifications.size() >= count);
+        Awaitility.await().pollInterval(POLL_INTERVAL).until(() -> notifications.size() >= count);
         return notifications;
     }
 
     public List<JsonObject> waitForRequests(int count) {
-        Awaitility.await().until(() -> requests.size() >= count);
+        Awaitility.await().pollInterval(POLL_INTERVAL).until(() -> requests.size() >= count);
         return requests;
     }
 
     public List<JsonObject> waitForResponses(int count) {
-        Awaitility.await().until(() -> responses.size() >= count);
+        Awaitility.await().pollInterval(POLL_INTERVAL).until(() -> responses.size() >= count);
         return responses;
     }
 
     public JsonObject waitForResponse(JsonObject request) {
         int id = request.getInteger("id");
-        Awaitility.await().until(() -> getResponse(id) != null);
-        return getResponse(id);
+        Awaitility.await().pollInterval(POLL_INTERVAL).until(() -> responseMap.containsKey(id));
+        return responseMap.get(id);
     }
 
     public JsonObject getResponse(int id) {
-        for (JsonObject r : responses) {
-            if (r.getInteger("id") == id) {
-                return r;
-            }
-        }
-        return null;
+        return responseMap.get(id);
     }
 
     public List<JsonObject> getRequests() {
