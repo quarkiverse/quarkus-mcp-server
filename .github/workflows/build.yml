@@ -65,12 +65,29 @@ jobs:
         run: mvn -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }}
 
   build-native:
-    name: Native / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
+    name: Native / ${{ matrix.module }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
         java-version: [ 17 ]
+        module:
+          - http
+          - stdio
+          - websocket
+          - cli-adapter
+          - hibernate-validator
+        include:
+          - module: http
+            pl: transports/http/integration-tests,transports/http/authorization-integration-tests,transports/http/tracing-integration-tests
+          - module: stdio
+            pl: transports/stdio/integration-tests,transports/stdio/tracing-integration-tests
+          - module: websocket
+            pl: transports/websocket/integration-tests,transports/websocket/tracing-integration-tests
+          - module: cli-adapter
+            pl: cli-adapter/integration-tests
+          - module: hibernate-validator
+            pl: hibernate-validator/integration-tests
     runs-on: ${{ matrix.os }}
     steps:
       - name: Prepare git
@@ -85,8 +102,11 @@ jobs:
           java-version: ${{ matrix.java-version }}
           cache: 'maven'
 
+      - name: Build with Maven
+        run: mvn -B clean install -Dno-format -DskipTests
+
       - name: Build with Maven (Native)
-        run: mvn -B clean install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip
+        run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip -pl ${{ matrix.pl }}
 
   build-samples:
     name: Samples / ${{ matrix.sample }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
