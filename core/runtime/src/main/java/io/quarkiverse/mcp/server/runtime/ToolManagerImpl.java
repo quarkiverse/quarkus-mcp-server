@@ -434,7 +434,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public void setResponse(ToolResponse response) {
-            this.response.set(response);
+            this.response.set(Objects.requireNonNull(response));
         }
 
     }
