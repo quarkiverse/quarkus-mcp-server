@@ -84,7 +84,7 @@ public interface ToolOutputGuardrail {
         /**
          * Set the current response.
          *
-         * @param response
+         * @param response must not be {@code null}
          */
         void setResponse(ToolResponse response);
 
