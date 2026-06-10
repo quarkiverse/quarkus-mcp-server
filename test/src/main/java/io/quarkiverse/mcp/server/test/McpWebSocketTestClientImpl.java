@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
@@ -105,7 +108,15 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
 
         // Send "notifications/initialized"
         JsonObject nofitication = newMessage("notifications/initialized");
-        client.send(nofitication.encode()).toCompletionStage().toCompletableFuture().join();
+        try {
+            client.send(nofitication.encode()).toCompletionStage()
+                    .toCompletableFuture().get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while sending initialized notification", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to send initialized notification", e);
+        }
 
         connected.set(true);
         return this;
