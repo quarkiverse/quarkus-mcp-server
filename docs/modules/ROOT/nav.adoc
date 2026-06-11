@@ -41,3 +41,6 @@
 ** xref:concepts-mcp-protocol.adoc[MCP Protocol]
 ** xref:concepts-architecture.adoc[Architecture]
 ** xref:concepts-transports.adoc[Transports]
+
+.Releases
+* xref:release-notes.adoc[Release Notes]

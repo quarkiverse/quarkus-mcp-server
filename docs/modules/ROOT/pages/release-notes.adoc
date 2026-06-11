@@ -1,0 +1,491 @@
+= Release Notes
+
+include::./includes/attributes.adoc[]
+
+[[version-1-13]]
+== 1.13.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.13.0[1.13.0]
+|June 3, 2026
+|===
+
+[[version-1-13-breaking]]
+=== Breaking Changes
+
+* [1.13.0] The `audience` attribute of the `@Resource.Annotations` annotation and the `Content.Annotations` record now supports multiple roles. The annotation attribute type changed from `Role` to `Role[]` and the record field type changed from `Role` to `List<Role>`. A backwards-compatible constructor accepting a single `Role` is provided. (https://github.com/quarkiverse/quarkus-mcp-server/issues/788[#788])
+
+[[version-1-13-features]]
+=== New Features
+
+* **Elicitation URL mode**: Servers can redirect users to an external URL for sensitive interactions instead of using form-based elicitation. (https://github.com/quarkiverse/quarkus-mcp-server/issues/711[#711])
+* **`OptionalInt`, `OptionalLong`, and `OptionalDouble` parameters**: Primitive-specialized optional types are now supported in tool and resource method signatures. (https://github.com/quarkiverse/quarkus-mcp-server/issues/769[#769])
+* **Lazy SSE initialization for Streamable HTTP**: SSE initialization is deferred until an API that requires it is invoked, removing the need for "transport hints" when adding tools programmatically. (https://github.com/quarkiverse/quarkus-mcp-server/issues/725[#725])
+* **Streamable HTTP auto-init reads `_meta` fields**: The server now reads `clientInfo` and `clientCapabilities` from `_meta` on each request when auto-initialization is enabled. (https://github.com/quarkiverse/quarkus-mcp-server/issues/796[#796])
+* **`FeatureInfo#method()`**: Exposes the declaring `java.lang.reflect.Method`, making it easier for filters to read method-level annotations. (https://github.com/quarkiverse/quarkus-mcp-server/issues/809[#809])
+* **OIDC security failure handler**: Intercepts OIDC security exceptions on Streamable HTTP connections and converts them into JSON-RPC error responses. (https://github.com/quarkiverse/quarkus-mcp-server/pull/775[#775])
+* **`quarkus-mcp-server-oidc` extension**: Adds a Vert.x failure handler for OIDC `403 Forbidden` responses with `WWW-Authenticate` headers as recommended by the MCP authorization spec. (https://github.com/quarkiverse/quarkus-mcp-server/pull/780[#780])
+
+[[version-1-13-fixes]]
+=== Important Bug Fixes
+
+* [1.13.0] The CLI adapter now derives MCP tool parameter names from Picocli `@Option` names instead of Java field names, and prefers the longest (most descriptive) option name. (https://github.com/quarkiverse/quarkus-mcp-server/issues/576[#576])
+* [1.13.0] Build-time validation of resource template methods now correctly considers the `name` attribute of `@ResourceTemplateArg` instead of only matching against method parameter names. (https://github.com/quarkiverse/quarkus-mcp-server/issues/806[#806])
+* [1.13.0] Custom Jackson serializers and deserializers are now honored for `@ToolArg` parameters of scalar and custom types, fixing incorrect schema generation and argument conversion. (https://github.com/quarkiverse/quarkus-mcp-server/issues/774[#774])
+* [1.13.0] Client-side 4xx HTTP errors in Streamable HTTP are now logged at WARN level instead of ERROR, avoiding false production alerts. (https://github.com/quarkiverse/quarkus-mcp-server/issues/760[#760])
+
+[[version-1-12]]
+== 1.12.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.12.1[1.12.1]
+|May 18, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.12.0[1.12.0]
+|April 21, 2026
+|===
+
+[[version-1-12-breaking]]
+=== Breaking Changes
+
+* [1.12.1] The `audience` attribute of the `@Resource.Annotations` annotation and the `Content.Annotations` record now supports multiple roles. The annotation attribute type changed from `Role` to `Role[]` and the record field type changed from `Role` to `List<Role>`. A backwards-compatible constructor accepting a single `Role` is provided. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/788[#788])
+
+[[version-1-12-features]]
+=== New Features
+
+* **OpenTelemetry tracing**: Distributed tracing for MCP server operations is now available when `quarkus-opentelemetry` is present, following the https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/#server[OpenTelemetry semantic conventions for MCP servers]. Tracing overhead is minimal when OpenTelemetry is disabled. (https://github.com/quarkiverse/quarkus-mcp-server/pull/703[#703])
+* **Transport hints**: A new API allows users to disable forced SSE initialization for programmatically added features, improving performance and simplifying request processing for tools that don't require SSE. (https://github.com/quarkiverse/quarkus-mcp-server/issues/715[#715])
+* **Per-server feature name uniqueness**: Feature names (tools, resources, prompts) are now enforced as unique per server configuration instead of globally, allowing different MCP servers to define features with the same name. (https://github.com/quarkiverse/quarkus-mcp-server/issues/627[#627])
+* **`McpStdioTestClient`**: A new test utility for STDIO-based MCP servers, available through the `McpAssured` API. (https://github.com/quarkiverse/quarkus-mcp-server/pull/721[#721])
+
+[[version-1-12-fixes]]
+=== Important Bug Fixes
+
+* [1.12.0] Empty `ToolAnnotations` title is no longer included in the JSON response, which caused some MCP clients (e.g. IBM Bob IDE) to not display available tools. (https://github.com/quarkiverse/quarkus-mcp-server/issues/748[#748])
+* [1.12.0] `McpLog#error(Throwable, String, Object...)` now correctly delegates to `logger.errorf(...)` instead of `logger.infof(...)`. (https://github.com/quarkiverse/quarkus-mcp-server/pull/744[#744])
+* [1.12.0] The server now sends a proper error response when a client subscribes to or unsubscribes from a non-existent resource URI, instead of throwing an uncaught exception. (https://github.com/quarkiverse/quarkus-mcp-server/issues/716[#716])
+* [1.12.0] The `Icon` class is now registered for reflection, fixing missing icons in native mode. (https://github.com/quarkiverse/quarkus-mcp-server/issues/706[#706])
+* [1.12.0] Streamable HTTP transport no longer uses `McpMetadata` in the hot path, reducing unnecessary allocations in larger deployments. (https://github.com/quarkiverse/quarkus-mcp-server/issues/722[#722])
+* [1.12.1] Custom Jackson serializers and deserializers are now honored for `@ToolArg` parameters of scalar and custom types, fixing incorrect schema generation and argument conversion. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/774[#774])
+
+[[version-1-11]]
+== 1.11.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.11.1[1.11.1]
+|April 8, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.11.0[1.11.0]
+|March 25, 2026
+|===
+
+[[version-1-11-features]]
+=== New Features
+
+* **Multiple `@McpServer` bindings**: The `@McpServer` annotation is now repeatable, allowing a single feature (tool, resource, prompt) to be bound to multiple server configurations. A configuration flag is available to enable backward compatibility mode. (https://github.com/quarkiverse/quarkus-mcp-server/issues/595[#595])
+* **Schema validator module**: A new module validates all MCP client requests and notifications against the relevant MCP specification JSON schema. (https://github.com/quarkiverse/quarkus-mcp-server/issues/17[#17])
+* **Tool name validation**: An optional validation of tool names according to the MCP specification rules can be enabled via configuration. (https://github.com/quarkiverse/quarkus-mcp-server/issues/691[#691])
+* **DNS rebinding protection**: Streamable HTTP servers bound to localhost now have DNS rebinding protection enabled by default, with options to configure or disable it. (https://github.com/quarkiverse/quarkus-mcp-server/pull/657[#657])
+* **Disable HTTP/WebSocket transport per server**: Individual HTTP or WebSocket transports can now be disabled for a specific server configuration. (https://github.com/quarkiverse/quarkus-mcp-server/issues/633[#633])
+* **Elicitation schema builders**: Convenient builder APIs for elicitation schema properties, including a new `IntegerSchema`. (https://github.com/quarkiverse/quarkus-mcp-server/issues/652[#652])
+* **`InitialResponseInfo`**: A new API that provides access to the initialization response details in `InitialCheck` implementations. (https://github.com/quarkiverse/quarkus-mcp-server/issues/597[#597])
+* **Dev UI improvements**: Aligned Dev UI screens with the Dev MCP look and feel, and added internationalization support. (https://github.com/quarkiverse/quarkus-mcp-server/pull/615[#615])
+
+[[version-1-11-fixes]]
+=== Important Bug Fixes
+
+* [1.11.0] Pagination cursor is now based on a snapshot timestamp instead of name, making it resilient to concurrent modifications. (https://github.com/quarkiverse/quarkus-mcp-server/issues/672[#672])
+* [1.11.0] Fixed a race condition in pagination. (https://github.com/quarkiverse/quarkus-mcp-server/pull/686[#686])
+* [1.11.0] Elicitation and sampling now work correctly in native image. (https://github.com/quarkiverse/quarkus-mcp-server/issues/679[#679])
+* [1.11.0] Elicitation schema properties are now encoded correctly. (https://github.com/quarkiverse/quarkus-mcp-server/issues/645[#645])
+* [1.11.0] The `AudioContent` return type is now encoded correctly. (https://github.com/quarkiverse/quarkus-mcp-server/issues/644[#644])
+* [1.11.0] Build-time validation of `@Icons` providers now correctly handles inner classes. (https://github.com/quarkiverse/quarkus-mcp-server/issues/649[#649])
+* [1.11.0] Fixed incorrect validation of tool default value converters. (https://github.com/quarkiverse/quarkus-mcp-server/issues/619[#619])
+* [1.11.1] The `Icon` class is now registered for reflection, fixing missing icons in native mode. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/706[#706])
+* [1.11.1] The server now sends a proper error response when a client subscribes to or unsubscribes from a non-existent resource URI, instead of throwing an uncaught exception. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/716[#716])
+* [1.11.1] Streamable HTTP transport no longer uses `McpMetadata` in the hot path, reducing unnecessary allocations in larger deployments. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/722[#722])
+
+[[version-1-10]]
+== 1.10.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.6[1.10.6]
+|June 2, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.5[1.10.5]
+|April 8, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.4[1.10.4]
+|March 30, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.3[1.10.3]
+|March 12, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.2[1.10.2]
+|February 24, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.1[1.10.1]
+|February 17, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.0[1.10.0]
+|February 10, 2026
+|===
+
+[[version-1-10-breaking]]
+=== Breaking Changes
+
+* [1.10.6] The `audience` attribute of the `@Resource.Annotations` annotation and the `Content.Annotations` record now supports multiple roles. The annotation attribute type changed from `Role` to `Role[]` and the record field type changed from `Role` to `List<Role>`. A backwards-compatible constructor accepting a single `Role` is provided. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/788[#788])
+
+[[version-1-10-features]]
+=== New Features
+
+* **Metrics support**: Basic metrics for MCP server operations are now available when Micrometer is present. (https://github.com/quarkiverse/quarkus-mcp-server/issues/589[#589])
+* **`FilterContext`**: Filters can now access additional metadata from the `_meta` field, the request ID, and the JSON-RPC method name. (https://github.com/quarkiverse/quarkus-mcp-server/issues/582[#582])
+* **Relaxed initialization phase**: The initialization phase constraints have been relaxed to allow more flexible server startup. (https://github.com/quarkiverse/quarkus-mcp-server/issues/586[#586])
+* **Resource usability improvements**: Improved resource content encoding with a default `ResourceContentsEncoder` implementation. (https://github.com/quarkiverse/quarkus-mcp-server/issues/601[#601])
+
+[[version-1-10-fixes]]
+=== Important Bug Fixes
+
+* [1.10.1] Fixed icons parsing when icon theme is null. (https://github.com/quarkiverse/quarkus-mcp-server/pull/611[#611])
+* [1.10.2] Fixed incorrect validation of tool default value converters. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/619[#619])
+* [1.10.3] Elicitation schema properties are now encoded correctly. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/645[#645])
+* [1.10.3] The `AudioContent` return type is now encoded correctly. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/644[#644])
+* [1.10.3] Pagination cursor is now based on a snapshot timestamp instead of name, making it resilient to concurrent modifications. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/672[#672])
+* [1.10.4] Elicitation and sampling now work correctly in native image. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/679[#679])
+* [1.10.4] Fixed a race condition in pagination. _(backported from <<version-1-11,1.11.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/686[#686])
+* [1.10.4] The `Icon` class is now registered for reflection, fixing missing icons in native mode. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/706[#706])
+* [1.10.5] The server now sends a proper error response when a client subscribes to or unsubscribes from a non-existent resource URI, instead of throwing an uncaught exception. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/716[#716])
+* [1.10.5] Streamable HTTP transport no longer uses `McpMetadata` in the hot path, reducing unnecessary allocations in larger deployments. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/722[#722])
+* [1.10.6] Empty `ToolAnnotations` title is no longer included in the JSON response, which caused some MCP clients (e.g. IBM Bob IDE) to not display available tools. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/748[#748])
+* [1.10.6] `McpLog#error(Throwable, String, Object...)` now correctly delegates to `logger.errorf(...)` instead of `logger.infof(...)`. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/744[#744])
+* [1.10.6] Build-time validation of resource template methods now correctly considers the `name` attribute of `@ResourceTemplateArg` instead of only matching against method parameter names. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/806[#806])
+
+[[version-1-9]]
+== 1.9.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.9.1[1.9.1]
+|February 6, 2026
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.9.0[1.9.0]
+|January 28, 2026
+|===
+
+[[version-1-9-features]]
+=== New Features
+
+* **Icons for tools, resources, resource templates, and prompts**: Features can now have associated icons for display in MCP clients. (https://github.com/quarkiverse/quarkus-mcp-server/pull/561[#561])
+* **Tool input/output guardrails**: A new mechanism to validate or transform tool inputs before execution and tool outputs before they are returned to the client. (https://github.com/quarkiverse/quarkus-mcp-server/pull/556[#556])
+* **Elicitation updates**: Support for default values in all primitive types for elicitation schemas, and updates to `ElicitResult` and `EnumSchema`. (https://github.com/quarkiverse/quarkus-mcp-server/pull/552[#552])
+* **Server/client `Implementation` metadata**: `description`, `icons`, and `websiteUrl` fields are now supported in the server and client `Implementation` records. (https://github.com/quarkiverse/quarkus-mcp-server/pull/548[#548])
+* **Dummy initialization for Streamable HTTP**: Allows performing a dummy initialization to work around clients that do not properly initialize the MCP connection. (https://github.com/quarkiverse/quarkus-mcp-server/pull/519[#519])
+
+[[version-1-9-fixes]]
+=== Important Bug Fixes
+
+* [1.9.0] Fixed missing `$defs` in generated `inputSchema` of `DefaultSchemaGenerator`, breaking support for recursive and complex types. (https://github.com/quarkiverse/quarkus-mcp-server/pull/540[#540])
+* [1.9.0] Input validation errors are now returned as tool response errors instead of JSON-RPC protocol errors. (https://github.com/quarkiverse/quarkus-mcp-server/pull/537[#537])
+* [1.9.0] Tool error messages no longer leak internal Java class names during argument validation. (https://github.com/quarkiverse/quarkus-mcp-server/pull/554[#554])
+* [1.9.1] `FilterContext` introduced — filters can now access metadata from the `_meta` field, request ID, and JSON-RPC method name. _(backported from <<version-1-10,1.10.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/582[#582])
+* [1.9.1] The initialization phase constraints have been relaxed to allow more flexible server startup. _(backported from <<version-1-10,1.10.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/586[#586])
+
+[[version-1-8]]
+== 1.8.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.8.1[1.8.1]
+|December 10, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.8.0[1.8.0]
+|November 26, 2025
+|===
+
+[[version-1-8-breaking]]
+=== Breaking Changes
+
+* The `quarkus-mcp-server-sse` artifact has been renamed to `quarkus-mcp-server-http`. Relocations and configuration fallbacks are provided for backward compatibility. (https://github.com/quarkiverse/quarkus-mcp-server/pull/501[#501])
+
+[[version-1-8-features]]
+=== New Features
+
+* **Feature metadata**: Additional metadata can now be attached to feature definitions (tools, resources, prompts) via the `@MetaField` annotation or the programmatic API. (https://github.com/quarkiverse/quarkus-mcp-server/pull/503[#503])
+* **`WrapBusinessError#unless()`**: A new option to conditionally skip error wrapping for specific exception types. (https://github.com/quarkiverse/quarkus-mcp-server/pull/505[#505])
+* **Tool name max length configuration**: A new `quarkus.mcp.server.tools.name-max-length` config property to enforce tool name length limits. (https://github.com/quarkiverse/quarkus-mcp-server/pull/484[#484])
+* **LangChain4j annotation support toggle**: Support for LangChain4j `@Tool`/`@P` annotations can now be disabled via configuration. (https://github.com/quarkiverse/quarkus-mcp-server/pull/475[#475])
+
+[[version-1-8-fixes]]
+=== Important Bug Fixes
+
+* [1.8.0] Fixed `Tool` method returning `Uni` with `structuredContent` enabled. (https://github.com/quarkiverse/quarkus-mcp-server/pull/480[#480])
+* [1.8.0] Fixed resource template completion when the client does not include the template name in the reference. (https://github.com/quarkiverse/quarkus-mcp-server/pull/494[#494])
+* [1.8.0] Hibernate Validator processor no longer wraps all validated methods, only MCP feature methods. (https://github.com/quarkiverse/quarkus-mcp-server/pull/507[#507])
+* [1.8.1] Dummy initialization for Streamable HTTP is now available. _(backported from <<version-1-9,1.9.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/519[#519])
+
+[[version-1-7]]
+== 1.7.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.7.3[1.7.3]
+|November 19, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.7.2[1.7.2]
+|November 12, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.7.1[1.7.1]
+|November 3, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.7.0[1.7.0]
+|October 15, 2025
+|===
+
+[[version-1-7-features]]
+=== New Features
+
+* **WebSocket transport**: A new WebSocket-based transport for MCP communication. (https://github.com/quarkiverse/quarkus-mcp-server/pull/449[#449])
+* **Custom input schema generation**: It is now possible to customize the JSON schema generation for tool inputs. (https://github.com/quarkiverse/quarkus-mcp-server/pull/438[#438])
+
+[[version-1-7-fixes]]
+=== Important Bug Fixes
+
+* [1.7.1] Fixed `Tool` method returning `Uni` with `structuredContent` enabled. _(backported from <<version-1-8,1.8.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/479[#479])
+* [1.7.2] WebSocket endpoints now use `InboundProcessingMode#CONCURRENT` for proper concurrent message handling. _(backported from <<version-1-8,1.8.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/486[#486])
+* [1.7.3] WebSocket transport now ensures MCP connection is initialized before a message is consumed. (https://github.com/quarkiverse/quarkus-mcp-server/pull/499[#499])
+* [1.7.3] Fixed HTTP transport compatibility with Quarkus 3.30+. (https://github.com/quarkiverse/quarkus-mcp-server/issues/491[#491])
+* [1.7.3] Fixed resource template completion when the client does not include the template name in the reference. _(backported from <<version-1-8,1.8.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/493[#493])
+
+[[version-1-6]]
+== 1.6.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.6.1[1.6.1]
+|October 8, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.6.0[1.6.0]
+|September 23, 2025
+|===
+
+[[version-1-6-features]]
+=== New Features
+
+* **Hibernate Validator integration**: A new `quarkus-mcp-server-hibernate-validator` module integrates Hibernate Validator for automatic validation of tool inputs, with improved input schema generation for Jakarta Validation annotations. (https://github.com/quarkiverse/quarkus-mcp-server/pull/431[#431])
+* **Instructions support**: Servers can now include instructions in the initialization response. (https://github.com/quarkiverse/quarkus-mcp-server/pull/408[#408])
+* **`McpException` in public API**: `McpException` has been moved to the public API for use in feature implementations. (https://github.com/quarkiverse/quarkus-mcp-server/pull/424[#424])
+* **`quarkus-mcp-server-bom`**: Introduced a Bill of Materials artifact for dependency management. (https://github.com/quarkiverse/quarkus-mcp-server/pull/395[#395])
+
+[[version-1-6-fixes]]
+=== Important Bug Fixes
+
+* [1.6.0] The CDI request context is now activated during `Notification.Type.INITIALIZED` processing. (https://github.com/quarkiverse/quarkus-mcp-server/pull/425[#425])
+* [1.6.1] Extracted `ObjectMapperCustomizer` from `DefaultSchemaGenerator` to fix a timing issue where `ObjectMapper` static initialization could conflict with `SchemaGeneratorConfigCustomizer` implementations that depend on runtime configuration. (https://github.com/quarkiverse/quarkus-mcp-server/pull/445[#445])
+
+[[version-1-5]]
+== 1.5.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.5.3[1.5.3]
+|September 8, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.5.2[1.5.2]
+|September 8, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.5.1[1.5.1]
+|September 8, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.5.0[1.5.0]
+|August 27, 2025
+|===
+
+[[version-1-5-breaking]]
+=== Breaking Changes
+
+* The deprecated `ResourceInfo#sendUpdate()` method has been removed. (https://github.com/quarkiverse/quarkus-mcp-server/pull/384[#384])
+
+[[version-1-5-features]]
+=== New Features
+
+* **Elicitation support**: Servers can request additional input from users during tool execution. (https://github.com/quarkiverse/quarkus-mcp-server/issues/362[#362])
+* **Structured tool output**: Tools can now return structured content alongside text responses. (https://github.com/quarkiverse/quarkus-mcp-server/pull/379[#379])
+* **Resource annotations**: Support for annotations on resources, resource templates, and contents (audience, priority, lastModified). (https://github.com/quarkiverse/quarkus-mcp-server/pull/383[#383])
+* **Resource links in tool calls and prompts**: Tool responses and prompts can now include resource links. (https://github.com/quarkiverse/quarkus-mcp-server/pull/370[#370])
+* **`_meta` field support**: Additional metadata represented by the `_meta` field is now supported. (https://github.com/quarkiverse/quarkus-mcp-server/pull/367[#367])
+* **Title for features**: A human-readable `title` field for display in UI is now supported. (https://github.com/quarkiverse/quarkus-mcp-server/pull/367[#367])
+* **`CompleteContext`**: A new context object for completion handlers. (https://github.com/quarkiverse/quarkus-mcp-server/pull/367[#367])
+* **`RawMessage`**: Access to the raw JSON-RPC message is now available. (https://github.com/quarkiverse/quarkus-mcp-server/pull/366[#366])
+* **Programmatic API improvements**: Interfaces are now used instead of records for arguments, and cancellation support has been added. (https://github.com/quarkiverse/quarkus-mcp-server/pull/365[#365], https://github.com/quarkiverse/quarkus-mcp-server/pull/366[#366])
+* **`quarkus-mcp-server-bom`**: [1.5.1] Introduced a Bill of Materials artifact for dependency management. _(backported from <<version-1-6,1.6.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/396[#396])
+
+[[version-1-4]]
+== 1.4.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.4.1[1.4.1]
+|July 31, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.4.0[1.4.0]
+|July 17, 2025
+|===
+
+[[version-1-4-features]]
+=== New Features
+
+* **Request cancellation**: Support for cancelling in-progress MCP requests. (https://github.com/quarkiverse/quarkus-mcp-server/pull/332[#332])
+* **`McpAssured` testing API**: A convenient new API for testing MCP servers in integration tests. (https://github.com/quarkiverse/quarkus-mcp-server/pull/316[#316])
+* **Subsidiary SSE streams**: Streamable HTTP transport now supports subsidiary SSE streams. (https://github.com/quarkiverse/quarkus-mcp-server/pull/330[#330])
+* **Pagination control**: Pagination can now be disabled by setting the page size to zero or a negative value. (https://github.com/quarkiverse/quarkus-mcp-server/pull/327[#327])
+
+[[version-1-4-fixes]]
+=== Important Bug Fixes
+
+* [1.4.0] Fixed NPE with `ToolAnnotations` without a title. (https://github.com/quarkiverse/quarkus-mcp-server/pull/331[#331])
+* [1.4.0] Fixed `McpLog` for the Streamable HTTP transport. (https://github.com/quarkiverse/quarkus-mcp-server/pull/309[#309])
+* [1.4.0] The legacy SSE endpoint now returns HTTP 405 for POST requests. (https://github.com/quarkiverse/quarkus-mcp-server/pull/326[#326])
+* [1.4.1] Cancellation support added to the programmatic API. _(backported from <<version-1-5,1.5.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/366[#366])
+
+[[version-1-3]]
+== 1.3.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.3.1[1.3.1]
+|June 24, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.3.0[1.3.0]
+|June 19, 2025
+|===
+
+[[version-1-3-features]]
+=== New Features
+
+* **Multiple MCP server configurations**: A single application can now host multiple MCP server configurations with separate endpoints. (https://github.com/quarkiverse/quarkus-mcp-server/pull/285[#285])
+* **Tool annotations**: Support for MCP tool annotations (`readOnlyHint`, `destructiveHint`, etc.). (https://github.com/quarkiverse/quarkus-mcp-server/pull/281[#281])
+* **`InitialCheck`**: A new hook to inspect and optionally reject client connections during initialization. (https://github.com/quarkiverse/quarkus-mcp-server/pull/294[#294])
+* **`InitialRequest#transport()`**: The transport type is now available in the initial request. (https://github.com/quarkiverse/quarkus-mcp-server/pull/296[#296])
+* **Connection idle timeout**: A configurable idle timeout for MCP connections. (https://github.com/quarkiverse/quarkus-mcp-server/pull/291[#291])
+* **Roots and sampling timeouts**: Configurable timeouts for roots and sampling operations. (https://github.com/quarkiverse/quarkus-mcp-server/pull/288[#288])
+* **SSE query parameters**: Query parameters from the SSE endpoint URL are now available in the message endpoint. (https://github.com/quarkiverse/quarkus-mcp-server/pull/290[#290])
+* **Nested tool argument schema generation**: Annotation-based schema generation now supports nested argument classes. (https://github.com/quarkiverse/quarkus-mcp-server/pull/298[#298])
+
+[[version-1-3-fixes]]
+=== Important Bug Fixes
+
+* [1.3.0] Fixed CDI request context activation for batch processing. (https://github.com/quarkiverse/quarkus-mcp-server/pull/277[#277])
+* [1.3.1] Fixed `McpLog` for the Streamable HTTP transport. (https://github.com/quarkiverse/quarkus-mcp-server/pull/309[#309])
+* [1.3.1] Subsidiary SSE messages are now properly discarded when not applicable. (https://github.com/quarkiverse/quarkus-mcp-server/pull/312[#312])
+
+[[version-1-2]]
+== 1.2.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.2.2[1.2.2]
+|June 4, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.2.1[1.2.1]
+|May 28, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.2.0[1.2.0]
+|May 22, 2025
+|===
+
+[[version-1-2-features]]
+=== New Features
+
+* **Streamable HTTP transport**: Initial support for the Streamable HTTP transport as defined in the MCP specification. (https://github.com/quarkiverse/quarkus-mcp-server/pull/240[#240])
+* **Filters**: A mechanism to determine the set of visible and accessible features per connection. (https://github.com/quarkiverse/quarkus-mcp-server/pull/257[#257])
+* **Default values for `@ToolArg` and `@PromptArg`**: Annotations now support specifying default values. (https://github.com/quarkiverse/quarkus-mcp-server/pull/235[#235])
+* **Dev UI bearer token input**: The Dev UI now includes an input field for bearer token authentication. (https://github.com/quarkiverse/quarkus-mcp-server/pull/220[#220])
+
+[[version-1-2-fixes]]
+=== Important Bug Fixes
+
+* [1.2.1] Fixed CDI request context activation for batch processing. (https://github.com/quarkiverse/quarkus-mcp-server/pull/277[#277])
+* [1.2.2] Fixed server info capabilities incorrectly reported for prompts, resources, and templates. (https://github.com/quarkiverse/quarkus-mcp-server/pull/284[#284])
+
+[[version-1-1]]
+== 1.1.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.1.1[1.1.1]
+|April 23, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.1.0[1.1.0]
+|April 17, 2025
+|===
+
+[[version-1-1-features]]
+=== New Features
+
+* **CLI adapter**: An early draft of the CLI adapter for exposing CLI tools as MCP tools. (https://github.com/quarkiverse/quarkus-mcp-server/pull/166[#166])
+* **Sampling support**: Initial support for the MCP sampling capability. (https://github.com/quarkiverse/quarkus-mcp-server/pull/214[#214])
+* **Roots support**: Initial support for the MCP roots capability. (https://github.com/quarkiverse/quarkus-mcp-server/pull/212[#212])
+* **Progress API**: A new API for reporting progress of long-running tool operations. (https://github.com/quarkiverse/quarkus-mcp-server/pull/195[#195])
+* **Notification hook**: A new `@Notification` annotation for post-initialization logic. (https://github.com/quarkiverse/quarkus-mcp-server/pull/212[#212])
+* **Dev UI completion views**: The Dev UI now includes views for completion APIs. (https://github.com/quarkiverse/quarkus-mcp-server/pull/210[#210])
+
+[[version-1-1-fixes]]
+=== Important Bug Fixes
+
+* [1.1.0] Fixed tools number argument coercion. (https://github.com/quarkiverse/quarkus-mcp-server/pull/187[#187])
+* [1.1.0] Fixed tools input schema generation for `Optional<List<String>>`. (https://github.com/quarkiverse/quarkus-mcp-server/pull/185[#185])
+* [1.1.0] Fixed naming conflict for CLI commands with the same class name. (https://github.com/quarkiverse/quarkus-mcp-server/pull/196[#196])
+
+[[version-1-0]]
+== 1.0.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.0.1[1.0.1]
+|April 10, 2025
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.0.0[1.0.0]
+|April 2, 2025
+|===
+
+1.0.0 is the first stable release of the Quarkus MCP Server extension, preceded by six Alpha, five Beta, and one CR pre-releases. It provides core support for MCP tools, resources, resource templates, prompts, and completions over STDIO and SSE transports, with a Dev UI for interactive testing.
+
+[[version-1-0-fixes]]
+=== Important Bug Fixes
+
+* [1.0.1] Fixed list changed notifications for the STDIO transport. (https://github.com/quarkiverse/quarkus-mcp-server/pull/178[#178])
+* [1.0.1] Fixed tools number argument coercion. _(backported from <<version-1-1,1.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/188[#188])
+* [1.0.1] Fixed tools input schema generation for `Optional<List<String>>`. _(backported from <<version-1-1,1.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/186[#186])
