@@ -51,7 +51,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     McpSseTestClientImpl(BuilderImpl builder) {
         super(builder.name, builder.version, builder.protocolVersion, builder.clientCapabilities, builder.additionalHeaders,
-                builder.autoPong, builder.basicAuth, builder.title, builder.description, builder.websiteUrl, builder.icons,
+                builder.autoPong, builder.authorization, builder.title, builder.description, builder.websiteUrl, builder.icons,
                 builder.openTelemetry);
         this.sseEndpoint = createEndpointUri(builder.baseUri, builder.ssePath);
         this.expectSseConnectionFailure = builder.expectSseConnectionFailure;
@@ -83,9 +83,8 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
 
         Map<String, String> headers = new HashMap<>();
-        if (clientBasicAuth != null) {
-            headers.put(HEADER_AUTHORIZATION,
-                    McpTestClientBase.getBasicAuthenticationHeader(clientBasicAuth.username(), clientBasicAuth.password()));
+        if (clientAuthorization != null && !clientAuthorization.isEmpty()) {
+            headers.put(HEADER_AUTHORIZATION, clientAuthorization.headerValue());
         }
 
         // Normally, the CF returned from the connect method never completes
@@ -120,7 +119,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         MultiMap initHeaders = additionalHeaders.apply(initMessage);
         HttpResponse response;
         try (TracingHandle ignored = startTracingSpan(initMessage, initHeaders)) {
-            response = sendSync(initMessage, initHeaders, clientBasicAuth);
+            response = sendSync(initMessage, initHeaders, clientAuthorization);
         }
         assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
 
@@ -154,7 +153,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         JsonObject nofitication = newMessage("notifications/initialized");
         MultiMap notifHeaders = additionalHeaders.apply(nofitication);
         try (TracingHandle ignored = startTracingSpan(nofitication, notifHeaders)) {
-            response = sendSync(nofitication, notifHeaders, clientBasicAuth);
+            response = sendSync(nofitication, notifHeaders, clientAuthorization);
         }
         assertEquals(200, response.statusCode());
         connected.set(true);
@@ -164,7 +163,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     @Override
     public void disconnect() {
         JsonObject message = newMessage("q/close");
-        HttpResponse response = sendSync(message, additionalHeaders.apply(message), clientBasicAuth);
+        HttpResponse response = sendSync(message, additionalHeaders.apply(message), clientAuthorization);
         assertEquals(200, response.statusCode());
         messageEndpoint = null;
         connected.set(false);
@@ -196,7 +195,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     public void sendAndForget(JsonObject message) {
         MultiMap headers = additionalHeaders.apply(message);
         try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
-            sendAsync(message.encode(), headers, clientBasicAuth);
+            sendAsync(message.encode(), headers, clientAuthorization);
         }
     }
 
@@ -207,11 +206,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         protected final AtomicReference<Consumer<HttpResponse>> httpResponseValidator;
         protected final AtomicReference<MultiMap> additionalHeaders;
-        protected final AtomicReference<BasicAuth> basicAuth;
+        protected final AtomicReference<Authorization> authorization;
 
         McpSseAssertImpl() {
             this.additionalHeaders = new AtomicReference<>(MultiMap.caseInsensitiveMultiMap());
-            this.basicAuth = new AtomicReference<>();
+            this.authorization = new AtomicReference<>();
             this.httpResponseValidator = new AtomicReference<>(DEFAULT_HTTP_RESPONSE_VALIDATOR);
         }
 
@@ -235,24 +234,24 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
         @Override
         public McpSseAssert basicAuth(String username, String password) {
-            this.basicAuth.set(new BasicAuth(username, password));
+            this.authorization.set(Authorization.basic(username, password));
             return this;
         }
 
         @Override
         public McpSseAssert noBasicAuth() {
-            this.basicAuth.set(new BasicAuth(null, null));
+            this.authorization.set(Authorization.none());
             return this;
         }
 
         protected TracingHandle doSend(JsonObject message) {
             MultiMap headers = additionalHeaders(message);
             try (TracingHandle tracingHandle = startTracingSpan(message, headers)) {
-                BasicAuth basicAuth = this.basicAuth.get();
-                if (basicAuth == null) {
-                    basicAuth = clientBasicAuth;
+                Authorization authorization = this.authorization.get();
+                if (authorization == null) {
+                    authorization = clientAuthorization;
                 }
-                HttpResponse response = sendSync(message, headers, basicAuth);
+                HttpResponse response = sendSync(message, headers, authorization);
                 Consumer<HttpResponse> validator = httpResponseValidator.get();
                 if (validator != null) {
                     validator.accept(response);
@@ -299,11 +298,11 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             if (additionalHeaders != null) {
                 headers.addAll(additionalHeaders);
             }
-            BasicAuth basicAuth = this.basicAuth.get();
-            if (basicAuth == null) {
-                basicAuth = clientBasicAuth;
+            Authorization authorization = this.authorization.get();
+            if (authorization == null) {
+                authorization = clientAuthorization;
             }
-            HttpResponse response = sendSync(batch, headers, basicAuth);
+            HttpResponse response = sendSync(batch, headers, authorization);
             Consumer<HttpResponse> validator = httpResponseValidator.get();
             if (validator != null) {
                 validator.accept(response);
@@ -318,7 +317,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         private String ssePath = "/mcp/sse";
         private URI baseUri = McpAssured.baseUri;
         private Function<JsonObject, MultiMap> additionalHeaders = m -> MultiMap.caseInsensitiveMultiMap();
-        private BasicAuth basicAuth;
+        private Authorization authorization;
         private boolean expectSseConnectionFailure;
 
         @Override
@@ -356,7 +355,16 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
             if (password == null) {
                 throw mustNotBeNull("password");
             }
-            this.basicAuth = new BasicAuth(username, password);
+            this.authorization = Authorization.basic(username, password);
+            return this;
+        }
+
+        @Override
+        public McpSseTestClient.Builder setBearerToken(String token) {
+            if (token == null) {
+                throw mustNotBeNull("token");
+            }
+            this.authorization = Authorization.bearer(token);
             return this;
         }
 
@@ -376,29 +384,30 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     }
 
-    private HttpResponse sendSync(JsonObject message, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        return sendSync(message.encode(), additionalHeaders, basicAuth);
+    private HttpResponse sendSync(JsonObject message, MultiMap additionalHeaders, Authorization authorization) {
+        return sendSync(message.encode(), additionalHeaders, authorization);
     }
 
-    private HttpResponse sendSync(JsonArray batch, MultiMap additionalHeaders, BasicAuth basicAuth) {
-        return sendSync(batch.encode(), additionalHeaders, basicAuth);
+    private HttpResponse sendSync(JsonArray batch, MultiMap additionalHeaders, Authorization authorization) {
+        return sendSync(batch.encode(), additionalHeaders, authorization);
     }
 
     private CompletableFuture<java.net.http.HttpResponse<String>> sendAsync(String data, MultiMap additionalHeaders,
-            BasicAuth basicAuth) {
+            Authorization authorization) {
         if (messageEndpoint == null) {
             throw new IllegalStateException("Message endpoint not ready");
         }
-        return HttpClients.getDefault().sendAsync(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+        return HttpClients.getDefault().sendAsync(buildRequest(data, additionalHeaders, authorization),
+                BodyHandlers.ofString());
     }
 
-    private HttpResponse sendSync(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+    private HttpResponse sendSync(String data, MultiMap additionalHeaders, Authorization authorization) {
         if (messageEndpoint == null) {
             throw new IllegalStateException("Message endpoint not ready");
         }
         java.net.http.HttpResponse<String> r;
         try {
-            r = HttpClients.getDefault().send(buildRequest(data, additionalHeaders, basicAuth), BodyHandlers.ofString());
+            r = HttpClients.getDefault().send(buildRequest(data, additionalHeaders, authorization), BodyHandlers.ofString());
             MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
             for (Entry<String, List<String>> e : r.headers().map().entrySet()) {
                 for (String val : e.getValue()) {
@@ -414,7 +423,7 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
         }
     }
 
-    private HttpRequest buildRequest(String data, MultiMap additionalHeaders, BasicAuth basicAuth) {
+    private HttpRequest buildRequest(String data, MultiMap additionalHeaders, Authorization authorization) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(messageEndpoint)
                 .version(Version.HTTP_1_1)
@@ -422,9 +431,8 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
                 .POST(BodyPublishers.ofString(data));
         additionalHeaders.forEach(builder::header);
 
-        if (basicAuth != null && !basicAuth.isEmpty()) {
-            builder.header(HEADER_AUTHORIZATION,
-                    McpTestClientBase.getBasicAuthenticationHeader(basicAuth.username(), basicAuth.password()));
+        if (authorization != null && !authorization.isEmpty()) {
+            builder.header(HEADER_AUTHORIZATION, authorization.headerValue());
         }
         return builder.build();
     }

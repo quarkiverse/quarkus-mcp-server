@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.test.junit.QuarkusTest;
-import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -30,8 +29,7 @@ class ServerFeaturesTest {
         String accessToken = getAccessToken();
 
         McpStreamableTestClient client = McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .build()
                 .connect();
         client.when()
@@ -73,8 +71,7 @@ class ServerFeaturesTest {
         String accessToken = getAccessToken("http://localhost:8081/access-token-no-audience");
 
         McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .setExpectConnectFailure()
                 .build()
                 .connect();
@@ -88,8 +85,7 @@ class ServerFeaturesTest {
                 .pollInterval(1, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
                     McpAssured.newStreamableClient()
-                            .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                                    .add("Authorization", "Bearer " + accessToken))
+                            .setBearerToken(accessToken)
                             .setExpectConnectFailure(r -> {
                                 assertEquals(401, r.statusCode());
                             })
@@ -104,8 +100,7 @@ class ServerFeaturesTest {
         String invalidToken = accessToken.substring(0, accessToken.lastIndexOf('.')) + ".invalid-signature";
 
         McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + invalidToken))
+                .setBearerToken(invalidToken)
                 .setExpectConnectFailure(r -> {
                     assertEquals(401, r.statusCode());
                 })
@@ -118,8 +113,7 @@ class ServerFeaturesTest {
         String accessToken = getAccessToken();
 
         McpStreamableTestClient client = McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .build()
                 .connect();
 
@@ -141,8 +135,7 @@ class ServerFeaturesTest {
         String accessToken = getAccessToken("http://localhost:8081/access-token-phone-scope");
 
         McpStreamableTestClient client = McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .build()
                 .connect();
         client.when()
@@ -157,8 +150,7 @@ class ServerFeaturesTest {
         String accessToken = getAccessToken();
 
         McpStreamableTestClient client = McpAssured.newStreamableClient()
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .build()
                 .connect();
         client.when()
@@ -176,8 +168,7 @@ class ServerFeaturesTest {
 
         McpStreamableTestClient client = McpAssured.newStreamableClient()
                 .setMcpPath("/beta/mcp")
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .build()
                 .connect();
         client.when()
@@ -194,8 +185,7 @@ class ServerFeaturesTest {
 
         McpAssured.newStreamableClient()
                 .setMcpPath("/beta/mcp")
-                .setAdditionalHeaders(msg -> MultiMap.caseInsensitiveMultiMap()
-                        .add("Authorization", "Bearer " + accessToken))
+                .setBearerToken(accessToken)
                 .setExpectConnectFailure(r -> {
                     assertEquals(403, r.statusCode());
 

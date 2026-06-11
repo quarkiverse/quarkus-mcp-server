@@ -358,6 +358,14 @@ public class McpAssured {
             Builder setBasicAuth(String username, String password);
 
             /**
+             * Set the bearer token used in the {@code Authorization} header sent with every HTTP request.
+             *
+             * @param token
+             * @return self
+             */
+            Builder setBearerToken(String token);
+
+            /**
              *
              * @param additionalHeaders
              * @return self
@@ -426,6 +434,14 @@ public class McpAssured {
              * @return self
              */
             Builder setBasicAuth(String username, String password);
+
+            /**
+             * Set the bearer token used in the {@code Authorization} header sent with every HTTP request.
+             *
+             * @param token
+             * @return self
+             */
+            Builder setBearerToken(String token);
 
             /**
              * Set a function that is used to produce additional HTTP headers for a specific message. The message input may be
@@ -510,6 +526,14 @@ public class McpAssured {
              * @return self
              */
             Builder setBasicAuth(String username, String password);
+
+            /**
+             * Set the bearer token used in the {@code Authorization} header sent with the initial HTTP request.
+             *
+             * @param token
+             * @return self
+             */
+            Builder setBearerToken(String token);
 
             /**
              *
