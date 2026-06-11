@@ -14,8 +14,8 @@ public class MutipleServersDuplicitRootPathTest {
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .withApplicationRoot(root -> root.addClasses(MyTools.class))
-            .overrideConfigKey("quarkus.mcp.server.sse.root-path", "/foo/mcp")
-            .overrideConfigKey("quarkus.mcp.server.bravo.sse.root-path", "/foo/mcp")
+            .overrideConfigKey("quarkus.mcp.server.http.root-path", "/foo/mcp")
+            .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/foo/mcp")
             .setExpectedException(IllegalStateException.class, true);
 
     @Test

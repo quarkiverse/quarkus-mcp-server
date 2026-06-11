@@ -38,9 +38,9 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class, CharlieFeatures.class))
             .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "true")
-            .overrideConfigKey("quarkus.mcp.server.sse.root-path", "/alpha/mcp")
-            .overrideConfigKey("quarkus.mcp.server.bravo.sse.root-path", "/bravo/mcp")
-            .overrideConfigKey("quarkus.mcp.server.charlie.sse.root-path", "/charlie/mcp");
+            .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")
+            .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp")
+            .overrideConfigKey("quarkus.mcp.server.charlie.http.root-path", "/charlie/mcp");
 
     @Inject
     ToolManager toolManager;
