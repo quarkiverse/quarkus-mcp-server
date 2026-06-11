@@ -3,8 +3,6 @@
 include::includes/attributes.adoc[]
 :diataxis-type: howto
 
-WARNING: This API is experimental and may change in future releases.
-
 Tool guardrails allow you to intercept and validate or transform tool arguments before they are passed to the tool implementation, or validate and transform the tool response before it's returned to the client.
 This guide shows you how to implement and use guardrails for MCP tools.
 

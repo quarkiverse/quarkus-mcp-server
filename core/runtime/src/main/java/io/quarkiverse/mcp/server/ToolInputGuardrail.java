@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.smallrye.common.annotation.CheckReturnValue;
-import io.smallrye.common.annotation.Experimental;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
@@ -26,7 +25,6 @@ import io.vertx.core.json.JsonObject;
  * @see SupportedExecutionModels
  * @see ToolOutputGuardrail
  */
-@Experimental("This API is experimental and may change in the future")
 public interface ToolInputGuardrail {
 
     /**

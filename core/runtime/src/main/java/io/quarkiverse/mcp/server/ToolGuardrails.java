@@ -6,8 +6,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import io.smallrye.common.annotation.Experimental;
-
 /**
  * Associate guardrails with a tool call.
  *
@@ -15,7 +13,6 @@ import io.smallrye.common.annotation.Experimental;
  * @see ToolInputGuardrail
  * @see ToolOutputGuardrail
  */
-@Experimental("This API is experimental and may change in the future")
 @Retention(RUNTIME)
 @Target(METHOD)
 public @interface ToolGuardrails {
