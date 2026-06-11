@@ -24,7 +24,7 @@ public class IncludeQueryParamsTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class))
-            .overrideConfigKey("quarkus.mcp.server.sse.message-endpoint.include-query-params", "true");
+            .overrideConfigKey("quarkus.mcp.server.http.message-endpoint.include-query-params", "true");
 
     @Test
     public void testQueryParams() {

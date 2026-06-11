@@ -16,7 +16,7 @@ public class CustomRootPathTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withEmptyApplication()
-            .overrideConfigKey("quarkus.mcp.server.sse.root-path", "foo");
+            .overrideConfigKey("quarkus.mcp.server.http.root-path", "foo");
 
     @Test
     public void testServerInfo() {
