@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server;
 
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.smallrye.common.annotation.CheckReturnValue;
-import io.smallrye.common.annotation.Experimental;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -25,7 +24,6 @@ import io.smallrye.mutiny.Uni;
  * @see SupportedExecutionModels
  * @see ToolInputGuardrail
  */
-@Experimental("This API is experimental and may change in the future")
 public interface ToolOutputGuardrail {
 
     /**
