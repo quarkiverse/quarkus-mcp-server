@@ -53,6 +53,7 @@ import io.smallrye.common.vertx.VertxContext;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 @Singleton
 public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
@@ -110,9 +111,9 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                                 Quarkus.asyncExit(0);
                                 return;
                             }
-                            Object json;
+                            JsonObject message;
                             try {
-                                json = Json.decodeValue(line);
+                                message = (JsonObject) Json.decodeValue(line);
                             } catch (Exception e) {
                                 String msg = "Unable to parse the JSON message";
                                 LOG.warnf(e, msg);
@@ -124,7 +125,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                             context.executeBlocking(new Callable<>() {
                                 @Override
                                 public Object call() throws Exception {
-                                    StdioMcpRequest mcpRequest = new StdioMcpRequest(McpServer.DEFAULT, json, connection,
+                                    StdioMcpRequest mcpRequest = new StdioMcpRequest(McpServer.DEFAULT, message, connection,
                                             connection, null, null,
                                             null);
                                     handle(mcpRequest);
@@ -147,10 +148,10 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
 
     static class StdioMcpRequest extends McpRequestImpl<StdioMcpConnection> {
 
-        StdioMcpRequest(String serverName, Object json, StdioMcpConnection connection, Sender sender,
+        StdioMcpRequest(String serverName, JsonObject message, StdioMcpConnection connection, Sender sender,
                 SecuritySupport securitySupport, ContextSupport requestContextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation) {
-            super(serverName, json, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
+            super(serverName, message, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
         }
 
     }

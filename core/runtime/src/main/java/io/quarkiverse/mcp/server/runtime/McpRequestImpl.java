@@ -13,7 +13,7 @@ import io.vertx.core.json.JsonObject;
 public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> implements McpRequest {
 
     private final String serverName;
-    private final Object json;
+    private final JsonObject message;
     private final CONNECTION connection;
     private final Sender sender;
     private final SecuritySupport securitySupport;
@@ -25,11 +25,11 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     // Tracing span - started by prepareTracing(), ended by contextEnd()
     private volatile McpTracingSpan tracingSpan;
 
-    public McpRequestImpl(String serverName, Object json, CONNECTION connection, Sender sender,
+    public McpRequestImpl(String serverName, JsonObject message, CONNECTION connection, Sender sender,
             SecuritySupport securitySupport,
             ContextSupport requestContextSupport, CurrentIdentityAssociation currentIdentityAssociation) {
         this.serverName = serverName;
-        this.json = json;
+        this.message = message;
         this.connection = connection;
         this.sender = sender;
         this.securitySupport = securitySupport;
@@ -44,8 +44,8 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     }
 
     @Override
-    public Object json() {
-        return json;
+    public JsonObject message() {
+        return message;
     }
 
     @Override

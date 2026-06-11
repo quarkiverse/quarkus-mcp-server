@@ -140,45 +140,13 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
-        Object json = mcpRequest.json();
-        if (json instanceof JsonObject message) {
-            // Single request, notification, or response
-            mcpRequest.messageReceived(message);
-            if (JsonRpc.validate(message, mcpRequest.sender())) {
-                return Messages.isResponse(message) ? handleResponse(message)
-                        : handleRequest(message, mcpRequest);
-            } else {
-                jsonrpcValidationFailed(mcpRequest);
-            }
-        } else if (json instanceof JsonArray batch) {
-            // Batch of messages
-            if (!batch.isEmpty()) {
-                List<Future<Void>> all = new ArrayList<>();
-                if (Messages.isResponse(batch.getJsonObject(0))) {
-                    // Batch of responses
-                    for (Object e : batch) {
-                        JsonObject response = (JsonObject) e;
-                        mcpRequest.messageReceived(response);
-                        if (JsonRpc.validate(response, mcpRequest.sender())) {
-                            all.add(handleResponse(response));
-                        } else {
-                            jsonrpcValidationFailed(mcpRequest);
-                        }
-                    }
-                } else {
-                    // Batch of requests/notifications
-                    for (Object e : batch) {
-                        JsonObject requestOrNotification = (JsonObject) e;
-                        mcpRequest.messageReceived(requestOrNotification);
-                        if (JsonRpc.validate(requestOrNotification, mcpRequest.sender())) {
-                            all.add(handleRequest(requestOrNotification, mcpRequest));
-                        } else {
-                            jsonrpcValidationFailed(mcpRequest);
-                        }
-                    }
-                }
-                return Future.join(all);
-            }
+        JsonObject message = mcpRequest.message();
+        mcpRequest.markReceived();
+        if (JsonRpc.validate(message, mcpRequest.sender())) {
+            return Messages.isResponse(message) ? handleResponse(message)
+                    : handleRequest(message, mcpRequest);
+        } else {
+            jsonrpcValidationFailed(mcpRequest);
         }
         return Future.failedFuture("Invalid jsonrpc message");
     }

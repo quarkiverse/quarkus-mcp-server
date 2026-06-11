@@ -17,6 +17,7 @@ include::./includes/attributes.adoc[]
 === Breaking Changes
 
 * [2.0.0] The Maven artifact relocations and configuration property fallbacks for the old `quarkus-mcp-server-sse` artifact (renamed to `quarkus-mcp-server-http` in <<version-1-8,1.8.0>>) have been removed. Users still referencing `quarkus-mcp-server-sse` must switch to `quarkus-mcp-server-http`, and any configuration properties using the `sse.` prefix (e.g. `quarkus.mcp.server.sse.root-path`) must be updated to use the `http.` prefix (e.g. `quarkus.mcp.server.http.root-path`). (https://github.com/quarkiverse/quarkus-mcp-server/issues/826[#826])
+* [2.0.0] JSON-RPC batching support has been removed. Batching was added in MCP 2025-03-26 and removed in 2025-06-18. The server now rejects batch (JSON array) messages with a parse error. The `whenBatch()` method has been removed from the `McpAssured` test API. (https://github.com/quarkiverse/quarkus-mcp-server/issues/723[#723])
 
 [[version-1-13]]
 == 1.13.x

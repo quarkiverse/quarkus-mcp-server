@@ -32,7 +32,7 @@ public class ToolCurrentRequestTest extends McpServerTest {
                 .build();
         client.connect();
 
-        client.whenBatch()
+        client.when()
                 .toolsCall("bravo", Map.of("price", 10), toolResponse -> {
                     assertFalse(toolResponse.isError());
                     assertEquals("10bazinga", toolResponse.firstContent().asText().text());

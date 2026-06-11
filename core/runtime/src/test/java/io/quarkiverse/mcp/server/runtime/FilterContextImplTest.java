@@ -33,7 +33,7 @@ public class FilterContextImplTest {
             }
 
             @Override
-            public Object json() {
+            public JsonObject message() {
                 return new JsonObject();
             }
 

@@ -42,6 +42,7 @@ import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.UniHelper;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A subclass is generated for each MCP server endpoint.
@@ -92,7 +93,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
     @OnTextMessage
     Uni<Void> consumeMessage(WebSocketConnection connection, String message) throws InterruptedException {
         WebSocketMcpConnection mcpConnection = connections.computeIfAbsent(connection.id(), k -> newConnection(connection));
-        Object json = Json.decodeValue(message);
+        JsonObject jsonMessage = (JsonObject) Json.decodeValue(message);
 
         SecuritySupport securitySupport;
         if (currentIdentityAssociation != null) {
@@ -107,7 +108,8 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             securitySupport = null;
         }
 
-        WebSocketMcpRequest mcpRequest = new WebSocketMcpRequest(serverName(), json, mcpConnection, securitySupport, null,
+        WebSocketMcpRequest mcpRequest = new WebSocketMcpRequest(serverName(), jsonMessage, mcpConnection, securitySupport,
+                null,
                 currentIdentityAssociation);
         return (Uni<Void>) UniHelper.toUni(handle(mcpRequest));
     }
@@ -137,10 +139,11 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
 
     static class WebSocketMcpRequest extends McpRequestImpl<WebSocketMcpConnection> {
 
-        WebSocketMcpRequest(String serverName, Object json, WebSocketMcpConnection connection,
+        WebSocketMcpRequest(String serverName, JsonObject message, WebSocketMcpConnection connection,
                 SecuritySupport securitySupport, ContextSupport requestContextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation) {
-            super(serverName, json, connection, connection, securitySupport, requestContextSupport, currentIdentityAssociation);
+            super(serverName, message, connection, connection, securitySupport, requestContextSupport,
+                    currentIdentityAssociation);
         }
 
     }

@@ -44,6 +44,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 @Singleton
@@ -117,9 +118,9 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             throw new IllegalStateException("Invalid connection type: " + conn.getClass().getName());
         }
 
-        Object json;
+        JsonObject message;
         try {
-            json = Json.decodeValue(ctx.body().buffer());
+            message = (JsonObject) Json.decodeValue(ctx.body().buffer());
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
             LOG.warnf(e, msg);
@@ -148,7 +149,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             }
         };
 
-        SseMcpRequest mcpRequest = new SseMcpRequest(serverName, json, connection, connection, securitySupport,
+        SseMcpRequest mcpRequest = new SseMcpRequest(serverName, message, connection, connection, securitySupport,
                 contextSupport,
                 currentIdentityAssociation);
         handle(mcpRequest).onComplete(ar -> {
@@ -167,10 +168,10 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
 
     static class SseMcpRequest extends McpRequestImpl<SseMcpConnection> {
 
-        SseMcpRequest(String serverName, Object json, SseMcpConnection connection, Sender sender,
+        SseMcpRequest(String serverName, JsonObject message, SseMcpConnection connection, Sender sender,
                 SecuritySupport securitySupport, ContextSupport requestContextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation) {
-            super(serverName, json, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
+            super(serverName, message, connection, sender, securitySupport, requestContextSupport, currentIdentityAssociation);
         }
 
     }

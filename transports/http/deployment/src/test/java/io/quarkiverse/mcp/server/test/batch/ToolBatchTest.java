@@ -1,26 +1,23 @@
 package io.quarkiverse.mcp.server.test.batch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
-import io.vertx.core.MultiMap;
-import io.vertx.core.http.HttpServerRequest;
+import io.restassured.RestAssured;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class ToolBatchTest extends McpServerTest {
 
@@ -30,59 +27,38 @@ public class ToolBatchTest extends McpServerTest {
                     root -> root.addClasses(MyTools.class));
 
     @Test
-    public void testBatchMessage() {
-        McpSseTestClient client = McpAssured
-                .newSseClient()
-                .setAdditionalHeaders(m -> MultiMap.caseInsensitiveMultiMap().add("test-foo", "bar"))
-                .build()
-                .connect();
+    public void testBatchMessageRejected() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
-        Set<String> fooIds = new HashSet<>();
-        client.whenBatch()
-                .toolsCall("bravo", Map.of("price", 10), toolResponse -> {
-                    String text = toolResponse.firstContent().asText().text();
-                    assertEquals("420", text.substring(0, text.indexOf("::")));
-                    fooIds.add(text.substring(text.indexOf("::") + 2));
-                })
-                .toolsCall("bravo", Map.of("price", 100), toolResponse -> {
-                    String text = toolResponse.firstContent().asText().text();
-                    assertEquals("4200", text.substring(0, text.indexOf("::")));
-                    fooIds.add(text.substring(text.indexOf("::") + 2));
-                })
-                .thenAssertResults();
-        assertEquals(2, fooIds.size());
+        JsonArray batch = new JsonArray()
+                .add(client.newRequest("tools/call")
+                        .put("params",
+                                new JsonObject().put("name", "bravo").put("arguments", new JsonObject().put("price", 10))))
+                .add(client.newRequest("tools/call")
+                        .put("params",
+                                new JsonObject().put("name", "bravo").put("arguments", new JsonObject().put("price", 100))));
+
+        String responseBody = RestAssured.given()
+                .when()
+                .headers(Map.of(
+                        HttpHeaders.ACCEPT + "", "application/json, text/event-stream",
+                        "Mcp-Session-Id", client.mcpSessionId()))
+                .body(batch.encode())
+                .post(client.mcpEndpoint().toString())
+                .then()
+                .statusCode(200)
+                .extract().body().asString();
+
+        JsonObject body = new JsonObject(responseBody);
+        assertNotNull(body.getJsonObject("error"));
+        assertEquals(JsonRpcErrorCodes.PARSE_ERROR, body.getJsonObject("error").getInteger("code"));
     }
 
     public static class MyTools {
 
-        @Inject
-        Foo foo;
-
-        @Inject
-        HttpServerRequest request;
-
         @Tool
         String bravo(int price) {
-            if (!"bar".equals(request.getHeader("test-foo"))) {
-                throw new IllegalStateException();
-            }
-            return "" + price * 42 + "::" + foo.getId();
-        }
-
-    }
-
-    @RequestScoped
-    public static class Foo {
-
-        private String id;
-
-        @PostConstruct
-        void init() {
-            this.id = UUID.randomUUID().toString();
-        }
-
-        public String getId() {
-            return id;
+            return "" + price * 42;
         }
 
     }

@@ -168,17 +168,6 @@ public class McpAssured {
         ASSERT when();
 
         /**
-         * Create a group of MCP requests and corresponding assert functions.
-         * <p>
-         * The MCP requests are sent in a batch, the responses are processed and the assert functions are used when the
-         * {@link McpAssert#thenAssertResults()} method is called.
-         *
-         * @return the assert group
-         * @see McpAssert#thenAssertResults()
-         */
-        ASSERT whenBatch();
-
-        /**
          * @param method
          * @return a new message
          */
