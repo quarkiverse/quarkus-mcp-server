@@ -145,7 +145,7 @@ public class MultipleServersMultiBindingTest extends McpServerTest {
                 .build()
                 .connect();
 
-        client.whenBatch()
+        client.when()
                 .toolsCall("charlie", r -> assertEquals("3", r.firstContent().asText().text()))
                 .toolsCall("delta", r -> assertEquals("4", r.firstContent().asText().text()))
                 .toolsCall("golf", r -> assertEquals("golf", r.firstContent().asText().text()))

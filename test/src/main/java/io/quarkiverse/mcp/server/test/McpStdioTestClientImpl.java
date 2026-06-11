@@ -26,8 +26,6 @@ import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStdioAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStdioTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
-import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioTestClient>
@@ -218,11 +216,6 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
     }
 
     @Override
-    public McpStdioAssert whenBatch() {
-        return new McpStdioAssertBatch();
-    }
-
-    @Override
     public void sendAndForget(JsonObject message) {
         LOG.debugf("MCP message sent: %s", message);
         processStdin.println(message.encode());
@@ -245,28 +238,6 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         protected TracingHandle doSend(JsonObject message) {
             sendAndForget(message);
             return null;
-        }
-
-    }
-
-    class McpStdioAssertBatch extends McpStdioAssertImpl {
-
-        private final List<JsonObject> requests = new ArrayList<>();
-
-        @Override
-        protected TracingHandle doSend(JsonObject message) {
-            requests.add(message);
-            return null;
-        }
-
-        @Override
-        public Snapshot thenAssertResults() {
-            JsonArray batch = new JsonArray();
-            requests.forEach(batch::add);
-            LOG.debugf("STDIO batch message sent: %s", batch);
-            processStdin.println(batch.encode());
-            processStdin.flush();
-            return super.thenAssertResults();
         }
 
     }

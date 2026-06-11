@@ -34,9 +34,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
-import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
 import io.vertx.core.MultiMap;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestClient> implements McpSseTestClient {
@@ -179,14 +177,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
     }
 
     @Override
-    public McpSseAssert whenBatch() {
-        if (!isConnected()) {
-            throw notConnected();
-        }
-        return new McpSseAssertBatch();
-    }
-
-    @Override
     protected McpClientState clientState() {
         return client.state;
     }
@@ -276,42 +266,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     }
 
-    class McpSseAssertBatch extends McpSseAssertImpl {
-
-        private final List<JsonObject> requests = new ArrayList<>();
-
-        @Override
-        protected TracingHandle doSend(JsonObject message) {
-            requests.add(message);
-            return null;
-        }
-
-        @Override
-        public Snapshot thenAssertResults() {
-            JsonArray batch = new JsonArray();
-            requests.forEach(batch::add);
-            MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-            for (JsonObject request : requests) {
-                headers.addAll(McpSseTestClientImpl.this.additionalHeaders.apply(request));
-            }
-            MultiMap additionalHeaders = this.additionalHeaders.get();
-            if (additionalHeaders != null) {
-                headers.addAll(additionalHeaders);
-            }
-            Authorization authorization = this.authorization.get();
-            if (authorization == null) {
-                authorization = clientAuthorization;
-            }
-            HttpResponse response = sendSync(batch, headers, authorization);
-            Consumer<HttpResponse> validator = httpResponseValidator.get();
-            if (validator != null) {
-                validator.accept(response);
-            }
-            return super.thenAssertResults();
-        }
-
-    }
-
     static class BuilderImpl extends McpTestClientBuilder<McpSseTestClient.Builder> implements McpSseTestClient.Builder {
 
         private String ssePath = "/mcp/sse";
@@ -386,10 +340,6 @@ class McpSseTestClientImpl extends McpTestClientBase<McpSseAssert, McpSseTestCli
 
     private HttpResponse sendSync(JsonObject message, MultiMap additionalHeaders, Authorization authorization) {
         return sendSync(message.encode(), additionalHeaders, authorization);
-    }
-
-    private HttpResponse sendSync(JsonArray batch, MultiMap additionalHeaders, Authorization authorization) {
-        return sendSync(batch.encode(), additionalHeaders, authorization);
     }
 
     private CompletableFuture<java.net.http.HttpResponse<String>> sendAsync(String data, MultiMap additionalHeaders,

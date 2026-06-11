@@ -21,9 +21,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
-import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
 import io.vertx.core.MultiMap;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert, McpStreamableTestClient>
@@ -174,11 +172,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
     }
 
     @Override
-    public McpStreamableAssert whenBatch() {
-        return new McpStreamableAssertBatch();
-    }
-
-    @Override
     protected McpClientState clientState() {
         return client.state;
     }
@@ -193,10 +186,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private void send(JsonObject message, MultiMap additionalHeaders, Authorization authorization) {
         send(message.encode(), additionalHeaders, authorization);
-    }
-
-    private void send(JsonArray batch, MultiMap additionalHeaders, Authorization authorization) {
-        send(batch.encode(), additionalHeaders, authorization);
     }
 
     private void send(String data, MultiMap additionalHeaders, Authorization authorization) {
@@ -249,42 +238,6 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 send(message, additionalHeaders(message), authorization);
             }
             return null;
-        }
-
-    }
-
-    class McpStreamableAssertBatch extends McpStreamableAssertImpl {
-
-        private final List<JsonObject> requests = new ArrayList<>();
-
-        @Override
-        protected TracingHandle doSend(JsonObject message) {
-            // todo handle otel in batches
-            requests.add(message);
-            return null;
-        }
-
-        @Override
-        public Snapshot thenAssertResults() {
-            JsonArray batch = new JsonArray();
-            requests.forEach(batch::add);
-            MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-            if (mcpSessionId != null) {
-                headers.add("Mcp-Session-Id", mcpSessionId);
-            }
-            for (JsonObject request : requests) {
-                headers.addAll(McpStreamableTestClientImpl.this.additionalHeaders.apply(request));
-            }
-            MultiMap additionalHeaders = this.additionalHeaders.get();
-            if (additionalHeaders != null) {
-                headers.addAll(additionalHeaders);
-            }
-            Authorization authorization = this.authorization.get();
-            if (authorization == null) {
-                authorization = clientAuthorization;
-            }
-            send(batch, headers, authorization);
-            return super.thenAssertResults();
         }
 
     }

@@ -85,7 +85,6 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
@@ -213,9 +212,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         }
 
-        Object json;
+        JsonObject message;
         try {
-            json = Json.decodeValue(ctx.body().buffer());
+            message = (JsonObject) Json.decodeValue(ctx.body().buffer());
         } catch (Exception e) {
             String msg = "Unable to parse the JSON message";
             LOG.warnf(e, msg);
@@ -249,8 +248,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ctx.fail(400);
             return;
         }
-        boolean lazySseInit = computeLazySseInit(serverName, json);
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, json, connection, securitySupport, ctx.response(),
+        boolean lazySseInit = computeLazySseInit(serverName, message);
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport, ctx.response(),
                 mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
         try {
             boolean containsRequest = scan(mcpRequest);
@@ -361,7 +360,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             // Try to find the clientInfo and clientCapabilities in _meta
             Implementation implementation = AUTO_INIT_IMPLEMENTATION;
             List<ClientCapability> clientCapabilities = List.of();
-            JsonObject meta = findMeta(mcpRequest.json());
+            JsonObject meta = findMeta(mcpRequest.message());
             if (meta != null) {
                 JsonObject clientInfo = meta.getJsonObject(MetaKey.CLIENT_INFO.toString());
                 if (clientInfo != null) {
@@ -387,18 +386,10 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return null;
     }
 
-    private static JsonObject findMeta(Object json) {
-        JsonObject message = null;
-        if (json instanceof JsonObject jsonObject) {
-            message = jsonObject;
-        } else if (json instanceof JsonArray jsonArray && !jsonArray.isEmpty()) {
-            message = jsonArray.getJsonObject(0);
-        }
-        if (message != null) {
-            JsonObject params = Messages.getParams(message);
-            if (params != null) {
-                return params.getJsonObject("_meta");
-            }
+    private static JsonObject findMeta(JsonObject message) {
+        JsonObject params = Messages.getParams(message);
+        if (params != null) {
+            return params.getJsonObject("_meta");
         }
         return null;
     }
@@ -476,26 +467,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ROOTS,
             ELICITATION);
 
-    private boolean computeLazySseInit(String serverName, Object json) {
+    private boolean computeLazySseInit(String serverName, JsonObject message) {
         if (!httpConfig.servers().get(serverName).http().streamable().lazySseInit()) {
             return false;
         }
-        if (json instanceof JsonObject message) {
-            return Messages.isRequest(message) && isForceSseMethod(message);
-        } else if (json instanceof JsonArray batch) {
-            if (!Messages.isResponse(batch.getJsonObject(0)) && batch.size() == 1) {
-                JsonObject message = batch.getJsonObject(0);
-                return Messages.isRequest(message) && isForceSseMethod(message);
-            }
-        }
-        return false;
+        return Messages.isRequest(message) && isForceSseMethod(message);
     }
 
     /**
-     * Scans the request payload and returns {@code true} if it contains at least one JSON-RPC request.
+     * Scans the request payload and returns {@code true} if it contains a JSON-RPC request.
      * <p>
-     * For batches with 2+ requests/notifications, SSE is eagerly initialized because multiple responses need streaming.
-     * For single requests in {@link #FORCE_SSE_METHODS}:
+     * For requests in {@link #FORCE_SSE_METHODS}:
      * <ul>
      * <li>If lazy SSE init is enabled (default), SSE is initialized lazily in {@link HttpMcpRequest#send(JsonObject)}
      * when a non-response message is actually sent.</li>
@@ -503,32 +485,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
      * </ul>
      */
     private boolean scan(HttpMcpRequest mcpRequest) {
-        boolean containsRequest = false;
-        if (mcpRequest.json() instanceof JsonObject message) {
-            containsRequest = Messages.isRequest(message);
-            if (containsRequest
-                    && !mcpRequest.lazySseInit
-                    && forceSseEager(mcpRequest, message)) {
-                mcpRequest.initiateSse();
-            }
-        } else if (mcpRequest.json() instanceof JsonArray batch) {
-            if (!Messages.isResponse(batch.getJsonObject(0))) {
-                if (batch.size() > 1) {
-                    // The batch contains at least 2 requests/notifications - force SSE eagerly
-                    mcpRequest.initiateSse();
-                } else if (!mcpRequest.lazySseInit) {
-                    JsonObject message = batch.getJsonObject(0);
-                    if (Messages.isRequest(message) && forceSseEager(mcpRequest, message)) {
-                        mcpRequest.initiateSse();
-                    }
-                }
-                for (Object e : batch) {
-                    if (e instanceof JsonObject message && Messages.isRequest(message)) {
-                        containsRequest = true;
-                        break;
-                    }
-                }
-            }
+        JsonObject message = mcpRequest.message();
+        boolean containsRequest = Messages.isRequest(message);
+        if (containsRequest
+                && !mcpRequest.lazySseInit
+                && forceSseEager(mcpRequest, message)) {
+            mcpRequest.initiateSse();
         }
         return containsRequest;
     }
@@ -660,12 +622,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final boolean lazySseInit;
 
-        public HttpMcpRequest(String serverName, Object json, StreamableHttpMcpConnection connection,
+        public HttpMcpRequest(String serverName, JsonObject message, StreamableHttpMcpConnection connection,
                 SecuritySupport securitySupport,
                 HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion,
                 boolean lazySseInit) {
-            super(serverName, json, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
+            super(serverName, message, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
             this.response = response;

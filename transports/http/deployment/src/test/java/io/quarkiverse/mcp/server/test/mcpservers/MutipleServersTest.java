@@ -82,7 +82,7 @@ public class MutipleServersTest extends McpServerTest {
                 .build()
                 .connect();
 
-        client.whenBatch()
+        client.when()
                 // tools
                 .toolsCall("alpha", r -> assertEquals("1", r.firstContent().asText().text()))
                 .toolsCall("bravo").withErrorAssert(e -> assertEquals("Invalid tool name: bravo", e.message())).send()

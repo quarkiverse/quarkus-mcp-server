@@ -18,12 +18,10 @@ import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
-import io.quarkiverse.mcp.server.test.McpAssured.Snapshot;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, McpWebSocketTestClient>
@@ -130,11 +128,6 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
     }
 
     @Override
-    public McpWebSocketAssert whenBatch() {
-        return new McpWebSocketAssertBatch();
-    }
-
-    @Override
     public void sendAndForget(JsonObject message) {
         client.send(message.encode());
     }
@@ -155,26 +148,6 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
         protected TracingHandle doSend(JsonObject message) {
             sendAndForget(message);
             return null;
-        }
-
-    }
-
-    class McpWebSocketAssertBatch extends McpWebSocketAssertImpl {
-
-        private final List<JsonObject> requests = new ArrayList<>();
-
-        @Override
-        protected TracingHandle doSend(JsonObject message) {
-            requests.add(message);
-            return null;
-        }
-
-        @Override
-        public Snapshot thenAssertResults() {
-            JsonArray batch = new JsonArray();
-            requests.forEach(batch::add);
-            client.send(batch.encode());
-            return super.thenAssertResults();
         }
 
     }

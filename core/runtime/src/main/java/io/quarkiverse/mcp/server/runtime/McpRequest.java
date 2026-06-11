@@ -8,7 +8,7 @@ public interface McpRequest {
 
     String serverName();
 
-    Object json();
+    JsonObject message();
 
     McpConnectionBase connection();
 
@@ -18,9 +18,9 @@ public interface McpRequest {
 
     ContextSupport contextSupport();
 
-    default void messageReceived(JsonObject message) {
+    default void markReceived() {
         if (connection().getTrafficLoggerTextLimit() > 0) {
-            TrafficLogger.messageReceived(message, connection(), connection().getTrafficLoggerTextLimit());
+            TrafficLogger.messageReceived(message(), connection(), connection().getTrafficLoggerTextLimit());
         }
     }
 
