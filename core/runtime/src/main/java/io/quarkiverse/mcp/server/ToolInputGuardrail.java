@@ -90,7 +90,7 @@ public interface ToolInputGuardrail {
         /**
          * Set the current arguments.
          *
-         * @param arguments
+         * @param arguments must not be {@code null}
          */
         void setArguments(JsonObject arguments);
 
