@@ -167,6 +167,16 @@
         "doc",
         "code"
       ]
+    },
+    {
+      "login": "moayad-alyaghshi",
+      "name": "Moayad Alyaghshi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/49444460?v=4",
+      "profile": "https://github.com/moayad-alyaghshi",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
