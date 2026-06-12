@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -40,6 +41,7 @@ public class McpAssured {
     public static final String RESOURCES_TEMPLATES_LIST = "resources/templates/list";
     public static final String RESOURCES_READ = "resources/read";
     public static final String COMPLETION_COMPLETE = "completion/complete";
+    public static final String SERVER_DISCOVER = "server/discover";
 
     /**
      * The base URI is used by HTTP-based client implementations.
@@ -127,6 +129,7 @@ public class McpAssured {
         boolean isConnected();
 
         /**
+         * For stateless clients, this returns the result of the {@code server/discover} operation.
          *
          * @return the result of the {@code initialize} operation or {@code null} if not connected
          */
@@ -134,6 +137,10 @@ public class McpAssured {
 
         /**
          * Connect the client and perform the MCP initialization.
+         * <p>
+         * For stateless clients, the {@code server/discover} method is used instead of the {@code initialize}/{@code
+         * notifications/initialized} handshake. No session is established and {@link McpStreamableTestClient#mcpSessionId()}
+         * returns {@code null}.
          *
          * @return the client
          */
@@ -143,6 +150,10 @@ public class McpAssured {
 
         /**
          * Connect the client and perform the MCP initialization.
+         * <p>
+         * For stateless clients, the {@code server/discover} method is used instead of the {@code initialize}/{@code
+         * notifications/initialized} handshake. No session is established and {@link McpStreamableTestClient#mcpSessionId()}
+         * returns {@code null}.
          *
          * @param assertFunction
          * @return the client
@@ -256,11 +267,19 @@ public class McpAssured {
             BUILDER setVersion(String clientVersion);
 
             /**
+             * @param protocolVersion
+             * @return self
+             * @deprecated use {@link #setProtocolVersion(McpProtocolVersion)} instead
+             */
+            @Deprecated(forRemoval = true)
+            BUILDER setProtocolVersion(String protocolVersion);
+
+            /**
              *
              * @param protocolVersion
              * @return self
              */
-            BUILDER setProtocolVersion(String protocolVersion);
+            BUILDER setProtocolVersion(McpProtocolVersion protocolVersion);
 
             /**
              *
@@ -313,6 +332,16 @@ public class McpAssured {
              * @return self
              */
             BUILDER setTracing(io.opentelemetry.api.OpenTelemetry openTelemetry);
+
+            /**
+             * Sets the client to stateless mode using the first stateless protocol version.
+             *
+             * @return self
+             */
+            @SuppressWarnings("unchecked")
+            default BUILDER setStateless() {
+                return (BUILDER) setProtocolVersion(McpProtocolVersion.FIRST_STATELESS);
+            }
 
         }
 

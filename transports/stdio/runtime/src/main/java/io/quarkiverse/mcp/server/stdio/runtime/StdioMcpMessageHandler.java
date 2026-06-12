@@ -19,10 +19,13 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
@@ -32,6 +35,7 @@ import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
 import io.quarkiverse.mcp.server.runtime.McpTracing;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -125,9 +129,31 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                             context.executeBlocking(new Callable<>() {
                                 @Override
                                 public Object call() throws Exception {
-                                    StdioMcpRequest mcpRequest = new StdioMcpRequest(McpServer.DEFAULT, message, connection,
-                                            connection, null, null,
-                                            null);
+                                    StdioMcpConnection requestConnection;
+                                    JsonObject meta = findMeta(message);
+                                    if (isStatelessMessage(message, meta)) {
+                                        requestConnection = new StdioMcpConnection(ConnectionManager.connectionId(),
+                                                serverConfig, stdout, vertx, true);
+                                        String metaVersion = meta != null
+                                                ? meta.getString(MetaKey.PROTOCOL_VERSION.toString())
+                                                : null;
+                                        InitialRequest initialRequest;
+                                        try {
+                                            initialRequest = buildStatelessInitialRequest(meta, metaVersion,
+                                                    Transport.STDIO);
+                                            applyMetaLogLevel(meta, requestConnection);
+                                        } catch (McpException e) {
+                                            requestConnection.sendError(Messages.getId(message), e.getJsonRpcErrorCode(),
+                                                    e.getMessage());
+                                            return null;
+                                        }
+                                        requestConnection.initialize(initialRequest);
+                                        requestConnection.setInitialized();
+                                    } else {
+                                        requestConnection = connection;
+                                    }
+                                    StdioMcpRequest mcpRequest = new StdioMcpRequest(McpServer.DEFAULT, message,
+                                            requestConnection, requestConnection, null, null, null);
                                     handle(mcpRequest);
                                     return null;
                                 }

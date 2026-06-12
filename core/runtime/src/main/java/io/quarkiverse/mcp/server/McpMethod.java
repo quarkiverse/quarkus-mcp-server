@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 public enum McpMethod {
 
     INITIALIZE("initialize"),
+    SERVER_DISCOVER("server/discover"),
 
     PROMPTS_LIST("prompts/list"),
     PROMPTS_GET("prompts/get"),

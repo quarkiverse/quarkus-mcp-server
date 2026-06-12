@@ -19,7 +19,12 @@ public class StdioMcpConnection extends McpConnectionBase {
     private final Vertx vertx;
 
     StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx) {
-        super(id, serverConfig, McpServer.DEFAULT);
+        this(id, serverConfig, out, vertx, false);
+    }
+
+    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx,
+            boolean transientConnection) {
+        super(id, serverConfig, McpServer.DEFAULT, transientConnection);
         this.out = out;
         this.vertx = vertx;
     }

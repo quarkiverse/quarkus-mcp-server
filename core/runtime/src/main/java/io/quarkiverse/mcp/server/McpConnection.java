@@ -13,16 +13,25 @@ public interface McpConnection {
     String id();
 
     /**
+     * The connection status is not relevant for {@linkplain #isTransient()
+     * transient} connections, which are always {@link Status#IN_OPERATION}.
+     *
      * @return the current status (not {@code null})}
      */
     Status status();
 
     /**
+     * For {@linkplain #isTransient() transient} connections, the initial request is synthesized from per-request {@code _meta}
+     * data (protocol version, client info, client capabilities).
+     *
      * @return the initial request (not {@code null})}
      */
     InitialRequest initialRequest();
 
     /**
+     * For {@linkplain #isTransient() transient} connections, returns the per-request log level from
+     * {@code _meta} ({@code io.modelcontextprotocol/logLevel}), or the default level if not specified.
+     *
      * @return the current log level
      */
     LogLevel logLevel();
@@ -32,6 +41,14 @@ public interface McpConnection {
      * @see McpServer
      */
     String serverName();
+
+    /**
+     * A transient connection is created per-request and is not tracked on the server. Stateless clients and
+     * auto-initialized connections use transient connections.
+     *
+     * @return {@code true} if this connection is transient
+     */
+    boolean isTransient();
 
     enum Status {
 

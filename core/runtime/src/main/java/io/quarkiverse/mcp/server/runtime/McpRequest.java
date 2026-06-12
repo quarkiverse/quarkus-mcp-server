@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server.runtime;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.vertx.core.json.JsonObject;
 
 public interface McpRequest {
@@ -49,5 +50,5 @@ public interface McpRequest {
 
     void contextEnd(Throwable error);
 
-    String protocolVersion();
+    McpProtocolVersion protocolVersion();
 }

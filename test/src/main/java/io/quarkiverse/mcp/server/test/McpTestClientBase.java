@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +26,8 @@ import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Icon;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
@@ -60,7 +63,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
     protected final String name;
     protected final String version;
-    protected final String protocolVersion;
+    protected final McpProtocolVersion protocolVersion;
     protected final Set<ClientCapability> clientCapabilities;
     protected final Function<JsonObject, MultiMap> additionalHeaders;
     protected final boolean autoPong;
@@ -75,7 +78,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     protected String websiteUrl;
     protected Set<Icon> icons;
 
-    McpTestClientBase(String name, String version, String protocolVersion, Set<ClientCapability> clientCapabilities,
+    McpTestClientBase(String name, String version, McpProtocolVersion protocolVersion, Set<ClientCapability> clientCapabilities,
             Function<JsonObject, MultiMap> additionalHeaders, boolean autoPong, Authorization clientAuthorization,
             String title, String description, String websiteUrl, Set<Icon> icons, OpenTelemetry openTelemetry) {
         this.name = name;
@@ -175,28 +178,100 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
     }
 
     protected JsonObject newToolsCallMessage(String toolName, Map<String, Object> arguments, Map<String, Object> meta) {
-        return newRequest(McpAssured.TOOLS_CALL, p -> {
+        JsonObject message = newRequest(McpAssured.TOOLS_CALL, p -> {
             p.put("name", toolName);
             addMeta(p, meta);
             if (!arguments.isEmpty()) {
                 p.put("arguments", arguments);
             }
         });
+        injectStatelessMeta(message);
+        return message;
     }
 
     protected JsonObject newListMessage(String method, Map<String, Object> meta, String cursor) {
-        return newRequest(method, p -> {
+        JsonObject message = newRequest(method, p -> {
             addMeta(p, meta);
             if (cursor != null) {
                 p.put("cursor", cursor);
             }
         });
+        injectStatelessMeta(message);
+        return message;
+    }
+
+    protected JsonObject newPromptsGetMessage(String promptName, Map<String, String> args, Map<String, Object> meta) {
+        JsonObject message = newRequest(McpAssured.PROMPTS_GET, p -> {
+            p.put("name", promptName);
+            addMeta(p, meta);
+            if (!args.isEmpty()) {
+                p.put("arguments", args);
+            }
+        });
+        injectStatelessMeta(message);
+        return message;
+    }
+
+    protected JsonObject newCompleteMessage(String refType, String refName, String argumentName, String argumentValue,
+            Map<String, String> contextArgs, Map<String, Object> meta) {
+        JsonObject message = newRequest(McpAssured.COMPLETION_COMPLETE, p -> {
+            JsonObject ref = new JsonObject().put("type", refType);
+            if (Messages.isPromptRef(refType)) {
+                ref.put("name", refName);
+            } else if (Messages.isResourceRef(refType)) {
+                ref.put("uri", refName);
+            }
+            addMeta(p, meta);
+            p.put("ref", ref);
+            p.put("argument", new JsonObject()
+                    .put("name", argumentName)
+                    .put("value", argumentValue));
+            if (contextArgs != null) {
+                p.put("context", new JsonObject().put("arguments", contextArgs));
+            }
+        });
+        injectStatelessMeta(message);
+        return message;
+    }
+
+    protected JsonObject newResourcesReadMessage(String uri, Map<String, Object> meta) {
+        JsonObject message = newRequest(McpAssured.RESOURCES_READ, p -> {
+            p.put("uri", uri);
+            addMeta(p, meta);
+        });
+        injectStatelessMeta(message);
+        return message;
     }
 
     protected void addMeta(JsonObject params, Map<String, Object> meta) {
         if (!meta.isEmpty()) {
+            params.put("_meta", new JsonObject(new HashMap<>(meta)));
+        }
+    }
+
+    protected void injectStatelessMeta(JsonObject message) {
+        if (!protocolVersion.isStateless()) {
+            return;
+        }
+        JsonObject params = message.getJsonObject("params");
+        if (params == null) {
+            params = new JsonObject();
+            message.put("params", params);
+        }
+        JsonObject meta = params.getJsonObject("_meta");
+        if (meta == null) {
+            meta = new JsonObject();
             params.put("_meta", meta);
         }
+        meta.put(MetaKey.PROTOCOL_VERSION.toString(), protocolVersion.version());
+        meta.put(MetaKey.CLIENT_INFO.toString(), new JsonObject()
+                .put("name", name)
+                .put("version", version));
+        JsonObject capabilities = new JsonObject();
+        for (var capability : clientCapabilities) {
+            capabilities.put(capability.name(), capability.properties());
+        }
+        meta.put(MetaKey.CLIENT_CAPABILITIES.toString(), capabilities);
     }
 
     /**
@@ -268,43 +343,6 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         }
     }
 
-    protected JsonObject newPromptsGetMessage(String promptName, Map<String, String> args, Map<String, Object> meta) {
-        return newRequest(McpAssured.PROMPTS_GET, p -> {
-            p.put("name", promptName);
-            addMeta(p, meta);
-            if (!args.isEmpty()) {
-                p.put("arguments", args);
-            }
-        });
-    }
-
-    protected JsonObject newCompleteMessage(String refType, String refName, String argumentName, String argumentValue,
-            Map<String, String> contextArgs, Map<String, Object> meta) {
-        return newRequest(McpAssured.COMPLETION_COMPLETE, p -> {
-            JsonObject ref = new JsonObject().put("type", refType);
-            if (Messages.isPromptRef(refType)) {
-                ref.put("name", refName);
-            } else if (Messages.isResourceRef(refType)) {
-                ref.put("uri", refName);
-            }
-            addMeta(p, meta);
-            p.put("ref", ref);
-            p.put("argument", new JsonObject()
-                    .put("name", argumentName)
-                    .put("value", argumentValue));
-            if (contextArgs != null) {
-                p.put("context", new JsonObject().put("arguments", contextArgs));
-            }
-        });
-    }
-
-    protected JsonObject newResourcesReadMessage(String uri, Map<String, Object> meta) {
-        return newRequest(McpAssured.RESOURCES_READ, p -> {
-            p.put("uri", uri);
-            addMeta(p, meta);
-        });
-    }
-
     @Override
     public JsonObject newInitMessage() {
         JsonObject initMessage = newRequest("initialize");
@@ -340,7 +378,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         }
         JsonObject params = new JsonObject()
                 .put("clientInfo", clientInfo)
-                .put("protocolVersion", protocolVersion);
+                .put("protocolVersion", protocolVersion.version());
         if (!clientCapabilities.isEmpty()) {
             JsonObject capabilities = new JsonObject();
             for (ClientCapability capability : clientCapabilities) {
@@ -532,6 +570,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             @Override
             public ASSERT send() {
                 JsonObject message = newRequest(McpAssured.PING);
+                injectStatelessMeta(message);
                 tracingHandles.add(doSend(message));
                 if (pongAssert) {
                     asserts.add(new PongAssert(message));

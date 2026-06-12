@@ -15,8 +15,8 @@ import io.quarkiverse.mcp.server.Icon.Theme;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -59,7 +59,7 @@ public class InitialRequestTest extends McpServerTest {
         String testInitRequest(McpConnection connection) {
             InitialRequest initRequest = connection.initialRequest();
             if (initRequest != null) {
-                if (!initRequest.protocolVersion().equals(McpMessageHandler.SUPPORTED_PROTOCOL_VERSIONS.get(0))) {
+                if (!initRequest.protocolVersion().equals(McpProtocolVersion.LATEST_STATEFUL.version())) {
                     throw new IllegalStateException();
                 }
                 if (!initRequest.implementation().name().equals("test-client")) {

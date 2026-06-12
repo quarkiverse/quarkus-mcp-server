@@ -171,6 +171,49 @@ MCP uses capability negotiation to establish what features are available between
 }
 ----
 
+=== Stateless Discovery
+
+Starting with protocol version `2026-07-28`, stateless clients use `server/discover` instead of the `initialize`/`initialized` handshake:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+    }
+  }
+}
+----
+
+The server responds with its supported versions, capabilities, and server info:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "supportedVersions": ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"],
+    "capabilities": {
+      "tools": {},
+      "resources": {},
+      "prompts": {}
+    },
+    "serverInfo": {
+      "name": "acme-quarkus-server",
+      "version": "1.0.0"
+    }
+  }
+}
+----
+
+No `initialized` notification is sent. Each subsequent request is self-contained.
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on required headers and `_meta` fields.
+
 === Capability Checking
 
 After initialization, both parties know what features are available:
@@ -217,9 +260,10 @@ NOTE: The exact sequence is not strictly enforced by the protocol, but this is t
 * No explicit shutdown request needed
 
 **HTTP Transports**::
-* Connections are session-based
-* Each session maintains separate state
-* Explicit `shutdown` request recommended for clean termination
+* Stateful connections are session-based; each session maintains separate state
+* Stateless clients (protocol version `2026-07-28`+) use transient connections — created per-request with no session
+* `McpConnection.isTransient()` returns `true` for transient connections
+* Explicit `shutdown` request recommended for clean termination of stateful sessions
 * SSE connections require keep-alive mechanism
 
 **WebSocket Transport** (custom transport)::
@@ -307,6 +351,23 @@ sequenceDiagram
     Note over Server: Tool executes
     Server-->>Client: 7. notifications/progress (optional)
     Server-->>Client: 8. tools/call response (result)
+----
+
+=== Tool Call Flow (Stateless)
+
+[mermaid,mcp-tool-call-flow-stateless,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. server/discover
+    Server-->>Client: 2. discover response (capabilities, versions)
+    Client->>Server: 3. tools/list (+headers, +_meta)
+    Server-->>Client: 4. tools/list response
+    Client->>Server: 5. tools/call (+headers, +_meta)
+    Note over Server: Tool executes<br/>(transient connection)
+    Server-->>Client: 6. tools/call response (result)
 ----
 
 === Server-to-Client Request (Sampling)

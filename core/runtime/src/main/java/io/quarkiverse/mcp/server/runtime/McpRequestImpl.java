@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.runtime;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.tracing.McpRequestInfo;
 import io.quarkiverse.mcp.server.runtime.tracing.McpResponseInfo;
 import io.quarkus.arc.Arc;
@@ -24,6 +25,8 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
 
     // Tracing span - started by prepareTracing(), ended by contextEnd()
     private volatile McpTracingSpan tracingSpan;
+
+    private volatile McpProtocolVersion protocolVersion;
 
     public McpRequestImpl(String serverName, JsonObject message, CONNECTION connection, Sender sender,
             SecuritySupport securitySupport,
@@ -120,12 +123,16 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     }
 
     @Override
-    public String protocolVersion() {
-        if ((connection.status() == Status.IN_OPERATION || connection.status() == Status.INITIALIZING)
-                && connection.initialRequest() != null) {
-            return connection.initialRequest().protocolVersion();
+    public McpProtocolVersion protocolVersion() {
+        McpProtocolVersion ret = protocolVersion;
+        if (ret == null) {
+            if ((connection.status() == Status.IN_OPERATION || connection.status() == Status.INITIALIZING)
+                    && connection.initialRequest() != null) {
+                ret = McpProtocolVersion.from(connection.initialRequest().protocolVersion());
+                protocolVersion = ret;
+            }
         }
-        return null;
+        return ret;
     }
 
 }

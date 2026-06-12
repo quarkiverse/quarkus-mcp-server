@@ -31,7 +31,14 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final String serverName;
 
+    protected final boolean transientConnection;
+
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName) {
+        this(id, serverConfig, serverName, false);
+    }
+
+    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName,
+            boolean transientConnection) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.logLevel = serverConfig.clientLogging().defaultLevel();
@@ -42,6 +49,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.lastUsed = Instant.now().toEpochMilli();
         this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
         this.serverName = serverName;
+        this.transientConnection = transientConnection;
     }
 
     @Override
@@ -76,13 +84,18 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         return logLevel;
     }
 
-    void setLogLevel(LogLevel level) {
+    public void setLogLevel(LogLevel level) {
         this.logLevel = level;
     }
 
     @Override
     public String serverName() {
         return serverName;
+    }
+
+    @Override
+    public boolean isTransient() {
+        return transientConnection;
     }
 
     public boolean setInitialized() {

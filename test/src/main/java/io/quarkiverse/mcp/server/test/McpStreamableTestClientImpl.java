@@ -61,6 +61,55 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (client == null) {
             client = new McpStreamableClient(mcpEndpoint);
         }
+        if (protocolVersion.isStateless()) {
+            return connectStateless(assertFunction);
+        }
+        return connectStateful(assertFunction);
+    }
+
+    private McpStreamableTestClient connectStateless(Consumer<InitResult> assertFunction) {
+        // Stateless clients send server/discover instead of initialize
+        JsonObject discoverMessage = newRequest(McpAssured.SERVER_DISCOVER);
+        injectStatelessMeta(discoverMessage);
+        MultiMap headers = additionalHeaders(discoverMessage);
+        addAuthorizationHeader(headers, clientAuthorization);
+        HttpResponse<String> response;
+        try (TracingHandle ignored = startTracingSpan(discoverMessage, headers)) {
+            response = client.sendSync(discoverMessage.encode(), headers);
+        }
+        assertEquals(200, response.statusCode(), "Invalid HTTP response status: " + response.statusCode());
+
+        JsonObject discoverResponse = new JsonObject(response.body());
+        client.state.addResponse(discoverResponse);
+        JsonObject discoverResult = assertResultResponse(discoverMessage, discoverResponse);
+        assertNotNull(discoverResult);
+
+        JsonObject serverInfo = discoverResult.getJsonObject("serverInfo");
+        JsonObject discoverCapabilities = discoverResult.getJsonObject("capabilities");
+        List<ServerCapability> capabilities = new ArrayList<>();
+        if (discoverCapabilities != null) {
+            for (String capability : discoverCapabilities.fieldNames()) {
+                capabilities.add(new ServerCapability(capability, discoverCapabilities.getJsonObject(capability).getMap()));
+            }
+        }
+        Implementation implementation = Messages.decodeImplementation(serverInfo);
+        InitResult r = new InitResult(null,
+                implementation.name(),
+                implementation.title(),
+                implementation.version(),
+                capabilities,
+                discoverResult.getString("instructions"),
+                implementation,
+                discoverResult.getJsonObject("_meta"));
+        if (assertFunction != null) {
+            assertFunction.accept(r);
+        }
+        this.initResult = r;
+        connected.set(true);
+        return this;
+    }
+
+    private McpStreamableTestClient connectStateful(Consumer<InitResult> assertFunction) {
         JsonObject initMessage = newInitMessage();
         MultiMap initHeaders = additionalHeaders.apply(initMessage);
         addAuthorizationHeader(initHeaders, clientAuthorization);
@@ -144,7 +193,30 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     private MultiMap additionalHeaders(JsonObject message) {
         MultiMap ret = additionalHeaders.apply(message);
-        if (mcpSessionId != null) {
+        if (protocolVersion.isStateless()) {
+            ret.add("MCP-Protocol-Version", protocolVersion.version());
+            if (message != null) {
+                String method = message.getString("method");
+                if (method != null) {
+                    ret.add("Mcp-Method", method);
+                }
+                JsonObject params = message.getJsonObject("params");
+                if (params != null) {
+                    // Mcp-Name for tools/call and prompts/get (name), resources/read (uri)
+                    if ("tools/call".equals(method) || "prompts/get".equals(method)) {
+                        String name = params.getString("name");
+                        if (name != null) {
+                            ret.add("Mcp-Name", name);
+                        }
+                    } else if ("resources/read".equals(method)) {
+                        String uri = params.getString("uri");
+                        if (uri != null) {
+                            ret.add("Mcp-Name", uri);
+                        }
+                    }
+                }
+            }
+        } else if (mcpSessionId != null) {
             ret.add("Mcp-Session-Id", mcpSessionId);
         }
         return ret;
@@ -159,6 +231,9 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     @Override
     public void terminateSession() {
+        if (protocolVersion.isStateless()) {
+            return;
+        }
         MultiMap headers = MultiMap.caseInsensitiveMultiMap();
         if (mcpSessionId != null) {
             headers.add("Mcp-Session-Id", mcpSessionId);
@@ -230,12 +305,13 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         }
 
         protected TracingHandle doSend(JsonObject message) {
-            try (TracingHandle tracingHandle = startTracingSpan(message, additionalHeaders(message))) {
+            try (TracingHandle tracingHandle = startTracingSpan(message,
+                    McpStreamableTestClientImpl.this.additionalHeaders(message))) {
                 Authorization authorization = this.authorization.get();
                 if (authorization == null) {
                     authorization = clientAuthorization;
                 }
-                send(message, additionalHeaders(message), authorization);
+                send(message, McpStreamableTestClientImpl.this.additionalHeaders(message), authorization);
             }
             return null;
         }

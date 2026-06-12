@@ -3,6 +3,8 @@ package io.quarkiverse.mcp.server.stdio.it;
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -42,6 +44,18 @@ public class ServerFeatures {
     @Resource(uri = "file:///project/alpha")
     BlobResourceContents alpha(RequestUri uri) {
         return BlobResourceContents.create(uri.value(), "data".getBytes());
+    }
+
+    @Tool
+    String protocolInfo(McpConnection connection) {
+        String version = connection.initialRequest().protocolVersion();
+        boolean stateless = McpProtocolVersion.isStateless(version);
+        return version + ":" + stateless + ":" + connection.isTransient();
+    }
+
+    @Tool
+    String logLevelInfo(McpConnection connection) {
+        return connection.logLevel().name();
     }
 
 }

@@ -28,6 +28,16 @@ public record MetaKey(String prefix, String name) {
     public static final MetaKey CLIENT_CAPABILITIES = new MetaKey("io.modelcontextprotocol/", "clientCapabilities");
 
     /**
+     * The {@code io.modelcontextprotocol/protocolVersion} key.
+     */
+    public static final MetaKey PROTOCOL_VERSION = new MetaKey("io.modelcontextprotocol/", "protocolVersion");
+
+    /**
+     * The {@code io.modelcontextprotocol/logLevel} key.
+     */
+    public static final MetaKey LOG_LEVEL = new MetaKey("io.modelcontextprotocol/", "logLevel");
+
+    /**
      * Create a new key from the specified string value, i.e. from {@code foo.bar/myKey}.
      *
      * @param value
