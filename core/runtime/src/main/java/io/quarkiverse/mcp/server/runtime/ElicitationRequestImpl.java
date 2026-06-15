@@ -32,15 +32,17 @@ public class ElicitationRequestImpl implements ElicitationRequest {
     private final ServerRequests serverRequests;
     private final Duration timeout;
     private final McpTracing mcpTracing;
+    private final boolean stateless;
 
     ElicitationRequestImpl(String message, Map<String, PrimitiveSchema> requestedSchema, Sender sender,
-            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing) {
+            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing, boolean stateless) {
         this.message = message;
         this.requestedSchema = Map.copyOf(requestedSchema);
         this.sender = sender;
         this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
+        this.stateless = stateless;
     }
 
     @JsonProperty
@@ -56,6 +58,10 @@ public class ElicitationRequestImpl implements ElicitationRequest {
 
     @Override
     public Uni<ElicitationResponse> send() {
+        if (stateless) {
+            throw new IllegalStateException(
+                    "Server-initiated requests are not supported with stateless protocol versions; use InputRequiredException instead");
+        }
         AtomicLong id = new AtomicLong();
         Uni<ElicitationResponse> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<ElicitationResponse> future = new CompletableFuture<ElicitationResponse>();
@@ -102,6 +108,26 @@ public class ElicitationRequestImpl implements ElicitationRequest {
                     });
         }
         return ret;
+    }
+
+    JsonObject toInputRequestJson() {
+        JsonObject properties = new JsonObject();
+        JsonObject schema = new JsonObject().put("type", "object").put("properties", properties);
+        JsonArray required = new JsonArray();
+        for (Entry<String, PrimitiveSchema> e : requestedSchema.entrySet()) {
+            if (e.getValue().required()) {
+                required.add(e.getKey());
+            }
+            properties.put(e.getKey(), e.getValue().asJson());
+        }
+        schema.put("required", required);
+        JsonObject params = new JsonObject()
+                .put("mode", "form")
+                .put("message", message)
+                .put("requestedSchema", schema);
+        return new JsonObject()
+                .put("method", McpMethod.ELICITATION_CREATE.jsonRpcName())
+                .put("params", params);
     }
 
     static class ContentImpl implements Content {

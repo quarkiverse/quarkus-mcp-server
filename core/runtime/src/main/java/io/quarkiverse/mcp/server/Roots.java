@@ -12,7 +12,7 @@ import io.smallrye.mutiny.Uni;
  *
  * @see Notification.Type#ROOTS_LIST_CHANGED
  */
-public interface Roots {
+public interface Roots extends MrtrRequest {
 
     /**
      * @return {@code true} if the client supports the {@value ClientCapability#ROOTS} capability, {@code false} otherwise

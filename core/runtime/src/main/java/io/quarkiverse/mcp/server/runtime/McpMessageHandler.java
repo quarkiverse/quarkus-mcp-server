@@ -1,9 +1,5 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import static io.quarkiverse.mcp.server.McpMethod.LOGGING_SET_LEVEL;
-import static io.quarkiverse.mcp.server.McpMethod.PING;
-import static io.quarkiverse.mcp.server.McpMethod.Q_CLOSE;
-
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -242,7 +238,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     && serverConfig(mcpRequest).devMode().dummyInit()) {
                 // In the dev mode, perform an automatic initialization
                 autoInit = new InitialRequest(new Implementation("dummy", "1", null),
-                        McpProtocolVersion.LATEST_STATEFUL.version(),
+                        McpProtocolVersion.LATEST_STATEFUL,
                         List.of(), transport(), true);
             } else {
                 autoInit = autoInitialRequest(mcpRequest);
@@ -395,11 +391,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         // Few operations do not involve user code
         // and don't need a new duplicated context
-        if (method == PING) {
+        if (method == McpMethod.PING) {
             return ping(message, mcpRequest);
-        } else if (method == Q_CLOSE) {
+        } else if (method == McpMethod.Q_CLOSE) {
             return close(message, mcpRequest);
-        } else if (method == LOGGING_SET_LEVEL) {
+        } else if (method == McpMethod.LOGGING_SET_LEVEL) {
             return setLogLevel(message, mcpRequest);
         } else if (method == McpMethod.NOTIFICATIONS_PROGRESS) {
             return progress(message, mcpRequest);
@@ -573,7 +569,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
         Implementation implementation = Messages.decodeImplementation(clientInfo);
-        String protocolVersion = params.getString("protocolVersion");
+        McpProtocolVersion protocolVersion = McpProtocolVersion.from(params.getString("protocolVersion"));
+        if (protocolVersion == null) {
+            protocolVersion = McpProtocolVersion.LATEST_STATEFUL;
+        }
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         JsonObject capabilities = params.getJsonObject("capabilities");
         if (capabilities != null) {
@@ -607,12 +606,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private static final EnumSet<McpMethod> STATELESS_REMOVED_METHODS = EnumSet.of(
             McpMethod.INITIALIZE,
             McpMethod.NOTIFICATIONS_INITIALIZED,
-            PING,
-            LOGGING_SET_LEVEL,
+            McpMethod.PING,
+            McpMethod.LOGGING_SET_LEVEL,
             McpMethod.NOTIFICATIONS_ROOTS_LIST_CHANGED);
-
-    protected static final String AUTO_INIT_IMPL_NAME = "quarkus.mcp.auto-init";
-    private static final Implementation AUTO_INIT_IMPLEMENTATION = new Implementation(AUTO_INIT_IMPL_NAME, "1", null);
 
     private static final Map<String, Object> LIST_CHANGED_PROPERTIES = Map.of("listChanged", true);
     private static final Map<String, Object> SUBSCRIBE_PROPERTIES = Map.of("subscribe", true);
@@ -683,17 +679,22 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
      * @return the initial request
      * @throws McpException with {@link JsonRpcErrorCodes#INVALID_PARAMS} if any required {@code _meta} field is missing
      */
-    protected static InitialRequest buildStatelessInitialRequest(JsonObject meta, String protocolVersion,
+    protected static InitialRequest buildStatelessInitialRequest(JsonObject meta, String protocolVersionStr,
             InitialRequest.Transport transport) {
         validateStatelessMeta(meta);
-        String version = protocolVersion != null ? protocolVersion : meta.getString(MetaKey.PROTOCOL_VERSION.toString());
+        String versionStr = protocolVersionStr != null ? protocolVersionStr
+                : meta.getString(MetaKey.PROTOCOL_VERSION.toString());
+        McpProtocolVersion protocolVersion = McpProtocolVersion.from(versionStr);
+        if (protocolVersion == null) {
+            protocolVersion = McpProtocolVersion.FIRST_STATELESS;
+        }
         Implementation implementation = Messages.decodeImplementation(meta.getJsonObject(MetaKey.CLIENT_INFO.toString()));
         JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         for (String name : capabilities.fieldNames()) {
             clientCapabilities.add(new ClientCapability(name, Map.of()));
         }
-        return new InitialRequest(implementation, version, List.copyOf(clientCapabilities), transport, true);
+        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport, true);
     }
 
     /**
@@ -728,7 +729,6 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         Object id = Messages.getId(message);
         FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.SERVER_DISCOVER, message, mcpRequest);
         Map<String, Object> ret = new HashMap<>();
-        ret.put("resultType", "complete");
         ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
         ret.put("capabilities", buildCapabilities(filterContext));
         ret.put("serverInfo", buildServerInfo(mcpRequest));
@@ -742,11 +742,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Map<String, Object> initResult(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
         Map<String, Object> ret = new HashMap<>();
 
-        String version = McpProtocolVersion.LATEST_STATEFUL.version();
-        if (McpProtocolVersion.SUPPORTED_VERSIONS.contains(initialRequest.protocolVersion())) {
-            version = initialRequest.protocolVersion();
-        }
-        ret.put("protocolVersion", version);
+        ret.put("protocolVersion", initialRequest.protocolVersion().version());
 
         FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.INITIALIZE, message, mcpRequest);
         ret.put("capabilities", buildCapabilities(filterContext));

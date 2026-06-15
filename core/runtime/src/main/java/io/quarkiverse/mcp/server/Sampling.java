@@ -7,7 +7,7 @@ package io.quarkiverse.mcp.server;
  * @see SamplingRequest
  * @see SamplingResponse
  */
-public interface Sampling {
+public interface Sampling extends MrtrRequest {
 
     /**
      * @return {@code true} if the client supports the {@value ClientCapability#SAMPLING} capability, {@code false} otherwise

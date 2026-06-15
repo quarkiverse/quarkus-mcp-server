@@ -16,6 +16,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Singleton;
+
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -86,8 +89,6 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Singleton;
 
 @Singleton
 public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRequest> implements Handler<RoutingContext> {
@@ -517,9 +518,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (config != null && config.http().streamable().autoInit()) {
             // "If the server does not receive an MCP-Protocol-Version header, the server SHOULD assume protocol version 2025-03-26"
             // Note that this is inconsistent with initial handshake where the latest supported version is used
-            String version = mcpRequest.mcpProtocolVersion;
-            if (version == null) {
-                version = McpProtocolVersion.DEFAULT_ASSUMED.version();
+            McpProtocolVersion protocolVersion = McpProtocolVersion.from(mcpRequest.mcpProtocolVersion);
+            if (protocolVersion == null) {
+                protocolVersion = McpProtocolVersion.DEFAULT_ASSUMED;
             }
 
             // Try to find the clientInfo and clientCapabilities in _meta
@@ -543,7 +544,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
             return new InitialRequest(
                     implementation,
-                    version,
+                    protocolVersion,
                     clientCapabilities,
                     Transport.STREAMABLE_HTTP,
                     true);
@@ -581,7 +582,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private static boolean isStateless(McpConnectionBase connection) {
         InitialRequest ir = connection.initialRequest();
-        return ir != null && ir.protocolVersion() != null && isStateless(ir.protocolVersion());
+        return ir != null && ir.protocolVersion() != null && ir.protocolVersion().isStateless();
     }
 
     @Override

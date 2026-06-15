@@ -1095,6 +1095,30 @@ public class McpAssured {
             ToolsCallMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
 
             /**
+             * Assert the raw JSON-RPC response. Useful for non-standard results like {@code InputRequiredResult}.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withRequestState(String requestState);
+
+            /**
              * Send the message.
              * <p>
              * The assert function is not used until the {@link #thenAssertResults()} method is called.
@@ -1180,6 +1204,30 @@ public class McpAssured {
              * @return self
              */
             PromptsGetMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Assert the raw JSON-RPC response.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withRequestState(String requestState);
 
             /**
              * Send the message.
@@ -1409,6 +1457,30 @@ public class McpAssured {
              * @return self
              */
             ResourcesReadMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Assert the raw JSON-RPC response.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withRequestState(String requestState);
 
             /**
              * Send the message.

@@ -28,10 +28,11 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
     private final Duration completionTimeout;
     private final McpTracing mcpTracing;
     private final String connectionId;
+    private final boolean stateless;
 
     UrlElicitationRequestImpl(String message, String url, String elicitationId, Sender sender,
             ServerRequests serverRequests, Duration timeout, Duration completionTimeout,
-            McpTracing mcpTracing, String connectionId) {
+            McpTracing mcpTracing, String connectionId, boolean stateless) {
         this.message = message;
         this.url = url;
         this.elicitationId = elicitationId;
@@ -41,6 +42,7 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
         this.completionTimeout = completionTimeout;
         this.mcpTracing = mcpTracing;
         this.connectionId = connectionId;
+        this.stateless = stateless;
     }
 
     @Override
@@ -58,8 +60,23 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
         return elicitationId;
     }
 
+    JsonObject toInputRequestJson() {
+        JsonObject params = new JsonObject()
+                .put("mode", "url")
+                .put("message", message)
+                .put("url", url)
+                .put("elicitationId", elicitationId);
+        return new JsonObject()
+                .put("method", McpMethod.ELICITATION_CREATE.jsonRpcName())
+                .put("params", params);
+    }
+
     @Override
     public Uni<ElicitationResponse> send() {
+        if (stateless) {
+            throw new IllegalStateException(
+                    "Server-initiated requests are not supported with stateless protocol versions; use InputRequiredException instead");
+        }
         AtomicLong id = new AtomicLong();
         Uni<ElicitationResponse> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<ElicitationResponse> future = new CompletableFuture<>();

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Sampling;
@@ -14,14 +15,18 @@ import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingRequest.Builder;
 import io.quarkiverse.mcp.server.SamplingRequest.IncludeContext;
+import io.vertx.core.json.JsonObject;
 
 class SamplingImpl implements Sampling {
 
     static SamplingImpl from(ArgumentProviders argProviders) {
+        JsonObject params = Messages.getParams(argProviders.rawMessage());
         return new SamplingImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.serverRequests(),
                 argProviders.serverRequests().getSamplingTimeout(argProviders.serverName()),
-                argProviders.mcpTracing());
+                argProviders.mcpTracing(),
+                InputResponsesImpl.from(params),
+                params != null ? params.getString("requestState") : null);
     }
 
     private final McpConnection connection;
@@ -34,18 +39,39 @@ class SamplingImpl implements Sampling {
 
     private final McpTracing mcpTracing;
 
+    private final InputResponses inputResponses;
+
+    private final String requestState;
+
     SamplingImpl(McpConnection connection, Sender sender, ServerRequests serverRequests, Duration timeout,
-            McpTracing mcpTracing) {
+            McpTracing mcpTracing, InputResponses inputResponses, String requestState) {
         this.connection = connection;
         this.sender = sender;
         this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
+        this.inputResponses = inputResponses;
+        this.requestState = requestState;
     }
 
     @Override
     public boolean isSupported() {
         return connection.initialRequest().supportsSampling();
+    }
+
+    @Override
+    public boolean isServerInitiatedRequestSupported() {
+        return !connection.initialRequest().protocolVersion().isStateless();
+    }
+
+    @Override
+    public InputResponses inputResponses() {
+        return inputResponses;
+    }
+
+    @Override
+    public String requestState() {
+        return requestState;
     }
 
     @Override
@@ -133,7 +159,8 @@ class SamplingImpl implements Sampling {
             }
             return new SamplingRequestImpl(maxTokens, List.copyOf(messages), temperature, systemPrompt, includeContext,
                     modelPreferences, metadata, stopSequences,
-                    sender, serverRequests, timeout, SamplingImpl.this.mcpTracing);
+                    sender, serverRequests, timeout, SamplingImpl.this.mcpTracing,
+                    SamplingImpl.this.connection.initialRequest().protocolVersion().isStateless());
         }
 
     }

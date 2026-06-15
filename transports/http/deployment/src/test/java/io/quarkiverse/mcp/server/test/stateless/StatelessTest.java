@@ -175,9 +175,8 @@ public class StatelessTest extends McpServerTest {
 
         @Tool
         String protocolInfo(McpConnection connection) {
-            String version = connection.initialRequest().protocolVersion();
-            boolean stateless = McpProtocolVersion.isStateless(version);
-            return version + ":" + stateless + ":" + connection.isTransient();
+            McpProtocolVersion version = connection.initialRequest().protocolVersion();
+            return version.version() + ":" + version.isStateless() + ":" + connection.isTransient();
         }
 
         @Tool

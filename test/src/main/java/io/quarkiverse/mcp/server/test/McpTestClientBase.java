@@ -639,6 +639,9 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             private Map<String, Object> meta = Map.of();
             private Consumer<ResourceResponse> assertFunction;
             private Consumer<McpError> errorAssertFunction;
+            private Consumer<JsonObject> rawAssertFunction;
+            private JsonObject inputResponses;
+            private String requestState;
 
             ResourcesReadMessageImpl(String uri) {
                 this.uri = uri;
@@ -672,13 +675,48 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             }
 
             @Override
+            public ResourcesReadMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction) {
+                if (rawAssertFunction == null) {
+                    throw mustNotBeNull("rawAssertFunction");
+                }
+                this.rawAssertFunction = rawAssertFunction;
+                return this;
+            }
+
+            @Override
+            public ResourcesReadMessage<ASSERT> withInputResponses(JsonObject inputResponses) {
+                if (inputResponses == null) {
+                    throw mustNotBeNull("inputResponses");
+                }
+                this.inputResponses = inputResponses;
+                return this;
+            }
+
+            @Override
+            public ResourcesReadMessage<ASSERT> withRequestState(String requestState) {
+                if (requestState == null) {
+                    throw mustNotBeNull("requestState");
+                }
+                this.requestState = requestState;
+                return this;
+            }
+
+            @Override
             public ASSERT send() {
                 JsonObject message = newResourcesReadMessage(uri, meta);
+                if (inputResponses != null) {
+                    message.getJsonObject("params").put("inputResponses", inputResponses);
+                }
+                if (requestState != null) {
+                    message.getJsonObject("params").put("requestState", requestState);
+                }
                 tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ResourcesReadAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
                     asserts.add(new ErrorAssert(message, errorAssertFunction));
+                } else if (rawAssertFunction != null) {
+                    asserts.add(new MessageAssert(message, rawAssertFunction));
                 }
                 return self();
             }
@@ -692,6 +730,9 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             private Map<String, Object> meta = Map.of();
             private Consumer<PromptResponse> assertFunction;
             private Consumer<McpError> errorAssertFunction;
+            private Consumer<JsonObject> rawAssertFunction;
+            private JsonObject inputResponses;
+            private String requestState;
 
             PromptsGetMessageImpl(String promptName) {
                 this.promptName = promptName;
@@ -731,13 +772,48 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             }
 
             @Override
+            public PromptsGetMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction) {
+                if (rawAssertFunction == null) {
+                    throw mustNotBeNull("rawAssertFunction");
+                }
+                this.rawAssertFunction = rawAssertFunction;
+                return this;
+            }
+
+            @Override
+            public PromptsGetMessage<ASSERT> withInputResponses(JsonObject inputResponses) {
+                if (inputResponses == null) {
+                    throw mustNotBeNull("inputResponses");
+                }
+                this.inputResponses = inputResponses;
+                return this;
+            }
+
+            @Override
+            public PromptsGetMessage<ASSERT> withRequestState(String requestState) {
+                if (requestState == null) {
+                    throw mustNotBeNull("requestState");
+                }
+                this.requestState = requestState;
+                return this;
+            }
+
+            @Override
             public ASSERT send() {
                 JsonObject message = newPromptsGetMessage(promptName, args, meta);
+                if (inputResponses != null) {
+                    message.getJsonObject("params").put("inputResponses", inputResponses);
+                }
+                if (requestState != null) {
+                    message.getJsonObject("params").put("requestState", requestState);
+                }
                 tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new PromptsGetAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
                     asserts.add(new ErrorAssert(message, errorAssertFunction));
+                } else if (rawAssertFunction != null) {
+                    asserts.add(new MessageAssert(message, rawAssertFunction));
                 }
                 return self();
             }
@@ -903,6 +979,9 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             private Map<String, Object> meta = Map.of();
             private Consumer<ToolResponse> assertFunction;
             private Consumer<McpError> errorAssertFunction;
+            private Consumer<JsonObject> rawAssertFunction;
+            private JsonObject inputResponses;
+            private String requestState;
 
             ToolsCallMessageImpl(String toolName) {
                 this.toolName = toolName;
@@ -945,13 +1024,48 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             }
 
             @Override
+            public ToolsCallMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction) {
+                if (rawAssertFunction == null) {
+                    throw mustNotBeNull("rawAssertFunction");
+                }
+                this.rawAssertFunction = rawAssertFunction;
+                return this;
+            }
+
+            @Override
+            public ToolsCallMessage<ASSERT> withInputResponses(JsonObject inputResponses) {
+                if (inputResponses == null) {
+                    throw mustNotBeNull("inputResponses");
+                }
+                this.inputResponses = inputResponses;
+                return this;
+            }
+
+            @Override
+            public ToolsCallMessage<ASSERT> withRequestState(String requestState) {
+                if (requestState == null) {
+                    throw mustNotBeNull("requestState");
+                }
+                this.requestState = requestState;
+                return this;
+            }
+
+            @Override
             public ASSERT send() {
                 JsonObject message = newToolsCallMessage(toolName, args, meta);
+                if (inputResponses != null) {
+                    message.getJsonObject("params").put("inputResponses", inputResponses);
+                }
+                if (requestState != null) {
+                    message.getJsonObject("params").put("requestState", requestState);
+                }
                 tracingHandles.add(doSend(message));
                 if (assertFunction != null) {
                     asserts.add(new ToolsCallAssert(message, assertFunction));
                 } else if (errorAssertFunction != null) {
                     asserts.add(new ErrorAssert(message, errorAssertFunction));
+                } else if (rawAssertFunction != null) {
+                    asserts.add(new MessageAssert(message, rawAssertFunction));
                 }
                 return self();
             }

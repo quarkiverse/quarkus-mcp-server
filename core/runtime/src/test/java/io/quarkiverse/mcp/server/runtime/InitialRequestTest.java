@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.InitialRequest;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 
 public class InitialRequestTest {
 
@@ -20,9 +21,11 @@ public class InitialRequestTest {
         assertEquals("protocolVersion must not be null",
                 assertThrows(IllegalArgumentException.class, () -> new InitialRequest(impl, null, null, null)).getMessage());
         assertEquals("clientCapabilities must not be null",
-                assertThrows(IllegalArgumentException.class, () -> new InitialRequest(impl, "1.0", null, null)).getMessage());
+                assertThrows(IllegalArgumentException.class,
+                        () -> new InitialRequest(impl, McpProtocolVersion.V_2024_11_05, null, null)).getMessage());
         assertEquals("transport must not be null",
-                assertThrows(IllegalArgumentException.class, () -> new InitialRequest(impl, "1.0", List.of(), null))
+                assertThrows(IllegalArgumentException.class,
+                        () -> new InitialRequest(impl, McpProtocolVersion.V_2024_11_05, List.of(), null))
                         .getMessage());
     }
 

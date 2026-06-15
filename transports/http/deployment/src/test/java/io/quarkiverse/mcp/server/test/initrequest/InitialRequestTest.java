@@ -59,7 +59,7 @@ public class InitialRequestTest extends McpServerTest {
         String testInitRequest(McpConnection connection) {
             InitialRequest initRequest = connection.initialRequest();
             if (initRequest != null) {
-                if (!initRequest.protocolVersion().equals(McpProtocolVersion.LATEST_STATEFUL.version())) {
+                if (initRequest.protocolVersion() != McpProtocolVersion.LATEST_STATEFUL) {
                     throw new IllegalStateException();
                 }
                 if (!initRequest.implementation().name().equals("test-client")) {
