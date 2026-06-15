@@ -454,6 +454,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             throw serverNameNotDefined();
         }
         HttpServerRequest request = ctx.request();
+        // Stateless protocol does not support the GET SSE stream
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        if (mcpProtocolVersion != null && isStateless(mcpProtocolVersion)) {
+            ctx.fail(405);
+            return;
+        }
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
             LOG.warnf("%s header not found", MCP_SESSION_ID_HEADER);
@@ -554,6 +560,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     public void terminateSession(RoutingContext ctx) {
         HttpServerRequest request = ctx.request();
+        // Stateless protocol does not support session termination
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        if (mcpProtocolVersion != null && isStateless(mcpProtocolVersion)) {
+            ctx.fail(405);
+            return;
+        }
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
             LOG.warnf("Mcp session id header is missing: %s", ctx.normalizedPath());
