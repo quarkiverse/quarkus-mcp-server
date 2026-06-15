@@ -6,6 +6,10 @@ include::includes/attributes.adoc[]
 This guide covers integration with MCP client features like sampling, elicitation, and roots.
 These features allow your MCP server to request services from the client.
 
+NOTE: With stateless protocol versions (`2026-07-28`+), server-initiated requests are not supported.
+Instead, use the xref:#_multi_round_trip_requests_mrtr[Multi Round-Trip Requests (MRTR)] pattern — throw an `InputRequiredException` from the feature method, and the client retries with the gathered input.
+Use `isServerInitiatedRequestSupported()` on `Sampling`, `Elicitation`, or `Roots` to detect which pattern to use.
+
 == Sampling
 
 Sampling allows the server to request LLM responses from the client.
@@ -774,6 +778,205 @@ public class RootsManager {
 <2> Store the initial roots.
 <3> Called when the client's roots change.
 <4> Update the cached roots.
+
+== Multi Round-Trip Requests (MRTR)
+
+With stateless protocol versions, the server cannot send server-initiated requests (sampling, elicitation, roots) to the client.
+Instead, it uses the Multi Round-Trip Requests (MRTR) pattern: the server throws an `InputRequiredException` from the feature method, and the client retries the original request with the gathered input.
+
+The `Sampling`, `Elicitation`, and `Roots` interfaces all implement `MrtrRequest`, which provides:
+
+* `isServerInitiatedRequestSupported()` — returns `true` for stateful clients, `false` for stateless
+* `inputRequired()` — returns an `InputRequiredException.Builder` (throws if the client is stateful)
+* `inputResponses()` — provides typed access to client responses on retry (never `null`, but may be empty on the initial request)
+* `requestState()` — the opaque state string echoed back by the client
+
+=== Detecting the Protocol Mode
+
+Use `isServerInitiatedRequestSupported()` to branch between the server-initiated request API and the MRTR pattern:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Ask the AI a question")
+    String askAI(String question, Sampling sampling) {
+        if (!sampling.isSupported()) {
+            return "Sampling not supported";
+        }
+
+        if (sampling.isServerInitiatedRequestSupported()) { // <1>
+            return sampling.requestBuilder()
+                .setMaxTokens(100)
+                .addMessage(SamplingMessage.withUserRole(question))
+                .build()
+                .sendAndAwait()
+                .content().asText().text();
+        }
+
+        // Stateless client — use MRTR pattern
+        if (sampling.inputResponses().isEmpty()) { // <2>
+            throw sampling.inputRequired() // <3>
+                .addSamplingRequest("answer",
+                    sampling.requestBuilder()
+                        .setMaxTokens(100)
+                        .addMessage(SamplingMessage.withUserRole(question))
+                        .build())
+                .build();
+        }
+
+        return sampling.inputResponses() // <4>
+            .getSamplingResponse("answer")
+            .content().asText().text();
+    }
+}
+----
+<1> Check if the client supports server-initiated requests (stateful protocol).
+<2> On the initial request, `inputResponses()` is empty — the server has not yet asked for input.
+<3> Throw `InputRequiredException` with a sampling request keyed by `"answer"`. The framework converts this to a `resultType: "input_required"` result.
+<4> On the retry, the client provides the sampling response. Access it by the same key.
+
+=== Elicitation with MRTR
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Get user info")
+    String getUserInfo(Elicitation elicitation) {
+        if (!elicitation.isFormModeSupported()) {
+            return "Elicitation not supported";
+        }
+
+        if (elicitation.isServerInitiatedRequestSupported()) {
+            var response = elicitation.requestBuilder()
+                .setMessage("Enter your name:")
+                .addSchemaProperty("name", new StringSchema(true))
+                .build()
+                .sendAndAwait();
+            return response.actionAccepted()
+                ? "Hello " + response.content().getString("name")
+                : "Cancelled";
+        }
+
+        // Stateless — MRTR
+        if (elicitation.inputResponses().isEmpty()) {
+            throw elicitation.inputRequired()
+                .addElicitationRequest("userInput",
+                    elicitation.requestBuilder()
+                        .setMessage("Enter your name:")
+                        .addSchemaProperty("name", new StringSchema(true))
+                        .build())
+                .setRequestState("get-user-info") // <1>
+                .build();
+        }
+
+        var response = elicitation.inputResponses()
+            .getElicitationResponse("userInput");
+        return response.actionAccepted()
+            ? "Hello " + response.content().getString("name")
+            : "Cancelled";
+    }
+}
+----
+<1> The request state is an opaque string echoed back by the client. Use it to identify the retry context.
+
+=== Combining Multiple Input Requests
+
+A single `InputRequiredException` can request multiple inputs at once:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.SamplingMessage;
+import io.quarkiverse.mcp.server.Tool;
+
+public class MyTools {
+
+    @Tool(description = "Analyze with context")
+    String analyzeWithContext(String topic, Elicitation elicitation, Sampling sampling) {
+        if (elicitation.inputResponses().isEmpty()) {
+            var builder = elicitation.inputRequired();
+
+            builder.addElicitationRequest("prefs", // <1>
+                elicitation.requestBuilder()
+                    .setMessage("What style of analysis do you prefer?")
+                    .addSchemaProperty("style", new StringSchema(true))
+                    .build());
+
+            builder.addSamplingRequest("summary", // <2>
+                sampling.requestBuilder()
+                    .setMaxTokens(200)
+                    .addMessage(SamplingMessage.withUserRole(
+                        "Summarize the topic: " + topic))
+                    .build());
+
+            throw builder.build();
+        }
+
+        var prefs = elicitation.inputResponses().getElicitationResponse("prefs");
+        var summary = sampling.inputResponses().getSamplingResponse("summary"); // <3>
+        String style = prefs.content().getString("style");
+        String text = summary.content().asText().text();
+        return "Analysis (" + style + "): " + text;
+    }
+}
+----
+<1> Add an elicitation request with key `"prefs"`.
+<2> Add a sampling request with key `"summary"` to the same builder.
+<3> `InputResponses` is available from any of the `MrtrRequest` objects — they all share the same responses.
+
+=== Roots with MRTR
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Root;
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Tool;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class MyTools {
+
+    @Tool(description = "List project roots")
+    String listRoots(Roots roots) {
+        if (!roots.isSupported()) {
+            return "Roots not supported";
+        }
+
+        if (roots.isServerInitiatedRequestSupported()) {
+            return formatRoots(roots.listAndAwait());
+        }
+
+        // Stateless — MRTR
+        if (roots.inputResponses().isEmpty()) {
+            throw roots.inputRequired()
+                .addRootsRequest("projectRoots")
+                .build();
+        }
+
+        List<Root> rootList = roots.inputResponses()
+            .getRootsResponse("projectRoots");
+        return formatRoots(rootList);
+    }
+
+    private String formatRoots(List<Root> roots) {
+        return roots.stream()
+            .map(r -> r.name() + ": " + r.uri())
+            .collect(Collectors.joining("\n"));
+    }
+}
+----
 
 == Configuration
 

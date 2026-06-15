@@ -387,6 +387,27 @@ sequenceDiagram
     Server-->>Client: tools/call response (result)
 ----
 
+=== Multi Round-Trip Request (MRTR)
+
+With stateless protocol versions, the server cannot send server-initiated requests (such as sampling or elicitation).
+Instead, it uses the Multi Round-Trip Requests (MRTR) pattern: the server returns an `input_required` result, and the client retries with the gathered input.
+
+[mermaid,mcp-mrtr-flow,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. tools/call (name: "analyze")
+    Note over Server: Tool needs input<br/>Throws InputRequiredException
+    Server-->>Client: 2. result (resultType: "input_required",<br/>inputRequests, requestState)
+    Note over Client: Client gathers input<br/>(UI form, LLM, etc.)
+    Client->>Server: 3. tools/call (name: "analyze",<br/>inputResponses, requestState)
+    Note over Server: Tool reads responses<br/>and completes
+    Server-->>Client: 4. tools/call response (result)
+----
+
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on which protocol versions use this pattern.
 
 == See Also
 

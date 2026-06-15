@@ -28,6 +28,9 @@ include::./includes/attributes.adoc[]
 * [2.0.0] New `McpProtocolVersion` enum as the public API for protocol version handling, with `isStateless()`, `from(String)`, and semantic constants (`FIRST_STATELESS`, `LATEST_STATEFUL`, `DEFAULT_ASSUMED`).
 * [2.0.0] Per-request log level via `_meta` field `io.modelcontextprotocol/logLevel` for stateless clients.
 * [2.0.0] New `MetaKey.LOG_LEVEL` and `MetaKey.PROTOCOL_VERSION` constants.
+* [2.0.0] Multi Round-Trip Requests (MRTR) support for stateless clients. Server feature methods can throw `InputRequiredException` to request additional input (elicitation, sampling, or roots) from the client. The client retries the original request with the gathered input via `InputResponses`. See xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request (MRTR)]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
+* [2.0.0] New `MrtrRequest` interface implemented by `Elicitation`, `Sampling`, and `Roots` — provides `isServerInitiatedRequestSupported()`, `inputResponses()`, `requestState()`, and `inputRequired()` builder.
+* [2.0.0] HTTP GET (SSE stream) and DELETE (session termination) requests from stateless clients now return `405 Method Not Allowed`.
 
 [[version-1-13]]
 == 1.13.x

@@ -81,6 +81,8 @@ Instead, each request is self-contained — the client provides its identity, pr
 * The server creates a transient connection for each request — no session is established and no `Mcp-Session-Id` header is returned.
 * Stateless connections are transient (`McpConnection.isTransient()` returns `true`).
 * The following methods are not available for stateless clients and will be rejected with a `METHOD_NOT_FOUND` error: `ping`, `logging/setLevel`, `initialize`, `notifications/initialized`, and `notifications/roots/list_changed`.
+* GET requests (subsidiary SSE streams) and DELETE requests (session termination) return HTTP `405 Method Not Allowed` for stateless clients.
+* Server-initiated requests (sampling, elicitation, roots) are not available for stateless clients. The Multi Round-Trip Requests (MRTR) pattern is used instead — see xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request (MRTR)].
 
 **Per-request log level**::
 Since `logging/setLevel` is not available for stateless clients, the log level can be set per-request using the `io.modelcontextprotocol/logLevel` `_meta` field.
