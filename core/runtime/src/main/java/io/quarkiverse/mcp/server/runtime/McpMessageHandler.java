@@ -751,17 +751,24 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     + MetaKey.PROTOCOL_VERSION + ", " + MetaKey.CLIENT_INFO + ", " + MetaKey.CLIENT_CAPABILITIES,
                     JsonRpcErrorCodes.INVALID_PARAMS);
         }
-        List<String> missing = new ArrayList<>();
+        List<String> missing = null;
         if (meta.getString(MetaKey.PROTOCOL_VERSION.toString()) == null) {
+            missing = new ArrayList<>();
             missing.add(MetaKey.PROTOCOL_VERSION.toString());
         }
         if (meta.getJsonObject(MetaKey.CLIENT_INFO.toString()) == null) {
+            if (missing == null) {
+                missing = new ArrayList<>();
+            }
             missing.add(MetaKey.CLIENT_INFO.toString());
         }
         if (meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString()) == null) {
+            if (missing == null) {
+                missing = new ArrayList<>();
+            }
             missing.add(MetaKey.CLIENT_CAPABILITIES.toString());
         }
-        if (!missing.isEmpty()) {
+        if (missing != null) {
             throw new McpException("Stateless request is missing required _meta fields: " + String.join(", ", missing),
                     JsonRpcErrorCodes.INVALID_PARAMS);
         }

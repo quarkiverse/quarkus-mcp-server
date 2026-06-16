@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents the supported MCP protocol versions.
@@ -65,6 +67,16 @@ public enum McpProtocolVersion {
             V_2025_03_26.version,
             V_2024_11_05.version);
 
+    private static final Map<String, McpProtocolVersion> BY_VERSION;
+
+    static {
+        Map<String, McpProtocolVersion> map = new HashMap<>();
+        for (McpProtocolVersion v : values()) {
+            map.put(v.version, v);
+        }
+        BY_VERSION = Map.copyOf(map);
+    }
+
     /**
      * @return {@code true} if the given version string uses the stateless model
      */
@@ -80,14 +92,10 @@ public enum McpProtocolVersion {
      * @return the matching enum constant, or {@code null} if no match
      */
     public static McpProtocolVersion from(String version) {
-        if (version != null) {
-            for (McpProtocolVersion v : values()) {
-                if (v.version.equals(version)) {
-                    return v;
-                }
-            }
+        if (version == null) {
+            return null;
         }
-        return null;
+        return BY_VERSION.get(version);
     }
 
 }

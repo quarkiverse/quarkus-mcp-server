@@ -116,7 +116,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
         WebSocketMcpConnection mcpConnection;
         JsonObject meta = findMeta(jsonMessage);
         if (isStatelessMessage(jsonMessage, meta)) {
-            mcpConnection = new WebSocketMcpConnection(ConnectionManager.connectionId(),
+            mcpConnection = new WebSocketMcpConnection(ConnectionManager.transientConnectionId(),
                     config.servers().get(serverName()), serverName(), connection, true);
             String metaVersion = meta != null ? meta.getString(MetaKey.PROTOCOL_VERSION.toString()) : null;
             InitialRequest initialRequest;

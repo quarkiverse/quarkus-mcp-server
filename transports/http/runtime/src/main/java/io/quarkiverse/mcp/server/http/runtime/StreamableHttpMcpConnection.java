@@ -18,7 +18,7 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
 
     private static final Logger LOG = Logger.getLogger(StreamableHttpMcpConnection.class);
 
-    private final List<SseStream> sseStreams;
+    private volatile List<SseStream> sseStreams;
 
     StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName) {
         this(id, serverConfig, serverName, false);
@@ -27,20 +27,36 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
     StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName,
             boolean transientConnection) {
         super(id, Objects.requireNonNull(serverConfig), serverName, transientConnection);
-        this.sseStreams = new CopyOnWriteArrayList<>();
     }
 
     void addSse(SseStream sse) {
-        sseStreams.add(sse);
+        List<SseStream> streams = this.sseStreams;
+        if (streams == null) {
+            synchronized (this) {
+                streams = this.sseStreams;
+                if (streams == null) {
+                    streams = new CopyOnWriteArrayList<>();
+                    this.sseStreams = streams;
+                }
+            }
+        }
+        streams.add(sse);
     }
 
     boolean removeSse(String id) {
-        return sseStreams.removeIf(e -> e.id().equals(id));
+        List<SseStream> streams = this.sseStreams;
+        if (streams == null) {
+            return false;
+        }
+        return streams.removeIf(e -> e.id().equals(id));
     }
 
     @Override
     public boolean close() {
-        sseStreams.clear();
+        List<SseStream> streams = this.sseStreams;
+        if (streams != null) {
+            streams.clear();
+        }
         return super.close();
     }
 
@@ -49,29 +65,35 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
         if (message == null) {
             return Future.succeededFuture();
         }
-        // Pick the first legacy stream (no subscription filter) for non-subscription messages
-        SseStream sse = null;
-        for (SseStream s : sseStreams) {
-            if (s.subscription() == null) {
-                sse = s;
-                break;
-            }
-        }
-        if (sse == null) {
+        List<SseStream> streams = this.sseStreams;
+        if (streams == null) {
             Object id = Messages.getId(message);
             String method = message.getString("method");
             LOG.debugf("Discarding message [id=%s,method=%s] - no SSE streams open yet", id, method);
             return Future.succeededFuture();
-        } else {
-            messageSent(message);
-            return sse.sendEvent("message", message.encode());
         }
+        // Pick the first legacy stream (no subscription filter) for non-subscription messages
+        for (SseStream s : streams) {
+            if (s.subscription() == null) {
+                messageSent(message);
+                return s.sendEvent("message", message.encode());
+            }
+        }
+        Object id = Messages.getId(message);
+        String method = message.getString("method");
+        LOG.debugf("Discarding message [id=%s,method=%s] - no SSE streams open yet", id, method);
+        return Future.succeededFuture();
     }
 
     @Override
     protected void deliverSubscriptionNotification(JsonObject notification, Subscription subscription) {
+        List<SseStream> streams = this.sseStreams;
+        if (streams == null) {
+            LOG.debugf("Subscription stream not found, notification dropped [%s]", id());
+            return;
+        }
         String targetId = String.valueOf(subscription.subscriptionId());
-        for (SseStream stream : sseStreams) {
+        for (SseStream stream : streams) {
             if (stream.subscription() != null
                     && stream.id().equals(targetId)) {
                 messageSent(notification);

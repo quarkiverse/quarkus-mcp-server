@@ -1,7 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -36,7 +35,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected final boolean transientConnection;
 
-    private final List<Subscription> subscriptions = new CopyOnWriteArrayList<>();
+    private volatile List<Subscription> subscriptions;
 
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName) {
         this(id, serverConfig, serverName, false);
@@ -50,9 +49,9 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         this.trafficLoggerTextLimit = serverConfig.trafficLogging().enabled()
                 ? serverConfig.trafficLogging().textLimit()
                 : -1;
-        this.autoPingInterval = serverConfig.autoPingInterval();
-        this.lastUsed = Instant.now().toEpochMilli();
-        this.idleTimeout = serverConfig.connectionIdleTimeout().toMillis();
+        this.autoPingInterval = transientConnection ? Optional.empty() : serverConfig.autoPingInterval();
+        this.lastUsed = System.currentTimeMillis();
+        this.idleTimeout = transientConnection ? 0 : serverConfig.connectionIdleTimeout().toMillis();
         this.serverName = serverName;
         this.transientConnection = transientConnection;
     }
@@ -116,7 +115,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     }
 
     public McpConnectionBase touch() {
-        this.lastUsed = Instant.now().toEpochMilli();
+        this.lastUsed = System.currentTimeMillis();
         return this;
     }
 
@@ -124,7 +123,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         if (idleTimeout <= 0) {
             return false;
         }
-        return Instant.now().minusMillis(lastUsed).toEpochMilli() > idleTimeout;
+        return System.currentTimeMillis() - lastUsed > idleTimeout;
     }
 
     protected void messageSent(JsonObject message) {
@@ -134,11 +133,25 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     }
 
     public void addSubscription(Subscription subscription) {
-        subscriptions.add(subscription);
+        List<Subscription> subs = this.subscriptions;
+        if (subs == null) {
+            synchronized (this) {
+                subs = this.subscriptions;
+                if (subs == null) {
+                    subs = new CopyOnWriteArrayList<>();
+                    this.subscriptions = subs;
+                }
+            }
+        }
+        subs.add(subscription);
     }
 
     public boolean removeSubscription(Object subscriptionId) {
-        return subscriptions.removeIf(s -> s.subscriptionId().equals(subscriptionId));
+        List<Subscription> subs = this.subscriptions;
+        if (subs == null) {
+            return false;
+        }
+        return subs.removeIf(s -> s.subscriptionId().equals(subscriptionId));
     }
 
     public boolean supportsSubscriptionsListen() {
@@ -155,11 +168,12 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
      * @param resourceUri the resource URI (for {@code notifications/resources/updated}), or {@code null}
      */
     public void sendNotification(JsonObject notification, String resourceUri) {
-        if (subscriptions.isEmpty()) {
+        List<Subscription> subs = this.subscriptions;
+        if (subs == null || subs.isEmpty()) {
             return;
         }
         String method = notification.getString("method");
-        for (Subscription sub : subscriptions) {
+        for (Subscription sub : subs) {
             if (sub.filter().matches(method, resourceUri)) {
                 JsonObject clone = notification.copy();
                 injectSubscriptionId(clone, sub.subscriptionId());

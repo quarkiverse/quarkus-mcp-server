@@ -352,7 +352,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private StreamableHttpMcpConnection createTransientConnection(String serverName) {
-        String id = ConnectionManager.connectionId();
+        String id = ConnectionManager.transientConnectionId();
         LOG.debugf("Stateless transient connection created [%s]", id);
         McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
         return new StreamableHttpMcpConnection(id, serverConfig, serverName, true);

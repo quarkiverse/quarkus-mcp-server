@@ -1,5 +1,8 @@
 package io.quarkiverse.mcp.server;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public enum McpMethod {
 
     INITIALIZE("initialize"),
@@ -40,6 +43,16 @@ public enum McpMethod {
     Q_CLOSE("q/close"),
     ;
 
+    private static final Map<String, McpMethod> BY_NAME;
+
+    static {
+        Map<String, McpMethod> map = new HashMap<>();
+        for (McpMethod m : values()) {
+            map.put(m.name, m);
+        }
+        BY_NAME = Map.copyOf(map);
+    }
+
     private final String name;
 
     McpMethod(String value) {
@@ -51,13 +64,9 @@ public enum McpMethod {
     }
 
     public static McpMethod from(String method) {
-        if (method != null && !method.isEmpty()) {
-            for (McpMethod m : values()) {
-                if (m.name.equals(method)) {
-                    return m;
-                }
-            }
+        if (method == null || method.isEmpty()) {
+            return null;
         }
-        return null;
+        return BY_NAME.get(method);
     }
 }

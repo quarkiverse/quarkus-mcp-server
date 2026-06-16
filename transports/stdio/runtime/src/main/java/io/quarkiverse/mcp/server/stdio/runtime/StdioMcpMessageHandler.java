@@ -132,7 +132,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                                     StdioMcpConnection requestConnection;
                                     JsonObject meta = findMeta(message);
                                     if (isStatelessMessage(message, meta)) {
-                                        requestConnection = new StdioMcpConnection(ConnectionManager.connectionId(),
+                                        requestConnection = new StdioMcpConnection(ConnectionManager.transientConnectionId(),
                                                 serverConfig, stdout, vertx, true);
                                         String metaVersion = meta != null
                                                 ? meta.getString(MetaKey.PROTOCOL_VERSION.toString())
