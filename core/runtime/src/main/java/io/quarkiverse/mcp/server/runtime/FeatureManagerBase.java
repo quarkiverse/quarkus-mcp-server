@@ -372,10 +372,16 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected void notifyConnections(McpMethod method) {
-        // Notify all connections
         JsonObject notification = Messages.newNotification(method.jsonRpcName());
         for (McpConnectionBase c : connectionManager) {
-            c.send(notification);
+            if (c.status() != McpConnection.Status.IN_OPERATION) {
+                continue;
+            }
+            if (c.supportsSubscriptionsListen()) {
+                c.sendNotification(notification, null);
+            } else {
+                c.send(notification);
+            }
         }
     }
 

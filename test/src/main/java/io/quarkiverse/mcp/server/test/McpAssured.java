@@ -119,6 +119,43 @@ public class McpAssured {
         return newStdioClient().build().connect();
     }
 
+    /**
+     * Injects the stateless protocol metadata ({@code _meta}) into the given JSON-RPC message with empty client capabilities.
+     *
+     * @param message the JSON-RPC message to inject metadata into
+     * @see #injectStatelessMeta(JsonObject, JsonObject)
+     */
+    public static void injectStatelessMeta(JsonObject message) {
+        injectStatelessMeta(message, new JsonObject());
+    }
+
+    /**
+     * Injects the stateless protocol metadata ({@code _meta}) into the given JSON-RPC message.
+     * <p>
+     * Use this for manually constructed messages that need to be recognized as stateless by the server
+     * (e.g. {@code subscriptions/listen}).
+     *
+     * @param message the JSON-RPC message to inject metadata into
+     * @param clientCapabilities the client capabilities object
+     */
+    public static void injectStatelessMeta(JsonObject message, JsonObject clientCapabilities) {
+        JsonObject params = message.getJsonObject("params");
+        if (params == null) {
+            params = new JsonObject();
+            message.put("params", params);
+        }
+        JsonObject meta = params.getJsonObject("_meta");
+        if (meta == null) {
+            meta = new JsonObject();
+            params.put("_meta", meta);
+        }
+        meta.put("io.modelcontextprotocol/protocolVersion", McpProtocolVersion.FIRST_STATELESS.version());
+        meta.put("io.modelcontextprotocol/clientInfo", new JsonObject()
+                .put("name", "test-client")
+                .put("version", "1.0"));
+        meta.put("io.modelcontextprotocol/clientCapabilities", clientCapabilities);
+    }
+
     public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>>
             extends AutoCloseable {
 

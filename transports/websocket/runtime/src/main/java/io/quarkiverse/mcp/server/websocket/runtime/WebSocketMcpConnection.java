@@ -21,6 +21,10 @@ public class WebSocketMcpConnection extends McpConnectionBase {
         this.connection = connection;
     }
 
+    WebSocketConnection webSocketConnection() {
+        return connection;
+    }
+
     @Override
     public Future<Void> send(JsonObject message) {
         if (message == null) {

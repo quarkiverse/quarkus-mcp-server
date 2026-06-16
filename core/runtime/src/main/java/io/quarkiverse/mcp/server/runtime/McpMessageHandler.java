@@ -399,6 +399,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return setLogLevel(message, mcpRequest);
         } else if (method == McpMethod.NOTIFICATIONS_PROGRESS) {
             return progress(message, mcpRequest);
+        } else if (method == McpMethod.SUBSCRIPTIONS_LISTEN) {
+            return subscriptionsListen(message, mcpRequest);
         }
         // Create a new duplicated context and process the operation on this context
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
@@ -472,12 +474,50 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 String reason = params.getString("reason");
                 LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
                         mcpRequest.connection().id());
+            } else if (requestId != null && mcpRequest.connection().removeSubscription(requestId)) {
+                LOG.debugf("Subscription %s cancelled [%s]", requestId, mcpRequest.connection().id());
             } else {
                 LOG.warnf("Ignored unknown/completed/invalid cancel request with id %s [%s]", requestId,
                         mcpRequest.connection().id());
             }
         }
         return Future.succeededFuture();
+    }
+
+    private Future<Void> subscriptionsListen(JsonObject message, MCP_REQUEST mcpRequest) {
+        Object id = Messages.getId(message);
+        JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Missing params");
+        }
+        JsonObject notifications = params.getJsonObject("notifications");
+        if (notifications == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS,
+                    "Missing notifications in params");
+        }
+        SubscriptionFilter filter = SubscriptionFilter.parse(notifications);
+        Subscription subscription = new Subscription(id, filter);
+        mcpRequest.connection().addSubscription(subscription);
+        LOG.debugf("Subscription %s opened [%s]", id, mcpRequest.connection().id());
+        return onSubscriptionOpened(message, mcpRequest, subscription);
+    }
+
+    /**
+     * Called after a {@code subscriptions/listen} request is processed and the subscription is registered.
+     * Transports override this to handle transport-specific stream setup.
+     * <p>
+     * The default implementation registers transient connections in the {@link ConnectionManager} and sends the
+     * {@code notifications/subscriptions/acknowledged} notification via the request sender.
+     */
+    protected Future<Void> onSubscriptionOpened(JsonObject message, MCP_REQUEST mcpRequest, Subscription subscription) {
+        if (mcpRequest.connection().isTransient()) {
+            connectionManager.add(mcpRequest.connection());
+        }
+        JsonObject params = new JsonObject().put("notifications", subscription.filter().toAcknowledgedJson());
+        JsonObject acknowledged = Messages.newNotification(
+                McpMethod.NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED.jsonRpcName(), params);
+        McpConnectionBase.injectSubscriptionId(acknowledged, subscription.subscriptionId());
+        return mcpRequest.sender().send(acknowledged);
     }
 
     private String ongoingId(JsonObject message, MCP_REQUEST mcpRequest) {
@@ -608,7 +648,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             McpMethod.NOTIFICATIONS_INITIALIZED,
             McpMethod.PING,
             McpMethod.LOGGING_SET_LEVEL,
-            McpMethod.NOTIFICATIONS_ROOTS_LIST_CHANGED);
+            McpMethod.NOTIFICATIONS_ROOTS_LIST_CHANGED,
+            McpMethod.RESOURCES_SUBSCRIBE,
+            McpMethod.RESOURCES_UNSUBSCRIBE);
 
     private static final Map<String, Object> LIST_CHANGED_PROPERTIES = Map.of("listChanged", true);
     private static final Map<String, Object> SUBSCRIBE_PROPERTIES = Map.of("subscribe", true);

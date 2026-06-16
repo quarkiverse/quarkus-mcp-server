@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.websocket.runtime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,6 +18,7 @@ import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
+import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
@@ -143,6 +145,19 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
         if (mcpConnection != null) {
             connectionManager.remove(mcpConnection.id());
             LOG.debugf("MCP WebSocket connection closed [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
+        }
+        // Clean up any transient subscription connections registered for this WebSocket
+        List<String> toRemove = new ArrayList<>();
+        for (McpConnectionBase c : connectionManager) {
+            if (c instanceof WebSocketMcpConnection wsc
+                    && wsc.webSocketConnection().id().equals(connection.id())
+                    && wsc.isTransient()) {
+                toRemove.add(c.id());
+            }
+        }
+        for (String id : toRemove) {
+            connectionManager.remove(id);
+            LOG.debugf("Transient subscription connection removed [mcpId: %s, wsId: %s]", id, connection.id());
         }
     }
 

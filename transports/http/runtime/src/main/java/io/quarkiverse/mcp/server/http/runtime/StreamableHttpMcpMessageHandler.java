@@ -42,7 +42,7 @@ import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.TransportHint;
-import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SubsidiarySse;
+import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SseStream;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
@@ -69,6 +69,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.Subscription;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
@@ -262,7 +263,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         ContextSupport contextSupport = createContextSupport(ctx);
 
         boolean lazySseInit = computeLazySseInit(serverName, message);
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport, ctx.response(),
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport,
+                ctx.request(), ctx.response(),
                 true, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
 
         try {
@@ -392,7 +394,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         ContextSupport contextSupport = createContextSupport(ctx);
 
         boolean lazySseInit = computeLazySseInit(serverName, message);
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport, ctx.response(),
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport,
+                ctx.request(), ctx.response(),
                 mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
         try {
             boolean containsRequest = scan(mcpRequest);
@@ -430,6 +433,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private void completeResponse(RoutingContext ctx, HttpMcpRequest mcpRequest, boolean containsRequest, boolean succeeded) {
+        if (mcpRequest.subscriptionStream.get()) {
+            return;
+        }
         if (succeeded) {
             if (mcpRequest.sse.get()) {
                 ctx.response().end();
@@ -478,12 +484,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
 
         StreamableHttpMcpConnection streamableConnection = (StreamableHttpMcpConnection) connection;
-        SubsidiarySse sse = new SubsidiarySse(ConnectionManager.connectionId(), response);
+        SseStream sse = new SseStream(ConnectionManager.connectionId(), response);
         streamableConnection.addSse(sse);
 
         // Send log notification to the client
         JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
-                Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
+                Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
                         "Subsidiary SSE opened [%s]".formatted(connection.id())));
 
         TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
@@ -595,6 +601,48 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private static boolean isStateless(McpConnectionBase connection) {
         InitialRequest ir = connection.initialRequest();
         return ir != null && ir.protocolVersion() != null && ir.protocolVersion().isStateless();
+    }
+
+    @Override
+    protected Future<Void> onSubscriptionOpened(JsonObject message, HttpMcpRequest mcpRequest,
+            Subscription subscription) {
+        StreamableHttpMcpConnection connection = mcpRequest.connection();
+
+        // Register transient connection so notification senders can find it
+        if (connection.isTransient()) {
+            connectionManager.add(connection);
+        }
+
+        mcpRequest.subscriptionStream.set(true);
+        mcpRequest.initiateSse();
+
+        String streamId = String.valueOf(subscription.subscriptionId());
+        SseStream sse = new SseStream(streamId, mcpRequest.response, subscription);
+        connection.addSse(sse);
+
+        HttpMcpServerRecorder.setCloseHandler(mcpRequest.request, () -> {
+            if (connection.removeSse(streamId)) {
+                connection.removeSubscription(subscription.subscriptionId());
+                LOG.debugf("Subscription stream [%s] closed [%s]", streamId, connection.id());
+            }
+            if (connection.isTransient() && connectionManager.remove(connection.id())) {
+                LOG.debugf("Transient subscription connection removed [%s]", connection.id());
+            }
+        }, "subscription stream will be cleaned up");
+
+        // Send acknowledged notification
+        JsonObject params = new JsonObject().put("notifications", subscription.filter().toAcknowledgedJson());
+        JsonObject acknowledged = Messages.newNotification(
+                McpMethod.NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED.jsonRpcName(), params);
+        McpConnectionBase.injectSubscriptionId(acknowledged, subscription.subscriptionId());
+
+        TrafficLogging trafficLogging = config.servers().get(mcpRequest.serverName()).trafficLogging();
+        if (trafficLogging.enabled()) {
+            TrafficLogger.messageSent(acknowledged, connection, trafficLogging.textLimit());
+        }
+
+        LOG.debugf("Subscription stream [%s] opened [%s]", streamId, connection.id());
+        return sse.sendEvent("message", acknowledged.encode());
     }
 
     @Override
@@ -793,20 +841,26 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final AtomicBoolean sse;
 
+        final HttpServerRequest request;
+
         final HttpServerResponse response;
 
         final String mcpProtocolVersion;
 
         final boolean lazySseInit;
 
+        final AtomicBoolean subscriptionStream = new AtomicBoolean(false);
+
         public HttpMcpRequest(String serverName, JsonObject message, StreamableHttpMcpConnection connection,
                 SecuritySupport securitySupport,
-                HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
+                HttpServerRequest request, HttpServerResponse response, boolean newSession,
+                ContextSupport contextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion,
                 boolean lazySseInit) {
             super(serverName, message, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
+            this.request = request;
             this.response = response;
             this.mcpProtocolVersion = mcpProtocolVersion;
             this.lazySseInit = lazySseInit;

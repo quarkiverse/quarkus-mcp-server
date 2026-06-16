@@ -387,6 +387,53 @@ sequenceDiagram
     Server-->>Client: tools/call response (result)
 ----
 
+=== Subscription Notifications (Stateless)
+
+With stateless protocol versions, `resources/subscribe` and `resources/unsubscribe` are not available.
+Instead, stateless clients use `subscriptions/listen` to open a notification stream filtered by notification type.
+
+[mermaid,mcp-subscriptions-listen-flow,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. subscriptions/listen (+filter)
+    Server-->>Client: 2. notifications/subscriptions/acknowledged
+    Note over Server: Server-side event<br/>(e.g. tool registered)
+    Server-->>Client: 3. notifications/tools/list_changed<br/>(+subscriptionId in _meta)
+    Note over Server: Resource updated
+    Server-->>Client: 4. notifications/resources/updated<br/>(+subscriptionId in _meta)
+----
+
+The `subscriptions/listen` request specifies a filter in the `notifications` field of the `params` object:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "subscriptions/listen",
+  "params": {
+    "notifications": {
+      "toolsListChanged": true,
+      "promptsListChanged": true,
+      "resourcesListChanged": true,
+      "resourceSubscriptions": ["file:///status.txt"]
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "my-client", "version": "1.0" }
+    }
+  }
+}
+----
+
+The server acknowledges the subscription immediately with `notifications/subscriptions/acknowledged`.
+Subsequent matching notifications include the `io.modelcontextprotocol/subscriptionId` field in `_meta`, set to the original request ID (in this case `1`).
+
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on how subscriptions work with stateless connections.
+
 === Multi Round-Trip Request (MRTR)
 
 With stateless protocol versions, the server cannot send server-initiated requests (such as sampling or elicitation).

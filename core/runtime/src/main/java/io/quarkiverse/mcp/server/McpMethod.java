@@ -33,6 +33,9 @@ public enum McpMethod {
     ELICITATION_CREATE("elicitation/create"),
     NOTIFICATIONS_ELICITATION_COMPLETE("notifications/elicitation/complete"),
 
+    SUBSCRIPTIONS_LISTEN("subscriptions/listen"),
+    NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED("notifications/subscriptions/acknowledged"),
+
     // non-standard methods
     Q_CLOSE("q/close"),
     ;

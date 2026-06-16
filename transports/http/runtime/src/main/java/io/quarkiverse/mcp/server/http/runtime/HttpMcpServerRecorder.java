@@ -170,7 +170,6 @@ public class HttpMcpServerRecorder {
                 SseMcpConnection connection = new SseMcpConnection(id, serverConfig, serverName, response);
                 connectionManager.add(connection);
 
-                // TODO we cannot override the close handler set/used by Quarkus HTTP
                 setCloseHandler(ctx.request(), id, connectionManager);
 
                 // By default /mcp/messages/{generatedId}
@@ -209,10 +208,20 @@ public class HttpMcpServerRecorder {
             if (connectionManager.remove(connectionId)) {
                 LOG.debugf("Connection %s closed", connectionId);
             }
-            // Connection may have been removed earlier...
         }, "client should close the connection [%s] explicitly".formatted(connectionId));
     }
 
+    /**
+     * Sets a close handler on the underlying HTTP connection by chaining it after the existing close handler set by
+     * Quarkus HTTP. This is necessary because {@link HttpConnection#closeHandler(Handler)} replaces the previous handler,
+     * and Quarkus sets its own handler internally. This method uses {@link VarHandle} to read the current handler from
+     * {@link ConnectionBase} and wrap it, ensuring both the original and the new {@code closeAction} run when the connection
+     * closes.
+     *
+     * @param request the HTTP server request whose connection should be monitored
+     * @param closeAction the action to run when the connection closes
+     * @param errorMessage a message logged if the close handler cannot be set
+     */
     static void setCloseHandler(HttpServerRequest request, Runnable closeAction, String errorMessage) {
         HttpConnection connection = request.connection();
         if (connection instanceof ConnectionBase base) {

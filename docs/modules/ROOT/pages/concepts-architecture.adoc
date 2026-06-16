@@ -147,8 +147,8 @@ The resource manager:
 
 * Stores resource metadata (URI, description)
 * Routes `resources/list` and `resources/read` requests
-* Manages subscriptions (`resources/subscribe`, `resources/unsubscribe`)
-* Sends update notifications to subscribers
+* Manages subscriptions (`resources/subscribe`, `resources/unsubscribe` for stateful clients; `subscriptions/listen` for stateless clients)
+* Sends update notifications to subscribers and subscription streams
 * Encodes return values to `ResourceResponse`
 
 === PromptManager

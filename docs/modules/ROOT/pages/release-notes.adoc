@@ -31,6 +31,7 @@ include::./includes/attributes.adoc[]
 * [2.0.0] Multi Round-Trip Requests (MRTR) support for stateless clients. Server feature methods can throw `InputRequiredException` to request additional input (elicitation, sampling, or roots) from the client. The client retries the original request with the gathered input via `InputResponses`. See xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request (MRTR)]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 * [2.0.0] New `MrtrRequest` interface implemented by `Elicitation`, `Sampling`, and `Roots` — provides `isServerInitiatedRequestSupported()`, `inputResponses()`, `requestState()`, and `inputRequired()` builder.
 * [2.0.0] HTTP GET (SSE stream) and DELETE (session termination) requests from stateless clients now return `405 Method Not Allowed`.
+* [2.0.0] `subscriptions/listen` support for stateless clients. Replaces `resources/subscribe`/`resources/unsubscribe` for protocol version `2026-07-28`+. Clients specify a notification filter (tools, prompts, resources list changes, and resource URI subscriptions) and receive matching notifications on the subscription stream. Supported on all transports (HTTP, WebSocket, stdio). See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 
 [[version-1-13]]
 == 1.13.x

@@ -38,6 +38,11 @@ public record MetaKey(String prefix, String name) {
     public static final MetaKey LOG_LEVEL = new MetaKey("io.modelcontextprotocol/", "logLevel");
 
     /**
+     * The {@code io.modelcontextprotocol/subscriptionId} key.
+     */
+    public static final MetaKey SUBSCRIPTION_ID = new MetaKey("io.modelcontextprotocol/", "subscriptionId");
+
+    /**
      * Create a new key from the specified string value, i.e. from {@code foo.bar/myKey}.
      *
      * @param value
