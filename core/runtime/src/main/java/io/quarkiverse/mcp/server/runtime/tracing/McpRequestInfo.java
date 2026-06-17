@@ -82,4 +82,8 @@ public class McpRequestInfo {
     void setAmbientContext(Context ambientContext) {
         this.ambientContext = ambientContext;
     }
+
+    public String getServerName() {
+        return mcpRequest.serverName();
+    }
 }
