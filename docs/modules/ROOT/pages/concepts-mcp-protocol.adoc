@@ -171,6 +171,49 @@ MCP uses capability negotiation to establish what features are available between
 }
 ----
 
+=== Stateless Discovery
+
+Starting with protocol version `2026-07-28`, stateless clients use `server/discover` instead of the `initialize`/`initialized` handshake:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+    }
+  }
+}
+----
+
+The server responds with its supported versions, capabilities, and server info:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "supportedVersions": ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"],
+    "capabilities": {
+      "tools": {},
+      "resources": {},
+      "prompts": {}
+    },
+    "serverInfo": {
+      "name": "acme-quarkus-server",
+      "version": "1.0.0"
+    }
+  }
+}
+----
+
+No `initialized` notification is sent. Each subsequent request is self-contained.
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on required headers and `_meta` fields.
+
 === Capability Checking
 
 After initialization, both parties know what features are available:
@@ -217,9 +260,10 @@ NOTE: The exact sequence is not strictly enforced by the protocol, but this is t
 * No explicit shutdown request needed
 
 **HTTP Transports**::
-* Connections are session-based
-* Each session maintains separate state
-* Explicit `shutdown` request recommended for clean termination
+* Stateful connections are session-based; each session maintains separate state
+* Stateless clients (protocol version `2026-07-28`+) use transient connections — created per-request with no session
+* `McpConnection.isTransient()` returns `true` for transient connections
+* Explicit `shutdown` request recommended for clean termination of stateful sessions
 * SSE connections require keep-alive mechanism
 
 **WebSocket Transport** (custom transport)::
@@ -309,6 +353,23 @@ sequenceDiagram
     Server-->>Client: 8. tools/call response (result)
 ----
 
+=== Tool Call Flow (Stateless)
+
+[mermaid,mcp-tool-call-flow-stateless,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. server/discover
+    Server-->>Client: 2. discover response (capabilities, versions)
+    Client->>Server: 3. tools/list (+headers, +_meta)
+    Server-->>Client: 4. tools/list response
+    Client->>Server: 5. tools/call (+headers, +_meta)
+    Note over Server: Tool executes<br/>(transient connection)
+    Server-->>Client: 6. tools/call response (result)
+----
+
 === Server-to-Client Request (Sampling)
 
 [mermaid,mcp-sampling-flow,svg]
@@ -326,6 +387,74 @@ sequenceDiagram
     Server-->>Client: tools/call response (result)
 ----
 
+=== Subscription Notifications (Stateless)
+
+With stateless protocol versions, `resources/subscribe` and `resources/unsubscribe` are not available.
+Instead, stateless clients use `subscriptions/listen` to open a notification stream filtered by notification type.
+
+[mermaid,mcp-subscriptions-listen-flow,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. subscriptions/listen (+filter)
+    Server-->>Client: 2. notifications/subscriptions/acknowledged
+    Note over Server: Server-side event<br/>(e.g. tool registered)
+    Server-->>Client: 3. notifications/tools/list_changed<br/>(+subscriptionId in _meta)
+    Note over Server: Resource updated
+    Server-->>Client: 4. notifications/resources/updated<br/>(+subscriptionId in _meta)
+----
+
+The `subscriptions/listen` request specifies a filter in the `notifications` field of the `params` object:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "subscriptions/listen",
+  "params": {
+    "notifications": {
+      "toolsListChanged": true,
+      "promptsListChanged": true,
+      "resourcesListChanged": true,
+      "resourceSubscriptions": ["file:///status.txt"]
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "my-client", "version": "1.0" }
+    }
+  }
+}
+----
+
+The server acknowledges the subscription immediately with `notifications/subscriptions/acknowledged`.
+Subsequent matching notifications include the `io.modelcontextprotocol/subscriptionId` field in `_meta`, set to the original request ID (in this case `1`).
+
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on how subscriptions work with stateless connections.
+
+=== Multi Round-Trip Request (MRTR)
+
+With stateless protocol versions, the server cannot send server-initiated requests (such as sampling or elicitation).
+Instead, it uses the Multi Round-Trip Requests (MRTR) pattern: the server returns an `input_required` result, and the client retries with the gathered input.
+
+[mermaid,mcp-mrtr-flow,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. tools/call (name: "analyze")
+    Note over Server: Tool needs input<br/>Throws InputRequiredException
+    Server-->>Client: 2. result (resultType: "input_required",<br/>inputRequests, requestState)
+    Note over Client: Client gathers input<br/>(UI form, LLM, etc.)
+    Client->>Server: 3. tools/call (name: "analyze",<br/>inputResponses, requestState)
+    Note over Server: Tool reads responses<br/>and completes
+    Server-->>Client: 4. tools/call response (result)
+----
+
+See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on which protocol versions use this pattern.
 
 == See Also
 

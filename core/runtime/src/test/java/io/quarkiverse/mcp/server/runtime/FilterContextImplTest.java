@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.vertx.core.json.JsonObject;
 
@@ -74,7 +75,7 @@ public class FilterContextImplTest {
             }
 
             @Override
-            public String protocolVersion() {
+            public McpProtocolVersion protocolVersion() {
                 throw new UnsupportedOperationException();
             }
 

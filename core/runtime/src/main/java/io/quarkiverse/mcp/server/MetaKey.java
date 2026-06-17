@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * <p>
  * {@code _meta} keys have two segments: an optional prefix, and a name.
  */
-public record MetaKey(String prefix, String name) {
+public record MetaKey(String prefix, String name, String key) {
 
     private static final Pattern NAME_PATTERN = Pattern.compile("[a-zA-Z0-9][a-zA-Z0-9_.-]*[a-zA-Z0-9]");
     private static final Pattern PREFIX_PATTERN = Pattern
@@ -28,17 +28,45 @@ public record MetaKey(String prefix, String name) {
     public static final MetaKey CLIENT_CAPABILITIES = new MetaKey("io.modelcontextprotocol/", "clientCapabilities");
 
     /**
+     * The {@code io.modelcontextprotocol/protocolVersion} key.
+     */
+    public static final MetaKey PROTOCOL_VERSION = new MetaKey("io.modelcontextprotocol/", "protocolVersion");
+
+    /**
+     * The {@code io.modelcontextprotocol/logLevel} key.
+     */
+    public static final MetaKey LOG_LEVEL = new MetaKey("io.modelcontextprotocol/", "logLevel");
+
+    /**
+     * The {@code io.modelcontextprotocol/subscriptionId} key.
+     */
+    public static final MetaKey SUBSCRIPTION_ID = new MetaKey("io.modelcontextprotocol/", "subscriptionId");
+
+    /**
+     * Create a new key with the specified prefix and name.
+     *
+     * @param prefix the optional prefix (e.g. {@code "io.modelcontextprotocol/"})
+     * @param name the key name
+     */
+    public MetaKey(String prefix, String name) {
+        this(prefix, name, prefix == null ? name : prefix + name);
+    }
+
+    /**
      * Create a new key from the specified string value, i.e. from {@code foo.bar/myKey}.
      *
      * @param value
      * @return the key
      */
     public static MetaKey from(String value) {
-        if (!value.contains("/")) {
-            return new MetaKey(null, value);
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException("value must not be null or empty");
         }
         int slashIdx = value.indexOf('/');
-        return new MetaKey(value.substring(0, slashIdx + 1), value.substring(slashIdx + 1));
+        if (slashIdx < 0) {
+            return new MetaKey(null, value, value);
+        }
+        return new MetaKey(value.substring(0, slashIdx + 1), value.substring(slashIdx + 1), value);
     }
 
     /**
@@ -78,10 +106,7 @@ public record MetaKey(String prefix, String name) {
     @JsonValue
     @Override
     public String toString() {
-        if (prefix == null) {
-            return name;
-        }
-        return prefix + name;
+        return key;
     }
 
     public static boolean isValidName(String value) {

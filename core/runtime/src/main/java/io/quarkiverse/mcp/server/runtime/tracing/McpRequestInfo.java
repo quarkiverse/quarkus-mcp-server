@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.opentelemetry.context.Context;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.McpRequest;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.vertx.core.json.JsonObject;
@@ -55,7 +56,8 @@ public class McpRequestInfo {
     }
 
     public String getProtocolVersion() {
-        return mcpRequest.protocolVersion();
+        McpProtocolVersion pv = mcpRequest.protocolVersion();
+        return pv != null ? pv.version() : null;
     }
 
     public InitialRequest.Transport getTransport() {

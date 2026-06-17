@@ -44,11 +44,12 @@ public class SamplingRequestImpl implements SamplingRequest {
     private final ServerRequests serverRequests;
     private final Duration timeout;
     private final McpTracing mcpTracing;
+    private final boolean stateless;
 
     SamplingRequestImpl(long maxTokens, List<SamplingMessage> messages, BigDecimal temperature, String systemPrompt,
             IncludeContext includeContext, ModelPreferences modelPreferences, Map<String, Object> metadata,
             List<String> stopSequences, Sender sender,
-            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing) {
+            ServerRequests serverRequests, Duration timeout, McpTracing mcpTracing, boolean stateless) {
         this.maxTokens = maxTokens;
         this.messages = messages;
         this.temperature = temperature;
@@ -61,6 +62,7 @@ public class SamplingRequestImpl implements SamplingRequest {
         this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
+        this.stateless = stateless;
     }
 
     @JsonProperty
@@ -116,8 +118,21 @@ public class SamplingRequestImpl implements SamplingRequest {
         return meta;
     }
 
+    JsonObject toInputRequestJson() {
+        JsonObject params = JsonObject.mapFrom(this);
+        // Remove internal fields that are not part of the protocol
+        params.remove("_meta");
+        return new JsonObject()
+                .put("method", McpMethod.SAMPLING_CREATE_MESSAGE.jsonRpcName())
+                .put("params", params);
+    }
+
     @Override
     public Uni<SamplingResponse> send() {
+        if (stateless) {
+            throw new IllegalStateException(
+                    "Server-initiated requests are not supported with stateless protocol versions; use InputRequiredException instead");
+        }
         AtomicLong id = new AtomicLong();
         Uni<SamplingResponse> ret = Uni.createFrom().completionStage(() -> {
             CompletableFuture<SamplingResponse> future = new CompletableFuture<SamplingResponse>();

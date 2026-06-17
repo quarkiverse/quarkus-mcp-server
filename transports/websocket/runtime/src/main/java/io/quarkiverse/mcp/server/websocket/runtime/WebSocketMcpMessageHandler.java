@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.websocket.runtime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -9,17 +10,22 @@ import jakarta.enterprise.inject.Instance;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
+import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
+import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestImpl;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
 import io.quarkiverse.mcp.server.runtime.McpTracing;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.NotificationManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
@@ -92,7 +98,6 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
     @SuppressWarnings("unchecked")
     @OnTextMessage
     Uni<Void> consumeMessage(WebSocketConnection connection, String message) throws InterruptedException {
-        WebSocketMcpConnection mcpConnection = connections.computeIfAbsent(connection.id(), k -> newConnection(connection));
         JsonObject jsonMessage = (JsonObject) Json.decodeValue(message);
 
         SecuritySupport securitySupport;
@@ -108,6 +113,26 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             securitySupport = null;
         }
 
+        WebSocketMcpConnection mcpConnection;
+        JsonObject meta = findMeta(jsonMessage);
+        if (isStatelessMessage(jsonMessage, meta)) {
+            mcpConnection = new WebSocketMcpConnection(ConnectionManager.transientConnectionId(),
+                    config.servers().get(serverName()), serverName(), connection, true);
+            String metaVersion = meta != null ? meta.getString(MetaKey.PROTOCOL_VERSION.toString()) : null;
+            InitialRequest initialRequest;
+            try {
+                initialRequest = buildStatelessInitialRequest(meta, metaVersion, Transport.WEBSOCKET);
+                applyMetaLogLevel(meta, mcpConnection);
+            } catch (McpException e) {
+                return (Uni<Void>) UniHelper
+                        .toUni(mcpConnection.sendError(Messages.getId(jsonMessage), e.getJsonRpcErrorCode(), e.getMessage()));
+            }
+            mcpConnection.initialize(initialRequest);
+            mcpConnection.setInitialized();
+        } else {
+            mcpConnection = connections.computeIfAbsent(connection.id(), k -> newConnection(connection));
+        }
+
         WebSocketMcpRequest mcpRequest = new WebSocketMcpRequest(serverName(), jsonMessage, mcpConnection, securitySupport,
                 null,
                 currentIdentityAssociation);
@@ -120,6 +145,19 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
         if (mcpConnection != null) {
             connectionManager.remove(mcpConnection.id());
             LOG.debugf("MCP WebSocket connection closed [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
+        }
+        // Clean up any transient subscription connections registered for this WebSocket
+        List<String> toRemove = new ArrayList<>();
+        for (McpConnectionBase c : connectionManager) {
+            if (c instanceof WebSocketMcpConnection wsc
+                    && wsc.webSocketConnection().id().equals(connection.id())
+                    && wsc.isTransient()) {
+                toRemove.add(c.id());
+            }
+        }
+        for (String id : toRemove) {
+            connectionManager.remove(id);
+            LOG.debugf("Transient subscription connection removed [mcpId: %s, wsId: %s]", id, connection.id());
         }
     }
 

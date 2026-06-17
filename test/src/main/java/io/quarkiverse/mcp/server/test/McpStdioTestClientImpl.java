@@ -139,6 +139,47 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
             }
         });
 
+        if (protocolVersion.isStateless()) {
+            return connectStateless(assertFunction);
+        }
+        return connectStateful(assertFunction);
+    }
+
+    private McpStdioTestClient connectStateless(Consumer<InitResult> assertFunction) {
+        JsonObject discoverMessage = newRequest(McpAssured.SERVER_DISCOVER);
+        injectStatelessMeta(discoverMessage);
+        sendAndForget(discoverMessage);
+
+        JsonObject discoverResponse = state.waitForResponse(discoverMessage);
+        JsonObject discoverResult = assertResultResponse(discoverMessage, discoverResponse);
+        assertNotNull(discoverResult);
+
+        JsonObject serverInfo = discoverResult.getJsonObject("serverInfo");
+        JsonObject discoverCapabilities = discoverResult.getJsonObject("capabilities");
+        List<ServerCapability> capabilities = new ArrayList<>();
+        if (discoverCapabilities != null) {
+            for (String capability : discoverCapabilities.fieldNames()) {
+                capabilities.add(new ServerCapability(capability, discoverCapabilities.getJsonObject(capability).getMap()));
+            }
+        }
+        Implementation implementation = Messages.decodeImplementation(serverInfo);
+        InitResult r = new InitResult(null,
+                implementation.name(),
+                implementation.title(),
+                implementation.version(),
+                capabilities,
+                discoverResult.getString("instructions"),
+                implementation,
+                discoverResult.getJsonObject("_meta"));
+        if (assertFunction != null) {
+            assertFunction.accept(r);
+        }
+        this.initResult = r;
+        connected.set(true);
+        return this;
+    }
+
+    private McpStdioTestClient connectStateful(Consumer<InitResult> assertFunction) {
         if (autoPong) {
             requestConsumer.set(m -> {
                 String method = m.getString("method");

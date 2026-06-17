@@ -153,6 +153,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     private void sendUpdateNotifications(String uri) {
         JsonObject updated = Messages.newNotification("notifications/resources/updated", new JsonObject().put("uri", uri));
+        // Old protocol: existing uriToSubscribers flow
         List<String> ids = uriToSubscribers.get(uri);
         if (ids != null) {
             for (String connectionId : ids) {
@@ -162,6 +163,12 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 } else {
                     unsubscribe(uri, connectionId);
                 }
+            }
+        }
+        // New protocol: route through subscription filters
+        for (McpConnectionBase c : connectionManager) {
+            if (c.supportsSubscriptionsListen()) {
+                c.sendNotification(updated, uri);
             }
         }
     }

@@ -186,7 +186,7 @@ public class AutoInitMetaTest extends McpServerTest {
         Uni<String> info(McpConnection connection, Sampling sampling) {
             String prefix = connection.initialRequest().implementation().name()
                     + ":" + connection.initialRequest().implementation().version()
-                    + ":" + connection.initialRequest().protocolVersion()
+                    + ":" + connection.initialRequest().protocolVersion().version()
                     + ":";
             if (sampling.isSupported()) {
                 SamplingRequest request = sampling.requestBuilder()

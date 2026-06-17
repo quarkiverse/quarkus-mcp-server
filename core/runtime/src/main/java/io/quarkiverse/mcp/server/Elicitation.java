@@ -7,7 +7,7 @@ package io.quarkiverse.mcp.server;
  * @see ElicitationRequest
  * @see UrlElicitationRequest
  */
-public interface Elicitation {
+public interface Elicitation extends MrtrRequest {
 
     /**
      * @return {@code true} if the client supports the {@link ClientCapability#ELICITATION} capability, {@code false} otherwise

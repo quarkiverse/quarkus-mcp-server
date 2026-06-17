@@ -1,8 +1,8 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import io.quarkiverse.mcp.server.InitialRequest;
-import io.quarkiverse.mcp.server.McpConnection.Status;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.tracing.McpRequestInfo;
 import io.quarkiverse.mcp.server.runtime.tracing.McpResponseInfo;
 import io.quarkus.arc.Arc;
@@ -120,9 +120,8 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     }
 
     @Override
-    public String protocolVersion() {
-        if ((connection.status() == Status.IN_OPERATION || connection.status() == Status.INITIALIZING)
-                && connection.initialRequest() != null) {
+    public McpProtocolVersion protocolVersion() {
+        if (connection.initialRequest() != null) {
             return connection.initialRequest().protocolVersion();
         }
         return null;

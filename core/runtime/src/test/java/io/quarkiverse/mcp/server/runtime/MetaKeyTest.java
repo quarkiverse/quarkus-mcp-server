@@ -43,6 +43,14 @@ public class MetaKeyTest {
         MetaKey k = MetaKey.from("foo-bar.baz/name");
         assertEquals("foo-bar.baz/", k.prefix());
         assertEquals("name", k.name());
+        assertEquals("foo-bar.baz/name", k.toString());
+
+        MetaKey simple = MetaKey.from("myKey");
+        assertEquals("myKey", simple.name());
+        assertEquals("myKey", simple.toString());
+
+        assertThrows(IllegalArgumentException.class, () -> MetaKey.from(null));
+        assertThrows(IllegalArgumentException.class, () -> MetaKey.from(""));
     }
 
     @Test

@@ -32,15 +32,17 @@ import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.InitialRequest.Transport;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.TransportHint;
-import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SubsidiarySse;
+import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpConnection.SseStream;
 import io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.HttpMcpRequest;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
@@ -67,6 +69,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.Subscription;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
@@ -97,10 +100,11 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     public static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
     public static final String MCP_PROTOCOL_VERSION_HEADER = "Mcp-Protocol-Version";
+    public static final String MCP_METHOD_HEADER = "Mcp-Method";
+    public static final String MCP_NAME_HEADER = "Mcp-Name";
     public static final String AUTO_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
     private static final Implementation AUTO_INIT_IMPLEMENTATION = new Implementation(AUTO_INIT_IMPL_NAME, "1", null);
 
-    private final McpMetadata metadata;
     private final CurrentVertxRequest currentVertxRequest;
     private final CurrentIdentityAssociation currentIdentityAssociation;
     private final McpHttpServersRuntimeConfig httpConfig;
@@ -139,7 +143,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
-        this.metadata = metadata;
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.httpConfig = runtimeConfig;
@@ -190,6 +193,174 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             return;
         }
 
+        JsonObject message;
+        try {
+            message = (JsonObject) Json.decodeValue(ctx.body().buffer());
+        } catch (Exception e) {
+            String msg = "Unable to parse the JSON message";
+            LOG.warnf(e, msg);
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.end(newError(null, JsonRpcErrorCodes.PARSE_ERROR, msg).toBuffer());
+            return;
+        }
+
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        JsonObject meta = findMeta(message);
+        if (isStatelessRequest(mcpProtocolVersion, message, meta)) {
+            handleStateless(ctx, serverName, request, message, mcpProtocolVersion, meta);
+        } else {
+            handleStateful(ctx, serverName, request, message, mcpProtocolVersion);
+        }
+    }
+
+    private boolean isStatelessRequest(String mcpProtocolVersion, JsonObject message, JsonObject meta) {
+        if (mcpProtocolVersion != null && isStateless(mcpProtocolVersion)) {
+            return true;
+        }
+        return isStatelessMessage(message, meta);
+    }
+
+    private void handleStateless(RoutingContext ctx, String serverName, HttpServerRequest request,
+            JsonObject message, String mcpProtocolVersion, JsonObject meta) {
+
+        // Validate required headers for stateless clients
+        if (!validateStatelessHeaders(ctx, message, mcpProtocolVersion, meta)) {
+            return;
+        }
+
+        // Validate protocol version is supported
+        if (mcpProtocolVersion != null && !McpProtocolVersion.SUPPORTED_VERSIONS.contains(mcpProtocolVersion)) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.UNSUPPORTED_PROTOCOL_VERSION,
+                    "Unsupported protocol version",
+                    new JsonObject().put("supported", McpProtocolVersion.SUPPORTED_VERSIONS).put("requested",
+                            mcpProtocolVersion))
+                    .toBuffer());
+            return;
+        }
+
+        // Create a transient connection — not registered in ConnectionManager
+        StreamableHttpMcpConnection connection = createTransientConnection(serverName);
+
+        // Build InitialRequest from _meta and auto-initialize
+        InitialRequest initialRequest;
+        try {
+            initialRequest = buildStatelessInitialRequest(meta, mcpProtocolVersion,
+                    Transport.STREAMABLE_HTTP);
+            applyMetaLogLevel(meta, connection);
+        } catch (McpException e) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(Messages.getId(message), e.getJsonRpcErrorCode(), e.getMessage()).toBuffer());
+            return;
+        }
+        connection.initialize(initialRequest);
+        connection.setInitialized();
+
+        QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();
+        SecuritySupport securitySupport = createSecuritySupport(ctx, user);
+        ContextSupport contextSupport = createContextSupport(ctx);
+
+        boolean lazySseInit = computeLazySseInit(serverName, message);
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport,
+                ctx.request(), ctx.response(),
+                true, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
+
+        try {
+            boolean containsRequest = scan(mcpRequest);
+            handle(mcpRequest).onComplete(ar -> {
+                completeResponse(ctx, mcpRequest, containsRequest, ar.succeeded());
+            });
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+    private boolean validateStatelessHeaders(RoutingContext ctx, JsonObject message, String mcpProtocolVersion,
+            JsonObject meta) {
+        // Validate Mcp-Method header
+        String mcpMethodHeader = ctx.request().getHeader(MCP_METHOD_HEADER);
+        String bodyMethod = message.getString("method");
+        if (mcpMethodHeader == null) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    "Missing required header: " + MCP_METHOD_HEADER).toBuffer());
+            return false;
+        }
+        if (bodyMethod != null && !mcpMethodHeader.equals(bodyMethod)) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    "Header mismatch: " + MCP_METHOD_HEADER + " header value '" + mcpMethodHeader
+                            + "' does not match body value '" + bodyMethod + "'")
+                    .toBuffer());
+            return false;
+        }
+
+        // Validate Mcp-Name header for methods that require it
+        if ("tools/call".equals(bodyMethod) || "prompts/get".equals(bodyMethod)) {
+            JsonObject params = Messages.getParams(message);
+            String bodyName = params != null ? params.getString("name") : null;
+            if (!validateMcpNameHeader(ctx, bodyName)) {
+                return false;
+            }
+        } else if ("resources/read".equals(bodyMethod)) {
+            JsonObject params = Messages.getParams(message);
+            String bodyUri = params != null ? params.getString("uri") : null;
+            if (!validateMcpNameHeader(ctx, bodyUri)) {
+                return false;
+            }
+        }
+
+        // Validate MCP-Protocol-Version header matches _meta version
+        if (meta != null && mcpProtocolVersion != null) {
+            String metaVersion = meta.getString(MetaKey.PROTOCOL_VERSION.toString());
+            if (metaVersion != null && !mcpProtocolVersion.equals(metaVersion)) {
+                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                ctx.response().setStatusCode(400);
+                ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                        "Header mismatch: " + MCP_PROTOCOL_VERSION_HEADER + " header value '" + mcpProtocolVersion
+                                + "' does not match _meta value '" + metaVersion + "'")
+                        .toBuffer());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean validateMcpNameHeader(RoutingContext ctx, String expectedValue) {
+        String mcpNameHeader = ctx.request().getHeader(MCP_NAME_HEADER);
+        if (mcpNameHeader == null) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    "Missing required header: " + MCP_NAME_HEADER).toBuffer());
+            return false;
+        }
+        if (expectedValue != null && !mcpNameHeader.equals(expectedValue)) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    "Header mismatch: " + MCP_NAME_HEADER + " header value '" + mcpNameHeader
+                            + "' does not match body value '" + expectedValue + "'")
+                    .toBuffer());
+            return false;
+        }
+        return true;
+    }
+
+    private StreamableHttpMcpConnection createTransientConnection(String serverName) {
+        String id = ConnectionManager.transientConnectionId();
+        LOG.debugf("Stateless transient connection created [%s]", id);
+        McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
+        return new StreamableHttpMcpConnection(id, serverConfig, serverName, true);
+    }
+
+    private void handleStateful(RoutingContext ctx, String serverName, HttpServerRequest request,
+            JsonObject message, String mcpProtocolVersion) {
+
         StreamableHttpMcpConnection connection;
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
@@ -198,7 +369,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             McpConnectionBase existing = connectionManager.get(mcpSessionId);
             if (existing == null) {
                 if (httpConfig.servers().get(serverName).http().streamable().autoInit()) {
-                    // We don't care about non-existent session when auto-init is enabled
                     connection = initConnection(serverName);
                 } else {
                     LOG.warnf("Mcp session not found: %s", mcpSessionId);
@@ -212,18 +382,35 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         }
 
-        JsonObject message;
-        try {
-            message = (JsonObject) Json.decodeValue(ctx.body().buffer());
-        } catch (Exception e) {
-            String msg = "Unable to parse the JSON message";
-            LOG.warnf(e, msg);
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-            ctx.end(newError(null, JsonRpcErrorCodes.PARSE_ERROR, msg).toBuffer());
+        if (mcpProtocolVersion != null
+                && !McpProtocolVersion.SUPPORTED_VERSIONS.contains(mcpProtocolVersion)) {
+            LOG.warnf("Invalid MCP protocol header: %s", mcpProtocolVersion);
+            ctx.fail(400);
             return;
         }
+
         QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();
-        SecuritySupport securitySupport = new SecuritySupport() {
+        SecuritySupport securitySupport = createSecuritySupport(ctx, user);
+        ContextSupport contextSupport = createContextSupport(ctx);
+
+        boolean lazySseInit = computeLazySseInit(serverName, message);
+        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport,
+                ctx.request(), ctx.response(),
+                mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
+        try {
+            boolean containsRequest = scan(mcpRequest);
+            handle(mcpRequest).onComplete(ar -> {
+                completeResponse(ctx, mcpRequest, containsRequest, ar.succeeded());
+                removeAutoInitConnection(connection);
+            });
+        } catch (Exception e) {
+            removeAutoInitConnection(connection);
+            throw e;
+        }
+    }
+
+    private SecuritySupport createSecuritySupport(RoutingContext ctx, QuarkusHttpUser user) {
+        return new SecuritySupport() {
             @Override
             public void setCurrentIdentity(CurrentIdentityAssociation currentIdentityAssociation) {
                 if (user != null) {
@@ -234,52 +421,37 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
             }
         };
-        ContextSupport contextSupport = new ContextSupport() {
+    }
+
+    private ContextSupport createContextSupport(RoutingContext ctx) {
+        return new ContextSupport() {
             @Override
             public void requestContextActivated() {
                 currentVertxRequest.setCurrent(ctx);
             }
         };
+    }
 
-        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
-        if (mcpProtocolVersion != null
-                && !SUPPORTED_PROTOCOL_VERSIONS.contains(mcpProtocolVersion)) {
-            LOG.warnf("Invalid MCP protocol header: %s", mcpProtocolVersion);
-            ctx.fail(400);
+    private void completeResponse(RoutingContext ctx, HttpMcpRequest mcpRequest, boolean containsRequest, boolean succeeded) {
+        if (mcpRequest.subscriptionStream.get()) {
             return;
         }
-        boolean lazySseInit = computeLazySseInit(serverName, message);
-        HttpMcpRequest mcpRequest = new HttpMcpRequest(serverName, message, connection, securitySupport, ctx.response(),
-                mcpSessionId == null, contextSupport, currentIdentityAssociation, mcpProtocolVersion, lazySseInit);
-        try {
-            boolean containsRequest = scan(mcpRequest);
-            handle(mcpRequest).onComplete(ar -> {
-                if (ar.succeeded()) {
-                    if (mcpRequest.sse.get()) {
-                        // Just close the SSE stream
-                        ctx.response().end();
+        if (succeeded) {
+            if (mcpRequest.sse.get()) {
+                ctx.response().end();
+            } else {
+                if (!ctx.response().ended()) {
+                    if (!containsRequest) {
+                        ctx.response().setStatusCode(202).end();
                     } else {
-                        if (!ctx.response().ended()) {
-                            if (!containsRequest) {
-                                // If the input consists solely of responses/notifications
-                                // then the server MUST return HTTP status 202
-                                ctx.response().setStatusCode(202).end();
-                            } else {
-                                ctx.end();
-                            }
-                        }
-                    }
-                } else {
-                    if (!ctx.response().ended()) {
-                        ctx.response().setStatusCode(500).end();
+                        ctx.end();
                     }
                 }
-
-                removeAutoInitConnection(connection);
-            });
-        } catch (Exception e) {
-            removeAutoInitConnection(connection);
-            throw e;
+            }
+        } else {
+            if (!ctx.response().ended()) {
+                ctx.response().setStatusCode(500).end();
+            }
         }
     }
 
@@ -288,6 +460,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             throw serverNameNotDefined();
         }
         HttpServerRequest request = ctx.request();
+        // Stateless protocol does not support the GET SSE stream
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        if (mcpProtocolVersion != null && isStateless(mcpProtocolVersion)) {
+            ctx.fail(405);
+            return;
+        }
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
             LOG.warnf("%s header not found", MCP_SESSION_ID_HEADER);
@@ -306,12 +484,12 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         response.headers().add(HttpHeaders.CONTENT_TYPE, "text/event-stream");
 
         StreamableHttpMcpConnection streamableConnection = (StreamableHttpMcpConnection) connection;
-        SubsidiarySse sse = new SubsidiarySse(ConnectionManager.connectionId(), response);
+        SseStream sse = new SseStream(ConnectionManager.connectionId(), response);
         streamableConnection.addSse(sse);
 
         // Send log notification to the client
         JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
-                Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
+                Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
                         "Subsidiary SSE opened [%s]".formatted(connection.id())));
 
         TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
@@ -352,9 +530,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (config != null && config.http().streamable().autoInit()) {
             // "If the server does not receive an MCP-Protocol-Version header, the server SHOULD assume protocol version 2025-03-26"
             // Note that this is inconsistent with initial handshake where the latest supported version is used
-            String version = mcpRequest.mcpProtocolVersion;
-            if (version == null) {
-                version = SUPPORTED_PROTOCOL_VERSIONS.get(2);
+            McpProtocolVersion protocolVersion = McpProtocolVersion.from(mcpRequest.mcpProtocolVersion);
+            if (protocolVersion == null) {
+                protocolVersion = McpProtocolVersion.DEFAULT_ASSUMED;
             }
 
             // Try to find the clientInfo and clientCapabilities in _meta
@@ -378,7 +556,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
             return new InitialRequest(
                     implementation,
-                    version,
+                    protocolVersion,
                     clientCapabilities,
                     Transport.STREAMABLE_HTTP,
                     true);
@@ -386,16 +564,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return null;
     }
 
-    private static JsonObject findMeta(JsonObject message) {
-        JsonObject params = Messages.getParams(message);
-        if (params != null) {
-            return params.getJsonObject("_meta");
-        }
-        return null;
-    }
-
     public void terminateSession(RoutingContext ctx) {
         HttpServerRequest request = ctx.request();
+        // Stateless protocol does not support session termination
+        String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        if (mcpProtocolVersion != null && isStateless(mcpProtocolVersion)) {
+            ctx.fail(405);
+            return;
+        }
         String mcpSessionId = request.getHeader(MCP_SESSION_ID_HEADER);
         if (mcpSessionId == null) {
             LOG.warnf("Mcp session id header is missing: %s", ctx.normalizedPath());
@@ -416,8 +592,57 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     @Override
     protected void afterInitialize(HttpMcpRequest mcpRequest) {
-        // Add the "Mcp-Session-Id" header to the response to the "Initialize" request
-        mcpRequest.response.headers().add(MCP_SESSION_ID_HEADER, mcpRequest.connection().id());
+        if (!isStateless(mcpRequest.connection())) {
+            // Add the "Mcp-Session-Id" header to the response to the "Initialize" request
+            mcpRequest.response.headers().add(MCP_SESSION_ID_HEADER, mcpRequest.connection().id());
+        }
+    }
+
+    private static boolean isStateless(McpConnectionBase connection) {
+        InitialRequest ir = connection.initialRequest();
+        return ir != null && ir.protocolVersion() != null && ir.protocolVersion().isStateless();
+    }
+
+    @Override
+    protected Future<Void> onSubscriptionOpened(JsonObject message, HttpMcpRequest mcpRequest,
+            Subscription subscription) {
+        StreamableHttpMcpConnection connection = mcpRequest.connection();
+
+        // Register transient connection so notification senders can find it
+        if (connection.isTransient()) {
+            connectionManager.add(connection);
+        }
+
+        mcpRequest.subscriptionStream.set(true);
+        mcpRequest.initiateSse();
+
+        String streamId = String.valueOf(subscription.subscriptionId());
+        SseStream sse = new SseStream(streamId, mcpRequest.response, subscription);
+        connection.addSse(sse);
+
+        HttpMcpServerRecorder.setCloseHandler(mcpRequest.request, () -> {
+            if (connection.removeSse(streamId)) {
+                connection.removeSubscription(subscription.subscriptionId());
+                LOG.debugf("Subscription stream [%s] closed [%s]", streamId, connection.id());
+            }
+            if (connection.isTransient() && connectionManager.remove(connection.id())) {
+                LOG.debugf("Transient subscription connection removed [%s]", connection.id());
+            }
+        }, "subscription stream will be cleaned up");
+
+        // Send acknowledged notification
+        JsonObject params = new JsonObject().put("notifications", subscription.filter().toAcknowledgedJson());
+        JsonObject acknowledged = Messages.newNotification(
+                McpMethod.NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED.jsonRpcName(), params);
+        McpConnectionBase.injectSubscriptionId(acknowledged, subscription.subscriptionId());
+
+        TrafficLogging trafficLogging = config.servers().get(mcpRequest.serverName()).trafficLogging();
+        if (trafficLogging.enabled()) {
+            TrafficLogger.messageSent(acknowledged, connection, trafficLogging.textLimit());
+        }
+
+        LOG.debugf("Subscription stream [%s] opened [%s]", streamId, connection.id());
+        return sse.sendEvent("message", acknowledged.encode());
     }
 
     @Override
@@ -616,20 +841,26 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         final AtomicBoolean sse;
 
+        final HttpServerRequest request;
+
         final HttpServerResponse response;
 
         final String mcpProtocolVersion;
 
         final boolean lazySseInit;
 
+        final AtomicBoolean subscriptionStream = new AtomicBoolean(false);
+
         public HttpMcpRequest(String serverName, JsonObject message, StreamableHttpMcpConnection connection,
                 SecuritySupport securitySupport,
-                HttpServerResponse response, boolean newSession, ContextSupport contextSupport,
+                HttpServerRequest request, HttpServerResponse response, boolean newSession,
+                ContextSupport contextSupport,
                 CurrentIdentityAssociation currentIdentityAssociation, String mcpProtocolVersion,
                 boolean lazySseInit) {
             super(serverName, message, connection, null, securitySupport, contextSupport, currentIdentityAssociation);
             this.newSession = newSession;
             this.sse = new AtomicBoolean(false);
+            this.request = request;
             this.response = response;
             this.mcpProtocolVersion = mcpProtocolVersion;
             this.lazySseInit = lazySseInit;
@@ -681,9 +912,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
 
         @Override
-        public String protocolVersion() {
-            String ret = super.protocolVersion();
-            return ret != null ? ret : mcpProtocolVersion;
+        public McpProtocolVersion protocolVersion() {
+            McpProtocolVersion ret = super.protocolVersion();
+            return ret != null ? ret : McpProtocolVersion.from(mcpProtocolVersion);
         }
 
     }

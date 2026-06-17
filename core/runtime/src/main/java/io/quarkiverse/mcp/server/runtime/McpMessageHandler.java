@@ -1,10 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
-import static io.quarkiverse.mcp.server.McpMethod.LOGGING_SET_LEVEL;
-import static io.quarkiverse.mcp.server.McpMethod.PING;
-import static io.quarkiverse.mcp.server.McpMethod.Q_CLOSE;
-
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +26,7 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -207,6 +205,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> doHandleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
+        if (method == McpMethod.SERVER_DISCOVER) {
+            return serverDiscover(message, mcpRequest);
+        }
         return switch (mcpRequest.connection().status()) {
             case NEW -> initializeNew(method, message, mcpRequest);
             case INITIALIZING -> initializing(method, message, mcpRequest);
@@ -237,7 +238,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     && serverConfig(mcpRequest).devMode().dummyInit()) {
                 // In the dev mode, perform an automatic initialization
                 autoInit = new InitialRequest(new Implementation("dummy", "1", null),
-                        SUPPORTED_PROTOCOL_VERSIONS.get(0),
+                        McpProtocolVersion.LATEST_STATEFUL,
                         List.of(), transport(), true);
             } else {
                 autoInit = autoInitialRequest(mcpRequest);
@@ -383,16 +384,23 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> operation(McpMethod method, JsonObject message, MCP_REQUEST mcpRequest) {
+        McpProtocolVersion protocolVersion = mcpRequest.protocolVersion();
+        if (protocolVersion != null && protocolVersion.isStateless() && STATELESS_REMOVED_METHODS.contains(method)) {
+            return mcpRequest.sender().sendError(Messages.getId(message), JsonRpcErrorCodes.METHOD_NOT_FOUND,
+                    "Method not available in stateless protocol version: " + method.jsonRpcName());
+        }
         // Few operations do not involve user code
         // and don't need a new duplicated context
-        if (method == PING) {
+        if (method == McpMethod.PING) {
             return ping(message, mcpRequest);
-        } else if (method == Q_CLOSE) {
+        } else if (method == McpMethod.Q_CLOSE) {
             return close(message, mcpRequest);
-        } else if (method == LOGGING_SET_LEVEL) {
+        } else if (method == McpMethod.LOGGING_SET_LEVEL) {
             return setLogLevel(message, mcpRequest);
         } else if (method == McpMethod.NOTIFICATIONS_PROGRESS) {
             return progress(message, mcpRequest);
+        } else if (method == McpMethod.SUBSCRIPTIONS_LISTEN) {
+            return subscriptionsListen(message, mcpRequest);
         }
         // Create a new duplicated context and process the operation on this context
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
@@ -466,12 +474,50 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 String reason = params.getString("reason");
                 LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
                         mcpRequest.connection().id());
+            } else if (requestId != null && mcpRequest.connection().removeSubscription(requestId)) {
+                LOG.debugf("Subscription %s cancelled [%s]", requestId, mcpRequest.connection().id());
             } else {
                 LOG.warnf("Ignored unknown/completed/invalid cancel request with id %s [%s]", requestId,
                         mcpRequest.connection().id());
             }
         }
         return Future.succeededFuture();
+    }
+
+    private Future<Void> subscriptionsListen(JsonObject message, MCP_REQUEST mcpRequest) {
+        Object id = Messages.getId(message);
+        JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS, "Missing params");
+        }
+        JsonObject notifications = params.getJsonObject("notifications");
+        if (notifications == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS,
+                    "Missing notifications in params");
+        }
+        SubscriptionFilter filter = SubscriptionFilter.parse(notifications);
+        Subscription subscription = new Subscription(id, filter);
+        mcpRequest.connection().addSubscription(subscription);
+        LOG.debugf("Subscription %s opened [%s]", id, mcpRequest.connection().id());
+        return onSubscriptionOpened(message, mcpRequest, subscription);
+    }
+
+    /**
+     * Called after a {@code subscriptions/listen} request is processed and the subscription is registered.
+     * Transports override this to handle transport-specific stream setup.
+     * <p>
+     * The default implementation registers transient connections in the {@link ConnectionManager} and sends the
+     * {@code notifications/subscriptions/acknowledged} notification via the request sender.
+     */
+    protected Future<Void> onSubscriptionOpened(JsonObject message, MCP_REQUEST mcpRequest, Subscription subscription) {
+        if (mcpRequest.connection().isTransient()) {
+            connectionManager.add(mcpRequest.connection());
+        }
+        JsonObject params = new JsonObject().put("notifications", subscription.filter().toAcknowledgedJson());
+        JsonObject acknowledged = Messages.newNotification(
+                McpMethod.NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED.jsonRpcName(), params);
+        McpConnectionBase.injectSubscriptionId(acknowledged, subscription.subscriptionId());
+        return mcpRequest.sender().send(acknowledged);
     }
 
     private String ongoingId(JsonObject message, MCP_REQUEST mcpRequest) {
@@ -563,7 +609,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private InitialRequest decodeInitializeRequest(JsonObject params) {
         JsonObject clientInfo = params.getJsonObject("clientInfo");
         Implementation implementation = Messages.decodeImplementation(clientInfo);
-        String protocolVersion = params.getString("protocolVersion");
+        McpProtocolVersion protocolVersion = McpProtocolVersion.from(params.getString("protocolVersion"));
+        if (protocolVersion == null) {
+            protocolVersion = McpProtocolVersion.LATEST_STATEFUL;
+        }
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         JsonObject capabilities = params.getJsonObject("capabilities");
         if (capabilities != null) {
@@ -584,27 +633,186 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
-    public static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of(
-            "2025-11-25",
-            "2025-06-18",
-            "2025-03-26",
-            "2024-11-05");
+    public static final String FIRST_STATELESS_PROTOCOL_VERSION = McpProtocolVersion.FIRST_STATELESS.version();
+
+    /**
+     * @return {@code true} if the given protocol version uses the stateless (per-request metadata) model,
+     *         i.e. is {@value #FIRST_STATELESS_PROTOCOL_VERSION} or later
+     */
+    public static boolean isStateless(String protocolVersion) {
+        return McpProtocolVersion.isStateless(protocolVersion);
+    }
+
+    private static final EnumSet<McpMethod> STATELESS_REMOVED_METHODS = EnumSet.of(
+            McpMethod.INITIALIZE,
+            McpMethod.NOTIFICATIONS_INITIALIZED,
+            McpMethod.PING,
+            McpMethod.LOGGING_SET_LEVEL,
+            McpMethod.NOTIFICATIONS_ROOTS_LIST_CHANGED,
+            McpMethod.RESOURCES_SUBSCRIBE,
+            McpMethod.RESOURCES_UNSUBSCRIBE);
 
     private static final Map<String, Object> LIST_CHANGED_PROPERTIES = Map.of("listChanged", true);
     private static final Map<String, Object> SUBSCRIBE_PROPERTIES = Map.of("subscribe", true);
 
+    /**
+     * @return the {@code _meta} object from the message params, or {@code null}
+     */
+    protected static JsonObject findMeta(JsonObject message) {
+        JsonObject params = Messages.getParams(message);
+        if (params != null) {
+            return params.getJsonObject("_meta");
+        }
+        return null;
+    }
+
+    /**
+     * @return {@code true} if the message uses the stateless protocol (based on method name or {@code _meta} protocol version)
+     */
+    protected static boolean isStatelessMessage(JsonObject message) {
+        return isStatelessMessage(message, findMeta(message));
+    }
+
+    /**
+     * @return {@code true} if the message uses the stateless protocol (based on method name or {@code _meta} protocol version)
+     */
+    protected static boolean isStatelessMessage(JsonObject message, JsonObject meta) {
+        String method = message.getString("method");
+        if ("server/discover".equals(method)) {
+            return true;
+        }
+        if ("initialize".equals(method)) {
+            return false;
+        }
+        if (meta != null) {
+            String metaVersion = meta.getString(MetaKey.PROTOCOL_VERSION.toString());
+            if (metaVersion != null && isStateless(metaVersion)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Applies the per-request log level from the {@code _meta} object to the connection.
+     *
+     * @throws McpException if the log level value is not valid
+     */
+    protected static void applyMetaLogLevel(JsonObject meta, McpConnectionBase connection) {
+        if (meta == null) {
+            return;
+        }
+        String logLevelStr = meta.getString(MetaKey.LOG_LEVEL.toString());
+        if (logLevelStr != null) {
+            LogLevel logLevel = LogLevel.from(logLevelStr);
+            if (logLevel == null) {
+                throw new McpException("Invalid log level: " + logLevelStr, JsonRpcErrorCodes.INVALID_PARAMS);
+            }
+            connection.setLogLevel(logLevel);
+        }
+    }
+
+    /**
+     * Builds an {@link InitialRequest} for a stateless request by extracting client info and capabilities from {@code _meta}.
+     *
+     * @param meta the {@code _meta} object from the JSON-RPC message
+     * @param protocolVersion the protocol version to use, or {@code null} to use the value from {@code _meta}
+     * @param transport the transport type
+     * @return the initial request
+     * @throws McpException with {@link JsonRpcErrorCodes#INVALID_PARAMS} if any required {@code _meta} field is missing
+     */
+    protected static InitialRequest buildStatelessInitialRequest(JsonObject meta, String protocolVersionStr,
+            InitialRequest.Transport transport) {
+        validateStatelessMeta(meta);
+        String versionStr = protocolVersionStr != null ? protocolVersionStr
+                : meta.getString(MetaKey.PROTOCOL_VERSION.toString());
+        McpProtocolVersion protocolVersion = McpProtocolVersion.from(versionStr);
+        if (protocolVersion == null) {
+            protocolVersion = McpProtocolVersion.FIRST_STATELESS;
+        }
+        Implementation implementation = Messages.decodeImplementation(meta.getJsonObject(MetaKey.CLIENT_INFO.toString()));
+        JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
+        List<ClientCapability> clientCapabilities = new ArrayList<>();
+        for (String name : capabilities.fieldNames()) {
+            clientCapabilities.add(new ClientCapability(name, Map.of()));
+        }
+        return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport, true);
+    }
+
+    /**
+     * Validates that all required per-request {@code _meta} fields are present.
+     *
+     * @param meta the {@code _meta} object from the JSON-RPC message
+     * @throws McpException with {@link JsonRpcErrorCodes#INVALID_PARAMS} if any required field is missing
+     */
+    static void validateStatelessMeta(JsonObject meta) {
+        if (meta == null) {
+            throw new McpException("Stateless request must include _meta with required fields: "
+                    + MetaKey.PROTOCOL_VERSION + ", " + MetaKey.CLIENT_INFO + ", " + MetaKey.CLIENT_CAPABILITIES,
+                    JsonRpcErrorCodes.INVALID_PARAMS);
+        }
+        List<String> missing = null;
+        if (meta.getString(MetaKey.PROTOCOL_VERSION.toString()) == null) {
+            missing = new ArrayList<>();
+            missing.add(MetaKey.PROTOCOL_VERSION.toString());
+        }
+        if (meta.getJsonObject(MetaKey.CLIENT_INFO.toString()) == null) {
+            if (missing == null) {
+                missing = new ArrayList<>();
+            }
+            missing.add(MetaKey.CLIENT_INFO.toString());
+        }
+        if (meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString()) == null) {
+            if (missing == null) {
+                missing = new ArrayList<>();
+            }
+            missing.add(MetaKey.CLIENT_CAPABILITIES.toString());
+        }
+        if (missing != null) {
+            throw new McpException("Stateless request is missing required _meta fields: " + String.join(", ", missing),
+                    JsonRpcErrorCodes.INVALID_PARAMS);
+        }
+    }
+
+    private Future<Void> serverDiscover(JsonObject message, MCP_REQUEST mcpRequest) {
+        Object id = Messages.getId(message);
+        FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.SERVER_DISCOVER, message, mcpRequest);
+        Map<String, Object> ret = new HashMap<>();
+        ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
+        ret.put("capabilities", buildCapabilities(filterContext));
+        ret.put("serverInfo", buildServerInfo(mcpRequest));
+        Optional<String> instructions = buildInstructions(mcpRequest);
+        if (instructions.isPresent()) {
+            ret.put("instructions", instructions.get());
+        }
+        return mcpRequest.sender().sendResult(id, ret);
+    }
+
     private Map<String, Object> initResult(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
         Map<String, Object> ret = new HashMap<>();
 
-        // Note that currently the protocol version does not affect the behavior
-        // of the server except for opt-in schema validation
-        String version = SUPPORTED_PROTOCOL_VERSIONS.get(0);
-        if (SUPPORTED_PROTOCOL_VERSIONS.contains(initialRequest.protocolVersion())) {
-            version = initialRequest.protocolVersion();
-        }
-        ret.put("protocolVersion", version);
+        ret.put("protocolVersion", initialRequest.protocolVersion().version());
 
         FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.INITIALIZE, message, mcpRequest);
+        ret.put("capabilities", buildCapabilities(filterContext));
+        ret.put("serverInfo", buildServerInfo(mcpRequest));
+
+        Optional<String> instructions = buildInstructions(mcpRequest);
+        if (instructions.isPresent()) {
+            ret.put("instructions", instructions.get());
+        }
+
+        for (InitialResponseInfo info : initialResponseInfos) {
+            Optional<Map<MetaKey, Object>> meta = info.meta(mcpRequest.serverName());
+            if (meta != null && meta.isPresent()) {
+                ret.put("_meta", meta.get());
+                break;
+            }
+        }
+        return ret;
+    }
+
+    private Map<String, Map<String, Object>> buildCapabilities(FilterContextImpl filterContext) {
         Map<String, Map<String, Object>> capabilities = new HashMap<>();
         if (promptManager.hasInfos(filterContext)) {
             capabilities.put("prompts", metadata.isPromptManagerUsed() ? LIST_CHANGED_PROPERTIES : Map.of());
@@ -627,77 +835,63 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
-        ret.put("capabilities", capabilities);
+        return capabilities;
+    }
 
-        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
-        Optional<Implementation> implementation = Optional.empty();
+    private Object buildServerInfo(MCP_REQUEST mcpRequest) {
         for (InitialResponseInfo info : initialResponseInfos) {
             Optional<Implementation> impl = info.implementation(mcpRequest.serverName());
             if (impl != null && impl.isPresent()) {
-                implementation = impl;
-                break;
+                return impl.get();
             }
         }
-        if (implementation.isPresent()) {
-            ret.put("serverInfo", implementation);
-        } else {
-            JsonObject impl = new JsonObject();
-            String serverName = serverInfo.name()
-                    .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
-                            .orElse("N/A"));
-            impl.put("name", serverName);
-            impl.put("version", serverInfo.version()
-                    .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
-                            .orElse("N/A")));
-            impl.put("title", serverInfo.title().orElse(serverName));
-            if (serverInfo.description().isPresent()) {
-                impl.put("description", serverInfo.description().get());
-            }
-            if (serverInfo.websiteUrl().isPresent()) {
-                impl.put("websiteUrl", serverInfo.websiteUrl().get());
-            }
-            if (!serverInfo.icons().isEmpty()) {
-                JsonArray icons = new JsonArray();
-                for (Icon icon : serverInfo.icons()) {
-                    JsonObject i = new JsonObject()
-                            .put("src", icon.src());
-                    if (icon.mimeType().isPresent()) {
-                        i.put("mimeType", icon.mimeType().get());
-                    }
-                    if (icon.theme().isPresent()) {
-                        i.put("theme", icon.theme().get().toString().toLowerCase());
-                    }
-                    if (!icon.sizes().isEmpty()) {
-                        i.put("sizes", icon.sizes());
-                    }
-                    icons.add(i);
+        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
+        JsonObject impl = new JsonObject();
+        String serverName = serverInfo.name()
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
+                        .orElse("N/A"));
+        impl.put("name", serverName);
+        impl.put("version", serverInfo.version()
+                .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
+                        .orElse("N/A")));
+        impl.put("title", serverInfo.title().orElse(serverName));
+        if (serverInfo.description().isPresent()) {
+            impl.put("description", serverInfo.description().get());
+        }
+        if (serverInfo.websiteUrl().isPresent()) {
+            impl.put("websiteUrl", serverInfo.websiteUrl().get());
+        }
+        if (!serverInfo.icons().isEmpty()) {
+            JsonArray icons = new JsonArray();
+            for (Icon icon : serverInfo.icons()) {
+                JsonObject i = new JsonObject()
+                        .put("src", icon.src());
+                if (icon.mimeType().isPresent()) {
+                    i.put("mimeType", icon.mimeType().get());
                 }
-                impl.put("icons", icons);
+                if (icon.theme().isPresent()) {
+                    i.put("theme", icon.theme().get().toString().toLowerCase());
+                }
+                if (!icon.sizes().isEmpty()) {
+                    i.put("sizes", icon.sizes());
+                }
+                icons.add(i);
             }
-            ret.put("serverInfo", impl);
-
+            impl.put("icons", icons);
         }
+        return impl;
+    }
 
+    private Optional<String> buildInstructions(MCP_REQUEST mcpRequest) {
+        ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
         Optional<String> instructions = serverInfo.instructions();
         for (InitialResponseInfo info : initialResponseInfos) {
             Optional<String> instr = info.instructions(mcpRequest.serverName());
             if (instr != null && instr.isPresent()) {
-                instructions = instr;
-                break;
+                return instr;
             }
         }
-        if (instructions.isPresent()) {
-            ret.put("instructions", instructions.get());
-        }
-
-        for (InitialResponseInfo info : initialResponseInfos) {
-            Optional<Map<MetaKey, Object>> meta = info.meta(mcpRequest.serverName());
-            if (meta != null && meta.isPresent()) {
-                ret.put("_meta", meta.get());
-                break;
-            }
-        }
-        return ret;
+        return instructions;
     }
 
     private void validateServerConfigs() {

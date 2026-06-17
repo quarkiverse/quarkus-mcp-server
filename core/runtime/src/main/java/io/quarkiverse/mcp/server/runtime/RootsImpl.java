@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Root;
@@ -22,10 +23,13 @@ class RootsImpl implements Roots {
     private static final Logger LOG = Logger.getLogger(Roots.class);
 
     static RootsImpl from(ArgumentProviders argProviders) {
+        JsonObject params = Messages.getParams(argProviders.rawMessage());
         return new RootsImpl(argProviders.connection(), argProviders.sender(),
                 argProviders.serverRequests(),
                 argProviders.serverRequests().getRootsTimeout(argProviders.serverName()),
-                argProviders.mcpTracing());
+                argProviders.mcpTracing(),
+                InputResponsesImpl.from(params),
+                params != null ? params.getString("requestState") : null);
     }
 
     private final McpConnection connection;
@@ -38,18 +42,39 @@ class RootsImpl implements Roots {
 
     private final McpTracing mcpTracing;
 
+    private final InputResponses inputResponses;
+
+    private final String requestState;
+
     RootsImpl(McpConnection connection, Sender sender, ServerRequests serverRequests, Duration timeout,
-            McpTracing mcpTracing) {
+            McpTracing mcpTracing, InputResponses inputResponses, String requestState) {
         this.connection = connection;
         this.sender = sender;
         this.serverRequests = serverRequests;
         this.timeout = timeout;
         this.mcpTracing = mcpTracing;
+        this.inputResponses = inputResponses;
+        this.requestState = requestState;
     }
 
     @Override
     public boolean isSupported() {
         return connection.initialRequest().supportsRoots();
+    }
+
+    @Override
+    public boolean isServerInitiatedRequestSupported() {
+        return !connection.initialRequest().protocolVersion().isStateless();
+    }
+
+    @Override
+    public InputResponses inputResponses() {
+        return inputResponses;
+    }
+
+    @Override
+    public String requestState() {
+        return requestState;
     }
 
     @Override
@@ -60,6 +85,10 @@ class RootsImpl implements Roots {
         if (!isSupported()) {
             throw new IllegalStateException(
                     "Client " + connection.initialRequest().implementation() + " does not support the `roots` capability");
+        }
+        if (!isServerInitiatedRequestSupported()) {
+            throw new IllegalStateException(
+                    "Server-initiated requests are not supported with stateless protocol versions; use InputRequiredException instead");
         }
         // Send a "roots/list" message to the client and register a handler
         // that will be called when a response arrives

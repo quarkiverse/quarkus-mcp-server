@@ -1,10 +1,19 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Map;
+
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.InputRequiredException;
+import io.quarkiverse.mcp.server.InputRequiredException.ElicitationInputRequest;
+import io.quarkiverse.mcp.server.InputRequiredException.InputRequestEntry;
+import io.quarkiverse.mcp.server.InputRequiredException.RootsInputRequest;
+import io.quarkiverse.mcp.server.InputRequiredException.SamplingInputRequest;
+import io.quarkiverse.mcp.server.InputRequiredException.UrlElicitationInputRequest;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
 import io.quarkiverse.mcp.server.UrlElicitationRequiredException.ElicitationEntry;
 import io.vertx.core.Future;
@@ -17,7 +26,20 @@ public abstract class MessageHandler {
 
     protected Future<Void> handleFailure(Object requestId, Sender sender, McpRequest mcpRequest, Throwable cause,
             Logger logger, String errorMessage, String featureId) {
-        if (cause instanceof UrlElicitationRequiredException urlElicitation) {
+        if (cause instanceof InputRequiredException inputRequired) {
+            JsonObject result = new JsonObject().put("resultType", "input_required");
+            if (!inputRequired.inputRequests().isEmpty()) {
+                JsonObject inputRequests = new JsonObject();
+                for (Map.Entry<String, InputRequestEntry> e : inputRequired.inputRequests().entrySet()) {
+                    inputRequests.put(e.getKey(), serializeInputRequest(e.getValue()));
+                }
+                result.put("inputRequests", inputRequests);
+            }
+            if (inputRequired.requestState() != null) {
+                result.put("requestState", inputRequired.requestState());
+            }
+            return sender.sendResult(requestId, result);
+        } else if (cause instanceof UrlElicitationRequiredException urlElicitation) {
             mcpRequest.setTracingErrorResponse(false, urlElicitation.getJsonRpcErrorCode(), urlElicitation.getMessage());
             JsonArray elicitations = new JsonArray();
             for (ElicitationEntry entry : urlElicitation.elicitations()) {
@@ -45,5 +67,20 @@ public abstract class MessageHandler {
             mcpRequest.setTracingErrorResponse(false, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
             return sender.sendInternalError(requestId);
         }
+    }
+
+    private static JsonObject serializeInputRequest(InputRequestEntry entry) {
+        if (entry instanceof ElicitationInputRequest e) {
+            return ((ElicitationRequestImpl) e.request()).toInputRequestJson();
+        } else if (entry instanceof UrlElicitationInputRequest e) {
+            return ((UrlElicitationRequestImpl) e.request()).toInputRequestJson();
+        } else if (entry instanceof SamplingInputRequest e) {
+            return ((SamplingRequestImpl) e.request()).toInputRequestJson();
+        } else if (entry instanceof RootsInputRequest) {
+            return new JsonObject()
+                    .put("method", McpMethod.ROOTS_LIST.jsonRpcName())
+                    .put("params", new JsonObject());
+        }
+        throw new IllegalArgumentException("Unknown input request entry type: " + entry.getClass());
     }
 }

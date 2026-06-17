@@ -14,6 +14,7 @@ import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.Implementation;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -40,6 +41,7 @@ public class McpAssured {
     public static final String RESOURCES_TEMPLATES_LIST = "resources/templates/list";
     public static final String RESOURCES_READ = "resources/read";
     public static final String COMPLETION_COMPLETE = "completion/complete";
+    public static final String SERVER_DISCOVER = "server/discover";
 
     /**
      * The base URI is used by HTTP-based client implementations.
@@ -117,6 +119,43 @@ public class McpAssured {
         return newStdioClient().build().connect();
     }
 
+    /**
+     * Injects the stateless protocol metadata ({@code _meta}) into the given JSON-RPC message with empty client capabilities.
+     *
+     * @param message the JSON-RPC message to inject metadata into
+     * @see #injectStatelessMeta(JsonObject, JsonObject)
+     */
+    public static void injectStatelessMeta(JsonObject message) {
+        injectStatelessMeta(message, new JsonObject());
+    }
+
+    /**
+     * Injects the stateless protocol metadata ({@code _meta}) into the given JSON-RPC message.
+     * <p>
+     * Use this for manually constructed messages that need to be recognized as stateless by the server
+     * (e.g. {@code subscriptions/listen}).
+     *
+     * @param message the JSON-RPC message to inject metadata into
+     * @param clientCapabilities the client capabilities object
+     */
+    public static void injectStatelessMeta(JsonObject message, JsonObject clientCapabilities) {
+        JsonObject params = message.getJsonObject("params");
+        if (params == null) {
+            params = new JsonObject();
+            message.put("params", params);
+        }
+        JsonObject meta = params.getJsonObject("_meta");
+        if (meta == null) {
+            meta = new JsonObject();
+            params.put("_meta", meta);
+        }
+        meta.put("io.modelcontextprotocol/protocolVersion", McpProtocolVersion.FIRST_STATELESS.version());
+        meta.put("io.modelcontextprotocol/clientInfo", new JsonObject()
+                .put("name", "test-client")
+                .put("version", "1.0"));
+        meta.put("io.modelcontextprotocol/clientCapabilities", clientCapabilities);
+    }
+
     public interface McpTestClient<ASSERT extends McpAssert<ASSERT>, CLIENT extends McpTestClient<ASSERT, CLIENT>>
             extends AutoCloseable {
 
@@ -127,6 +166,7 @@ public class McpAssured {
         boolean isConnected();
 
         /**
+         * For stateless clients, this returns the result of the {@code server/discover} operation.
          *
          * @return the result of the {@code initialize} operation or {@code null} if not connected
          */
@@ -134,6 +174,10 @@ public class McpAssured {
 
         /**
          * Connect the client and perform the MCP initialization.
+         * <p>
+         * For stateless clients, the {@code server/discover} method is used instead of the {@code initialize}/{@code
+         * notifications/initialized} handshake. No session is established and {@link McpStreamableTestClient#mcpSessionId()}
+         * returns {@code null}.
          *
          * @return the client
          */
@@ -143,6 +187,10 @@ public class McpAssured {
 
         /**
          * Connect the client and perform the MCP initialization.
+         * <p>
+         * For stateless clients, the {@code server/discover} method is used instead of the {@code initialize}/{@code
+         * notifications/initialized} handshake. No session is established and {@link McpStreamableTestClient#mcpSessionId()}
+         * returns {@code null}.
          *
          * @param assertFunction
          * @return the client
@@ -256,11 +304,19 @@ public class McpAssured {
             BUILDER setVersion(String clientVersion);
 
             /**
+             * @param protocolVersion
+             * @return self
+             * @deprecated use {@link #setProtocolVersion(McpProtocolVersion)} instead
+             */
+            @Deprecated(forRemoval = true)
+            BUILDER setProtocolVersion(String protocolVersion);
+
+            /**
              *
              * @param protocolVersion
              * @return self
              */
-            BUILDER setProtocolVersion(String protocolVersion);
+            BUILDER setProtocolVersion(McpProtocolVersion protocolVersion);
 
             /**
              *
@@ -313,6 +369,16 @@ public class McpAssured {
              * @return self
              */
             BUILDER setTracing(io.opentelemetry.api.OpenTelemetry openTelemetry);
+
+            /**
+             * Sets the client to stateless mode using the first stateless protocol version.
+             *
+             * @return self
+             */
+            @SuppressWarnings("unchecked")
+            default BUILDER setStateless() {
+                return (BUILDER) setProtocolVersion(McpProtocolVersion.FIRST_STATELESS);
+            }
 
         }
 
@@ -1066,6 +1132,30 @@ public class McpAssured {
             ToolsCallMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
 
             /**
+             * Assert the raw JSON-RPC response. Useful for non-standard results like {@code InputRequiredResult}.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            ToolsCallMessage<ASSERT> withRequestState(String requestState);
+
+            /**
              * Send the message.
              * <p>
              * The assert function is not used until the {@link #thenAssertResults()} method is called.
@@ -1151,6 +1241,30 @@ public class McpAssured {
              * @return self
              */
             PromptsGetMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Assert the raw JSON-RPC response.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            PromptsGetMessage<ASSERT> withRequestState(String requestState);
 
             /**
              * Send the message.
@@ -1380,6 +1494,30 @@ public class McpAssured {
              * @return self
              */
             ResourcesReadMessage<ASSERT> withErrorAssert(Consumer<McpError> errorAssertFunction);
+
+            /**
+             * Assert the raw JSON-RPC response.
+             *
+             * @param rawAssertFunction
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withRawAssert(Consumer<JsonObject> rawAssertFunction);
+
+            /**
+             * Set the {@code inputResponses} for an MRTR retry request.
+             *
+             * @param inputResponses
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withInputResponses(JsonObject inputResponses);
+
+            /**
+             * Set the {@code requestState} for an MRTR retry request.
+             *
+             * @param requestState
+             * @return self
+             */
+            ResourcesReadMessage<ASSERT> withRequestState(String requestState);
 
             /**
              * Send the message.

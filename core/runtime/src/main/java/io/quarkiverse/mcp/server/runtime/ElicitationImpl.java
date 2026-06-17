@@ -11,18 +11,23 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.Builder;
 import io.quarkiverse.mcp.server.ElicitationRequest.PrimitiveSchema;
+import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.UrlElicitationRequest;
+import io.vertx.core.json.JsonObject;
 
 class ElicitationImpl implements Elicitation {
 
     static ElicitationImpl from(ArgumentProviders argProviders) {
         ServerRequests sr = argProviders.serverRequests();
         String serverName = argProviders.serverName();
+        JsonObject params = Messages.getParams(argProviders.rawMessage());
         return new ElicitationImpl(argProviders.connection(), argProviders.sender(), sr,
                 sr.getElicitationTimeout(serverName),
                 sr.getElicitationCompletionTimeout(serverName),
-                argProviders.mcpTracing());
+                argProviders.mcpTracing(),
+                InputResponsesImpl.from(params),
+                params != null ? params.getString("requestState") : null);
     }
 
     private final McpConnection connection;
@@ -37,20 +42,41 @@ class ElicitationImpl implements Elicitation {
 
     private final McpTracing mcpTracing;
 
+    private final InputResponses inputResponses;
+
+    private final String requestState;
+
     ElicitationImpl(McpConnection connection, Sender sender, ServerRequests serverRequests, Duration timeout,
-            Duration completionTimeout, McpTracing mcpTracing) {
+            Duration completionTimeout, McpTracing mcpTracing, InputResponses inputResponses, String requestState) {
         this.connection = connection;
         this.sender = sender;
         this.serverRequests = serverRequests;
         this.defaultTimeout = timeout;
         this.defaultCompletionTimeout = completionTimeout;
         this.mcpTracing = mcpTracing;
+        this.inputResponses = inputResponses;
+        this.requestState = requestState;
     }
 
     @Deprecated(forRemoval = true)
     @Override
     public boolean isSupported() {
         return connection.initialRequest().supportsElicitation();
+    }
+
+    @Override
+    public boolean isServerInitiatedRequestSupported() {
+        return !connection.initialRequest().protocolVersion().isStateless();
+    }
+
+    @Override
+    public InputResponses inputResponses() {
+        return inputResponses;
+    }
+
+    @Override
+    public String requestState() {
+        return requestState;
     }
 
     @Override
@@ -122,7 +148,8 @@ class ElicitationImpl implements Elicitation {
                 throw new IllegalStateException("requestedSchema must be set");
             }
             return new ElicitationRequestImpl(message, requestedSchema, sender, serverRequests, timeout,
-                    ElicitationImpl.this.mcpTracing);
+                    ElicitationImpl.this.mcpTracing,
+                    ElicitationImpl.this.connection.initialRequest().protocolVersion().isStateless());
         }
 
     }
@@ -177,7 +204,8 @@ class ElicitationImpl implements Elicitation {
                 throw new IllegalStateException("completionTimeout must not be less than timeout");
             }
             return new UrlElicitationRequestImpl(message, url, elicitationId, sender, serverRequests, timeout,
-                    completionTimeout, ElicitationImpl.this.mcpTracing, ElicitationImpl.this.connection.id());
+                    completionTimeout, ElicitationImpl.this.mcpTracing, ElicitationImpl.this.connection.id(),
+                    ElicitationImpl.this.connection.initialRequest().protocolVersion().isStateless());
         }
 
     }

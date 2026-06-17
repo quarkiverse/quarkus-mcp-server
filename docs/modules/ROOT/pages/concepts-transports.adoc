@@ -61,6 +61,36 @@ The `\{rootPath}` is set to `mcp` by default, but it can be changed with the `qu
 
 NOTE: The https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#resumability-and-redelivery[Resumability and Redelivery] for the Streamable HTTP is not supported yet.
 
+=== Stateless Mode
+
+Starting with protocol version `2026-07-28`, MCP supports a stateless communication mode.
+The server automatically detects whether a client is stateless or stateful and handles both paradigms simultaneously on the same endpoint.
+
+**Stateless vs. Stateful**::
+In the stateful mode (protocol versions `2025-11-25` and earlier), the client performs an `initialize`/`initialized` handshake, the server assigns a session via the `Mcp-Session-Id` header, and both sides maintain state across requests.
+In the stateless mode, there is no handshake and no session.
+Instead, each request is self-contained — the client provides its identity, protocol version, and capabilities via `_meta` fields and required HTTP headers.
+
+**How it works**::
+* A stateless client sends `server/discover` (instead of `initialize`) to learn the server's capabilities, supported protocol versions, and server info.
+* Every subsequent request includes:
+** `MCP-Protocol-Version` header with the protocol version
+** `Mcp-Method` header matching the JSON-RPC method in the body
+** `Mcp-Name` header for `tools/call`, `prompts/get`, and `resources/read` (the tool name, prompt name, or resource URI)
+** `_meta` fields: `io.modelcontextprotocol/protocolVersion`, `io.modelcontextprotocol/clientInfo`, and optionally `io.modelcontextprotocol/clientCapabilities`
+* The server creates a transient connection for each request — no session is established and no `Mcp-Session-Id` header is returned.
+* Stateless connections are transient (`McpConnection.isTransient()` returns `true`).
+* The following methods are not available for stateless clients and will be rejected with a `METHOD_NOT_FOUND` error: `ping`, `logging/setLevel`, `initialize`, `notifications/initialized`, `notifications/roots/list_changed`, `resources/subscribe`, and `resources/unsubscribe`.
+* GET requests (subsidiary SSE streams) and DELETE requests (session termination) return HTTP `405 Method Not Allowed` for stateless clients.
+* Server-initiated requests (sampling, elicitation, roots) are not available for stateless clients. The Multi Round-Trip Requests (MRTR) pattern is used instead — see xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request (MRTR)].
+* Stateless clients use `subscriptions/listen` instead of `resources/subscribe`/`resources/unsubscribe` to receive notifications. The client specifies a filter for the notification types it wants (e.g. `toolsListChanged`, `resourceSubscriptions`), and the server delivers matching notifications on the subscription stream. See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications].
+
+**Per-request log level**::
+Since `logging/setLevel` is not available for stateless clients, the log level can be set per-request using the `io.modelcontextprotocol/logLevel` `_meta` field.
+The value must be a valid log level string (e.g. `debug`, `info`, `warning`, `error`).
+The server returns an `INVALID_PARAMS` error (`-32602`) if the value is not recognized.
+The `McpConnection.logLevel()` method returns this per-request value for transient connections.
+
 See xref:getting-started-http.adoc[Getting Started with HTTP] for a complete tutorial.
 
 == WebSocket Transport

@@ -255,6 +255,13 @@ public class MyResources {
 
 When `sendUpdateAndForget()` is called, all clients that have subscribed to the resource will be notified and can re-fetch the updated content.
 
+=== Stateless Clients
+
+Stateless clients (protocol version `2026-07-28`+) cannot use `resources/subscribe` and `resources/unsubscribe`.
+Instead, they use `subscriptions/listen` to open a notification stream with a filter that specifies resource URIs via the `resourceSubscriptions` field.
+When `sendUpdateAndForget()` is called, matching `notifications/resources/updated` messages are delivered to all subscription streams that include the resource URI in their filter.
+See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications] for details on the protocol flow.
+
 == Completion API
 
 Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.

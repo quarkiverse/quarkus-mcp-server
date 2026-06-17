@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.McpRequest;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
 import io.quarkiverse.mcp.server.runtime.Messages;
@@ -83,7 +84,7 @@ public class JsonSchemaValidator implements McpRequestValidator {
                     mcpRequest.connection().id());
             return SUCCEEDED_FUTURE;
         }
-        String protocolVersion = mcpRequest.protocolVersion();
+        McpProtocolVersion protocolVersion = mcpRequest.protocolVersion();
         if (protocolVersion == null) {
             LOG.warnf("Unable to validate schema - no protocol version [server: %s, connection: %s]", mcpRequest.serverName(),
                     mcpRequest.connection().id());
@@ -92,7 +93,7 @@ public class JsonSchemaValidator implements McpRequestValidator {
         return vertx.executeBlocking(new Callable<>() {
             @Override
             public Boolean call() throws Exception {
-                Validator validator = validators.computeIfAbsent(new ValidatorKey(method, protocolVersion),
+                Validator validator = validators.computeIfAbsent(new ValidatorKey(method, protocolVersion.version()),
                         JsonSchemaValidator.this::newValidator);
                 OutputUnit result = validator.validate(message);
                 if (!result.getValid()) {

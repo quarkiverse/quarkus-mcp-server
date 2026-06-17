@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
@@ -117,8 +118,14 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
         return min;
     }
 
+    private static final AtomicLong TRANSIENT_COUNTER = new AtomicLong();
+
     public static String connectionId() {
         return Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
+    }
+
+    public static String transientConnectionId() {
+        return "transient/" + TRANSIENT_COUNTER.incrementAndGet();
     }
 
 }

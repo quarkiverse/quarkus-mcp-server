@@ -45,7 +45,7 @@ public class ServerFeaturesIT {
         try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) {
             client.when()
                     .toolsList(page -> {
-                        assertEquals(1, page.size());
+                        assertEquals(3, page.size());
                         var tool = page.findByName("toLowerCase");
                         assertNotNull(tool);
                         assertNotNull(tool.inputSchema());

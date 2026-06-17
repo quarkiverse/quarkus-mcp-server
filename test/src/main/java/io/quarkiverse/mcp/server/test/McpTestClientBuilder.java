@@ -9,14 +9,14 @@ import java.util.Set;
 import io.opentelemetry.api.OpenTelemetry;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.Icon;
-import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient.Builder;
 
 abstract class McpTestClientBuilder<BUILDER extends Builder<BUILDER>> implements McpAssured.McpTestClient.Builder<BUILDER> {
 
     protected String name = "test-client";
     protected String version = "1.0";
-    protected String protocolVersion = McpMessageHandler.SUPPORTED_PROTOCOL_VERSIONS.get(0);
+    protected McpProtocolVersion protocolVersion = McpProtocolVersion.LATEST_STATEFUL;
     protected String title;
     protected String description;
     protected String websiteUrl;
@@ -43,8 +43,22 @@ abstract class McpTestClientBuilder<BUILDER extends Builder<BUILDER>> implements
         return self();
     }
 
+    @SuppressWarnings("removal")
     @Override
     public BUILDER setProtocolVersion(String protocolVersion) {
+        if (protocolVersion == null) {
+            throw mustNotBeNull("protocolVersion");
+        }
+        McpProtocolVersion v = McpProtocolVersion.from(protocolVersion);
+        if (v == null) {
+            throw new IllegalArgumentException("Unknown protocol version: " + protocolVersion);
+        }
+        this.protocolVersion = v;
+        return self();
+    }
+
+    @Override
+    public BUILDER setProtocolVersion(McpProtocolVersion protocolVersion) {
         if (protocolVersion == null) {
             throw mustNotBeNull("protocolVersion");
         }

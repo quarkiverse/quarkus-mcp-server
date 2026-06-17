@@ -11,13 +11,13 @@ import java.util.List;
  * @param transport the transport used by the client (must not be {@code null})
  * @param autoInitialized {@code true} if the request was created automatically (without client-initiated initialization)
  */
-public record InitialRequest(Implementation implementation, String protocolVersion,
+public record InitialRequest(Implementation implementation, McpProtocolVersion protocolVersion,
         List<ClientCapability> clientCapabilities, Transport transport, boolean autoInitialized) {
 
     /**
      * Creates a new initial request with {@code autoInitialized} set to {@code false}.
      */
-    public InitialRequest(Implementation implementation, String protocolVersion,
+    public InitialRequest(Implementation implementation, McpProtocolVersion protocolVersion,
             List<ClientCapability> clientCapabilities, Transport transport) {
         this(implementation, protocolVersion, clientCapabilities, transport, false);
     }
