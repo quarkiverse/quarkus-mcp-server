@@ -12,6 +12,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.json.JsonObject;
 
 @Singleton
@@ -27,11 +29,13 @@ public class MicrometerMcpMetrics implements McpMetrics {
     private static final String NONE = "none";
 
     private final Map<McpMethod, String> mcpMethodNames;
+    private final McpServersRuntimeConfig config;
 
     @Inject
     MeterRegistry meterRegistry;
 
-    MicrometerMcpMetrics() {
+    MicrometerMcpMetrics(McpServersRuntimeConfig config) {
+        this.config = config;
         // Note that we can't use a timer with the same name but a different set of tags
         // https://docs.micrometer.io/micrometer/reference/implementations/prometheus.html#_limitation_on_same_name_with_different_set_of_tag_keys
         mcpMethodNames = new EnumMap<>(McpMethod.class);
@@ -42,12 +46,20 @@ public class MicrometerMcpMetrics implements McpMetrics {
 
     @Override
     public <T> void createMcpConnectionsGauge(T stateObject, ToDoubleFunction<T> valueFunction) {
-        meterRegistry.gauge(MCP_SERVER_CONNECTIONS_ACTIVE, stateObject, valueFunction);
+        for (McpServerRuntimeConfig serverConfig : config.servers().values()) {
+            if (serverConfig.metricsEnabled()) {
+                meterRegistry.gauge(MCP_SERVER_CONNECTIONS_ACTIVE, stateObject, valueFunction);
+                break;
+            }
+        }
     }
 
     @Override
     public void mcpRequestCompleted(McpMethod method, JsonObject message, McpRequest mcpRequest, long duration,
             Throwable failure) {
+        if (!config.servers().get(mcpRequest.serverName()).metricsEnabled()) {
+            return;
+        }
         Timer.builder(mcpMethodNames.get(method))
                 .tags(MCP_SERVER, mcpRequest.serverName(), FAILURE, failure(failure))
                 .tags(createTags(method, message, mcpRequest))
