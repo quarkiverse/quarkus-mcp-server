@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.PromptInfo;
@@ -133,6 +134,7 @@ class TracingClientWithoutOtelTest {
         assertNotNull(initialize.getJsonObject("attributes").getString("mcp.session.id"));
         final String mcpSessionId = initialize.getJsonObject("attributes").getString("mcp.session.id");
         assertEquals(client.mcpSessionId(), mcpSessionId);
+        assertEquals(McpServer.DEFAULT, initialize.getJsonObject("attributes").getString("mcp.server.name"));
         assertEquals("http", initialize.getJsonObject("attributes").getString("network.protocol.name"));
         assertEquals("tcp", initialize.getJsonObject("attributes").getString("network.transport"));
         assertEquals("2", initialize.getJsonObject("attributes").getString("network.protocol.version"));
@@ -144,6 +146,7 @@ class TracingClientWithoutOtelTest {
         assertNotNull(notifInitialized);
         assertEquals("0000000000000000", notifInitialized.getString("parent_spanId"));
         assertEquals(mcpSessionId, notifInitialized.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals(McpServer.DEFAULT, notifInitialized.getJsonObject("attributes").getString("mcp.server.name"));
         assertEquals("http", notifInitialized.getJsonObject("attributes").getString("network.protocol.name"));
         assertEquals("tcp", notifInitialized.getJsonObject("attributes").getString("network.transport"));
         assertEquals("2", notifInitialized.getJsonObject("attributes").getString("network.protocol.version"));
@@ -154,6 +157,7 @@ class TracingClientWithoutOtelTest {
         assertEquals("0000000000000000", listSpan.getString("parent_spanId"));
         assertEquals("SERVER", listSpan.getString("kind"));
         assertEquals(mcpSessionId, listSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals(McpServer.DEFAULT, listSpan.getJsonObject("attributes").getString("mcp.server.name"));
         assertEquals("tools/list", listSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertNotNull(listSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
         assertNotNull(listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
@@ -167,6 +171,7 @@ class TracingClientWithoutOtelTest {
         assertEquals("0000000000000000", callSpan.getString("parent_spanId"));
         assertEquals("SERVER", callSpan.getString("kind"));
         assertEquals(mcpSessionId, callSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals(McpServer.DEFAULT, callSpan.getJsonObject("attributes").getString("mcp.server.name"));
         assertEquals("tools/call", callSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("toLowerCase", callSpan.getJsonObject("attributes").getString("gen_ai.tool.name"));
         assertEquals("execute_tool", callSpan.getJsonObject("attributes").getString("gen_ai.operation.name"));
@@ -183,6 +188,7 @@ class TracingClientWithoutOtelTest {
         assertEquals("0000000000000000", answerSpan.getString("parent_spanId"));
         assertEquals("SERVER", answerSpan.getString("kind"));
         assertEquals(mcpSessionId, answerSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals(McpServer.DEFAULT, answerSpan.getJsonObject("attributes").getString("mcp.server.name"));
         assertEquals("tools/call", answerSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("answer", answerSpan.getJsonObject("attributes").getString("gen_ai.tool.name"));
         assertEquals("execute_tool", answerSpan.getJsonObject("attributes").getString("gen_ai.operation.name"));
