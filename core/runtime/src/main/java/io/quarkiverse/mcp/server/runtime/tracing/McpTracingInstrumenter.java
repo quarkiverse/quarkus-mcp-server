@@ -29,7 +29,6 @@ import io.opentelemetry.semconv.incubating.GenAiIncubatingAttributes;
 import io.opentelemetry.semconv.incubating.RpcIncubatingAttributes;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.McpMethod;
-import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.McpRequest;
 import io.quarkiverse.mcp.server.runtime.McpTracing;
 import io.quarkiverse.mcp.server.runtime.McpTracingSpan;
@@ -46,14 +45,19 @@ public class McpTracingInstrumenter implements McpTracing {
     private static final AttributeKey<String> MCP_SESSION_ID = AttributeKey.stringKey("mcp.session.id");
     private static final AttributeKey<String> MCP_PROTOCOL_VERSION = AttributeKey.stringKey("mcp.protocol.version");
     private static final AttributeKey<String> MCP_RESOURCE_URI = AttributeKey.stringKey("mcp.resource.uri");
+    private static final AttributeKey<String> MCP_SERVER_NAME = AttributeKey.stringKey("mcp.server.name");
     private static final AttributeKey<String> GEN_AI_PROMPT_NAME = AttributeKey.stringKey("gen_ai.prompt.name");
 
     private final Instrumenter<McpRequestInfo, McpResponseInfo> instrumenter;
     private final OpenTelemetry openTelemetry;
+    private final McpServersRuntimeConfig mcpConfig;
+    private final boolean otelSdkDisabled;
 
     public McpTracingInstrumenter(OpenTelemetry openTelemetry, OTelRuntimeConfig otelConfig,
             McpServersRuntimeConfig mcpConfig) {
         this.openTelemetry = openTelemetry;
+        this.mcpConfig = mcpConfig;
+        this.otelSdkDisabled = otelConfig.sdkDisabled();
 
         InstrumenterBuilder<McpRequestInfo, McpResponseInfo> builder = Instrumenter.builder(
                 openTelemetry,
@@ -63,8 +67,7 @@ public class McpTracingInstrumenter implements McpTracing {
         builder.addAttributesExtractor(new McpAttributesExtractor())
                 .setSpanStatusExtractor(new McpSpanStatusExtractor())
                 .addSpanLinksExtractor(new McpAmbientContextLinksExtractor())
-                .setEnabled(!otelConfig.sdkDisabled()
-                        && mcpConfig.servers().get(McpServer.DEFAULT).tracingEnabled());
+                .setEnabled(!otelSdkDisabled);
 
         // Use buildInstrumenter with SERVER kind instead of buildServerInstrumenter
         // to avoid nested server span suppression (Quarkus HTTP already creates a server span)
@@ -79,6 +82,10 @@ public class McpTracingInstrumenter implements McpTracing {
     @Override
     public McpTracingSpan startSpan(McpMethod method, JsonObject message, McpRequest mcpRequest,
             InitialRequest.Transport transport) {
+        if (otelSdkDisabled
+                || !mcpConfig.servers().get(mcpRequest.serverName()).tracingEnabled()) {
+            return McpTracingSpan.NOOP;
+        }
         McpRequestInfo requestInfo = new McpRequestInfo(method, message, mcpRequest, transport);
 
         // Capture the ambient transport context (e.g., HTTP server span) before switching to root
@@ -179,6 +186,7 @@ public class McpTracingInstrumenter implements McpTracing {
         @Override
         public void onStart(AttributesBuilder attributes, Context parentContext, McpRequestInfo request) {
             // Required
+            attributes.put(MCP_SERVER_NAME, request.getServerName());
             attributes.put(MCP_METHOD_NAME, request.method().jsonRpcName());
 
             // Conditionally required - only for requests, not notifications
