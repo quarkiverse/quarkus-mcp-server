@@ -121,16 +121,21 @@ public class HttpMcpServerRecorder {
                         ctx.request().resume();
                     }
                     ctx.request().body().onComplete(ar -> {
-                        if (ar.succeeded() && ar.result() != null) {
-                            Integer id = new JsonObject(ar.result()).getInteger("id");
-                            JsonObject error = new JsonObject()
-                                    .put("jsonrpc", "2.0")
-                                    .put("id", id)
-                                    .put("error", new JsonObject()
-                                            .put("code", JsonRpcErrorCodes.SECURITY_ERROR)
-                                            .put("message", failure.toString()));
-                            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(error.toBuffer());
+                        Object id = null;
+                        if (ar.succeeded() && ar.result() != null && ar.result().length() > 0) {
+                            try {
+                                id = new JsonObject(ar.result()).getValue("id");
+                            } catch (Exception e) {
+                                LOG.debugf(e, "Unable to parse request body");
+                            }
                         }
+                        JsonObject error = new JsonObject()
+                                .put("jsonrpc", "2.0")
+                                .put("id", id)
+                                .put("error", new JsonObject()
+                                        .put("code", JsonRpcErrorCodes.SECURITY_ERROR)
+                                        .put("message", failure.toString()));
+                        ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(error.toBuffer());
                     });
                 } else {
                     ctx.next();
