@@ -91,6 +91,7 @@
                                         <excludes>
                                             <exclude>io.quarkiverse.mcp:*-integration-tests</exclude>
                                             <exclude>io.quarkiverse.mcp:quarkus-mcp-server-docs</exclude>
+                                            <exclude>io.quarkiverse.mcp:quarkus-mcp-server-core-rag</exclude>
                                         </excludes>
                                     </modules>
                                 </bom>
