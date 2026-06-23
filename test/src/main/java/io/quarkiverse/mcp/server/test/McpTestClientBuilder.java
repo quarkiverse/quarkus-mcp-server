@@ -50,7 +50,7 @@ abstract class McpTestClientBuilder<BUILDER extends Builder<BUILDER>> implements
             throw mustNotBeNull("protocolVersion");
         }
         McpProtocolVersion v = McpProtocolVersion.from(protocolVersion);
-        if (v == null) {
+        if (!v.isKnown()) {
             throw new IllegalArgumentException("Unknown protocol version: " + protocolVersion);
         }
         this.protocolVersion = v;
