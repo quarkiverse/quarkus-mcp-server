@@ -19,6 +19,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.Arc;
@@ -150,6 +151,7 @@ public class HttpMcpServerRecorder {
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
+        TrafficListeners trafficListeners = container.instance(TrafficListeners.class).get();
 
         return new Handler<RoutingContext>() {
 
@@ -172,7 +174,7 @@ public class HttpMcpServerRecorder {
                 String id = ConnectionManager.connectionId();
                 LOG.debugf("SSE connection initialized [%s]", id);
 
-                SseMcpConnection connection = new SseMcpConnection(id, serverConfig, serverName, response);
+                SseMcpConnection connection = new SseMcpConnection(id, serverConfig, serverName, trafficListeners, response);
                 connectionManager.add(connection);
 
                 setCloseHandler(ctx.request(), id, connectionManager);

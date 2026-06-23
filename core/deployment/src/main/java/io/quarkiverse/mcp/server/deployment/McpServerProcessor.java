@@ -64,6 +64,7 @@ import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.McpServer;
+import io.quarkiverse.mcp.server.McpTrafficListener;
 import io.quarkiverse.mcp.server.MetaField;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.ModelHint;
@@ -118,6 +119,7 @@ import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
@@ -216,6 +218,7 @@ class McpServerProcessor {
     void addBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
+        unremovable.addBeanClass(TrafficListeners.class);
         unremovable.addBeanClass(ServerRequests.class);
         unremovable.addBeanClass(RequestIdGenerator.class);
         unremovable.addBeanClass(CancellationRequests.class);
@@ -263,6 +266,10 @@ class McpServerProcessor {
                 .build());
         autoScopes.produce(AutoAddScopeBuildItem.builder()
                 .implementsInterface(DotName.createSimple(InitialCheck.class))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .implementsInterface(DotName.createSimple(McpTrafficListener.class))
                 .defaultScope(BuiltinScope.SINGLETON)
                 .build());
     }

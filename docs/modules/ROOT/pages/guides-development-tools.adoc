@@ -68,7 +68,8 @@ When enabled, traffic logging outputs JSON-RPC messages to the application logs:
 
 [source,text]
 ----
-2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.tra.TrafficLogger] Received:
+2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.traffic] MCP message received [abc123]:
+
 {
   "jsonrpc": "2.0",
   "method": "tools/call",
@@ -81,7 +82,8 @@ When enabled, traffic logging outputs JSON-RPC messages to the application logs:
   "id": 1
 }
 
-2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.tra.TrafficLogger] Sent:
+2024-01-15 10:23:45 INFO  [io.qua.mcp.ser.traffic] MCP message sent [abc123]:
+
 {
   "jsonrpc": "2.0",
   "result": {
@@ -95,6 +97,36 @@ When enabled, traffic logging outputs JSON-RPC messages to the application logs:
   "id": 1
 }
 ----
+
+=== Custom Traffic Listeners
+
+You can implement the `io.quarkiverse.mcp.server.McpTrafficListener` interface to receive notifications when MCP messages are sent or received.
+Unlike the built-in traffic logging, custom listeners are always invoked regardless of the `traffic-logging.enabled` configuration property.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpTrafficListener;
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.RawMessage;
+
+public class MyTrafficListener implements McpTrafficListener { <1>
+
+    @Override
+    public void onMessageReceived(RawMessage message, McpConnection connection) { <2>
+        // message.method() returns the JSON-RPC method name, or null for responses
+        // message.id() returns the request id (RequestId), or null for notifications
+        if (message.id() != null) {
+            Log.infof("Request [%s] received [%s]: %s", message.method(), connection.id(), message.asString());
+        }
+    }
+
+    @Override
+    public void onMessageSent(RawMessage message, McpConnection connection) {
+    }
+}
+----
+<1> A CDI bean scope is added automatically.
+<2> Listener methods should be fast and non-blocking. If a listener throws an unchecked exception, it is logged and the next listener is invoked.
 
 == Dev UI
 

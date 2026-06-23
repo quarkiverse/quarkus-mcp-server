@@ -1,30 +1,73 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import jakarta.inject.Singleton;
+
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.McpConnection;
-import io.vertx.core.json.JsonObject;
+import io.quarkiverse.mcp.server.McpTrafficListener;
+import io.quarkiverse.mcp.server.RawMessage;
+import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 
-public final class TrafficLogger {
+@Singleton
+public class TrafficLogger implements McpTrafficListener {
 
     private static final Logger LOG = Logger.getLogger("io.quarkus.mcp.server.traffic");
 
-    public static void messageReceived(JsonObject message, McpConnection connection, int textPayloadLimit) {
-        LOG.infof("MCP message received [%s]:\n\n%s", connection.id(), messageToString(message, textPayloadLimit));
+    private final boolean anyServerEnabled;
+    private final McpServersRuntimeConfig serversConfig;
+
+    TrafficLogger(McpServersRuntimeConfig serversConfig) {
+        this.serversConfig = serversConfig;
+        boolean enabled = false;
+        for (McpServerRuntimeConfig serverConfig : serversConfig.servers().values()) {
+            if (serverConfig.trafficLogging().enabled()) {
+                enabled = true;
+                break;
+            }
+        }
+        this.anyServerEnabled = enabled;
     }
 
-    public static void messageSent(JsonObject message, McpConnection connection, int textPayloadLimit) {
-        LOG.infof("MCP message sent [%s]:\n\n%s", connection.id(), messageToString(message, textPayloadLimit));
+    @Override
+    public void onMessageReceived(RawMessage message, McpConnection connection) {
+        if (!anyServerEnabled) {
+            return;
+        }
+        McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
+        if (!config.enabled()) {
+            return;
+        }
+        LOG.infof("MCP message received [%s]:\n\n%s", connection.id(),
+                messageToString(message, config.textLimit()));
     }
 
-    private static String messageToString(JsonObject message, int textPayloadLimit) {
-        String encoded = message.encodePrettily();
+    @Override
+    public void onMessageSent(RawMessage message, McpConnection connection) {
+        if (!anyServerEnabled) {
+            return;
+        }
+        McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
+        if (!config.enabled()) {
+            return;
+        }
+        LOG.infof("MCP message sent [%s]:\n\n%s", connection.id(),
+                messageToString(message, config.textLimit()));
+    }
+
+    private McpServerRuntimeConfig.TrafficLogging trafficLoggingConfig(McpConnection connection) {
+        return serversConfig.servers().get(connection.serverName()).trafficLogging();
+    }
+
+    private static String messageToString(RawMessage message, int textLimit) {
+        String encoded = message.asJsonObject().encodePrettily();
         if (encoded == null || encoded.isBlank()) {
             return "n/a";
-        } else if (textPayloadLimit < 0 || encoded.length() <= textPayloadLimit) {
+        } else if (textLimit < 0 || encoded.length() <= textLimit) {
             return encoded;
         } else {
-            return encoded.substring(0, textPayloadLimit) + "...";
+            return encoded.substring(0, textLimit) + "...";
         }
     }
 

@@ -1,6 +1,9 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.util.Optional;
+
 import io.quarkiverse.mcp.server.RawMessage;
+import io.quarkiverse.mcp.server.RequestId;
 import io.vertx.core.json.JsonObject;
 
 class RawMessageImpl implements RawMessage {
@@ -11,7 +14,10 @@ class RawMessageImpl implements RawMessage {
 
     private final JsonObject message;
 
-    private RawMessageImpl(JsonObject message) {
+    private volatile String cachedString;
+    private volatile Optional<RequestId> cachedId;
+
+    RawMessageImpl(JsonObject message) {
         this.message = message;
     }
 
@@ -23,7 +29,28 @@ class RawMessageImpl implements RawMessage {
 
     @Override
     public String asString() {
-        return message.encode();
+        String s = cachedString;
+        if (s == null) {
+            s = message.encode();
+            cachedString = s;
+        }
+        return s;
+    }
+
+    @Override
+    public String method() {
+        return message.getString("method");
+    }
+
+    @Override
+    public RequestId id() {
+        Optional<RequestId> id = cachedId;
+        if (id == null) {
+            Object val = message.getValue("id");
+            id = val != null ? Optional.of(new RequestId(val)) : Optional.empty();
+            cachedId = id;
+        }
+        return id.orElse(null);
     }
 
 }

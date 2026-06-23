@@ -20,15 +20,11 @@ public interface McpRequest {
     ContextSupport contextSupport();
 
     default void markReceived() {
-        if (connection().getTrafficLoggerTextLimit() > 0) {
-            TrafficLogger.messageReceived(message(), connection(), connection().getTrafficLoggerTextLimit());
-        }
+        connection().trafficListeners().messageReceived(message(), connection());
     }
 
     default void messageSent(JsonObject message) {
-        if (connection().getTrafficLoggerTextLimit() > 0) {
-            TrafficLogger.messageSent(message, connection(), connection().getTrafficLoggerTextLimit());
-        }
+        connection().trafficListeners().messageSent(message, connection());
     }
 
     /**

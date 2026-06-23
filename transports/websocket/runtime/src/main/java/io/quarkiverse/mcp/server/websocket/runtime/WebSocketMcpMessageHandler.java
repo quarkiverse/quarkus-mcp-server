@@ -35,6 +35,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.websocket.runtime.WebSocketMcpMessageHandler.WebSocketMcpRequest;
 import io.quarkus.arc.All;
@@ -59,6 +60,8 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
 
     CurrentIdentityAssociation currentIdentityAssociation;
 
+    TrafficListeners trafficListeners;
+
     protected WebSocketMcpMessageHandler(McpServersRuntimeConfig config,
             ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
@@ -77,13 +80,15 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             Instance<McpMetrics> metrics,
             Instance<McpTracing> tracing,
-            Instance<McpRequestValidator> mcpRequestValidator) {
+            Instance<McpRequestValidator> mcpRequestValidator,
+            TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
+        this.trafficListeners = trafficListeners;
     }
 
     protected abstract String serverName();
@@ -117,7 +122,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
         JsonObject meta = findMeta(jsonMessage);
         if (isStatelessMessage(jsonMessage, meta)) {
             mcpConnection = new WebSocketMcpConnection(ConnectionManager.transientConnectionId(),
-                    config.servers().get(serverName()), serverName(), connection, true);
+                    config.servers().get(serverName()), serverName(), trafficListeners, connection, true);
             String metaVersion = meta != null ? meta.getString(MetaKey.PROTOCOL_VERSION.toString()) : null;
             InitialRequest initialRequest;
             try {
@@ -169,7 +174,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
     private WebSocketMcpConnection newConnection(WebSocketConnection connection) {
         String id = ConnectionManager.connectionId();
         WebSocketMcpConnection mcpConnection = new WebSocketMcpConnection(id, config.servers().get(serverName()), serverName(),
-                connection);
+                trafficListeners, connection);
         connectionManager.add(mcpConnection);
         LOG.debugf("MCP WebSocket connection initialized [mcpId: %s, id: %s]", mcpConnection.id(), connection.id());
         return mcpConnection;
