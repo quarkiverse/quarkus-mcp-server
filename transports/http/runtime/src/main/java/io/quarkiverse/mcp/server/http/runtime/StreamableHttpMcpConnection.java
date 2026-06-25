@@ -9,6 +9,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.runtime.Subscription;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
@@ -20,13 +21,14 @@ class StreamableHttpMcpConnection extends McpConnectionBase {
 
     private volatile List<SseStream> sseStreams;
 
-    StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName) {
-        this(id, serverConfig, serverName, false);
+    StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName,
+            TrafficListeners trafficListeners) {
+        this(id, serverConfig, serverName, trafficListeners, false);
     }
 
     StreamableHttpMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName,
-            boolean transientConnection) {
-        super(id, Objects.requireNonNull(serverConfig), serverName, transientConnection);
+            TrafficListeners trafficListeners, boolean transientConnection) {
+        super(id, Objects.requireNonNull(serverConfig), serverName, trafficListeners, transientConnection);
     }
 
     void addSse(SseStream sse) {

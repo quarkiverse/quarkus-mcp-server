@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.http.runtime;
 
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
@@ -10,8 +11,9 @@ public class SseMcpConnection extends McpConnectionBase {
 
     private final HttpServerResponse response;
 
-    SseMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName, HttpServerResponse response) {
-        super(id, serverConfig, serverName);
+    SseMcpConnection(String id, McpServerRuntimeConfig serverConfig, String serverName, TrafficListeners trafficListeners,
+            HttpServerResponse response) {
+        super(id, serverConfig, serverName, trafficListeners);
         this.response = response;
     }
 

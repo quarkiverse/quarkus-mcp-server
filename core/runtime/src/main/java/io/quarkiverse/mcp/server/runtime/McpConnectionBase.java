@@ -23,7 +23,7 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     protected volatile LogLevel logLevel;
 
-    protected final int trafficLoggerTextLimit;
+    protected final TrafficListeners trafficListeners;
 
     protected final Optional<Duration> autoPingInterval;
 
@@ -37,18 +37,17 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
 
     private volatile List<Subscription> subscriptions;
 
-    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName) {
-        this(id, serverConfig, serverName, false);
+    protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName,
+            TrafficListeners trafficListeners) {
+        this(id, serverConfig, serverName, trafficListeners, false);
     }
 
     protected McpConnectionBase(String id, McpServerRuntimeConfig serverConfig, String serverName,
-            boolean transientConnection) {
+            TrafficListeners trafficListeners, boolean transientConnection) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
         this.logLevel = serverConfig.clientLogging().defaultLevel();
-        this.trafficLoggerTextLimit = serverConfig.trafficLogging().enabled()
-                ? serverConfig.trafficLogging().textLimit()
-                : -1;
+        this.trafficListeners = trafficListeners;
         this.autoPingInterval = transientConnection ? Optional.empty() : serverConfig.autoPingInterval();
         this.lastUsed = System.currentTimeMillis();
         this.idleTimeout = transientConnection ? 0 : serverConfig.connectionIdleTimeout().toMillis();
@@ -106,10 +105,6 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
         return status.compareAndSet(Status.INITIALIZING, Status.IN_OPERATION);
     }
 
-    public int getTrafficLoggerTextLimit() {
-        return trafficLoggerTextLimit;
-    }
-
     public Optional<Duration> autoPingInterval() {
         return autoPingInterval;
     }
@@ -127,9 +122,11 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
     }
 
     protected void messageSent(JsonObject message) {
-        if (trafficLoggerTextLimit > 0) {
-            TrafficLogger.messageSent(message, this, trafficLoggerTextLimit);
-        }
+        trafficListeners.messageSent(message, this);
+    }
+
+    TrafficListeners trafficListeners() {
+        return trafficListeners;
     }
 
     public void addSubscription(Subscription subscription) {

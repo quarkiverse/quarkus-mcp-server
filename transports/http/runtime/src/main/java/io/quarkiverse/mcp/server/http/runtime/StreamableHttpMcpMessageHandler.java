@@ -71,9 +71,8 @@ import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.Subscription;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
-import io.quarkiverse.mcp.server.runtime.TrafficLogger;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
-import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.TrafficLogging;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.runtime.LaunchMode;
@@ -108,6 +107,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private final CurrentVertxRequest currentVertxRequest;
     private final CurrentIdentityAssociation currentIdentityAssociation;
     private final McpHttpServersRuntimeConfig httpConfig;
+    private final TrafficListeners trafficListeners;
 
     // Precomputed maps for eager SSE init (lazySseInit=false), null when lazy
     private final Map<FeatureKey, Boolean> toolsForceSse;
@@ -136,7 +136,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             Vertx vertx,
             Instance<McpMetrics> metrics,
             Instance<McpTracing> tracing,
-            Instance<McpRequestValidator> mcpRequestValidator) {
+            Instance<McpRequestValidator> mcpRequestValidator,
+            TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests,
                 metadata,
@@ -146,6 +147,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.currentVertxRequest = currentVertxRequest;
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.httpConfig = runtimeConfig;
+        this.trafficListeners = trafficListeners;
         checkCorsConfig(config);
 
         // Precompute forceSse maps only when eager SSE init is configured
@@ -355,7 +357,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         String id = ConnectionManager.transientConnectionId();
         LOG.debugf("Stateless transient connection created [%s]", id);
         McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-        return new StreamableHttpMcpConnection(id, serverConfig, serverName, true);
+        return new StreamableHttpMcpConnection(id, serverConfig, serverName, trafficListeners, true);
     }
 
     private void handleStateful(RoutingContext ctx, String serverName, HttpServerRequest request,
@@ -492,10 +494,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
                         "Subsidiary SSE opened [%s]".formatted(connection.id())));
 
-        TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
-        if (trafficLogging.enabled()) {
-            TrafficLogger.messageSent(log, connection, trafficLogging.textLimit());
-        }
+        trafficListeners.messageSent(log, connection);
         sse.sendEvent("message", log.encode());
 
         HttpMcpServerRecorder.setCloseHandler(request, () -> {
@@ -511,7 +510,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         String id = ConnectionManager.connectionId();
         LOG.debugf("Streamable connection initialized [%s]", id);
         McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
-        StreamableHttpMcpConnection conn = new StreamableHttpMcpConnection(id, serverConfig, serverName);
+        StreamableHttpMcpConnection conn = new StreamableHttpMcpConnection(id, serverConfig, serverName, trafficListeners);
         connectionManager.add(conn);
         return conn;
     }
@@ -636,10 +635,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 McpMethod.NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED.jsonRpcName(), params);
         McpConnectionBase.injectSubscriptionId(acknowledged, subscription.subscriptionId());
 
-        TrafficLogging trafficLogging = config.servers().get(mcpRequest.serverName()).trafficLogging();
-        if (trafficLogging.enabled()) {
-            TrafficLogger.messageSent(acknowledged, connection, trafficLogging.textLimit());
-        }
+        trafficListeners.messageSent(acknowledged, connection);
 
         LOG.debugf("Subscription stream [%s] opened [%s]", streamId, connection.id());
         return sse.sendEvent("message", acknowledged.encode());

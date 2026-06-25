@@ -46,6 +46,7 @@ import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler.StdioMcpRequest;
@@ -70,6 +71,8 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
 
     private final McpServerRuntimeConfig serverConfig;
 
+    private final TrafficListeners trafficListeners;
+
     protected StdioMcpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager, PromptCompletionManagerImpl promptCompleteManager,
@@ -83,7 +86,8 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             Vertx vertx,
             Instance<McpMetrics> metrics,
             Instance<McpTracing> tracing,
-            Instance<McpRequestValidator> mcpRequestValidator) {
+            Instance<McpRequestValidator> mcpRequestValidator,
+            TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
@@ -94,12 +98,13 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             throw new IllegalStateException("Multiple server configurations are not supported for the stdio transport");
         }
         this.serverConfig = config.servers().values().iterator().next();
+        this.trafficListeners = trafficListeners;
     }
 
     public void initialize(PrintStream stdout) {
         if (initialized.compareAndSet(false, true)) {
             String connectionId = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-            StdioMcpConnection connection = new StdioMcpConnection(connectionId, serverConfig, stdout, vertx);
+            StdioMcpConnection connection = new StdioMcpConnection(connectionId, serverConfig, trafficListeners, stdout, vertx);
             connectionManager.add(connection);
             InputStream in = System.in;
             executor.submit(new Runnable() {
@@ -133,7 +138,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                                     JsonObject meta = findMeta(message);
                                     if (isStatelessMessage(message, meta)) {
                                         requestConnection = new StdioMcpConnection(ConnectionManager.transientConnectionId(),
-                                                serverConfig, stdout, vertx, true);
+                                                serverConfig, trafficListeners, stdout, vertx, true);
                                         String metaVersion = meta != null
                                                 ? meta.getString(MetaKey.PROTOCOL_VERSION.toString())
                                                 : null;

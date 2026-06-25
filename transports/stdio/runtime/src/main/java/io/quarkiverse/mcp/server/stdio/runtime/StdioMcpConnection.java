@@ -5,6 +5,7 @@ import java.util.concurrent.Callable;
 
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkus.runtime.BlockingOperationControl;
 import io.vertx.core.Future;
@@ -18,13 +19,14 @@ public class StdioMcpConnection extends McpConnectionBase {
 
     private final Vertx vertx;
 
-    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx) {
-        this(id, serverConfig, out, vertx, false);
+    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, TrafficListeners trafficListeners, PrintStream out,
+            Vertx vertx) {
+        this(id, serverConfig, trafficListeners, out, vertx, false);
     }
 
-    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, PrintStream out, Vertx vertx,
-            boolean transientConnection) {
-        super(id, serverConfig, McpServer.DEFAULT, transientConnection);
+    StdioMcpConnection(String id, McpServerRuntimeConfig serverConfig, TrafficListeners trafficListeners, PrintStream out,
+            Vertx vertx, boolean transientConnection) {
+        super(id, serverConfig, McpServer.DEFAULT, trafficListeners, transientConnection);
         this.out = out;
         this.vertx = vertx;
     }

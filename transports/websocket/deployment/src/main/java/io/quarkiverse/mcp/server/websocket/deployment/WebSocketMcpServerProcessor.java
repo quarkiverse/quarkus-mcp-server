@@ -28,6 +28,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
+import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.websocket.runtime.WebSocketMcpMessageHandler;
 import io.quarkiverse.mcp.server.websocket.runtime.config.McpWebSocketServerBuildTimeConfig;
@@ -153,6 +154,7 @@ public class WebSocketMcpServerProcessor {
                     // Instance<McpRequestValidator>
                     ParamVar p18 = conc.parameter("mcpRequestValidator",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpRequestValidator.class))));
+                    ParamVar p19 = conc.parameter("trafficListeners", TrafficListeners.class);
 
                     ConstructorDesc superConstructor = ConstructorDesc.of(WebSocketMcpMessageHandler.class,
                             McpServersRuntimeConfig.class,
@@ -173,10 +175,11 @@ public class WebSocketMcpServerProcessor {
                             Instance.class,
                             Instance.class,
                             Instance.class,
-                            Instance.class);
+                            Instance.class,
+                            TrafficListeners.class);
                     conc.body(bc -> {
                         bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
-                                p13, p14, p15, p16, p17, p18);
+                                p13, p14, p15, p16, p17, p18, p19);
                         bc.return_();
                     });
                 });
