@@ -489,6 +489,45 @@ public class MyTools {
 ----
 <1> Clean up resources when the operation is cancelled.
 
+=== Cancellation Callback
+
+Instead of polling with `check()`, you can register a callback that is executed when a cancellation request arrives.
+This is useful for cancelling async operations such as ``CompletableFuture``s without polling:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.Cancellation.OperationCancellationException;
+import io.quarkiverse.mcp.server.Tool;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+
+public class MyTools {
+
+    @Tool(description = "Cancellable async operation")
+    String asyncOperation(Cancellation cancellation) {
+        CompletableFuture<String> future = startAsyncWork();
+
+        cancellation.onCancelled(reason -> future.cancel(true)); // <1>
+
+        try {
+            return future.get();
+        } catch (CancellationException e) {
+            throw new OperationCancellationException(); // <2>
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private CompletableFuture<String> startAsyncWork() {
+        // Start some async operation
+        return new CompletableFuture<>();
+    }
+}
+----
+<1> Register a consumer that cancels the future when the client requests cancellation. The consumer receives the optional cancellation reason. If cancellation was already requested, the consumer is called immediately. Multiple consumers can be registered.
+<2> Translate `CancellationException` into `OperationCancellationException` so the framework handles it properly.
+
 === Checking Cancellation Reason
 
 Access the cancellation reason if provided:

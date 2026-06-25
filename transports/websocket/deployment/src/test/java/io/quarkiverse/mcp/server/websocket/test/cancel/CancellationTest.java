@@ -3,9 +3,13 @@ package io.quarkiverse.mcp.server.websocket.test.cancel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -38,11 +42,14 @@ public class CancellationTest extends McpServerTest {
     public void testCancellation() throws InterruptedException {
         assertCancellation("alpha", MyTools.ALPHA_LATCH);
         assertCancellation("bravo", MyTools.BRAVO_LATCH);
+        assertCancellation("charlie", MyTools.CHARLIE_LATCH);
+        assertEquals("No reason at all", MyTools.CANCEL_REASON.get().orElse(null));
     }
 
     private void assertCancellation(String toolName, CountDownLatch latch) throws InterruptedException {
         McpWebSocketTestClient client = McpAssured.newConnectedWebSocketClient();
         MyTools.CANCELLED.set(false);
+        MyTools.CANCEL_REASON.set(null);
 
         JsonObject request = client.newRequest("tools/call")
                 .put("params", new JsonObject()
@@ -70,8 +77,10 @@ public class CancellationTest extends McpServerTest {
 
         static final CountDownLatch ALPHA_LATCH = new CountDownLatch(1);
         static final CountDownLatch BRAVO_LATCH = new CountDownLatch(1);
+        static final CountDownLatch CHARLIE_LATCH = new CountDownLatch(1);
 
         static final AtomicBoolean CANCELLED = new AtomicBoolean();
+        static final AtomicReference<Optional<String>> CANCEL_REASON = new AtomicReference<>();
 
         @Inject
         ToolManager manager;
@@ -119,6 +128,27 @@ public class CancellationTest extends McpServerTest {
                 TimeUnit.MILLISECONDS.sleep(500);
             }
             return "OK";
+        }
+
+        @Tool
+        String charlie(Cancellation cancellation, @ToolArg(defaultValue = "1") int price) {
+            CompletableFuture<String> future = new CompletableFuture<>();
+            cancellation.onCancelled(reason -> {
+                CANCEL_REASON.set(reason);
+                future.completeExceptionally(new OperationCancellationException());
+            });
+            CHARLIE_LATCH.countDown();
+            try {
+                return future.get(10, TimeUnit.SECONDS);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof OperationCancellationException oce) {
+                    CANCELLED.set(true);
+                    throw oce;
+                }
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
     }

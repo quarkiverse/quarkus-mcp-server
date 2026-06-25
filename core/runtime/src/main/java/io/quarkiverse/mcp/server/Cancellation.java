@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Can be used to determine if an MCP client requested a cancellation of an in-progress request.
@@ -23,6 +24,17 @@ public interface Cancellation {
      * @see OperationCancellationException
      */
     Result check();
+
+    /**
+     * Registers an action that is executed when a cancellation of the current MCP request is requested by the client. If
+     * cancellation was already requested, the action is executed immediately. Multiple actions can be registered.
+     * <p>
+     * The consumer receives the optional cancellation reason provided by the client.
+     *
+     * @param action the action to execute on cancellation, must not be {@code null}
+     * @throws IllegalArgumentException if the action is {@code null}
+     */
+    void onCancelled(Consumer<Optional<String>> action);
 
     /**
      * Perform the check and if cancellation is requested then skip the processing, i.e. throw

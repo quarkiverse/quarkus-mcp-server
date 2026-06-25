@@ -3,9 +3,14 @@ package io.quarkiverse.mcp.server.test.cancel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
@@ -38,11 +43,51 @@ public class CancellationTest extends McpServerTest {
     public void testCancellation() throws InterruptedException {
         assertCancellation("alpha", MyTools.ALPHA_LATCH);
         assertCancellation("bravo", MyTools.BRAVO_LATCH);
+        assertCancellation("charlie", MyTools.CHARLIE_LATCH);
+        assertEquals("No reason at all", MyTools.CANCEL_REASON.get().orElse(null));
+        assertCancellationMultipleActions();
+        assertEquals("No reason at all", MyTools.CANCEL_REASON.get().orElse(null));
+    }
+
+    @Test
+    public void testOnCancelledNullAction() {
+        McpAssured.newConnectedStreamableClient()
+                .when()
+                .toolsCall("echo", r -> assertEquals("REJECTED", r.firstContent().asText().text()))
+                .thenAssertResults();
+    }
+
+    private void assertCancellationMultipleActions() throws InterruptedException {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        MyTools.CANCELLED.set(false);
+        MyTools.CANCEL_ACTION_COUNT.set(0);
+        MyTools.CANCEL_REASON.set(null);
+
+        JsonObject request = client.newRequest("tools/call")
+                .put("params", new JsonObject()
+                        .put("name", "delta"));
+        client.sendAndForget(request);
+
+        // Wait for the tool execution start
+        assertTrue(MyTools.DELTA_LATCH.await(5, TimeUnit.SECONDS));
+
+        JsonObject notification = client.newMessage("notifications/cancelled").put("params",
+                new JsonObject()
+                        .put("requestId", request.getValue("id"))
+                        .put("reason", "No reason at all"));
+        client.sendAndForget(notification);
+
+        Awaitility.await().until(() -> MyTools.CANCELLED.get());
+        // Both actions should have been invoked
+        assertEquals(2, MyTools.CANCEL_ACTION_COUNT.get());
+        // Only the response to the "initialize" request
+        assertEquals(1, client.snapshot().responses().size());
     }
 
     private void assertCancellation(String toolName, CountDownLatch latch) throws InterruptedException {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         MyTools.CANCELLED.set(false);
+        MyTools.CANCEL_REASON.set(null);
 
         JsonObject request = client.newRequest("tools/call")
                 .put("params", new JsonObject()
@@ -70,8 +115,12 @@ public class CancellationTest extends McpServerTest {
 
         static final CountDownLatch ALPHA_LATCH = new CountDownLatch(1);
         static final CountDownLatch BRAVO_LATCH = new CountDownLatch(1);
+        static final CountDownLatch CHARLIE_LATCH = new CountDownLatch(1);
+        static final CountDownLatch DELTA_LATCH = new CountDownLatch(1);
 
         static final AtomicBoolean CANCELLED = new AtomicBoolean();
+        static final AtomicInteger CANCEL_ACTION_COUNT = new AtomicInteger();
+        static final AtomicReference<Optional<String>> CANCEL_REASON = new AtomicReference<>();
 
         @Inject
         ToolManager manager;
@@ -118,6 +167,60 @@ public class CancellationTest extends McpServerTest {
                 TimeUnit.MILLISECONDS.sleep(500);
             }
             return "OK";
+        }
+
+        @Tool
+        String charlie(Cancellation cancellation, @ToolArg(defaultValue = "1") int price) {
+            CompletableFuture<String> future = new CompletableFuture<>();
+            cancellation.onCancelled(reason -> {
+                CANCEL_REASON.set(reason);
+                future.completeExceptionally(new OperationCancellationException());
+            });
+            CHARLIE_LATCH.countDown();
+            try {
+                return future.get(10, TimeUnit.SECONDS);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof OperationCancellationException oce) {
+                    CANCELLED.set(true);
+                    throw oce;
+                }
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Tool
+        String delta(Cancellation cancellation, @ToolArg(defaultValue = "1") int price) {
+            CompletableFuture<String> future = new CompletableFuture<>();
+            cancellation.onCancelled(reason -> {
+                CANCEL_REASON.set(reason);
+                CANCEL_ACTION_COUNT.incrementAndGet();
+                future.completeExceptionally(new OperationCancellationException());
+            });
+            cancellation.onCancelled(reason -> CANCEL_ACTION_COUNT.incrementAndGet());
+            DELTA_LATCH.countDown();
+            try {
+                return future.get(10, TimeUnit.SECONDS);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof OperationCancellationException oce) {
+                    CANCELLED.set(true);
+                    throw oce;
+                }
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Tool
+        String echo(Cancellation cancellation, @ToolArg(defaultValue = "1") int price) {
+            try {
+                cancellation.onCancelled(null);
+                return "OK";
+            } catch (IllegalArgumentException expected) {
+                return "REJECTED";
+            }
         }
 
     }

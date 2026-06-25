@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.RequestId;
@@ -29,6 +30,11 @@ public class CancellationImpl implements Cancellation {
         } else {
             return new Result(true, reason);
         }
+    }
+
+    @Override
+    public void onCancelled(Consumer<Optional<String>> action) {
+        cancellationRequests.subscribe(connection, requestId, action);
     }
 
 }
