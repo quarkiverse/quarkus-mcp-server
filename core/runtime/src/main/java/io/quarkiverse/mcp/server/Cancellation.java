@@ -30,6 +30,10 @@ public interface Cancellation {
      * cancellation was already requested, the action is executed immediately. Multiple actions can be registered.
      * <p>
      * The consumer receives the optional cancellation reason provided by the client.
+     * <p>
+     * The action may be invoked on a Vert.x event loop thread and must not block. Suitable actions include setting a flag or
+     * completing a future. If you need to perform a blocking operation, such as a database call or file I/O, offload the
+     * execution to a worker thread.
      *
      * @param action the action to execute on cancellation, must not be {@code null}
      * @throws IllegalArgumentException if the action is {@code null}
