@@ -9,9 +9,9 @@ import io.quarkiverse.mcp.server.ProgressNotification;
 import io.quarkiverse.mcp.server.ProgressToken;
 import io.quarkiverse.mcp.server.ProgressTracker;
 
-class ProgressImpl implements Progress {
+public class ProgressImpl implements Progress {
 
-    static ProgressImpl from(ArgumentProviders argProviders) {
+    public static ProgressImpl from(ArgumentProviders argProviders) {
         ProgressToken token = null;
         if (argProviders.progressToken() != null) {
             token = new ProgressToken(argProviders.progressToken());

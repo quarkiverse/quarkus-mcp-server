@@ -66,13 +66,19 @@ public record FeatureArgument(String name,
         RAW_MESSAGE,
         COMPLETE_CONTEXT,
         META,
-        ELICITATION;
+        ELICITATION,
+        MCPJAVA_PROGRESS,
+        MCPJAVA_CANCELLATION,
+        MCPJAVA_MCP_REQUEST,
+        MCPJAVA_COMPLETION_CONTEXT;
 
         public boolean isValidFor(Feature feature) {
             return switch (this) {
                 case REQUEST_ID -> feature != Feature.NOTIFICATION;
                 case REQUEST_URI -> feature == Feature.RESOURCE || feature == Feature.RESOURCE_TEMPLATE;
-                case COMPLETE_CONTEXT -> feature == Feature.PROMPT_COMPLETE || feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
+                case COMPLETE_CONTEXT,
+                        MCPJAVA_COMPLETION_CONTEXT ->
+                    feature == Feature.PROMPT_COMPLETE || feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
                 default -> true;
             };
         }

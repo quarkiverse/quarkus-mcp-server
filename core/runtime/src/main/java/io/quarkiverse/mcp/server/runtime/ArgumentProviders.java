@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Holds all information needed to supply arguments for a feature method.
  */
-record ArgumentProviders(
+public record ArgumentProviders(
         JsonObject rawMessage,
         Map<String, Object> args,
         McpConnectionBase connection,

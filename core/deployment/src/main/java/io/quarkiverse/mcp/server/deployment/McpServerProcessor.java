@@ -50,6 +50,7 @@ import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
 import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 import org.jboss.logging.Logger;
+import org.mcpjava.server.spi.McpServerSPI;
 
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
@@ -123,6 +124,11 @@ import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaContentBlockEncoder;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaPromptMessageEncoder;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaPromptResponseEncoder;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaResourceContentsEncoder;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaToolResponseEncoder;
 import io.quarkiverse.mcp.server.runtime.tracing.McpTracingInstrumenter;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
@@ -156,6 +162,7 @@ import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.execannotations.ExecutionModelAnnotationsAllowedBuildItem;
 import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
@@ -185,27 +192,24 @@ class McpServerProcessor {
 
     @BuildStep
     FeatureAnnotationsBuildItem featureAnnotations(McpServersBuildTimeConfig config) {
-        Map<DotName, Feature> annotationToFeature;
+        Map<DotName, Feature> annotationToFeature = new HashMap<>();
+        annotationToFeature.put(DotNames.PROMPT, PROMPT);
+        annotationToFeature.put(DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE);
+        annotationToFeature.put(DotNames.RESOURCE, RESOURCE);
+        annotationToFeature.put(DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE);
+        annotationToFeature.put(DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE);
+        annotationToFeature.put(DotNames.TOOL, TOOL);
+        annotationToFeature.put(DotNames.NOTIFICATION, NOTIFICATION);
         if (config.supportLangchain4jAnnotations()) {
-            annotationToFeature = Map.of(
-                    DotNames.PROMPT, PROMPT,
-                    DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
-                    DotNames.RESOURCE, RESOURCE,
-                    DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
-                    DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
-                    DotNames.TOOL, TOOL,
-                    DotNames.LANGCHAIN4J_TOOL, TOOL,
-                    DotNames.NOTIFICATION, NOTIFICATION);
-        } else {
-            annotationToFeature = Map.of(
-                    DotNames.PROMPT, PROMPT,
-                    DotNames.COMPLETE_PROMPT, PROMPT_COMPLETE,
-                    DotNames.RESOURCE, RESOURCE,
-                    DotNames.RESOURCE_TEMPLATE, RESOURCE_TEMPLATE,
-                    DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE,
-                    DotNames.TOOL, TOOL,
-                    DotNames.NOTIFICATION, NOTIFICATION);
+            annotationToFeature.put(DotNames.LANGCHAIN4J_TOOL, TOOL);
         }
+        // java-mcp-annotations
+        annotationToFeature.put(DotNames.MCPJAVA_TOOL, TOOL);
+        annotationToFeature.put(DotNames.MCPJAVA_PROMPT, PROMPT);
+        annotationToFeature.put(DotNames.MCPJAVA_RESOURCE, RESOURCE);
+        annotationToFeature.put(DotNames.MCPJAVA_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE);
+        annotationToFeature.put(DotNames.MCPJAVA_COMPLETE_PROMPT, PROMPT_COMPLETE);
+        annotationToFeature.put(DotNames.MCPJAVA_COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE);
         return new FeatureAnnotationsBuildItem(annotationToFeature);
     }
 
@@ -230,6 +234,10 @@ class McpServerProcessor {
                 ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class);
         // Encoders
         unremovable.addBeanClasses(JsonTextContentEncoder.class, DefaultResourceContentsEncoder.class);
+        // mcpjava encoders
+        unremovable.addBeanClasses(McpJavaContentBlockEncoder.class, McpJavaToolResponseEncoder.class,
+                McpJavaPromptResponseEncoder.class, McpJavaPromptMessageEncoder.class,
+                McpJavaResourceContentsEncoder.class);
         // Result mappers
         unremovable.addBeanClasses(ToolEncoderResultMapper.class, ResourceContentsEncoderResultMapper.class,
                 PromptEncoderResultMapper.class, ToolStructuredContentResultMapper.class);
@@ -329,7 +337,8 @@ class McpServerProcessor {
                     String description;
                     if (feature == TOOL && method.hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)) {
                         AnnotationValue value = featureAnnotation.value();
-                        description = value != null ? Arrays.stream(value.asStringArray()).collect(Collectors.joining()) : "";
+                        description = value != null ? Arrays.stream(value.asStringArray()).collect(Collectors.joining())
+                                : "";
                     } else if (feature == NOTIFICATION) {
                         // Description holds the notification type
                         description = featureAnnotation.value().asEnum();
@@ -381,7 +390,8 @@ class McpServerProcessor {
                             AnnotationValue destructiveHintValue = annotationsAnnotation.value("destructiveHint");
                             AnnotationValue idempotentHintValue = annotationsAnnotation.value("idempotentHint");
                             AnnotationValue openWorldHintValue = annotationsAnnotation.value("openWorldHint");
-                            toolAnnotations = new ToolAnnotations(annoTitleValue != null ? annoTitleValue.asString() : null,
+                            toolAnnotations = new ToolAnnotations(
+                                    annoTitleValue != null ? annoTitleValue.asString() : null,
                                     readOnlyHintValue != null ? readOnlyHintValue.asBoolean() : false,
                                     destructiveHintValue != null ? destructiveHintValue.asBoolean() : true,
                                     idempotentHintValue != null ? idempotentHintValue.asBoolean() : false,
@@ -391,32 +401,47 @@ class McpServerProcessor {
                         if (structuredContentValue != null)
                             structuredContent = structuredContentValue.asBoolean();
 
-                        AnnotationValue outputSchemaValue = featureAnnotation.value("outputSchema");
-                        if (outputSchemaValue != null) {
-                            AnnotationValue outputSchemaFromValue = outputSchemaValue.asNested().value("from");
-                            if (outputSchemaFromValue != null) {
+                        if (DotNames.isMcpJavaAnnotation(featureAnnotation.name())) {
+                            // java-mcp-annotations uses a flat outputSchemaFrom attribute
+                            AnnotationValue outputSchemaFromValue = featureAnnotation.value("outputSchemaFrom");
+                            if (outputSchemaFromValue != null
+                                    && !outputSchemaFromValue.asClass().name().equals(DotNames.VOID)) {
                                 outputSchemaFrom = outputSchemaFromValue.asClass();
-                            } else {
+                                outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
+                            } else if (structuredContent) {
                                 outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
-                            }
-                            AnnotationValue outputSchemaGeneratorValue = outputSchemaValue.asNested().value("generator");
-                            if (outputSchemaGeneratorValue != null) {
-                                outputSchemaGenerator = outputSchemaGeneratorValue.asClass();
-                            } else {
                                 outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
                             }
-                        } else if (structuredContent) {
-                            outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
-                            outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
-                        }
+                        } else {
+                            AnnotationValue outputSchemaValue = featureAnnotation.value("outputSchema");
+                            if (outputSchemaValue != null) {
+                                AnnotationValue outputSchemaFromValue = outputSchemaValue.asNested().value("from");
+                                if (outputSchemaFromValue != null) {
+                                    outputSchemaFrom = outputSchemaFromValue.asClass();
+                                } else {
+                                    outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
+                                }
+                                AnnotationValue outputSchemaGeneratorValue = outputSchemaValue.asNested()
+                                        .value("generator");
+                                if (outputSchemaGeneratorValue != null) {
+                                    outputSchemaGenerator = outputSchemaGeneratorValue.asClass();
+                                } else {
+                                    outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
+                                }
+                            } else if (structuredContent) {
+                                outputSchemaFrom = outputSchemaFromReturnType(method.returnType());
+                                outputSchemaGenerator = ClassType.create(GlobalOutputSchemaGenerator.class);
+                            }
 
-                        AnnotationValue inputSchemaValue = featureAnnotation.value("inputSchema");
-                        if (inputSchemaValue != null) {
-                            AnnotationValue inputSchemaValueGeneratorValue = inputSchemaValue.asNested().value("generator");
-                            if (inputSchemaValueGeneratorValue != null) {
-                                inputSchemaGenerator = inputSchemaValueGeneratorValue.asClass();
-                            } else {
-                                inputSchemaGenerator = ClassType.create(GlobalInputSchemaGenerator.class);
+                            AnnotationValue inputSchemaValue = featureAnnotation.value("inputSchema");
+                            if (inputSchemaValue != null) {
+                                AnnotationValue inputSchemaValueGeneratorValue = inputSchemaValue.asNested()
+                                        .value("generator");
+                                if (inputSchemaValueGeneratorValue != null) {
+                                    inputSchemaGenerator = inputSchemaValueGeneratorValue.asClass();
+                                } else {
+                                    inputSchemaGenerator = ClassType.create(GlobalInputSchemaGenerator.class);
+                                }
                             }
                         }
                     }
@@ -426,10 +451,16 @@ class McpServerProcessor {
 
                     // Process metadata entries
                     AnnotationInstance metaField = method.declaredAnnotation(DotNames.META_FIELD);
+                    if (metaField == null) {
+                        metaField = method.declaredAnnotation(DotNames.MCPJAVA_META_FIELD);
+                    }
                     if (metaField != null) {
                         addMetaField(metadata, metaField);
                     } else {
                         AnnotationInstance metaFields = method.declaredAnnotation(DotNames.META_FIELDS);
+                        if (metaFields == null) {
+                            metaFields = method.declaredAnnotation(DotNames.MCPJAVA_META_FIELDS);
+                        }
                         if (metaFields != null) {
                             for (AnnotationInstance entry : metaFields.value().asNestedArray()) {
                                 addMetaField(metadata, entry);
@@ -463,8 +494,13 @@ class McpServerProcessor {
                     // Icons
                     DotName iconsProvider = null;
                     AnnotationInstance icons = method.declaredAnnotation(DotNames.ICONS);
+                    if (icons == null) {
+                        icons = method.declaredAnnotation(DotNames.MCPJAVA_ICONS);
+                    }
                     if (icons != null) {
-                        AnnotationValue value = icons.value();
+                        AnnotationValue value = DotNames.isMcpJavaAnnotation(icons.name())
+                                ? icons.value("iconProvider")
+                                : icons.value();
                         if (value != null) {
                             iconsProvider = value.asClass().name();
                         }
@@ -495,7 +531,8 @@ class McpServerProcessor {
                     FeatureMethodBuildItem fm = new FeatureMethodBuildItem(bean, method, invokerBuilder.build(), name,
                             title, description, uri, mimeType, size, feature, toolAnnotations,
                             servers, structuredContent,
-                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations, metadata,
+                            outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations,
+                            metadata,
                             inputGuardrails, outputGuardrails, executionModel(method, transformedAnnotations),
                             iconsProvider);
                     features.produce(fm);
@@ -510,7 +547,8 @@ class McpServerProcessor {
             }
         }
 
-        // Check duplicate names - only report errors when features with the same name have overlapping server bindings
+        // Check duplicate names - only report errors when features with the same name
+        // have overlapping server bindings
         for (List<FeatureMethodBuildItem> featureMethods : found.values()) {
             Map<String, List<FeatureMethodBuildItem>> byName = featureMethods.stream()
                     .collect(Collectors.toMap(this::getDuplicateValidationName, List::of, (v1, v2) -> {
@@ -591,10 +629,15 @@ class McpServerProcessor {
         Set<String> ret = new HashSet<String>();
         Optional<Boolean> multiServerBindings = config.supportMultiServerBindings();
         if (multiServerBindings.orElse(true)) {
-            // The set of bindings includes all values declared on the feature method and all values defined on the declaring class of the feature
-            List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
-            List<AnnotationInstance> classAnnotations = method.declaringClass()
-                    .declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            // The set of bindings includes all values declared on the feature method and
+            // all values defined on the declaring class of the feature
+            List<AnnotationInstance> methodAnnotations = new ArrayList<>(
+                    method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
+            methodAnnotations.addAll(method.declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
+            List<AnnotationInstance> classAnnotations = new ArrayList<>(
+                    method.declaringClass().declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
+            classAnnotations.addAll(
+                    method.declaringClass().declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
             for (AnnotationInstance a : methodAnnotations) {
                 ret.add(a.value().asString());
             }
@@ -603,7 +646,8 @@ class McpServerProcessor {
             }
             if (ret.size() > 1 && methodAnnotations.size() == 1 && classAnnotations.size() == 1
                     && multiServerBindings.isEmpty()) {
-                // In versions 1.10 and lower, the method-level annotation overrode the class-level one;
+                // In versions 1.10 and lower, the method-level annotation overrode the
+                // class-level one;
                 // now both are merged - fail the build if the user has not explicitly opted in
                 throw new IllegalStateException(
                         String.format(
@@ -616,21 +660,27 @@ class McpServerProcessor {
             }
         } else {
             // Compatibility mode - only a single binding is allowed
-            List<AnnotationInstance> methodAnnotations = method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+            List<AnnotationInstance> methodAnnotations = new ArrayList<>(
+                    method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
+            methodAnnotations.addAll(method.declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
             if (methodAnnotations.size() > 1) {
                 throw new IllegalStateException(
-                        "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                        "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass()
+                                + "#"
                                 + method.name()
                                 + "()");
             } else if (methodAnnotations.size() == 1) {
                 ret.add(methodAnnotations.get(0).value().asString());
             } else {
                 // Try the declaring class
-                List<AnnotationInstance> classAnnotations = method.declaringClass()
-                        .declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index);
+                List<AnnotationInstance> classAnnotations = new ArrayList<>(
+                        method.declaringClass().declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
+                classAnnotations.addAll(
+                        method.declaringClass().declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
                 if (classAnnotations.size() > 1) {
                     throw new IllegalStateException(
-                            "Only single @McpServer binding is allowed in compatibility mode: " + method.declaringClass() + "#"
+                            "Only single @McpServer binding is allowed in compatibility mode: "
+                                    + method.declaringClass() + "#"
                                     + method.name()
                                     + "()");
                 } else if (classAnnotations.size() == 1) {
@@ -650,11 +700,13 @@ class McpServerProcessor {
         for (FeatureMethodBuildItem featureMethod : featureMethods) {
             if (featureMethod.isTool()) {
                 for (DotName inputGuardRail : featureMethod.getInputGuardrails()) {
-                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, inputGuardRail, validationPhase.getContext(),
+                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, inputGuardRail,
+                            validationPhase.getContext(),
                             errors, reflectiveClasses);
                 }
                 for (DotName outputGuardRail : featureMethod.getOutputGuardrails()) {
-                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, outputGuardRail, validationPhase.getContext(),
+                    validateGuardrail(beanArchiveIndex.getIndex(), featureMethod, outputGuardRail,
+                            validationPhase.getContext(),
                             errors, reflectiveClasses);
                 }
             }
@@ -788,9 +840,15 @@ class McpServerProcessor {
             AnnotationValue audienceValue = annotationsAnnotation.value("audience");
             List<Role> audience = List.of();
             if (audienceValue != null) {
-                audience = new ArrayList<>();
-                for (String r : audienceValue.asEnumArray()) {
-                    audience.add(Role.valueOf(r));
+                if (DotNames.isMcpJavaAnnotation(featureAnnotation.name())) {
+                    // audience should be an array:
+                    // https://github.com/mcp-java/java-mcp-annotations/issues/60
+                    audience = List.of(Role.valueOf(audienceValue.asEnum()));
+                } else {
+                    audience = new ArrayList<>();
+                    for (String r : audienceValue.asEnumArray()) {
+                        audience.add(Role.valueOf(r));
+                    }
                 }
             }
             AnnotationValue lastModifiedValue = annotationsAnnotation.value("lastModified");
@@ -811,7 +869,8 @@ class McpServerProcessor {
         return wrongUsages;
     }
 
-    private void findWrongMethods(IndexView index, DotName annotationName, Feature feature, List<Throwable> wrongUsages) {
+    private void findWrongMethods(IndexView index, DotName annotationName, Feature feature,
+            List<Throwable> wrongUsages) {
         for (AnnotationInstance annotation : index.getAnnotations(annotationName)) {
             if (annotation.target().kind() == AnnotationTarget.Kind.METHOD) {
                 if (Modifier.isStatic(annotation.target().asMethod().flags())) {
@@ -873,7 +932,8 @@ class McpServerProcessor {
             BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
 
-        // Note that the generated McpMetadata impl must be considered an application class
+        // Note that the generated McpMetadata impl must be considered an application
+        // class
         // so that it can see the generated invokers
         ClassOutput classOutput = new GeneratedClassGizmo2Adaptor(generatedClasses, generatedResources, true);
         Gizmo gizmo = Gizmo.create(classOutput)
@@ -925,7 +985,10 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, prompt, DotNames.PROMPT_ARG,
+                                        processFeatureMethod(counter, cc, prompt,
+                                                prompt.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_PROMPT)
+                                                        ? DotNames.MCPJAVA_PROMPT_ARG
+                                                        : DotNames.PROMPT_ARG,
                                                 PromptArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
@@ -945,7 +1008,11 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, promptCompletion, DotNames.COMPLETE_ARG,
+                                        processFeatureMethod(counter, cc, promptCompletion,
+                                                promptCompletion.getMethod()
+                                                        .hasDeclaredAnnotation(DotNames.MCPJAVA_COMPLETE_PROMPT)
+                                                                ? DotNames.MCPJAVA_COMPLETE_ARG
+                                                                : DotNames.COMPLETE_ARG,
                                                 CompleteArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
@@ -967,7 +1034,9 @@ class McpServerProcessor {
                                 bc.invokeVirtual(processFeatureMethod(counter, cc, tool,
                                         tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)
                                                 ? DotNames.LANGCHAIN4J_P
-                                                : DotNames.TOOL_ARG,
+                                                : tool.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_TOOL)
+                                                        ? DotNames.MCPJAVA_TOOL_ARG
+                                                        : DotNames.TOOL_ARG,
                                         ToolArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
@@ -1005,7 +1074,11 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, resourceTemplate, DotNames.RESOURCE_TEMPLATE_ARG,
+                                        processFeatureMethod(counter, cc, resourceTemplate,
+                                                resourceTemplate.getMethod()
+                                                        .hasDeclaredAnnotation(DotNames.MCPJAVA_RESOURCE_TEMPLATE)
+                                                                ? DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG
+                                                                : DotNames.RESOURCE_TEMPLATE_ARG,
                                                 ResourceTemplateArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
@@ -1025,7 +1098,12 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, resourceTemplateCompletion, DotNames.COMPLETE_ARG,
+                                        processFeatureMethod(counter, cc, resourceTemplateCompletion,
+                                                resourceTemplateCompletion.getMethod()
+                                                        .hasDeclaredAnnotation(
+                                                                DotNames.MCPJAVA_COMPLETE_RESOURCE_TEMPLATE)
+                                                                        ? DotNames.MCPJAVA_COMPLETE_ARG
+                                                                        : DotNames.COMPLETE_ARG,
                                                 CompleteArg.ELEMENT_NAME),
                                         cc.this_()));
                     }
@@ -1083,7 +1161,8 @@ class McpServerProcessor {
             });
 
             // McpMetadata.toolArgumentHolders()
-            // Generated tool argument holders are used to workaround a limitation of com.github.victools.jsonschema.generator.SchemaGenerator
+            // Generated tool argument holders are used to workaround a limitation of
+            // com.github.victools.jsonschema.generator.SchemaGenerator
             // that can only consume java.lang.reflect.Type
             cc.method("toolArgumentHolders", mc -> {
                 mc.returning(Map.class);
@@ -1129,7 +1208,8 @@ class McpServerProcessor {
                 isToolManagerUsed = true;
             }
         }
-        return new ManagerUsage(isResourceManagerUsed, isResourceTemplateManagerUsed, isPromptManagerUsed, isToolManagerUsed);
+        return new ManagerUsage(isResourceManagerUsed, isResourceTemplateManagerUsed, isPromptManagerUsed,
+                isToolManagerUsed);
     }
 
     private record ManagerUsage(boolean resources, boolean resourceTemplates, boolean prompts, boolean tools) {
@@ -1148,7 +1228,8 @@ class McpServerProcessor {
                 List<AnnotationInstance> annotations = param.declaredAnnotations();
                 if (!annotations.isEmpty()
                         && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
-                                && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
+                                && !a.name().equals(DotNames.LANGCHAIN4J_P)
+                                && !a.name().equals(DotNames.MCPJAVA_TOOL_ARG))) {
                     generateHolder = true;
                 }
             }
@@ -1291,8 +1372,16 @@ class McpServerProcessor {
         }
     }
 
-    private static final Set<DotName> ARG_ANNOTATIONS = Set.of(DotNames.TOOL_ARG, DotNames.PROMPT_ARG, DotNames.COMPLETE_ARG,
-            DotNames.RESOURCE_TEMPLATE_ARG);
+    @BuildStep
+    void registerMcpJavaSpi(BuildProducer<ServiceProviderBuildItem> services) {
+        services.produce(ServiceProviderBuildItem.allProvidersFromClassPath(McpServerSPI.class.getName()));
+    }
+
+    private static final Set<DotName> ARG_ANNOTATIONS = Set.of(DotNames.TOOL_ARG, DotNames.PROMPT_ARG,
+            DotNames.COMPLETE_ARG,
+            DotNames.RESOURCE_TEMPLATE_ARG,
+            DotNames.MCPJAVA_TOOL_ARG, DotNames.MCPJAVA_PROMPT_ARG, DotNames.MCPJAVA_COMPLETE_ARG,
+            DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG);
 
     private void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation,
             List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index) {
@@ -1306,17 +1395,17 @@ class McpServerProcessor {
             throw new IllegalStateException(feature + " method may not return void: " + methodDesc(method));
         }
         for (MethodParameterInfo param : method.parameters()) {
-            DotName argAnnotation = switch (feature) {
-                case TOOL -> DotNames.TOOL_ARG;
-                case PROMPT -> DotNames.PROMPT_ARG;
-                case RESOURCE_TEMPLATE -> DotNames.RESOURCE_TEMPLATE_ARG;
-                case PROMPT_COMPLETE, RESOURCE_TEMPLATE_COMPLETE -> DotNames.COMPLETE_ARG;
-                default -> null;
+            Set<DotName> validArgAnnotations = switch (feature) {
+                case TOOL -> Set.of(DotNames.TOOL_ARG, DotNames.MCPJAVA_TOOL_ARG);
+                case PROMPT -> Set.of(DotNames.PROMPT_ARG, DotNames.MCPJAVA_PROMPT_ARG);
+                case RESOURCE_TEMPLATE ->
+                    Set.of(DotNames.RESOURCE_TEMPLATE_ARG, DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG);
+                case PROMPT_COMPLETE, RESOURCE_TEMPLATE_COMPLETE ->
+                    Set.of(DotNames.COMPLETE_ARG, DotNames.MCPJAVA_COMPLETE_ARG);
+                default -> Set.of();
             };
             Set<DotName> invalidAnnotations = new HashSet<>(ARG_ANNOTATIONS);
-            if (argAnnotation != null) {
-                invalidAnnotations.remove(argAnnotation);
-            }
+            invalidAnnotations.removeAll(validArgAnnotations);
             for (DotName invalidAnnotation : invalidAnnotations) {
                 if (param.hasDeclaredAnnotation(invalidAnnotation)) {
                     throw new IllegalStateException("Parameter of a %s method may not be annotated with @%s: %s"
@@ -1337,7 +1426,7 @@ class McpServerProcessor {
     }
 
     private static final Set<org.jboss.jandex.Type> PROMPT_TYPES = Set.of(ClassType.create(DotNames.PROMPT_RESPONSE),
-            ClassType.create(DotNames.PROMPT_MESSAGE));
+            ClassType.create(DotNames.PROMPT_MESSAGE), ClassType.create(DotNames.STRING));
 
     private void validatePromptMethod(MethodInfo method) {
         // No need to validate return type
@@ -1351,8 +1440,10 @@ class McpServerProcessor {
         }
     }
 
-    private static final Set<org.jboss.jandex.Type> COMPLETE_TYPES = Set.of(ClassType.create(DotNames.COMPLETE_RESPONSE),
-            ClassType.create(DotNames.STRING));
+    private static final Set<org.jboss.jandex.Type> COMPLETE_TYPES = Set.of(
+            ClassType.create(DotNames.COMPLETE_RESPONSE),
+            ClassType.create(DotNames.STRING),
+            ClassType.create(DotNames.MCPJAVA_COMPLETION_RESULT));
 
     private void validatePromptCompleteMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
@@ -1404,6 +1495,9 @@ class McpServerProcessor {
         parameters(method, TOOL);
         for (MethodParameterInfo p : method.parameters()) {
             AnnotationInstance toolArg = p.annotation(DotNames.TOOL_ARG);
+            if (toolArg == null) {
+                toolArg = p.annotation(DotNames.MCPJAVA_TOOL_ARG);
+            }
             if (toolArg != null) {
                 AnnotationValue defaultValueValue = toolArg.value(DEFAULT_VALUE);
                 if (defaultValueValue != null) {
@@ -1428,7 +1522,8 @@ class McpServerProcessor {
                     if (defaultValueConverters.stream()
                             .noneMatch(c -> TypeEquivalenceKey.of(c.getArgumentType()).equals(argEquivalenceKey))) {
                         throw new IllegalStateException(
-                                "No matching default value converter found for argument type [" + p.type() + "] declared on: "
+                                "No matching default value converter found for argument type [" + p.type()
+                                        + "] declared on: "
                                         + p);
                     }
                 }
@@ -1467,7 +1562,8 @@ class McpServerProcessor {
         if (uriTemplateValue == null) {
             throw new IllegalStateException("URI template not found");
         }
-        VariableMatcher variableMatcher = ResourceTemplateManagerImpl.createMatcherFromUriTemplate(uriTemplateValue.asString());
+        VariableMatcher variableMatcher = ResourceTemplateManagerImpl
+                .createMatcherFromUriTemplate(uriTemplateValue.asString());
 
         List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
         for (MethodParameterInfo param : parameters) {
@@ -1501,7 +1597,8 @@ class McpServerProcessor {
         List<MethodParameterInfo> params = parameters(method, NOTIFICATION);
         if (!params.isEmpty()) {
             throw new IllegalStateException(
-                    "Notification method %s may not consume the following parameter types: %s".formatted(methodDesc(method),
+                    "Notification method %s may not consume the following parameter types: %s".formatted(
+                            methodDesc(method),
                             params.stream().map(MethodParameterInfo::type).toList()));
         }
     }
@@ -1511,8 +1608,9 @@ class McpServerProcessor {
         for (MethodParameterInfo param : method.parameters()) {
             Provider provider = providerFrom(param.type());
             if (!provider.isValidFor(feature)) {
-                throw new IllegalStateException("%s feature method %s may not accept parameter of type %s".formatted(feature,
-                        methodDesc(method), param.type()));
+                throw new IllegalStateException(
+                        "%s feature method %s may not accept parameter of type %s".formatted(feature,
+                                methodDesc(method), param.type()));
             }
             if (provider == Provider.PARAMS) {
                 ret.add(param);
@@ -1583,11 +1681,13 @@ class McpServerProcessor {
                                 : "";
                         throw new IllegalStateException(
                                 "Missing argument name - compile the class %s with -parameters%s"
-                                        .formatted(featureMethod.getMethod().declaringClass().name(), explicitAnnotation));
+                                        .formatted(featureMethod.getMethod().declaringClass().name(),
+                                                explicitAnnotation));
                     }
 
                     LocalVar type = RuntimeTypeCreator.of(bc).create(param.type());
-                    // new FeatureArgument(String name, String title, String description, boolean required, Type type, String defaultValue, Provider provider)
+                    // new FeatureArgument(String name, String title, String description, boolean
+                    // required, Type type, String defaultValue, Provider provider)
                     LocalVar arg = bc.localVar("arg", bc.new_(FeatureArgument.class,
                             Const.of(name),
                             title != null ? Const.of(title) : Const.ofNull(String.class),
@@ -1602,7 +1702,8 @@ class McpServerProcessor {
                 LocalVar toolAnnotations;
                 if (featureMethod.isTool() && featureMethod.getToolAnnotations() != null) {
                     ToolAnnotations annotations = featureMethod.getToolAnnotations();
-                    // new ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint, boolean openWorldHint)
+                    // new ToolAnnotations(String title, boolean readOnlyHint, boolean
+                    // destructiveHint, boolean idempotentHint, boolean openWorldHint)
                     toolAnnotations = bc.localVar("toolAnnotations", bc.new_(ToolManager.ToolAnnotations.class,
                             annotations.title() != null ? Const.of(annotations.title()) : Const.ofNull(String.class),
                             Const.of(annotations.readOnlyHint()),
@@ -1624,7 +1725,8 @@ class McpServerProcessor {
                                     : bc.listOf(annotations.audience(), Const::of),
                             annotations.lastModified() == null ? Const.ofNull(String.class)
                                     : Const.of(annotations.lastModified()),
-                            annotations.priority() == null ? Const.ofNull(Double.class) : Const.of(annotations.priority())));
+                            annotations.priority() == null ? Const.ofNull(Double.class)
+                                    : Const.of(annotations.priority())));
                 } else {
                     resourceAnnotations = bc.localVar("resourceAnnotations", Const.ofNull(Content.Annotations.class));
                 }
@@ -1634,11 +1736,12 @@ class McpServerProcessor {
                 if (metaEntries.isEmpty()) {
                     meta = bc.localVar("meta", bc.mapOf());
                 } else {
-                    meta = bc.localVar("meta", bc.invokeStatic(MD_Map.ofEntries, bc.newArray(Entry.class, metaEntries.entrySet()
-                            .stream()
-                            .sorted(Comparator.comparing(Entry::getKey))
-                            .map(e -> bc.mapEntry(Const.of(e.getKey()), Const.of(e.getValue())))
-                            .toList())));
+                    meta = bc.localVar("meta",
+                            bc.invokeStatic(MD_Map.ofEntries, bc.newArray(Entry.class, metaEntries.entrySet()
+                                    .stream()
+                                    .sorted(Comparator.comparing(Entry::getKey))
+                                    .map(e -> bc.mapEntry(Const.of(e.getKey()), Const.of(e.getValue())))
+                                    .toList())));
                 }
 
                 LocalVar inputGuardrails;
@@ -1676,7 +1779,8 @@ class McpServerProcessor {
                 // new FeatureMethodInfo(...)
                 LocalVar info = bc.localVar("info", bc.new_(FeatureMethodInfo.class,
                         Const.of(featureMethod.getName()),
-                        featureMethod.getTitle() != null ? Const.of(featureMethod.getTitle()) : Const.ofNull(String.class),
+                        featureMethod.getTitle() != null ? Const.of(featureMethod.getTitle())
+                                : Const.ofNull(String.class),
                         Const.of(featureMethod.getDescription()),
                         featureMethod.getUri() == null ? Const.ofNull(String.class) : Const.of(featureMethod.getUri()),
                         featureMethod.getMimeType() == null ? Const.ofNull(String.class)
@@ -1699,11 +1803,14 @@ class McpServerProcessor {
                         outputGuardrails,
                         iconsProvider));
 
-                LocalVar invoker = bc.localVar("invoker", Invoker.class, bc.new_(featureMethod.getInvoker().getClassDesc()));
+                LocalVar invoker = bc.localVar("invoker", Invoker.class,
+                        bc.new_(featureMethod.getInvoker().getClassDesc()));
                 LocalVar executionModel = bc.localVar("executionModel", Const.of(featureMethod.getExecutionModel()));
                 Var resultMapper = getMapper(bc, featureMethod);
 
-                // new FeatureMetadata<>(Feature feature, FeatureMethodInfo info, Invoker<Object, Object> invoker, ExecutionModel executionModel, Function<Result<Object>, Uni<M>> resultMapper)
+                // new FeatureMetadata<>(Feature feature, FeatureMethodInfo info,
+                // Invoker<Object, Object> invoker, ExecutionModel executionModel,
+                // Function<Result<Object>, Uni<M>> resultMapper)
                 bc.return_(bc.new_(FeatureMetadata.class,
                         Const.of(featureMethod.getFeature()),
                         info,
@@ -1719,6 +1826,12 @@ class McpServerProcessor {
         AnnotationInstance anno = param.annotation(DotNames.TOOL_ARG);
         if (anno == null) {
             anno = param.annotation(DotNames.PROMPT_ARG);
+        }
+        if (anno == null) {
+            anno = param.annotation(DotNames.MCPJAVA_TOOL_ARG);
+        }
+        if (anno == null) {
+            anno = param.annotation(DotNames.MCPJAVA_PROMPT_ARG);
         }
         return anno != null && anno.value(DEFAULT_VALUE) != null;
     }
@@ -1748,6 +1861,14 @@ class McpServerProcessor {
             return FeatureArgument.Provider.META;
         } else if (type.name().equals(DotNames.ELICITATION)) {
             return FeatureArgument.Provider.ELICITATION;
+        } else if (type.name().equals(DotNames.MCPJAVA_PROGRESS)) {
+            return FeatureArgument.Provider.MCPJAVA_PROGRESS;
+        } else if (type.name().equals(DotNames.MCPJAVA_CANCELLATION)) {
+            return FeatureArgument.Provider.MCPJAVA_CANCELLATION;
+        } else if (type.name().equals(DotNames.MCPJAVA_MCP_REQUEST)) {
+            return FeatureArgument.Provider.MCPJAVA_MCP_REQUEST;
+        } else if (type.name().equals(DotNames.MCPJAVA_COMPLETION_CONTEXT)) {
+            return FeatureArgument.Provider.MCPJAVA_COMPLETION_CONTEXT;
         } else {
             return FeatureArgument.Provider.PARAMS;
         }
@@ -1762,25 +1883,43 @@ class McpServerProcessor {
 
     private Var getMapper(BlockCreator bc, FeatureMethodBuildItem featureMethod) {
         // Returns a function that converts the returned object to Uni<RESPONSE>
-        // where the RESPONSE is one of ToolResponse, PromptResponse, ResourceResponse, CompleteResponse
+        // where the RESPONSE is one of ToolResponse, PromptResponse, ResourceResponse,
+        // CompleteResponse
         // IMPL NOTE: at this point the method return type is already validated
         org.jboss.jandex.Type returnType = featureMethod.getMethod().returnType();
         return switch (featureMethod.getFeature()) {
             case PROMPT -> promptResultMapper(featureMethod, bc, returnType);
-            case PROMPT_COMPLETE -> readResultMapper(bc,
-                    createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "String"));
+            case PROMPT_COMPLETE -> completionResultMapper(bc, returnType);
             case TOOL -> toolResultMapper(featureMethod, bc, returnType);
             case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(featureMethod, bc, returnType);
-            case RESOURCE_TEMPLATE_COMPLETE -> readResultMapper(bc,
-                    createMapperClassSimpleName(RESOURCE_TEMPLATE_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE,
-                            c -> "String"));
+            case RESOURCE_TEMPLATE_COMPLETE -> completionResultMapper(bc, returnType);
             case NOTIFICATION -> readResultMapper(bc, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
             default -> throw new IllegalArgumentException("Unsupported feature: " + featureMethod.getFeature());
         };
     }
 
+    private Var completionResultMapper(BlockCreator bc, org.jboss.jandex.Type returnType) {
+        DotName unwrapped = DotNames.UNI.equals(returnType.name())
+                ? returnType.asParameterizedType().arguments().get(0).name()
+                : returnType.name();
+        if (unwrapped.equals(DotNames.MCPJAVA_COMPLETION_RESULT)) {
+            return readResultMapper(bc,
+                    DotNames.UNI.equals(returnType.name()) ? "CompleteUniOfMcpJavaResult" : "CompleteOfMcpJavaResult");
+        }
+        return readResultMapper(bc,
+                createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE, c -> "String"));
+    }
+
     Var resourceResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType) {
+        DotName unwrapped = DotNames.UNI.equals(returnType.name())
+                ? returnType.asParameterizedType().arguments().get(0).name()
+                : returnType.name();
+        if (unwrapped.equals(DotNames.MCPJAVA_RESOURCE_RESPONSE)) {
+            return readResultMapper(bc,
+                    DotNames.UNI.equals(returnType.name()) ? "ResourceUniOfMcpJavaResponse"
+                            : "ResourceOfMcpJavaResponse");
+        }
         if (useEncoder(returnType, RESOURCE_TYPES)) {
             return encoderResultMapper(featureMethod, bc, returnType, ResourceContentsEncoderResultMapper.class);
         } else {
@@ -1842,7 +1981,9 @@ class McpServerProcessor {
             return encoderResultMapper(featureMethod, bc, returnType, PromptEncoderResultMapper.class);
         } else {
             return readResultMapper(bc,
-                    createMapperClassSimpleName(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> "OfMessage"));
+                    createMapperClassSimpleName(PROMPT, returnType, DotNames.PROMPT_RESPONSE, c -> {
+                        return DotNames.STRING.equals(c) ? "String" : "OfMessage";
+                    }));
         }
     }
 
@@ -1890,7 +2031,8 @@ class McpServerProcessor {
         return Expr.staticField(FieldDesc.of(mapperClassDesc, "INSTANCE", mapperClassDesc));
     }
 
-    private static ExecutionModel executionModel(MethodInfo method, TransformedAnnotationsBuildItem transformedAnnotations) {
+    private static ExecutionModel executionModel(MethodInfo method,
+            TransformedAnnotationsBuildItem transformedAnnotations) {
         if (KotlinUtils.isKotlinSuspendMethod(method)
                 && (transformedAnnotations.hasAnnotation(method, DotNames.RUN_ON_VIRTUAL_THREAD)
                         || transformedAnnotations.hasAnnotation(method.declaringClass(),
@@ -1909,7 +2051,8 @@ class McpServerProcessor {
             return ExecutionModel.EVENT_LOOP;
         } else if (transformedAnnotations.hasAnnotation(method, DotNames.TRANSACTIONAL)
                 || transformedAnnotations.hasAnnotation(method.declaringClass(), DotNames.TRANSACTIONAL)) {
-            // Method annotated with @Transactional or declared on a class annotated @Transactional is also treated as a blocking method
+            // Method annotated with @Transactional or declared on a class annotated
+            // @Transactional is also treated as a blocking method
             return ExecutionModel.WORKER_THREAD;
         } else {
             return hasBlockingSignature(method) ? ExecutionModel.WORKER_THREAD : ExecutionModel.EVENT_LOOP;

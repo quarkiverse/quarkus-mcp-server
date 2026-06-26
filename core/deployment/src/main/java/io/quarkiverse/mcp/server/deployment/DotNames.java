@@ -131,5 +131,36 @@ class DotNames {
     static final DotName SUPPORTED_EXEC_MODELS = DotName.createSimple(SupportedExecutionModels.class);
     static final DotName ICONS = DotName.createSimple(Icons.class);
     static final DotName ICONS_PROVIDER = DotName.createSimple(IconsProvider.class);
+    static final DotName VOID = DotName.createSimple(Void.class);
+
+    // java-mcp-annotations
+    static final DotName MCPJAVA_TOOL = DotName.createSimple(org.mcpjava.server.tools.Tool.class);
+    static final DotName MCPJAVA_TOOL_ARG = DotName.createSimple(org.mcpjava.server.tools.ToolArg.class);
+    static final DotName MCPJAVA_PROMPT = DotName.createSimple(org.mcpjava.server.prompts.Prompt.class);
+    static final DotName MCPJAVA_PROMPT_ARG = DotName.createSimple(org.mcpjava.server.prompts.PromptArg.class);
+    static final DotName MCPJAVA_RESOURCE = DotName.createSimple(org.mcpjava.server.resources.Resource.class);
+    static final DotName MCPJAVA_RESOURCE_TEMPLATE = DotName.createSimple(org.mcpjava.server.resources.ResourceTemplate.class);
+    static final DotName MCPJAVA_RESOURCE_TEMPLATE_ARG = DotName
+            .createSimple(org.mcpjava.server.resources.ResourceTemplateArg.class);
+    static final DotName MCPJAVA_COMPLETE_PROMPT = DotName.createSimple(org.mcpjava.server.completion.CompletePrompt.class);
+    static final DotName MCPJAVA_COMPLETE_RESOURCE_TEMPLATE = DotName
+            .createSimple(org.mcpjava.server.completion.CompleteResourceTemplate.class);
+    static final DotName MCPJAVA_COMPLETE_ARG = DotName.createSimple(org.mcpjava.server.completion.CompleteArg.class);
+    static final DotName MCPJAVA_MCP_SERVER = DotName.createSimple(org.mcpjava.server.McpServer.class);
+    static final DotName MCPJAVA_MCP_SERVERS = DotName.createSimple(org.mcpjava.server.McpServer.McpServers.class);
+    static final DotName MCPJAVA_META_FIELD = DotName.createSimple(org.mcpjava.server.MetaField.class);
+    static final DotName MCPJAVA_META_FIELDS = DotName.createSimple(org.mcpjava.server.MetaField.MetaFields.class);
+    static final DotName MCPJAVA_ICONS = DotName.createSimple(org.mcpjava.server.Icons.class);
+    static final DotName MCPJAVA_PROGRESS = DotName.createSimple(org.mcpjava.server.progress.Progress.class);
+    static final DotName MCPJAVA_CANCELLATION = DotName.createSimple(org.mcpjava.server.Cancellation.class);
+    static final DotName MCPJAVA_MCP_REQUEST = DotName.createSimple(org.mcpjava.server.McpRequest.class);
+    static final DotName MCPJAVA_COMPLETION_CONTEXT = DotName
+            .createSimple(org.mcpjava.server.completion.CompletionContext.class);
+    static final DotName MCPJAVA_COMPLETION_RESULT = DotName.createSimple(org.mcpjava.server.completion.CompletionResult.class);
+    static final DotName MCPJAVA_RESOURCE_RESPONSE = DotName.createSimple(org.mcpjava.server.resources.ResourceResponse.class);
+
+    static boolean isMcpJavaAnnotation(DotName name) {
+        return name.toString().startsWith("org.mcpjava.");
+    }
 
 }

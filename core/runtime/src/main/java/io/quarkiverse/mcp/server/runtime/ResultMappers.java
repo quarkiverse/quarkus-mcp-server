@@ -11,11 +11,36 @@ import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaTypeConverter;
 import io.smallrye.mutiny.Uni;
 
 public class ResultMappers {
 
     public record Result<R>(R value, String serverName) {
+    }
+
+    public static class PromptString implements Function<Result<String>, Uni<PromptResponse>> {
+
+        public static final PromptString INSTANCE = new PromptString();
+
+        @Override
+        public Uni<PromptResponse> apply(Result<String> r) {
+            return Uni.createFrom()
+                    .item(new PromptResponse(null, List.of(PromptMessage.withUserRole(new TextContent(r.value())))));
+        }
+
+    }
+
+    public static class PromptUniString implements Function<Result<Uni<String>>, Uni<PromptResponse>> {
+
+        public static final PromptUniString INSTANCE = new PromptUniString();
+
+        @Override
+        public Uni<PromptResponse> apply(Result<Uni<String>> r) {
+            return r.value()
+                    .map(str -> new PromptResponse(null, List.of(PromptMessage.withUserRole(new TextContent(str)))));
+        }
+
     }
 
     public static class PromptOfMessage implements Function<Result<PromptMessage>, Uni<PromptResponse>> {
@@ -258,6 +283,72 @@ public class ResultMappers {
         @Override
         public Uni<CompletionResponse> apply(Result<Uni<List<String>>> r) {
             return r.value().map(list -> new CompletionResponse(list, null, null));
+        }
+
+    }
+
+    // java-mcp-annotations result mappers
+
+    public static class CompleteOfMcpJavaResult
+            implements Function<Result<org.mcpjava.server.completion.CompletionResult>, Uni<CompletionResponse>> {
+
+        public static final CompleteOfMcpJavaResult INSTANCE = new CompleteOfMcpJavaResult();
+
+        @Override
+        public Uni<CompletionResponse> apply(Result<org.mcpjava.server.completion.CompletionResult> r) {
+            org.mcpjava.server.completion.CompletionResult cr = r.value();
+            return Uni.createFrom().item(new CompletionResponse(
+                    cr.values(),
+                    cr.total().isPresent() ? cr.total().getAsInt() : null,
+                    cr.hasMore().orElse(null),
+                    McpJavaTypeConverter.convertMetadata(cr.metadata())));
+        }
+
+    }
+
+    public static class CompleteUniOfMcpJavaResult
+            implements
+            Function<Result<Uni<org.mcpjava.server.completion.CompletionResult>>, Uni<CompletionResponse>> {
+
+        public static final CompleteUniOfMcpJavaResult INSTANCE = new CompleteUniOfMcpJavaResult();
+
+        @Override
+        public Uni<CompletionResponse> apply(Result<Uni<org.mcpjava.server.completion.CompletionResult>> r) {
+            return r.value().map(cr -> new CompletionResponse(
+                    cr.values(),
+                    cr.total().isPresent() ? cr.total().getAsInt() : null,
+                    cr.hasMore().orElse(null),
+                    McpJavaTypeConverter.convertMetadata(cr.metadata())));
+        }
+
+    }
+
+    public static class ResourceOfMcpJavaResponse
+            implements Function<Result<org.mcpjava.server.resources.ResourceResponse>, Uni<ResourceResponse>> {
+
+        public static final ResourceOfMcpJavaResponse INSTANCE = new ResourceOfMcpJavaResponse();
+
+        @Override
+        public Uni<ResourceResponse> apply(Result<org.mcpjava.server.resources.ResourceResponse> r) {
+            org.mcpjava.server.resources.ResourceResponse rr = r.value();
+            return Uni.createFrom().item(new ResourceResponse(
+                    McpJavaTypeConverter.convertResourceContentsList(rr.getContents()),
+                    McpJavaTypeConverter.convertMetadata(rr.metadata())));
+        }
+
+    }
+
+    public static class ResourceUniOfMcpJavaResponse
+            implements
+            Function<Result<Uni<org.mcpjava.server.resources.ResourceResponse>>, Uni<ResourceResponse>> {
+
+        public static final ResourceUniOfMcpJavaResponse INSTANCE = new ResourceUniOfMcpJavaResponse();
+
+        @Override
+        public Uni<ResourceResponse> apply(Result<Uni<org.mcpjava.server.resources.ResourceResponse>> r) {
+            return r.value().map(rr -> new ResourceResponse(
+                    McpJavaTypeConverter.convertResourceContentsList(rr.getContents()),
+                    McpJavaTypeConverter.convertMetadata(rr.metadata())));
         }
 
     }

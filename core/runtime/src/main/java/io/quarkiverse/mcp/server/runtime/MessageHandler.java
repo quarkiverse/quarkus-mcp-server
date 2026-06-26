@@ -55,7 +55,8 @@ public abstract class MessageHandler {
         } else if (cause instanceof McpException mcp) {
             mcpRequest.setTracingErrorResponse(false, mcp.getJsonRpcErrorCode(), mcp.getMessage());
             return sender.sendError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage());
-        } else if (cause instanceof Cancellation.OperationCancellationException) {
+        } else if (cause instanceof Cancellation.OperationCancellationException
+                || cause instanceof org.mcpjava.server.Cancellation.OperationCancelledException) {
             LOG.debugf("Operation for request %s was cancelled", requestId);
             // Skip processing
             return Future.succeededFuture();

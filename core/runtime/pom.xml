@@ -47,6 +47,11 @@
             <version>${jsonschema-generator.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.mcp-java</groupId>
+            <artifactId>mcp-server-api</artifactId>
+            <version>${mcp-server-api.version}</version>
+        </dependency>
         <!-- Integration with Micrometer extension -->
         <dependency>
             <groupId>io.micrometer</groupId>
