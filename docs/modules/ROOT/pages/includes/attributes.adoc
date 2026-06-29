@@ -1,4 +1,4 @@
-:project-version: 2.0.0.Beta1
+:project-version: 2.0.0.Beta2
 
 :examples-dir: ./../examples/
 :spec-version: 2025-11-25
