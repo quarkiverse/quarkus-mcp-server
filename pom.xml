@@ -41,6 +41,8 @@
         <swagger-annotations.version>2.2.52</swagger-annotations.version>
         <langchain4j.version>1.16.3</langchain4j.version>
         <assertj.version>3.27.7</assertj.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.dest-file>${maven.multiModuleProjectDirectory}/target/jacoco.exec</jacoco.dest-file>
     </properties>
 
     <dependencyManagement>
@@ -121,6 +123,9 @@
             <activation>
                 <jdk>[25,)</jdk>
             </activation>
+            <properties>
+                <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -128,7 +133,32 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <!-- See for example https://github.com/jboss/jboss-threads/pull/215 -->
-                            <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                            <!--argLine>@{argLine} -add-opens java.base/java.lang=ALL-UNNAMED</!argLine-->
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <profile>
+            <id>test-coverage</id>
+            <activation>
+                <property>
+                    <name>jacoco</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <quarkus.jacoco.data-file>${jacoco.dest-file}</quarkus.jacoco.data-file>
+                                <quarkus.jacoco.reuse-data-file>true</quarkus.jacoco.reuse-data-file>
+                                <quarkus.jacoco.report-location>${maven.multiModuleProjectDirectory}/target/coverage</quarkus.jacoco.report-location>
+                                <quarkus.jacoco.title>Quarkus MCP Server</quarkus.jacoco.title>
+                                <quarkus.jacoco.aggregate-report-data>true</quarkus.jacoco.aggregate-report-data>
+                            </systemPropertyVariables>
                         </configuration>
                     </plugin>
                 </plugins>
