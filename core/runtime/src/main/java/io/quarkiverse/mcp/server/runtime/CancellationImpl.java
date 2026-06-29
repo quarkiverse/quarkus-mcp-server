@@ -8,7 +8,7 @@ import io.quarkiverse.mcp.server.RequestId;
 
 public class CancellationImpl implements Cancellation {
 
-    static CancellationImpl from(ArgumentProviders argProviders) {
+    public static CancellationImpl from(ArgumentProviders argProviders) {
         return new CancellationImpl(argProviders.connection(), argProviders.requestId(), argProviders.cancellationRequests());
     }
 

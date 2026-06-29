@@ -369,7 +369,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 if (icon.theme() != null) {
                     i.put("theme", icon.theme().toString().toLowerCase());
                 }
-                if (!icon.sizes().isEmpty()) {
+                if (icon.sizes() != null && !icon.sizes().isEmpty()) {
                     i.put("sizes", icon.sizes());
                 }
                 icons.add(i);

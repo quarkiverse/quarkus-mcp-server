@@ -2,12 +2,15 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.mcpjava.server.completion.CompletionContext;
 
 import io.quarkiverse.mcp.server.CompleteContext;
 import io.vertx.core.json.JsonObject;
 
-class CompleteContextImpl implements CompleteContext {
+class CompleteContextImpl implements CompleteContext, CompletionContext {
 
     static CompleteContextImpl from(ArgumentProviders argumentProviders) {
         JsonObject message = argumentProviders.rawMessage();
@@ -35,6 +38,11 @@ class CompleteContextImpl implements CompleteContext {
     @Override
     public Map<String, String> arguments() {
         return arguments;
+    }
+
+    @Override
+    public Optional<String> getArgument(String name) {
+        return Optional.ofNullable(arguments.get(name));
     }
 
 }

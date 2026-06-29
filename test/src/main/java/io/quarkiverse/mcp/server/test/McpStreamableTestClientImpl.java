@@ -130,7 +130,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
         if (mcpSessionId == null) {
             throw new IllegalStateException("Mcp-Session-Id header not found: " + response.headers());
         }
-        LOG.infof("Mcp-Session-Id received: %s", mcpSessionId);
+        LOG.debugf("Mcp-Session-Id received: %s", mcpSessionId);
 
         JsonObject initResponse = new JsonObject(response.body());
         client.state.addResponse(initResponse);
