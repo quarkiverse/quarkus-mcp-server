@@ -81,6 +81,34 @@ public class AutoInitTest extends McpServerTest {
         }
     }
 
+    @Test
+    public void testNotificationsInitialized() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        URI endpoint = client.mcpEndpoint();
+        String sessionId = client.mcpSessionId();
+        client.terminateSession();
+        client.disconnect();
+
+        // notifications/initialized with an unknown session id should not result in 404
+        RestAssured.given()
+                .when()
+                .headers(StreamableHttpMcpMessageHandler.MCP_SESSION_ID_HEADER, sessionId,
+                        HttpHeaders.ACCEPT + "", "application/json, text/event-stream")
+                .body(notificationsInitialized().encode())
+                .post(endpoint)
+                .then()
+                .statusCode(202);
+
+        // Auto-initialized connection should have been removed
+        assertFalse(connectionManager.iterator().hasNext());
+    }
+
+    private JsonObject notificationsInitialized() {
+        return new JsonObject()
+                .put("jsonrpc", "2.0")
+                .put("method", "notifications/initialized");
+    }
+
     private JsonObject toolsCall(String name, int id) {
         return new JsonObject()
                 .put("jsonrpc", "2.0")
