@@ -27,7 +27,7 @@ include::./includes/attributes.adoc[]
 
 * [2.0.0] Stateless MCP protocol support (protocol version `2026-07-28`). The server supports both stateful and stateless clients simultaneously. Stateless clients use `server/discover` instead of the `initialize`/`initialized` handshake. See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 * [2.0.0] New `McpConnection.isTransient()` method to check if a connection is transient (per-request, not tracked on the server).
-* [2.0.0] New `McpProtocolVersion` enum as the public API for protocol version handling, with `isStateless()`, `from(String)`, and semantic constants (`FIRST_STATELESS`, `LATEST_STATEFUL`, `DEFAULT_ASSUMED`).
+* [2.0.0] New `McpProtocolVersion` class as the public API for protocol version handling, with `isStateless()`, `isKnown()`, `from(String)`, and semantic constants (`FIRST_STATELESS`, `LATEST_STATEFUL`, `DEFAULT_ASSUMED`).
 * [2.0.0] Tracing spans now include the `mcp.server.name` attribute, identifying the MCP server configuration that handled the request. (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
 * [2.0.0] New `McpTrafficListener` API for custom traffic message listeners. Unlike built-in traffic logging, custom listeners are always invoked regardless of the `traffic-logging.enabled` configuration. See xref:guides-development-tools.adoc#_custom_traffic_listeners[Custom Traffic Listeners]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/860[#860])
 * [2.0.0] `RawMessage#id()` and `RawMessage#method()` methods to obtain the JSON-RPC message id and method name respectively. (https://github.com/quarkiverse/quarkus-mcp-server/issues/860[#860])
@@ -38,6 +38,12 @@ include::./includes/attributes.adoc[]
 * [2.0.0] New `MrtrRequest` interface implemented by `Elicitation`, `Sampling`, and `Roots` — provides `isServerInitiatedRequestSupported()`, `inputResponses()`, `requestState()`, and `inputRequired()` builder.
 * [2.0.0] HTTP GET (SSE stream) and DELETE (session termination) requests from stateless clients now return `405 Method Not Allowed`.
 * [2.0.0] `subscriptions/listen` support for stateless clients. Replaces `resources/subscribe`/`resources/unsubscribe` for protocol version `2026-07-28`+. Clients specify a notification filter (tools, prompts, resources list changes, and resource URI subscriptions) and receive matching notifications on the subscription stream. Supported on all transports (HTTP, WebSocket, stdio). See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
+* [2.0.0] Initial support for https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations]. Both the Quarkus-specific and the standard Java MCP annotations are supported during the transitional period. (https://github.com/quarkiverse/quarkus-mcp-server/issues/823[#823])
+
+[[version-2-0-fixes]]
+=== Important Bug Fixes
+
+* [2.0.0] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
 
 [[version-1-13]]
 == 1.13.x
@@ -45,6 +51,9 @@ include::./includes/attributes.adoc[]
 [cols="1,1"]
 |===
 |Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.13.1[1.13.1]
+|July 2, 2026
 
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.13.0[1.13.0]
 |June 3, 2026
@@ -73,6 +82,11 @@ include::./includes/attributes.adoc[]
 * [1.13.0] Build-time validation of resource template methods now correctly considers the `name` attribute of `@ResourceTemplateArg` instead of only matching against method parameter names. (https://github.com/quarkiverse/quarkus-mcp-server/issues/806[#806])
 * [1.13.0] Custom Jackson serializers and deserializers are now honored for `@ToolArg` parameters of scalar and custom types, fixing incorrect schema generation and argument conversion. (https://github.com/quarkiverse/quarkus-mcp-server/issues/774[#774])
 * [1.13.0] Client-side 4xx HTTP errors in Streamable HTTP are now logged at WARN level instead of ERROR, avoiding false production alerts. (https://github.com/quarkiverse/quarkus-mcp-server/issues/760[#760])
+* [1.13.1] `ToolInputGuardrail.ToolInputContext#setArguments()` and `ToolOutputGuardrail.ToolOutputContext#setResponse()` no longer accept null, avoiding NPE for guarded no-argument tool calls. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/819[#819])
+* [1.13.1] The `quarkus.mcp-server.metrics.enabled` config property is now read at runtime. Since it defaults to `false`, applications that rely on MCP metrics without explicitly setting `quarkus.mcp-server.metrics.enabled=true` will stop collecting them. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/844[#844])
+* [1.13.1] Tracing spans now include the `mcp.server.name` attribute and respect per-server `tracingEnabled` configuration instead of only checking the default server. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
+* [1.13.1] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
+* [1.13.1] When `notifications/initialized` arrives with an unknown session ID and auto-initialization is enabled, the server now returns 202 instead of an unsupported method error. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/878[#878])
 
 [[version-1-12]]
 == 1.12.x
