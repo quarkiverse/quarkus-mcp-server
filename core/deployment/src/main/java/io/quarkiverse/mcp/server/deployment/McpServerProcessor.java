@@ -114,6 +114,7 @@ import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
+import io.quarkiverse.mcp.server.runtime.TrafficLogger;
 import io.quarkiverse.mcp.server.runtime.WrapBusinessErrorInterceptor;
 import io.quarkiverse.mcp.server.runtime.config.McpServerBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
@@ -213,6 +214,7 @@ class McpServerProcessor {
         AdditionalBeanBuildItem.Builder unremovable = AdditionalBeanBuildItem.builder().setUnremovable();
         unremovable.addBeanClass("io.quarkiverse.mcp.server.runtime.ConnectionManager");
         unremovable.addBeanClass(TrafficListeners.class);
+        unremovable.addBeanClass(TrafficLogger.class);
         unremovable.addBeanClass(ServerRequests.class);
         unremovable.addBeanClass(RequestIdGenerator.class);
         unremovable.addBeanClass(CancellationRequests.class);

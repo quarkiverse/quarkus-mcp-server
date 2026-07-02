@@ -425,6 +425,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case COMPLETION_COMPLETE -> complete(message, mcpRequest);
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
+                case NOTIFICATIONS_INITIALIZED -> alreadyInitialized(mcpRequest);
                 default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
@@ -584,6 +585,12 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         Object id = Messages.getId(message);
         LOG.debugf("Ping [id: %s]", id);
         return mcpRequest.sender().sendResult(id, new JsonObject());
+    }
+
+    private Future<Void> alreadyInitialized(MCP_REQUEST mcpRequest) {
+        LOG.debugf("Ignoring notifications/initialized on already initialized connection [%s]",
+                mcpRequest.connection().id());
+        return Future.succeededFuture();
     }
 
     private Future<Void> progress(JsonObject message, MCP_REQUEST mcpRequest) {
