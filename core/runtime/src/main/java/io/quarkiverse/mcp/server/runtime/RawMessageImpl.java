@@ -23,8 +23,9 @@ class RawMessageImpl implements RawMessage {
 
     @Override
     public JsonObject asJsonObject() {
-        // Return a copy since the JsonObject is mutable
-        return message.copy();
+        // Encode and re-parse instead of copy() because the JsonObject may contain
+        // non-Vert.x types (e.g. Jackson ObjectNode) that copy() cannot deep-copy
+        return new JsonObject(message.encode());
     }
 
     @Override
