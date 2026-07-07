@@ -13,10 +13,10 @@ public interface RawMessage {
     /**
      * Returns the message as a {@link JsonObject}.
      * <p>
-     * Note that the returned object is a deep copy of the original message and this method may be expensive for large
-     * messages.
+     * Note that the returned object is a new instance obtained by encoding the original message to a JSON string and
+     * parsing it back. This method may be expensive for large messages.
      *
-     * @return a copy of the message as a {@link JsonObject}
+     * @return a new {@link JsonObject} representing the message
      */
     JsonObject asJsonObject();
 
