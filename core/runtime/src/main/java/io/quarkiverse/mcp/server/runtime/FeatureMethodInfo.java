@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.InputSchemaGenerator;
@@ -21,6 +22,7 @@ public record FeatureMethodInfo(String name,
         String methodName,
         ToolManager.ToolAnnotations toolAnnotations,
         Content.Annotations resourceAnnotations,
+        CacheControl cacheControl,
         Set<String> serverNames,
         Class<?> outputSchemaFrom,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator,

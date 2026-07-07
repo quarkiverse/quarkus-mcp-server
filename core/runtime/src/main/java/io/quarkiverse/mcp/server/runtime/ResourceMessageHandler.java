@@ -2,13 +2,16 @@ package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -88,6 +91,7 @@ class ResourceMessageHandler extends MessageHandler {
             ResourceInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
+        putCacheControl(result, serverConfig.resources().ttlMs(), serverConfig.resources().cacheScope());
         return mcpRequest.sender().sendResult(id, result);
     }
 
@@ -115,7 +119,9 @@ class ResourceMessageHandler extends MessageHandler {
                     return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
                             "Resource not found: " + resourceUri);
                 } else {
-                    return mcpRequest.sender().sendResult(id, resourceResponse);
+                    ResourceResponse resolved = resolveResourceReadCacheControl(resourceResponse, resourceUri,
+                            mcpRequest.serverName());
+                    return mcpRequest.sender().sendResult(id, resolved);
                 }
             },
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
@@ -123,6 +129,28 @@ class ResourceMessageHandler extends MessageHandler {
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
+    }
+
+    // Precedence: ResourceResponse cache control > resource/template cache control
+    private ResourceResponse resolveResourceReadCacheControl(ResourceResponse response, String resourceUri,
+            String serverName) {
+        if (response.cacheControl() != null) {
+            return response;
+        }
+        Optional<CacheControl> cc = Optional.empty();
+        ResourceInfo info = manager.getResource(resourceUri, serverName);
+        if (info != null) {
+            cc = info.cacheControl();
+        } else {
+            ResourceTemplateInfo templateInfo = manager.resourceTemplateManager.findMatching(resourceUri, serverName);
+            if (templateInfo != null) {
+                cc = templateInfo.cacheControl();
+            }
+        }
+        if (cc.isPresent()) {
+            return new ResourceResponse(response.contents(), response._meta(), cc.get());
+        }
+        return response;
     }
 
 }

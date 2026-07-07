@@ -47,6 +47,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
             ResourceTemplateManager.ResourceTemplateInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
+        putCacheControl(result, serverConfig.resourceTemplates().ttlMs(), serverConfig.resourceTemplates().cacheScope());
         return mcpRequest.sender().sendResult(id, result);
     }
 

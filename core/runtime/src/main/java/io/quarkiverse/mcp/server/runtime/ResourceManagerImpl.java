@@ -24,6 +24,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.FilterContext;
@@ -321,6 +322,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public Optional<CacheControl> cacheControl() {
+            return Optional.ofNullable(metadata.info().cacheControl());
+        }
+
+        @Override
         public Map<MetaKey, Object> metadata() {
             return metadata.info().metadata().entrySet()
                     .stream()
@@ -361,13 +367,15 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private final String mimeType;
         private final int size;
         private final Content.Annotations annotations;
+        private final CacheControl cacheControl;
         private final Map<MetaKey, Object> metadata;
         private final Map<TransportHint, Object> transportHints;
 
         private ResourceDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceArguments, ResourceResponse> fun,
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, int size, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons,
+                String mimeType, int size, Content.Annotations annotations, CacheControl cacheControl,
+                Map<MetaKey, Object> metadata, List<Icon> icons,
                 Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
@@ -375,6 +383,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             this.mimeType = mimeType;
             this.size = size;
             this.annotations = annotations;
+            this.cacheControl = cacheControl;
             this.metadata = Map.copyOf(metadata);
             this.transportHints = Map.copyOf(transportHints);
         }
@@ -402,6 +411,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         @Override
         public Optional<Annotations> annotations() {
             return Optional.ofNullable(annotations);
+        }
+
+        @Override
+        public Optional<CacheControl> cacheControl() {
+            return Optional.ofNullable(cacheControl);
         }
 
         @Override
@@ -490,6 +504,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private String mimeType;
         private int size = -1;
         private Content.Annotations annotations;
+        private CacheControl cacheControl;
         private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceDefinitionImpl(String name) {
@@ -533,13 +548,19 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         }
 
         @Override
+        public ResourceDefinition setCacheControl(CacheControl cacheControl) {
+            this.cacheControl = cacheControl;
+            return this;
+        }
+
+        @Override
         public ResourceInfo register() {
             validate();
             if (uri == null) {
                 throw new IllegalStateException("uri must be set");
             }
             ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, uri, mimeType, size, annotations, metadata, icons, transportHints);
+                    runOnVirtualThread, uri, mimeType, size, annotations, cacheControl, metadata, icons, transportHints);
             List<FeatureKey> nameKeys = FeatureKey.list(name, serverNames);
             List<FeatureKey> uriKeys = FeatureKey.list(uri, serverNames);
             registrationLock.lock();

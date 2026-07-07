@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
@@ -30,7 +31,9 @@ public class StatelessTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClass(MyTools.class));
+            .withApplicationRoot(root -> root.addClass(MyTools.class))
+            .overrideConfigKey("quarkus.mcp.server.discover.ttl-ms", "45000")
+            .overrideConfigKey("quarkus.mcp.server.discover.cache-scope", "public");
 
     @Inject
     ConnectionManager connectionManager;
@@ -44,6 +47,9 @@ public class StatelessTest extends McpServerTest {
                     assertNotNull(initResult);
                     assertNotNull(initResult.capabilities());
                     assertNotNull(initResult.implementation());
+                    assertNotNull(initResult.cacheControl());
+                    assertEquals(45000, initResult.cacheControl().ttlMs());
+                    assertEquals(CacheScope.PUBLIC, initResult.cacheControl().cacheScope());
                 });
         assertTrue(client.isConnected());
         assertNull(client.mcpSessionId());

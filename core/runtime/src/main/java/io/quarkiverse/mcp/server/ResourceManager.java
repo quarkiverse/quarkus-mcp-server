@@ -78,6 +78,8 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
 
         Optional<Content.Annotations> annotations();
 
+        Optional<CacheControl> cacheControl();
+
         Map<MetaKey, Object> metadata();
 
         /**
@@ -136,6 +138,12 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
          * @return self
          */
         ResourceDefinition setMetadata(Map<MetaKey, Object> metadata);
+
+        /**
+         * @param cacheControl
+         * @return self
+         */
+        ResourceDefinition setCacheControl(CacheControl cacheControl);
 
         /**
          * @return the resource info

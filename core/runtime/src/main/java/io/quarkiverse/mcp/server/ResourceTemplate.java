@@ -8,6 +8,7 @@ import java.lang.annotation.Target;
 import java.util.List;
 
 import io.quarkiverse.mcp.server.Resource.Annotations;
+import io.quarkiverse.mcp.server.Resource.CacheControl;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -88,5 +89,13 @@ public @interface ResourceTemplate {
      * explicitly in order to be included in Resource metadata.
      */
     Annotations annotations() default @Annotations(audience = Role.USER, lastModified = "", priority = 0.5);
+
+    /**
+     * Optional caching hints for the {@code resources/read} result.
+     * <p>
+     * Note that the default value of this annotation member is ignored. In other words, the cache control has to be declared
+     * explicitly in order to be included in the {@code resources/read} response.
+     */
+    CacheControl cacheControl() default @CacheControl(ttlMs = -1, cacheScope = CacheScope.PUBLIC);
 
 }

@@ -1,9 +1,11 @@
 package io.quarkiverse.mcp.server.runtime;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.InputRequiredException;
 import io.quarkiverse.mcp.server.InputRequiredException.ElicitationInputRequest;
@@ -83,5 +85,14 @@ public abstract class MessageHandler {
                     .put("params", new JsonObject());
         }
         throw new IllegalArgumentException("Unknown input request entry type: " + entry.getClass());
+    }
+
+    static void putCacheControl(JsonObject result, long ttlMs, Optional<CacheScope> cacheScope) {
+        if (ttlMs >= 0) {
+            result.put("ttlMs", ttlMs);
+        }
+        if (cacheScope.isPresent()) {
+            result.put("cacheScope", cacheScope.get().getName());
+        }
     }
 }

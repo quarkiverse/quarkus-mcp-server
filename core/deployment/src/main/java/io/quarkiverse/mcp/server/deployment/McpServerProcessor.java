@@ -49,6 +49,8 @@ import org.mcpjava.server.spi.McpServerSPI;
 
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CacheControl;
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
@@ -352,6 +354,7 @@ class McpServerProcessor {
                     org.jboss.jandex.Type inputSchemaGenerator = null;
                     ToolManager.ToolAnnotations toolAnnotations = null;
                     Content.Annotations resourceAnnotations = null;
+                    CacheControl cacheControl = null;
                     Map<String, String> metadata = new HashMap<>();
 
                     if (feature == RESOURCE) {
@@ -365,6 +368,7 @@ class McpServerProcessor {
                         if (sizeValue != null)
                             size = sizeValue.asInt();
                         resourceAnnotations = parseResourceAnnotations(featureAnnotation);
+                        cacheControl = parseCacheControl(featureAnnotation);
                     } else if (feature == RESOURCE_TEMPLATE) {
                         AnnotationValue uriValue = featureAnnotation.value("uriTemplate");
                         if (uriValue != null)
@@ -373,6 +377,7 @@ class McpServerProcessor {
                         if (mimeTypeValue != null)
                             mimeType = mimeTypeValue.asString();
                         resourceAnnotations = parseResourceAnnotations(featureAnnotation);
+                        cacheControl = parseCacheControl(featureAnnotation);
                     } else if (feature == TOOL) {
                         // Tool annotations
                         AnnotationValue annotations = featureAnnotation.value("annotations");
@@ -525,6 +530,7 @@ class McpServerProcessor {
                             title, description, uri, mimeType, size, feature, toolAnnotations,
                             servers, structuredContent,
                             outputSchemaFrom, outputSchemaGenerator, inputSchemaGenerator, resourceAnnotations,
+                            cacheControl,
                             metadata,
                             inputGuardrails, outputGuardrails,
                             FeatureMethods.executionModel(method, transformedAnnotations),
@@ -781,6 +787,22 @@ class McpServerProcessor {
             AnnotationValue priorityValue = annotationsAnnotation.value("priority");
             return new Content.Annotations(audience, lastModifiedValue != null ? lastModifiedValue.asString() : null,
                     priorityValue != null ? priorityValue.asDouble() : null);
+        }
+        return null;
+    }
+
+    private CacheControl parseCacheControl(AnnotationInstance featureAnnotation) {
+        AnnotationValue cacheControlValue = featureAnnotation.value("cacheControl");
+        if (cacheControlValue != null) {
+            AnnotationInstance cc = cacheControlValue.asNested();
+            AnnotationValue ttlMsValue = cc.value("ttlMs");
+            long ttlMs = ttlMsValue != null ? ttlMsValue.asLong() : -1;
+            if (ttlMs < 0) {
+                return null;
+            }
+            AnnotationValue cacheScopeValue = cc.value("cacheScope");
+            CacheScope scope = cacheScopeValue != null ? CacheScope.valueOf(cacheScopeValue.asEnum()) : CacheScope.PUBLIC;
+            return new CacheControl(ttlMs, scope);
         }
         return null;
     }
@@ -1398,6 +1420,18 @@ class McpServerProcessor {
                     resourceAnnotations = bc.localVar("resourceAnnotations", Const.ofNull(Content.Annotations.class));
                 }
 
+                LocalVar cacheControl;
+                if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
+                        && featureMethod.getCacheControl() != null) {
+                    CacheControl cacheControlVal = featureMethod.getCacheControl();
+                    cacheControl = bc.localVar("cacheControl", bc.new_(
+                            ConstructorDesc.of(CacheControl.class, long.class, CacheScope.class),
+                            Const.of(cacheControlVal.ttlMs()),
+                            Const.of(cacheControlVal.cacheScope())));
+                } else {
+                    cacheControl = bc.localVar("cacheControl", Const.ofNull(CacheControl.class));
+                }
+
                 LocalVar meta;
                 Map<String, String> metaEntries = featureMethod.getMetadata();
                 if (metaEntries.isEmpty()) {
@@ -1458,6 +1492,7 @@ class McpServerProcessor {
                         Const.of(featureMethod.getMethod().name()),
                         toolAnnotations,
                         resourceAnnotations,
+                        cacheControl,
                         serverNames,
                         featureMethod.getOutputSchemaFrom() == null ? Const.ofNull(Class.class)
                                 : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getOutputSchemaFrom().name())),

@@ -9,15 +9,21 @@ import java.util.NoSuchElementException;
  *
  * @param contents text and/or binary data (must not be {@code null})
  * @param _meta the optional metadata
+ * @param cacheControl the optional cache control hints; if {@code null} no caching fields are included in the response
  */
-public record ResourceResponse(List<ResourceContents> contents, Map<MetaKey, Object> _meta) {
+public record ResourceResponse(List<ResourceContents> contents, Map<MetaKey, Object> _meta,
+        CacheControl cacheControl) {
 
     public ResourceResponse(ResourceContents contents) {
-        this(List.of(contents), null);
+        this(List.of(contents), null, null);
     }
 
     public ResourceResponse(List<ResourceContents> contents) {
-        this(contents, null);
+        this(contents, null, null);
+    }
+
+    public ResourceResponse(List<ResourceContents> contents, Map<MetaKey, Object> _meta) {
+        this(contents, _meta, null);
     }
 
     public ResourceResponse {

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
@@ -1618,7 +1619,8 @@ public class McpAssured {
     public record InitResult(String protocolVersion,
             // Keep serverName, serverTitle and serverVersion for backwards compatibility
             String serverName, String serverTitle, String serverVersion,
-            List<ServerCapability> capabilities, String instructions, Implementation implementation, JsonObject meta) {
+            List<ServerCapability> capabilities, String instructions, Implementation implementation, JsonObject meta,
+            CacheControl cacheControl) {
 
     }
 
@@ -1626,7 +1628,7 @@ public class McpAssured {
 
     }
 
-    public record ToolsPage(List<ToolInfo> tools, String nextCursor) {
+    public record ToolsPage(List<ToolInfo> tools, String nextCursor, CacheControl cacheControl) {
 
         public int size() {
             return tools().size();
@@ -1638,7 +1640,7 @@ public class McpAssured {
 
     }
 
-    public record PromptsPage(List<PromptInfo> prompts, String nextCursor) {
+    public record PromptsPage(List<PromptInfo> prompts, String nextCursor, CacheControl cacheControl) {
 
         public int size() {
             return prompts().size();
@@ -1650,7 +1652,7 @@ public class McpAssured {
 
     }
 
-    public record ResourcesPage(List<ResourceInfo> resources, String nextCursor) {
+    public record ResourcesPage(List<ResourceInfo> resources, String nextCursor, CacheControl cacheControl) {
 
         public int size() {
             return resources().size();
@@ -1661,7 +1663,8 @@ public class McpAssured {
         }
     }
 
-    public record ResourcesTemplatesPage(List<ResourceTemplateInfo> templates, String nextCursor) {
+    public record ResourcesTemplatesPage(List<ResourceTemplateInfo> templates, String nextCursor,
+            CacheControl cacheControl) {
 
         public int size() {
             return templates().size();

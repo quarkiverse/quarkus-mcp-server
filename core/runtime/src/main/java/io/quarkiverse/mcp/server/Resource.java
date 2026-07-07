@@ -89,6 +89,14 @@ public @interface Resource {
      */
     Annotations annotations() default @Annotations(audience = Role.USER, lastModified = "", priority = 0.5);
 
+    /**
+     * Optional caching hints for the {@code resources/read} result.
+     * <p>
+     * Note that the default value of this annotation member is ignored. In other words, the cache control has to be declared
+     * explicitly in order to be included in the {@code resources/read} response.
+     */
+    CacheControl cacheControl() default @CacheControl(ttlMs = -1, cacheScope = CacheScope.PUBLIC);
+
     @Retention(RUNTIME)
     @Target(ElementType.ANNOTATION_TYPE)
     public @interface Annotations {
@@ -98,6 +106,22 @@ public @interface Resource {
         String lastModified() default "";
 
         double priority();
+
+    }
+
+    @Retention(RUNTIME)
+    @Target(ElementType.ANNOTATION_TYPE)
+    public @interface CacheControl {
+
+        /**
+         * Time-to-live in milliseconds. A value of {@code 0} means immediately stale. A negative value means unset.
+         */
+        long ttlMs();
+
+        /**
+         * The cache scope.
+         */
+        CacheScope cacheScope() default CacheScope.PUBLIC;
 
     }
 

@@ -25,6 +25,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.FilterContext;
@@ -360,6 +361,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public Optional<CacheControl> cacheControl() {
+            return Optional.ofNullable(metadata.info().cacheControl());
+        }
+
+        @Override
         public Map<MetaKey, Object> metadata() {
             return metadata.info().metadata().entrySet()
                     .stream()
@@ -395,19 +401,22 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private final String uriTemplate;
         private final String mimeType;
         private final Content.Annotations annotations;
+        private final CacheControl cacheControl;
         private final Map<MetaKey, Object> metadata;
         private final Map<TransportHint, Object> transportHints;
 
         private ResourceTemplateDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ResourceTemplateArguments, ResourceResponse> fun,
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
-                String mimeType, Content.Annotations annotations, Map<MetaKey, Object> metadata, List<Icon> icons,
+                String mimeType, Content.Annotations annotations, CacheControl cacheControl, Map<MetaKey, Object> metadata,
+                List<Icon> icons,
                 Map<TransportHint, Object> transportHints) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
             this.annotations = annotations;
+            this.cacheControl = cacheControl;
             this.metadata = Map.copyOf(metadata);
             this.transportHints = Map.copyOf(transportHints);
         }
@@ -430,6 +439,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         @Override
         public Optional<Annotations> annotations() {
             return Optional.ofNullable(annotations);
+        }
+
+        @Override
+        public Optional<CacheControl> cacheControl() {
+            return Optional.ofNullable(cacheControl);
         }
 
         @Override
@@ -521,6 +535,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private String uriTemplate;
         private String mimeType;
         private Annotations annotations;
+        private CacheControl cacheControl;
         private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceTemplateDefinitionImpl(String name) {
@@ -558,13 +573,20 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         }
 
         @Override
+        public ResourceTemplateDefinition setCacheControl(CacheControl cacheControl) {
+            this.cacheControl = cacheControl;
+            return this;
+        }
+
+        @Override
         public ResourceTemplateInfo register() {
             validate();
             if (uriTemplate == null) {
                 throw new IllegalStateException("uriTemplate must be set");
             }
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverNames,
-                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, metadata, icons, transportHints);
+                    fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, cacheControl, metadata, icons,
+                    transportHints);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata templateMetadata = new ResourceTemplateMetadata(variableMatcher, ret);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
