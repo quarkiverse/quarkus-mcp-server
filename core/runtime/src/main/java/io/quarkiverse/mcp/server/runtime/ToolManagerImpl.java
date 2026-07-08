@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
@@ -90,6 +91,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     final Instance<ToolOutputGuardrail> outputGuardrails;
     final Instance<IconsProvider> iconsProviders;
 
+    final Event<ToolAdded> toolAddedEvent;
+    final Event<ToolRemoved> toolRemovedEvent;
+
     ToolManagerImpl(McpMetadata metadata,
             Vertx vertx,
             ObjectMapper mapper,
@@ -106,7 +110,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Instance<InputSchemaGenerator<?>> inputSchemaGenerator,
             Instance<OutputSchemaGenerator> outputSchemaGenerator,
             McpServersBuildTimeConfig buildTimeConfig,
-            McpServersRuntimeConfig config) {
+            McpServersRuntimeConfig config,
+            Event<ToolAdded> toolAddedEvent,
+            Event<ToolRemoved> toolRemovedEvent) {
         super(vertx, mapper, connectionManager, currentIdentityAssociation, serverRequests, cancellationRequests,
                 config,
                 metadata);
@@ -122,6 +128,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.filters = filters;
         this.buildTimeConfig = buildTimeConfig;
         this.config = config;
+        this.toolAddedEvent = toolAddedEvent;
+        this.toolRemovedEvent = toolRemovedEvent;
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             ToolMethod toolMethod = new ToolMethod(f, iconsProviders);
             for (String server : f.info().serverNames()) {
@@ -177,7 +185,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             }
             return value;
         });
-        return removed.get();
+        ToolInfo removedTool = removed.get();
+        if (removedTool != null) {
+            toolRemovedEvent.fire(new ToolRemoved(removedTool));
+        }
+        return removedTool;
     }
 
     @Override
@@ -190,10 +202,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             }
             return false;
         });
-        if (removed.get() != null) {
+        ToolInfo removedTool = removed.get();
+        if (removedTool != null) {
             notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+            toolRemovedEvent.fire(new ToolRemoved(removedTool));
         }
-        return removed.get();
+        return removedTool;
     }
 
     @SuppressWarnings("unchecked")
@@ -678,6 +692,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 registrationLock.unlock();
             }
             notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+            toolAddedEvent.fire(new ToolAdded(ret));
             return ret;
         }
 
@@ -842,6 +857,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
     @SuppressWarnings("unchecked")
     private static <T> T cast(Object obj) {
         return (T) obj;
+    }
+
+    public record ToolAdded(ToolInfo tool) {
+    }
+
+    public record ToolRemoved(ToolInfo tool) {
     }
 
 }

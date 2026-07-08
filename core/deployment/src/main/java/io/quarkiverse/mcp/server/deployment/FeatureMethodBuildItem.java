@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,12 @@ import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;
 
-final class FeatureMethodBuildItem extends MultiBuildItem {
+/**
+ * Represents a CDI bean method annotated with one of the MCP feature annotations, such as
+ * {@link io.quarkiverse.mcp.server.Tool @Tool}, {@link io.quarkiverse.mcp.server.Prompt @Prompt},
+ * {@link io.quarkiverse.mcp.server.Resource @Resource}, etc.
+ */
+public final class FeatureMethodBuildItem extends MultiBuildItem {
 
     static final Comparator<FeatureMethodBuildItem> NAME_COMPARATOR = Comparator.comparing(fm -> fm.getName());
 
@@ -100,123 +106,123 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.iconsProvider = iconsProvider;
     }
 
-    BeanInfo getBean() {
+    public BeanInfo getBean() {
         return bean;
     }
 
-    MethodInfo getMethod() {
+    public MethodInfo getMethod() {
         return method;
     }
 
-    InvokerInfo getInvoker() {
+    public InvokerInfo getInvoker() {
         return invoker;
     }
 
-    String getName() {
+    public String getName() {
         return name;
     }
 
-    String getTitle() {
+    public String getTitle() {
         return title;
     }
 
-    String getDescription() {
+    public String getDescription() {
         return description;
     }
 
-    String getUri() {
+    public String getUri() {
         return uri;
     }
 
-    String getMimeType() {
+    public String getMimeType() {
         return mimeType;
     }
 
-    int getSize() {
+    public int getSize() {
         return size;
     }
 
-    Feature getFeature() {
+    public Feature getFeature() {
         return feature;
     }
 
-    ToolManager.ToolAnnotations getToolAnnotations() {
+    public ToolManager.ToolAnnotations getToolAnnotations() {
         return toolAnnotations;
     }
 
-    Set<String> getServers() {
-        return servers;
+    public Set<String> getServers() {
+        return Collections.unmodifiableSet(servers);
     }
 
-    boolean isStructuredContent() {
+    public boolean isStructuredContent() {
         return structuredContent;
     }
 
-    Type getOutputSchemaFrom() {
+    public Type getOutputSchemaFrom() {
         return outputSchemaFrom;
     }
 
-    Type getOutputSchemaGenerator() {
+    public Type getOutputSchemaGenerator() {
         return outputSchemaGenerator;
     }
 
-    Type getInputSchemaGenerator() {
+    public Type getInputSchemaGenerator() {
         return inputSchemaGenerator;
     }
 
-    Annotations getResourceAnnotations() {
+    public Annotations getResourceAnnotations() {
         return resourceAnnotations;
     }
 
-    CacheControl getCacheControl() {
+    public CacheControl getCacheControl() {
         return cacheControl;
     }
 
-    Map<String, String> getMetadata() {
-        return metadata;
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
     }
 
-    List<DotName> getInputGuardrails() {
-        return inputGuardrails;
+    public List<DotName> getInputGuardrails() {
+        return Collections.unmodifiableList(inputGuardrails);
     }
 
-    List<DotName> getOutputGuardrails() {
-        return outputGuardrails;
+    public List<DotName> getOutputGuardrails() {
+        return Collections.unmodifiableList(outputGuardrails);
     }
 
-    ExecutionModel getExecutionModel() {
+    public ExecutionModel getExecutionModel() {
         return executionModel;
     }
 
-    DotName getIconsProvider() {
+    public DotName getIconsProvider() {
         return iconsProvider;
     }
 
-    boolean isTool() {
+    public boolean isTool() {
         return feature == Feature.TOOL;
     }
 
-    boolean isPrompt() {
+    public boolean isPrompt() {
         return feature == Feature.PROMPT;
     }
 
-    boolean isPromptComplete() {
+    public boolean isPromptComplete() {
         return feature == Feature.PROMPT_COMPLETE;
     }
 
-    boolean isResource() {
+    public boolean isResource() {
         return feature == Feature.RESOURCE;
     }
 
-    boolean isResourceTemplate() {
+    public boolean isResourceTemplate() {
         return feature == Feature.RESOURCE_TEMPLATE;
     }
 
-    boolean isResourceTemplateComplete() {
+    public boolean isResourceTemplateComplete() {
         return feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
     }
 
-    boolean isNotification() {
+    public boolean isNotification() {
         return feature == Feature.NOTIFICATION;
     }
 

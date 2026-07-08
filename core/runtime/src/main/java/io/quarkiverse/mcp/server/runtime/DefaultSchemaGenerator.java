@@ -89,7 +89,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
         }
     }
 
-    record InputSchemaImpl(JsonObject value) implements InputSchema {
+    public record InputSchemaImpl(JsonObject value) implements InputSchema {
 
         @Override
         public String asJson() {
