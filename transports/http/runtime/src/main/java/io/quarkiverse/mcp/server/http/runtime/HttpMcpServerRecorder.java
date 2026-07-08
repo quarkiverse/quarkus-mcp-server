@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -19,6 +20,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -282,6 +284,17 @@ public class HttpMcpServerRecorder {
             @Override
             public McpServerEndpoints apply(SyntheticCreationalContext<McpServerEndpoints> t) {
                 return new McpServerEndpoints(endpoints);
+            }
+        };
+    }
+
+    public Function<SyntheticCreationalContext<McpParamHeaderMetadata>, McpParamHeaderMetadata> createMcpParamHeaderMetadata(
+            Map<FeatureKey, Map<String, String>> toolHeaders) {
+        return new Function<SyntheticCreationalContext<McpParamHeaderMetadata>, McpParamHeaderMetadata>() {
+
+            @Override
+            public McpParamHeaderMetadata apply(SyntheticCreationalContext<McpParamHeaderMetadata> t) {
+                return new McpParamHeaderMetadata(toolHeaders);
             }
         };
     }

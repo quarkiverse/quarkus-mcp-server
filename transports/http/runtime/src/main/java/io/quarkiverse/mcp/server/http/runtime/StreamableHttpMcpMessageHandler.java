@@ -8,6 +8,7 @@ import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.SAMPLIN
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -101,6 +102,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     public static final String MCP_PROTOCOL_VERSION_HEADER = "Mcp-Protocol-Version";
     public static final String MCP_METHOD_HEADER = "Mcp-Method";
     public static final String MCP_NAME_HEADER = "Mcp-Name";
+    public static final String MCP_PARAM_HEADER_PREFIX = "Mcp-Param-";
     public static final String AUTO_INIT_IMPL_NAME = "quarkus.mcp.http.streamable.dummy";
     private static final Implementation AUTO_INIT_IMPLEMENTATION = new Implementation(AUTO_INIT_IMPL_NAME, "1", null);
 
@@ -108,6 +110,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     private final CurrentIdentityAssociation currentIdentityAssociation;
     private final McpHttpServersRuntimeConfig httpConfig;
     private final TrafficListeners trafficListeners;
+    private final McpParamHeaderMetadata headerMetadata;
 
     // Precomputed maps for eager SSE init (lazySseInit=false), null when lazy
     private final Map<FeatureKey, Boolean> toolsForceSse;
@@ -137,7 +140,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             Instance<McpMetrics> metrics,
             Instance<McpTracing> tracing,
             Instance<McpRequestValidator> mcpRequestValidator,
-            TrafficListeners trafficListeners) {
+            TrafficListeners trafficListeners,
+            McpParamHeaderMetadata headerMetadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests,
                 metadata,
@@ -148,6 +152,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.httpConfig = runtimeConfig;
         this.trafficListeners = trafficListeners;
+        this.headerMetadata = headerMetadata;
         checkCorsConfig(config);
 
         // Precompute forceSse maps only when eager SSE init is configured
@@ -226,7 +231,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             JsonObject message, String mcpProtocolVersion, JsonObject meta) {
 
         // Validate required headers for stateless clients
-        if (!validateStatelessHeaders(ctx, message, mcpProtocolVersion, meta)) {
+        if (!validateStatelessHeaders(ctx, serverName, message, mcpProtocolVersion, meta)) {
             return;
         }
 
@@ -279,8 +284,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
     }
 
-    private boolean validateStatelessHeaders(RoutingContext ctx, JsonObject message, String mcpProtocolVersion,
-            JsonObject meta) {
+    private boolean validateStatelessHeaders(RoutingContext ctx, String serverName, JsonObject message,
+            String mcpProtocolVersion, JsonObject meta) {
         // Validate Mcp-Method header
         String mcpMethodHeader = ctx.request().getHeader(MCP_METHOD_HEADER);
         String bodyMethod = message.getString("method");
@@ -302,13 +307,19 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
 
         // Validate Mcp-Name header for methods that require it
-        if ("tools/call".equals(bodyMethod) || "prompts/get".equals(bodyMethod)) {
+        McpMethod mcpMethod = McpMethod.from(bodyMethod);
+        if (McpMethod.TOOLS_CALL == mcpMethod || McpMethod.PROMPTS_GET == mcpMethod) {
             JsonObject params = Messages.getParams(message);
             String bodyName = params != null ? params.getString("name") : null;
             if (!validateMcpNameHeader(ctx, bodyName)) {
                 return false;
             }
-        } else if ("resources/read".equals(bodyMethod)) {
+            if (McpMethod.TOOLS_CALL == mcpMethod && bodyName != null) {
+                if (!validateMcpParamHeaders(ctx, serverName, bodyName, params)) {
+                    return false;
+                }
+            }
+        } else if (McpMethod.RESOURCES_READ == mcpMethod) {
             JsonObject params = Messages.getParams(message);
             String bodyUri = params != null ? params.getString("uri") : null;
             if (!validateMcpNameHeader(ctx, bodyUri)) {
@@ -330,6 +341,56 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             }
         }
         return true;
+    }
+
+    private boolean validateMcpParamHeaders(RoutingContext ctx, String serverName, String toolName, JsonObject params) {
+        if (headerMetadata.isEmpty()) {
+            return true;
+        }
+        Map<String, String> headers = headerMetadata.getHeaders(new FeatureKey(toolName, serverName));
+        if (headers == null || headers.isEmpty()) {
+            return true;
+        }
+        JsonObject arguments = params.getJsonObject("arguments");
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            String argName = entry.getKey();
+            String headerName = MCP_PARAM_HEADER_PREFIX + entry.getValue();
+            String headerValue = ctx.request().getHeader(headerName);
+            Object bodyValue = arguments != null ? arguments.getValue(argName) : null;
+
+            if (bodyValue != null && headerValue == null) {
+                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                ctx.response().setStatusCode(400);
+                ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                        "Missing required header: " + headerName).toBuffer());
+                return false;
+            }
+            if (bodyValue != null && headerValue != null) {
+                String decodedHeaderValue = decodeHeaderValue(headerValue);
+                String bodyValueStr = String.valueOf(bodyValue);
+                if (!decodedHeaderValue.equals(bodyValueStr)) {
+                    ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+                    ctx.response().setStatusCode(400);
+                    ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                            "Header mismatch: " + headerName + " header value '" + decodedHeaderValue
+                                    + "' does not match body value '" + bodyValueStr + "'")
+                            .toBuffer());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static final String BASE64_PREFIX = "=?base64?";
+    private static final String BASE64_SUFFIX = "?=";
+
+    static String decodeHeaderValue(String value) {
+        if (value.startsWith(BASE64_PREFIX) && value.endsWith(BASE64_SUFFIX)) {
+            String encoded = value.substring(BASE64_PREFIX.length(), value.length() - BASE64_SUFFIX.length());
+            return new String(Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return value;
     }
 
     private boolean validateMcpNameHeader(RoutingContext ctx, String expectedValue) {
