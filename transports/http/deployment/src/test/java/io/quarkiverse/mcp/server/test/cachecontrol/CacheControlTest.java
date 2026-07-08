@@ -115,6 +115,19 @@ public class CacheControlTest extends McpServerTest {
     }
 
     @Test
+    public void testResourceTemplateReadDefaultScope() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                // templateDefaultScope has @CacheControl(ttlMs = 7000) with no explicit cacheScope - defaults to PUBLIC
+                .resourcesRead("file:///cc/template_default_scope/1", r -> {
+                    assertEquals("template-default-scope-1", r.contents().get(0).asText().text());
+                    assertEquals(7000L, r.cacheControl().ttlMs());
+                    assertEquals(CacheScope.PUBLIC, r.cacheControl().cacheScope());
+                })
+                .thenAssertResults();
+    }
+
+    @Test
     public void testResourceTemplateReadCacheControl() {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()

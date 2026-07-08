@@ -402,8 +402,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         try {
             boolean containsRequest = scan(mcpRequest);
             handle(mcpRequest).onComplete(ar -> {
-                completeResponse(ctx, mcpRequest, containsRequest, ar.succeeded());
                 removeAutoInitConnection(connection);
+                completeResponse(ctx, mcpRequest, containsRequest, ar.succeeded());
             });
         } catch (Exception e) {
             removeAutoInitConnection(connection);
@@ -516,7 +516,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
     }
 
     private void removeAutoInitConnection(StreamableHttpMcpConnection connection) {
-        if (connection.initialRequest() != null
+        if (!connection.isTransient()
+                && connection.initialRequest() != null
                 && connection.initialRequest().autoInitialized()
                 && connectionManager.remove(connection.id())) {
             LOG.debugf("Auto-initialized session removed [%s]", connection.id());
