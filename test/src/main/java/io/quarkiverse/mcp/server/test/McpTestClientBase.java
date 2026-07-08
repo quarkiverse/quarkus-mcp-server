@@ -1283,7 +1283,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         @Override
         public void doAssert(JsonObject response) {
             JsonObject error = assertErrorResponse(response, response);
-            errorMessageAssert.accept(new McpError(error.getInteger("code"), error.getString("message")));
+            errorMessageAssert
+                    .accept(new McpError(error.getInteger("code"), error.getString("message"), error.getJsonObject("data")));
         }
 
     }

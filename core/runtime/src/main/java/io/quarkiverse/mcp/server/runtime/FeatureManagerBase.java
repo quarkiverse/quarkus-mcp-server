@@ -47,6 +47,7 @@ import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Meta;
 import io.quarkiverse.mcp.server.Progress;
@@ -141,7 +142,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 }
             });
         }
-        throw notFound(id);
+        throw notFound(id, executionContext.mcpRequest().protocolVersion());
     }
 
     protected boolean transformsExecutionFailure() {
@@ -331,7 +332,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected abstract FeatureInvoker<RESULT> getInvoker(String id, McpRequest mcpRequest, JsonObject message);
 
-    protected abstract McpException notFound(String id);
+    protected abstract McpException notFound(String id, McpProtocolVersion version);
 
     protected Future<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
         Promise<RESULT> ret = Promise.promise();

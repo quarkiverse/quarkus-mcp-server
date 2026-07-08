@@ -35,6 +35,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder.ResourceContentsData;
@@ -240,8 +241,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     }
 
     @Override
-    protected McpException notFound(String id) {
-        return new McpException("Resource not found: " + id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
+    protected McpException notFound(String id, McpProtocolVersion version) {
+        return new McpException("Resource not found: " + id,
+                version.isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS : JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
     }
 
     @Override
@@ -274,7 +276,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
     protected Object wrapResult(FeatureInvoker<?> invoker, Object ret, FeatureMetadata<?> metadata,
             ArgumentProviders argProviders) {
         if (ret == null) {
-            throw notFound(argProviders.uri());
+            throw notFound(argProviders.uri(), argProviders.connection().initialRequest().protocolVersion());
         }
         if (invoker instanceof ResourceTemplateMethod m
                 && metadata.resultMapper() instanceof EncoderMapper) {

@@ -34,6 +34,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.ResourceContentsEncoder.ResourceContentsData;
@@ -124,7 +125,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     void subscribe(String uri, McpRequest mcpRequest) {
         ResourceInfo info = getResource(uri, mcpRequest.serverName());
         if (info == null) {
-            throw notFound(uri);
+            throw notFound(uri, mcpRequest.protocolVersion());
         }
         List<String> ids = new CopyOnWriteArrayList<>();
         ids.add(mcpRequest.connection().id());
@@ -135,7 +136,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     void unsubscribe(String uri, McpRequest mcpRequest) {
         ResourceInfo info = getResource(uri);
         if (info == null || !matchesServer(info, mcpRequest)) {
-            throw notFound(uri);
+            throw notFound(uri, mcpRequest.protocolVersion());
         }
         unsubscribe(uri, mcpRequest.connection().id());
     }
@@ -255,8 +256,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     @Override
-    protected McpException notFound(String id) {
-        return new McpException("Resource not found: " + id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
+    protected McpException notFound(String id, McpProtocolVersion version) {
+        return new McpException("Resource not found: " + id,
+                version.isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS : JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
     }
 
     private boolean test(ResourceInfo resource, FilterContext filterContext) {
