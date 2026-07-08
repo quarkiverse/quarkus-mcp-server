@@ -14,6 +14,8 @@ public class McpException extends RuntimeException {
 
     private final int jsonRpcErrorCode;
 
+    private final Object data;
+
     /**
      *
      * @param message
@@ -23,6 +25,7 @@ public class McpException extends RuntimeException {
     public McpException(String message, Throwable cause, int jsonRpcErrorCode) {
         super(message, cause);
         this.jsonRpcErrorCode = jsonRpcErrorCode;
+        this.data = null;
     }
 
     /**
@@ -33,6 +36,19 @@ public class McpException extends RuntimeException {
     public McpException(String message, int jsonRpcError) {
         super(message);
         this.jsonRpcErrorCode = jsonRpcError;
+        this.data = null;
+    }
+
+    /**
+     *
+     * @param message
+     * @param jsonRpcErrorCode
+     * @param data the optional structured data to include in the JSON-RPC error response
+     */
+    public McpException(String message, int jsonRpcErrorCode, Object data) {
+        super(message);
+        this.jsonRpcErrorCode = jsonRpcErrorCode;
+        this.data = data;
     }
 
     /**
@@ -42,6 +58,14 @@ public class McpException extends RuntimeException {
      */
     public int getJsonRpcErrorCode() {
         return jsonRpcErrorCode;
+    }
+
+    /**
+     *
+     * @return the optional structured data to include in the JSON-RPC error response, or {@code null}
+     */
+    public Object getData() {
+        return data;
     }
 
 }

@@ -116,7 +116,9 @@ class ResourceMessageHandler extends MessageHandler {
                     new FeatureExecutionContext(message, mcpRequest, argProviders));
             return fu.compose(resourceResponse -> {
                 if (resourceResponse == null) {
-                    return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
+                    return mcpRequest.sender().sendError(id,
+                            mcpRequest.protocolVersion().isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS
+                                    : JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
                             "Resource not found: " + resourceUri);
                 } else {
                     ResourceResponse resolved = resolveResourceReadCacheControl(resourceResponse, resourceUri,

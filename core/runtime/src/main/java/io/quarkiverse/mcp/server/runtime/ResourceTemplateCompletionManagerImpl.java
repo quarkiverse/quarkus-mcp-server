@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.ResourceTemplateCompletionManager;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.ResourceTemplateMetadata;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -55,7 +56,7 @@ public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase
     }
 
     @Override
-    protected McpException notFound(String id) {
+    protected McpException notFound(String id, McpProtocolVersion version) {
         return new McpException("Resource template completion does not exist: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 

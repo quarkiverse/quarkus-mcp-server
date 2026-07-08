@@ -1711,8 +1711,11 @@ public class McpAssured {
     public record HttpResponse(int statusCode, MultiMap headers, String body) {
     }
 
-    public record McpError(int code, String message) {
+    public record McpError(int code, String message, JsonObject data) {
 
+        public McpError(int code, String message) {
+            this(code, message, null);
+        }
     }
 
     public record ConnectFailureResponse(int statusCode, Map<String, List<String>> headers) {

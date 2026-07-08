@@ -28,6 +28,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.PromptFilter;
 import io.quarkiverse.mcp.server.PromptManager;
@@ -145,7 +146,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
     }
 
     @Override
-    protected McpException notFound(String id) {
+    protected McpException notFound(String id, McpProtocolVersion version) {
         return new McpException("Invalid prompt name: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 

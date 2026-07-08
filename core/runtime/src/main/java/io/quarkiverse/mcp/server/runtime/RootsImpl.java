@@ -3,13 +3,16 @@ package io.quarkiverse.mcp.server.runtime;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.InputResponses;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.Root;
 import io.quarkiverse.mcp.server.Roots;
@@ -83,6 +86,12 @@ class RootsImpl implements Roots {
             throw McpMessageHandler.clientNotInitialized(connection);
         }
         if (!isSupported()) {
+            if (connection.initialRequest().protocolVersion().isStateless()) {
+                throw new McpException(
+                        "Client does not support the required `roots` capability",
+                        JsonRpcErrorCodes.MISSING_REQUIRED_CLIENT_CAPABILITY,
+                        Map.of("requiredCapabilities", Map.of("roots", Map.of())));
+            }
             throw new IllegalStateException(
                     "Client " + connection.initialRequest().implementation() + " does not support the `roots` capability");
         }

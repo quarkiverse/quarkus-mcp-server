@@ -56,6 +56,10 @@ public abstract class MessageHandler {
                     Messages.newError(requestId, urlElicitation.getJsonRpcErrorCode(), urlElicitation.getMessage(), data));
         } else if (cause instanceof McpException mcp) {
             mcpRequest.setTracingErrorResponse(false, mcp.getJsonRpcErrorCode(), mcp.getMessage());
+            if (mcp.getData() != null) {
+                return sender.send(
+                        Messages.newError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage(), mcp.getData()));
+            }
             return sender.sendError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage());
         } else if (cause instanceof Cancellation.OperationCancellationException
                 || cause instanceof org.mcpjava.server.Cancellation.OperationCancelledException) {

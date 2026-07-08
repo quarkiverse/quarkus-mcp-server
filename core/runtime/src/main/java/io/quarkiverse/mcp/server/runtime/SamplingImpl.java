@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.quarkiverse.mcp.server.InputResponses;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ModelPreferences;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
@@ -80,6 +82,12 @@ class SamplingImpl implements Sampling {
             throw McpMessageHandler.clientNotInitialized(connection);
         }
         if (!isSupported()) {
+            if (connection.initialRequest().protocolVersion().isStateless()) {
+                throw new McpException(
+                        "Client does not support the required `sampling` capability",
+                        JsonRpcErrorCodes.MISSING_REQUIRED_CLIENT_CAPABILITY,
+                        Map.of("requiredCapabilities", Map.of("sampling", Map.of())));
+            }
             throw new IllegalStateException(
                     "Client " + connection.initialRequest().implementation() + " does not support the `sampling` capability");
         }

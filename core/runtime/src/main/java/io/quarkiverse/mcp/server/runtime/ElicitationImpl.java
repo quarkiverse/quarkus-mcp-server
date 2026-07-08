@@ -12,7 +12,9 @@ import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.Builder;
 import io.quarkiverse.mcp.server.ElicitationRequest.PrimitiveSchema;
 import io.quarkiverse.mcp.server.InputResponses;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.UrlElicitationRequest;
 import io.vertx.core.json.JsonObject;
 
@@ -95,6 +97,12 @@ class ElicitationImpl implements Elicitation {
             throw McpMessageHandler.clientNotInitialized(connection);
         }
         if (!isFormModeSupported()) {
+            if (connection.initialRequest().protocolVersion().isStateless()) {
+                throw new McpException(
+                        "Client does not support the required `elicitation` capability",
+                        JsonRpcErrorCodes.MISSING_REQUIRED_CLIENT_CAPABILITY,
+                        Map.of("requiredCapabilities", Map.of("elicitation", Map.of())));
+            }
             throw new IllegalStateException(
                     "Client " + connection.initialRequest().implementation()
                             + " does not support the form mode of the `elicitation` capability");
@@ -108,6 +116,12 @@ class ElicitationImpl implements Elicitation {
             throw McpMessageHandler.clientNotInitialized(connection);
         }
         if (!isUrlModeSupported()) {
+            if (connection.initialRequest().protocolVersion().isStateless()) {
+                throw new McpException(
+                        "Client does not support the required `elicitation` capability",
+                        JsonRpcErrorCodes.MISSING_REQUIRED_CLIENT_CAPABILITY,
+                        Map.of("requiredCapabilities", Map.of("elicitation", Map.of())));
+            }
             throw new IllegalStateException(
                     "Client " + connection.initialRequest().implementation()
                             + " does not support the URL mode of the `elicitation` capability");

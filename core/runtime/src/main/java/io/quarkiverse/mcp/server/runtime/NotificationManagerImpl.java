@@ -19,6 +19,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Notification;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
@@ -109,7 +110,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
     }
 
     @Override
-    protected McpException notFound(String id) {
+    protected McpException notFound(String id, McpProtocolVersion version) {
         return new McpException("Invalid notification name: " + id, JsonRpcErrorCodes.INVALID_PARAMS);
     }
 
