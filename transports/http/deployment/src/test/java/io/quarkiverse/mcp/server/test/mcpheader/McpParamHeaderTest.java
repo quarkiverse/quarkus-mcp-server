@@ -237,6 +237,33 @@ public class McpParamHeaderTest extends McpServerTest {
     }
 
     @Test
+    public void testDefaultHeaderName() {
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless()
+                .setAdditionalHeaders(m -> {
+                    MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+                    headers.add("Mcp-Param-tenant", "acme");
+                    return headers;
+                })
+                .build()
+                .connect();
+
+        client.when()
+                .toolsList(tools -> {
+                    McpAssured.ToolInfo tool = tools.findByName("defaultHeaderName");
+                    assertNotNull(tool);
+                    JsonObject properties = tool.inputSchema().getJsonObject("properties");
+                    assertEquals("tenant", properties.getJsonObject("tenant").getString("x-mcp-header"));
+                })
+                .toolsCall("defaultHeaderName", Map.of("tenant", "acme", "value", "data"), r -> {
+                    assertFalse(r.isError());
+                    assertEquals("acme:data", r.firstContent().asText().text());
+                })
+                .thenAssertResults();
+        client.disconnect();
+    }
+
+    @Test
     public void testProgrammaticToolSchemaContainsXMcpHeader() {
         toolManager.newTool("programmaticQuery")
                 .setDescription("A programmatic tool with x-mcp-header")
@@ -388,6 +415,11 @@ public class McpParamHeaderTest extends McpServerTest {
         @Tool
         String dryRun(@McpParamHeader("DryRun") boolean dryRun, String value) {
             return dryRun + ":" + value;
+        }
+
+        @Tool
+        String defaultHeaderName(@McpParamHeader String tenant, String value) {
+            return tenant + ":" + value;
         }
 
         @Tool
