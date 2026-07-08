@@ -772,15 +772,9 @@ class McpServerProcessor {
             AnnotationValue audienceValue = annotationsAnnotation.value("audience");
             List<Role> audience = List.of();
             if (audienceValue != null) {
-                if (DotNames.isMcpJavaAnnotation(featureAnnotation.name())) {
-                    // audience should be an array:
-                    // https://github.com/mcp-java/java-mcp-annotations/issues/60
-                    audience = List.of(Role.valueOf(audienceValue.asEnum()));
-                } else {
-                    audience = new ArrayList<>();
-                    for (String r : audienceValue.asEnumArray()) {
-                        audience.add(Role.valueOf(r));
-                    }
+                audience = new ArrayList<>();
+                for (String r : audienceValue.asEnumArray()) {
+                    audience.add(Role.valueOf(r));
                 }
             }
             AnnotationValue lastModifiedValue = annotationsAnnotation.value("lastModified");
