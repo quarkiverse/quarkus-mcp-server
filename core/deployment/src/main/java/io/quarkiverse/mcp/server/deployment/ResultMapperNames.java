@@ -27,7 +27,7 @@ final class ResultMapperNames {
             String f = feature.toString();
             ret = new StringBuilder().append(f.charAt(0)).append(f.substring(1).toLowerCase());
         }
-        if (DotNames.UNI.equals(type.name())) {
+        if (DotNames.isAsyncType(type.name())) {
             type = type.asParameterizedType().arguments().get(0);
             if (type.name().equals(baseType)) {
                 return "Identity";

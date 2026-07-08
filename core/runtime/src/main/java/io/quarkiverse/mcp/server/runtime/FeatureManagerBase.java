@@ -18,6 +18,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -489,6 +490,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             try {
                 Function<Result<Object>, Uni<RESPONSE>> resultMapper = metadata.resultMapper();
                 Object ret = invoker.invoke(null, arguments);
+                if (ret instanceof CompletionStage<?> cs) {
+                    ret = Uni.createFrom().completionStage(cs);
+                }
                 ret = wrapResult(this, ret, metadata, argProviders);
                 return resultMapper.apply(new Result<>(ret, argProviders.serverName()));
             } catch (Throwable e) {

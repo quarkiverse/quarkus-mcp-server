@@ -11,6 +11,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import jakarta.inject.Inject;
 
@@ -112,6 +114,23 @@ public class MyTools {
         checkDuplicatedContext();
         checkRequestContext();
         return Uni.createFrom().item(List.of("charlie4"));
+    }
+
+    @Tool
+    CompletionStage<ToolResponse> cs_alpha(@ToolArg(name = "cs_price") double price) {
+        checkExecutionModel(false);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return CompletableFuture.completedFuture(ToolResponse.success(
+                new TextContent(fooService.ping(price + "", 1, new Options(true)))));
+    }
+
+    @Tool
+    CompletionStage<String> cs_bravo() {
+        checkExecutionModel(false);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return CompletableFuture.completedFuture("cs_bravo_ok");
     }
 
 }

@@ -126,7 +126,7 @@ final class FeatureMethods {
 
     private static void validatePromptCompleteMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
-        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+        if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
@@ -145,7 +145,7 @@ final class FeatureMethods {
 
     private static void validateResourceTemplateCompleteMethod(MethodInfo method) {
         org.jboss.jandex.Type type = method.returnType();
-        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+        if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
@@ -242,10 +242,11 @@ final class FeatureMethods {
 
     private static void validateNotificationMethod(MethodInfo method) {
         if (method.returnType().kind() != Kind.VOID
-                && (!method.returnType().name().equals(DotNames.UNI)
+                && (!DotNames.isAsyncType(method.returnType().name())
                         || !method.returnType().asParameterizedType().arguments().get(0).name()
-                                .equals(DotName.createSimple(Void.class)))) {
-            throw new IllegalStateException("Notification method must return void or Uni<Void>");
+                                .equals(DotNames.VOID))) {
+            throw new IllegalStateException(
+                    "Notification method must return void, Uni<Void> or CompletionStage<Void>");
         }
         List<MethodParameterInfo> params = parameters(method, NOTIFICATION);
         if (!params.isEmpty()) {
@@ -326,7 +327,7 @@ final class FeatureMethods {
                 return true;
             case PARAMETERIZED_TYPE:
                 DotName name = method.returnType().asParameterizedType().name();
-                return !name.equals(DotNames.UNI) && !name.equals(DotNames.MULTI);
+                return !DotNames.isAsyncType(name);
             default:
                 throw new IllegalStateException(
                         "Unsupported return type:" + methodDesc(method));

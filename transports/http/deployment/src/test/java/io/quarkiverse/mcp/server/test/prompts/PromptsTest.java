@@ -30,7 +30,7 @@ public class PromptsTest extends McpServerTest {
 
         client.when()
                 .promptsList(page -> {
-                    assertEquals(6, page.size());
+                    assertEquals(7, page.size());
                     PromptInfo bar = page.findByName("BAR");
                     assertNull(bar.title());
                     assertEquals(1, bar.arguments().size());
@@ -59,6 +59,9 @@ public class PromptsTest extends McpServerTest {
                 })
                 .promptsGet("uni_response", Map.of("val", "Martin"), r -> {
                     assertEquals("MARTIN", r.messages().get(0).content().asText().text());
+                })
+                .promptsGet("cs_bar", Map.of("val", "Karel"), r -> {
+                    assertEquals("KAREL", r.messages().get(0).content().asText().text());
                 })
                 .thenAssertResults();
     }

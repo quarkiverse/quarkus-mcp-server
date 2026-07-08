@@ -38,7 +38,7 @@ public class ToolsTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(8, page.size());
+                    assertEquals(10, page.size());
 
                     ToolInfo alpha = page.findByName("alpha");
                     assertNull(alpha.title());
@@ -106,6 +106,9 @@ public class ToolsTest extends McpServerTest {
                 .toolsCall("uni_charlie", r -> assertEquals("charlie2", r.firstContent().asText().text()))
                 .toolsCall("list_charlie", r -> assertEquals("charlie3", r.firstContent().asText().text()))
                 .toolsCall("uni_list_charlie", r -> assertEquals("charlie4", r.firstContent().asText().text()))
+                .toolsCall("cs_alpha", Map.of("cs_price", 1),
+                        r -> assertEquals("Hello 1.0!", r.firstContent().asText().text()))
+                .toolsCall("cs_bravo", r -> assertEquals("cs_bravo_ok", r.firstContent().asText().text()))
                 .thenAssertResults();
     }
 

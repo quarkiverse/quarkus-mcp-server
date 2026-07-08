@@ -48,7 +48,7 @@ public class SimpleStreamableTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(8, page.size());
+                    assertEquals(10, page.size());
 
                     JsonObject schema = page.findByName("alpha").inputSchema();
                     JsonObject properties = schema.getJsonObject("properties");

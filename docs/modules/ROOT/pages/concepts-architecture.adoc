@@ -210,15 +210,23 @@ NOTE: Kotlin suspend functions are always considered non-blocking and may not be
 [source,java]
 ----
 import io.smallrye.mutiny.Uni;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-// Method returning Uni<T> is non-blocking by convention
+// Method returning Uni<T> or CompletionStage<T> is non-blocking by convention
 @Tool
 Uni<String> eventLoopTool() {
     return Uni.createFrom().item("fast");  // Runs on event loop
 }
 
+// CompletionStage<T> is also non-blocking
+@Tool
+CompletionStage<String> completionStageTool() {
+    return CompletableFuture.completedFuture("fast");  // Runs on event loop
+}
 
-// Method returning non-Uni type is blocking by convention
+
+// Method returning non-async type is blocking by convention
 @Tool
 String workerThreadTool() {
     Thread.sleep(1000);  // Blocking! Automatically offloaded to worker thread
@@ -243,9 +251,9 @@ String virtualThreadTool() {
 
 You can use `io.quarkus.runtime.BlockingOperationControl.isBlockingAllowed` to detect if blocking calls are allowed.
 
-=== Async with Uni
+=== Async with Uni or CompletionStage
 
-Return `Uni<T>` for truly async operations:
+Return `Uni<T>` or `CompletionStage<T>` for truly async operations:
 
 [source,java]
 ----
@@ -254,6 +262,12 @@ Uni<String> asyncTool() {
     return restClient.getData()  // Non-blocking HTTP call
         .map(data -> process(data))
         .onFailure().recoverWithItem("fallback");
+}
+
+@Tool
+CompletionStage<String> asyncToolWithCs() {
+    return someAsyncApi.getData()  // Non-blocking call
+        .thenApply(data -> process(data));
 }
 ----
 
@@ -277,10 +291,10 @@ Understanding when to use each execution model:
 |Simple blocking code with async-like scalability, no pool limits
 |Requires Java 21+, slight scheduling overhead
 
-|**Event Loop (Uni<T>)**
-|Non-blocking I/O with reactive libraries
+|**Event Loop (Uni<T> / CompletionStage<T>)**
+|Non-blocking I/O with reactive or standard JDK async APIs
 |Maximum throughput, no thread overhead, true async
-|Requires reactive programming, cannot perform blocking operations using `emitOn` or `runSubscriptionOn` to switch execution context
+|Cannot perform blocking operations; use `emitOn` or `runSubscriptionOn` to switch execution context for Uni
 |===
 
 === CDI Request Scope

@@ -5,6 +5,8 @@ import static io.quarkiverse.mcp.server.test.Checks.checkExecutionModel;
 import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
@@ -46,5 +48,13 @@ public class MyResources {
         checkDuplicatedContext();
         checkRequestContext();
         return Uni.createFrom().item(new TextResourceContents("file:///foo", "4", null));
+    }
+
+    @Resource(uri = "file:///project/cs_alpha")
+    CompletionStage<TextResourceContents> cs_alpha(RequestUri uri) {
+        checkExecutionModel(false);
+        checkDuplicatedContext();
+        checkRequestContext();
+        return CompletableFuture.completedFuture(new TextResourceContents(uri.value(), "5", null));
     }
 }

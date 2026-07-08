@@ -53,7 +53,7 @@ public class ResourcesTest extends McpServerTest {
 
         client.when()
                 .resourcesList(p -> {
-                    assertEquals(4, p.size());
+                    assertEquals(5, p.size());
                     ResourceInfo alpha = p.findByUri("file:///project/alpha");
                     assertEquals("alpha", alpha.name());
                     assertEquals("Alpha...", alpha.title());
@@ -85,6 +85,7 @@ public class ResourcesTest extends McpServerTest {
                 .resourcesRead("file:///project/uni_alpha", r -> assertEquals("2", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///project/bravo", r -> assertEquals("3", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///project/uni_bravo", r -> assertEquals("4", r.contents().get(0).asText().text()))
+                .resourcesRead("file:///project/cs_alpha", r -> assertEquals("5", r.contents().get(0).asText().text()))
                 .thenAssertResults();
     }
 

@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.concurrent.CompletionStage;
 
 import org.jboss.jandex.DotName;
 
@@ -61,7 +62,6 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.common.annotation.RunOnVirtualThread;
-import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 
 class DotNames {
@@ -73,6 +73,7 @@ class DotNames {
     static final DotName COMPLETE_PROMPT = DotName.createSimple(CompletePrompt.class);
     static final DotName COMPLETE_RESOURCE_TEMPLATE = DotName.createSimple(CompleteResourceTemplate.class);
     static final DotName COMPLETE_RESPONSE = DotName.createSimple(CompletionResponse.class);
+    static final DotName COMPLETION_STAGE = DotName.createSimple(CompletionStage.class);
     static final DotName COMPLETE_CONTEXT = DotName.createSimple(CompleteContext.class);
     static final DotName CONTENT = DotName.createSimple(Content.class);
     static final DotName DEFAULT_VALUE_CONVERTER = DotName.createSimple(DefaultValueConverter.class);
@@ -85,7 +86,6 @@ class DotNames {
     static final DotName MCP_CONNECTION = DotName.createSimple(McpConnection.class);
     static final DotName MCP_LOG = DotName.createSimple(McpLog.class);
     static final DotName MCP_SERVER = DotName.createSimple(McpServer.class);
-    static final DotName MULTI = DotName.createSimple(Multi.class);
     static final DotName NON_BLOCKING = DotName.createSimple(NonBlocking.class);
     static final DotName NOTIFICATION = DotName.createSimple(Notification.class);
     static final DotName OPTIONAL = DotName.createSimple(Optional.class);
@@ -158,6 +158,10 @@ class DotNames {
             .createSimple(org.mcpjava.server.completion.CompletionContext.class);
     static final DotName MCPJAVA_COMPLETION_RESULT = DotName.createSimple(org.mcpjava.server.completion.CompletionResult.class);
     static final DotName MCPJAVA_RESOURCE_RESPONSE = DotName.createSimple(org.mcpjava.server.resources.ResourceResponse.class);
+
+    static boolean isAsyncType(DotName name) {
+        return UNI.equals(name) || COMPLETION_STAGE.equals(name);
+    }
 
     static boolean isMcpJavaAnnotation(DotName name) {
         return name.toString().startsWith("org.mcpjava.");
