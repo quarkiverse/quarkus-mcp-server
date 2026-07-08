@@ -74,6 +74,10 @@ public class PromptCompleteTest extends McpServerTest {
                     assertEquals("_foo", completionResponse.values().get(0));
                 })
                 .send()
+                .promptComplete("cs_prompt", "name", "Ja", completionResponse -> {
+                    assertEquals(1, completionResponse.values().size());
+                    assertEquals("Jachym", completionResponse.values().get(0));
+                })
                 .thenAssertResults();
 
         assertThrows(IllegalArgumentException.class,

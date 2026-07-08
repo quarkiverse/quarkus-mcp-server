@@ -1,6 +1,8 @@
 package io.quarkiverse.mcp.server.test.complete;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.CompletePrompt;
@@ -29,5 +31,16 @@ public class MyPrompts {
     String completeSuffix(String suffix) {
         Log.infof("Complete suffix: %s", suffix);
         return "_foo";
+    }
+
+    @Prompt
+    PromptMessage cs_prompt(String name) {
+        return PromptMessage.withUserRole(new TextContent(name));
+    }
+
+    @CompletePrompt("cs_prompt")
+    CompletionStage<List<String>> csCompleteName(String name) {
+        Log.infof("CS complete name: %s", name);
+        return CompletableFuture.completedFuture(NAMES.stream().filter(n -> n.startsWith(name)).toList());
     }
 }

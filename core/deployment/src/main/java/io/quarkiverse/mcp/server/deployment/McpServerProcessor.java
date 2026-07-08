@@ -759,7 +759,7 @@ class McpServerProcessor {
     }
 
     private ClassType outputSchemaFromReturnType(org.jboss.jandex.Type returnType) {
-        if (returnType.name().equals(DotNames.UNI)) {
+        if (DotNames.isAsyncType(returnType.name())) {
             return ClassType.create(returnType.asParameterizedType().arguments().get(0).name());
         }
         return ClassType.create(returnType.name());
@@ -1186,7 +1186,7 @@ class McpServerProcessor {
         // JsonObject.encode() may use Jackson under the hood which requires reflection
         for (FeatureMethodBuildItem m : featureMethods) {
             org.jboss.jandex.Type returnType = m.getMethod().returnType();
-            if (DotNames.UNI.equals(returnType.name()) && returnType.kind() == Kind.PARAMETERIZED_TYPE) {
+            if (DotNames.isAsyncType(returnType.name()) && returnType.kind() == Kind.PARAMETERIZED_TYPE) {
                 returnType = returnType.asParameterizedType().arguments().get(0);
             }
             if (DotNames.LIST.equals(returnType.name()) && returnType.kind() == Kind.PARAMETERIZED_TYPE) {
@@ -1299,7 +1299,7 @@ class McpServerProcessor {
     }
 
     private boolean useEncoder(org.jboss.jandex.Type type, Set<org.jboss.jandex.Type> types) {
-        if (DotNames.UNI.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
+        if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
         }
         if (DotNames.LIST.equals(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
@@ -1542,12 +1542,13 @@ class McpServerProcessor {
     }
 
     private Var completionResultMapper(BlockCreator bc, org.jboss.jandex.Type returnType) {
-        DotName unwrapped = DotNames.UNI.equals(returnType.name())
+        DotName unwrapped = DotNames.isAsyncType(returnType.name())
                 ? returnType.asParameterizedType().arguments().get(0).name()
                 : returnType.name();
         if (unwrapped.equals(DotNames.MCPJAVA_COMPLETION_RESULT)) {
             return readResultMapper(bc,
-                    DotNames.UNI.equals(returnType.name()) ? "CompleteUniOfMcpJavaResult" : "CompleteOfMcpJavaResult");
+                    DotNames.isAsyncType(returnType.name()) ? "CompleteUniOfMcpJavaResult"
+                            : "CompleteOfMcpJavaResult");
         }
         return readResultMapper(bc,
                 ResultMapperNames.createMapperClassSimpleName(PROMPT_COMPLETE, returnType, DotNames.COMPLETE_RESPONSE,
@@ -1556,12 +1557,12 @@ class McpServerProcessor {
 
     Var resourceResultMapper(FeatureMethodBuildItem featureMethod, BlockCreator bc,
             org.jboss.jandex.Type returnType) {
-        DotName unwrapped = DotNames.UNI.equals(returnType.name())
+        DotName unwrapped = DotNames.isAsyncType(returnType.name())
                 ? returnType.asParameterizedType().arguments().get(0).name()
                 : returnType.name();
         if (unwrapped.equals(DotNames.MCPJAVA_RESOURCE_RESPONSE)) {
             return readResultMapper(bc,
-                    DotNames.UNI.equals(returnType.name()) ? "ResourceUniOfMcpJavaResponse"
+                    DotNames.isAsyncType(returnType.name()) ? "ResourceUniOfMcpJavaResponse"
                             : "ResourceOfMcpJavaResponse");
         }
         if (useEncoder(returnType, FeatureMethods.RESOURCE_TYPES)) {
@@ -1584,7 +1585,7 @@ class McpServerProcessor {
         LocalVar mapper = bc.localVar("mapper", bc.invokeInterface(
                 MethodDesc.of(InstanceHandle.class, "get", Object.class),
                 instance));
-        if (DotNames.UNI.equals(returnType.name())) {
+        if (DotNames.isAsyncType(returnType.name())) {
             if (useUniList(featureMethod, returnType.asParameterizedType().arguments().get(0))) {
                 bc.set(mapper, bc.invokeVirtual(
                         MethodDesc.of(mapperClazz, "uniList", Function.class), mapper));

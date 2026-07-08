@@ -7,6 +7,8 @@ import static io.quarkiverse.mcp.server.test.Checks.checkRequestContext;
 import static io.quarkiverse.mcp.server.test.Checks.checkRequestId;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import jakarta.inject.Inject;
 
@@ -76,6 +78,14 @@ public class MyPrompts {
         return Uni.createFrom()
                 .item(new PromptResponse("My description",
                         List.of(PromptMessage.withUserRole(new TextContent(val.toUpperCase())))));
+    }
+
+    @Prompt
+    CompletionStage<PromptMessage> cs_bar(String val) {
+        checkExecutionModel(false);
+        checkRequestContext();
+        checkDuplicatedContext();
+        return CompletableFuture.completedFuture(PromptMessage.withUserRole(new TextContent(val.toUpperCase())));
     }
 
 }
