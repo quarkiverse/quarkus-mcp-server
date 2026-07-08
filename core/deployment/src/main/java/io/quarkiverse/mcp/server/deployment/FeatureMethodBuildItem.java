@@ -10,6 +10,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
 
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.ExecutionModel;
@@ -43,6 +44,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
     private final String mimeType;
     private final int size;
     private final Content.Annotations resourceAnnotations;
+    private final CacheControl cacheControl;
 
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
@@ -67,6 +69,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
             Set<String> servers, boolean structuredContent, Type outputSchemaFrom, Type outputSchemaGenerator,
             Type inputSchemaGenerator,
             Content.Annotations resourceAnnotations,
+            CacheControl cacheControl,
             Map<String, String> metadata,
             List<DotName> inputGuardrails,
             List<DotName> outputGuardrails,
@@ -89,6 +92,7 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
         this.outputSchemaGenerator = outputSchemaGenerator;
         this.inputSchemaGenerator = inputSchemaGenerator;
         this.resourceAnnotations = resourceAnnotations;
+        this.cacheControl = cacheControl;
         this.metadata = Objects.requireNonNull(metadata);
         this.inputGuardrails = inputGuardrails;
         this.outputGuardrails = outputGuardrails;
@@ -162,6 +166,10 @@ final class FeatureMethodBuildItem extends MultiBuildItem {
 
     Annotations getResourceAnnotations() {
         return resourceAnnotations;
+    }
+
+    CacheControl getCacheControl() {
+        return cacheControl;
     }
 
     Map<String, String> getMetadata() {

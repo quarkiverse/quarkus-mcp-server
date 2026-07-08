@@ -222,6 +222,74 @@ BlobResourceContents largeFile(McpLog log, Progress progress) throws Exception {
 }
 ----
 
+== Cache Control
+
+MCP supports optional caching hints (`ttlMs` and `cacheScope`) in results, allowing clients to reuse responses without re-fetching.
+Cache control can be applied to `resources/list`, `resources/templates/list`, and `resources/read` results.
+
+=== List Results
+
+Caching hints for `resources/list` and `resources/templates/list` are configured via application properties:
+
+[source,properties]
+----
+quarkus.mcp.server.resources.ttl-ms=10000
+quarkus.mcp.server.resources.cache-scope=public
+quarkus.mcp.server.resource-templates.ttl-ms=20000
+quarkus.mcp.server.resource-templates.cache-scope=private
+----
+
+=== Resource Read
+
+Caching hints for `resources/read` results can be set via annotation or programmatically.
+When both are present, the programmatic `ResourceResponse` cache control takes precedence over the `@Resource.CacheControl` annotation.
+
+==== Annotation
+
+Use `@Resource.CacheControl` on `@Resource` or `@ResourceTemplate` methods:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CacheScope;
+import io.quarkiverse.mcp.server.Resource;
+
+public class MyResources {
+
+    @Resource(uri = "file:///data.json",
+              cacheControl = @Resource.CacheControl(ttlMs = 5000, cacheScope = CacheScope.PRIVATE))
+    String data() {
+        return "{\"key\": \"value\"}";
+    }
+}
+----
+
+`ttlMs` is a freshness hint in milliseconds.
+`cacheScope` controls whether shared intermediaries may cache the response — `PUBLIC` (any cache) or `PRIVATE` (same authorization context only).
+
+==== Programmatic
+
+Return a `ResourceResponse` with explicit `CacheControl` to override any annotation or config value:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.CacheControl;
+import io.quarkiverse.mcp.server.CacheScope;
+import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceResponse;
+import io.quarkiverse.mcp.server.TextResourceContents;
+
+public class MyResources {
+
+    @Resource(uri = "file:///dynamic.txt")
+    ResourceResponse dynamic() {
+        return new ResourceResponse(
+                List.of(TextResourceContents.create("file:///dynamic.txt", "dynamic content")),
+                Map.of(),
+                new CacheControl(9999, CacheScope.PRIVATE));
+    }
+}
+----
+
 == Subscriptions
 
 MCP clients can subscribe to a specific resource and receive update notifications.

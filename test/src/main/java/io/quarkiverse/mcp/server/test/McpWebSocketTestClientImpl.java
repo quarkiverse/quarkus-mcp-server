@@ -93,7 +93,8 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
                 capabilities,
                 discoverResult.getString("instructions"),
                 implementation,
-                discoverResult.getJsonObject("_meta"));
+                discoverResult.getJsonObject("_meta"),
+                parseCacheControl(discoverResult));
         if (assertFunction != null) {
             assertFunction.accept(r);
         }
@@ -136,7 +137,8 @@ class McpWebSocketTestClientImpl extends McpTestClientBase<McpWebSocketAssert, M
                 capabilities,
                 initResult.getString("instructions"),
                 implementation,
-                initResult.getJsonObject("_meta"));
+                initResult.getJsonObject("_meta"),
+                null);
         if (assertFunction != null) {
             assertFunction.accept(r);
         }

@@ -214,6 +214,14 @@ The server responds with its supported versions, capabilities, and server info:
 No `initialized` notification is sent. Each subsequent request is self-contained.
 See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on required headers and `_meta` fields.
 
+The `server/discover` result can include optional caching hints, configured via application properties:
+
+[source,properties]
+----
+quarkus.mcp.server.discover.ttl-ms=45000
+quarkus.mcp.server.discover.cache-scope=public
+----
+
 === Capability Checking
 
 After initialization, both parties know what features are available:

@@ -933,6 +933,58 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-ttl-ms]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-ttl-ms[`+++quarkus.mcp.server.resources.ttl-ms+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resources.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".resources.ttl-ms+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resources.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The time-to-live in milliseconds for the `resources/list` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCES_TTL_MS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCES_TTL_MS+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resources-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resources-cache-scope[`+++quarkus.mcp.server.resources.cache-scope+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resources.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".resources.cache-scope+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resources.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The cache scope for the `resources/list` result. If not set, the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCES_CACHE_SCOPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCES_CACHE_SCOPE+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`public`, `private`
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-page-size[`+++quarkus.mcp.server.resource-templates.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.resource-templates.page-size+++[]
@@ -959,6 +1011,58 @@ endif::add-copy-button-to-env-var[]
 |int
 |`+++50+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-ttl-ms]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-ttl-ms[`+++quarkus.mcp.server.resource-templates.ttl-ms+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resource-templates.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".resource-templates.ttl-ms+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resource-templates.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The time-to-live in milliseconds for the `resources/templates/list` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_TTL_MS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_TTL_MS+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-resource-templates-cache-scope[`+++quarkus.mcp.server.resource-templates.cache-scope+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.resource-templates.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".resource-templates.cache-scope+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".resource-templates.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The cache scope for the `resources/templates/list` result. If not set, the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_CACHE_SCOPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESOURCE_TEMPLATES_CACHE_SCOPE+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`public`, `private`
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-page-size[`+++quarkus.mcp.server.tools.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.page-size+++[]
@@ -984,6 +1088,58 @@ endif::add-copy-button-to-env-var[]
 --
 |int
 |`+++50+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-ttl-ms]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-ttl-ms[`+++quarkus.mcp.server.tools.ttl-ms+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tools.ttl-ms+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The time-to-live in milliseconds for the `tools/list` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_TTL_MS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_TTL_MS+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-cache-scope[`+++quarkus.mcp.server.tools.cache-scope+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tools.cache-scope+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The cache scope for the `tools/list` result. If not set, the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_CACHE_SCOPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_CACHE_SCOPE+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`public`, `private`
+|
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-structured-content-compatibility-mode[`+++quarkus.mcp.server.tools.structured-content.compatibility-mode+++`]##
 ifdef::add-copy-button-to-config-props[]
@@ -1063,6 +1219,110 @@ endif::add-copy-button-to-env-var[]
 --
 |int
 |`+++50+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-ttl-ms]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-ttl-ms[`+++quarkus.mcp.server.prompts.ttl-ms+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.prompts.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".prompts.ttl-ms+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".prompts.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The time-to-live in milliseconds for the `prompts/list` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_PROMPTS_TTL_MS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_PROMPTS_TTL_MS+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-cache-scope[`+++quarkus.mcp.server.prompts.cache-scope+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.prompts.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".prompts.cache-scope+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".prompts.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The cache scope for the `prompts/list` result. If not set, the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_PROMPTS_CACHE_SCOPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_PROMPTS_CACHE_SCOPE+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`public`, `private`
+|
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-discover-ttl-ms]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-discover-ttl-ms[`+++quarkus.mcp.server.discover.ttl-ms+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.discover.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".discover.ttl-ms+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".discover.ttl-ms+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The time-to-live in milliseconds for the `server/discover` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_DISCOVER_TTL_MS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_DISCOVER_TTL_MS+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-discover-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-discover-cache-scope[`+++quarkus.mcp.server.discover.cache-scope+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.discover.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".discover.cache-scope+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".discover.cache-scope+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The cache scope for the `server/discover` result. If not set, the field is not included in the response.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_DISCOVER_CACHE_SCOPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_DISCOVER_CACHE_SCOPE+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`public`, `private`
+|
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout[`+++quarkus.mcp.server.sampling.default-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]

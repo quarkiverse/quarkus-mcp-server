@@ -4,10 +4,12 @@ import jakarta.enterprise.context.Dependent;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.AudioContent;
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.EmbeddedResource;
@@ -29,7 +31,8 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
     public void customize(ObjectMapper objectMapper) {
         objectMapper.addMixIn(ToolResponse.class, ResponseMixin.class);
         objectMapper.addMixIn(PromptResponse.class, ResponseMixin.class);
-        objectMapper.addMixIn(ResourceResponse.class, ResponseMixin.class);
+        objectMapper.addMixIn(ResourceResponse.class, ResourceResponseMixin.class);
+        objectMapper.addMixIn(CacheControl.class, ResponseMixin.class);
         objectMapper.addMixIn(CompletionResponse.class, ResponseMixin.class);
 
         objectMapper.addMixIn(TextResourceContents.class, ResponseMixin.class);
@@ -49,6 +52,12 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
     @JsonInclude(Include.NON_NULL)
     static abstract class ResponseMixin {
 
+    }
+
+    @JsonInclude(Include.NON_NULL)
+    static abstract class ResourceResponseMixin {
+        @JsonUnwrapped
+        CacheControl cacheControl;
     }
 
 }

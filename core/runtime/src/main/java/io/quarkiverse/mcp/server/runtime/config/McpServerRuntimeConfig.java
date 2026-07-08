@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
@@ -54,6 +55,11 @@ public interface McpServerRuntimeConfig {
      * Prompts config.
      */
     Prompts prompts();
+
+    /**
+     * Discover config.
+     */
+    Discover discover();
 
     /**
      * Sampling config.
@@ -229,6 +235,20 @@ public interface McpServerRuntimeConfig {
         @WithDefault("50")
         int pageSize();
 
+        /**
+         * The time-to-live in milliseconds for the {@code resources/list} result. Clients may consider the result fresh for
+         * this duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is not
+         * included in
+         * the response.
+         */
+        @WithDefault("-1")
+        long ttlMs();
+
+        /**
+         * The cache scope for the {@code resources/list} result. If not set, the field is not included in the response.
+         */
+        Optional<CacheScope> cacheScope();
+
     }
 
     public interface ResourceTemplates {
@@ -241,6 +261,20 @@ public interface McpServerRuntimeConfig {
         @WithDefault("50")
         int pageSize();
 
+        /**
+         * The time-to-live in milliseconds for the {@code resources/templates/list} result. Clients may consider the result
+         * fresh for this duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is
+         * not included in the response.
+         */
+        @WithDefault("-1")
+        long ttlMs();
+
+        /**
+         * The cache scope for the {@code resources/templates/list} result. If not set, the field is not included in the
+         * response.
+         */
+        Optional<CacheScope> cacheScope();
+
     }
 
     public interface Prompts {
@@ -252,6 +286,19 @@ public interface McpServerRuntimeConfig {
         @WithDefault("50")
         int pageSize();
 
+        /**
+         * The time-to-live in milliseconds for the {@code prompts/list} result. Clients may consider the result fresh for this
+         * duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is not included in
+         * the response.
+         */
+        @WithDefault("-1")
+        long ttlMs();
+
+        /**
+         * The cache scope for the {@code prompts/list} result. If not set, the field is not included in the response.
+         */
+        Optional<CacheScope> cacheScope();
+
     }
 
     public interface Tools {
@@ -262,6 +309,19 @@ public interface McpServerRuntimeConfig {
          */
         @WithDefault("50")
         int pageSize();
+
+        /**
+         * The time-to-live in milliseconds for the {@code tools/list} result. Clients may consider the result fresh for this
+         * duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is not included in
+         * the response.
+         */
+        @WithDefault("-1")
+        long ttlMs();
+
+        /**
+         * The cache scope for the {@code tools/list} result. If not set, the field is not included in the response.
+         */
+        Optional<CacheScope> cacheScope();
 
         /**
          * Structured content config.
@@ -305,6 +365,23 @@ public interface McpServerRuntimeConfig {
          */
         @WithDefault("false")
         boolean compatibilityMode();
+
+    }
+
+    public interface Discover {
+
+        /**
+         * The time-to-live in milliseconds for the {@code server/discover} result. Clients may consider the result fresh for
+         * this duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is not
+         * included in the response.
+         */
+        @WithDefault("-1")
+        long ttlMs();
+
+        /**
+         * The cache scope for the {@code server/discover} result. If not set, the field is not included in the response.
+         */
+        Optional<CacheScope> cacheScope();
 
     }
 

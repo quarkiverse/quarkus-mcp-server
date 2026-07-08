@@ -78,6 +78,8 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
 
         Optional<Content.Annotations> annotations();
 
+        Optional<CacheControl> cacheControl();
+
     }
 
     /**
@@ -122,6 +124,12 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
          * @return self
          */
         ResourceTemplateDefinition setMetadata(Map<MetaKey, Object> metadata);
+
+        /**
+         * @param cacheControl
+         * @return self
+         */
+        ResourceTemplateDefinition setCacheControl(CacheControl cacheControl);
 
         /**
          * @return the resource template info

@@ -22,6 +22,8 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.quarkiverse.mcp.server.CacheControl;
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Content;
@@ -161,6 +163,16 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
         JsonObject result = response.getJsonObject("result");
         assertNotNull(result, "Expected result response but received: " + response);
         return result;
+    }
+
+    protected static CacheControl parseCacheControl(JsonObject result) {
+        Long ttlMs = result.getLong("ttlMs");
+        String cacheScopeStr = result.getString("cacheScope");
+        if (ttlMs == null && cacheScopeStr == null) {
+            return null;
+        }
+        return new CacheControl(ttlMs != null ? ttlMs : -1,
+                cacheScopeStr != null ? CacheScope.valueOf(cacheScopeStr.toUpperCase()) : null);
     }
 
     protected static JsonObject assertErrorResponse(JsonObject request, JsonObject response) {
@@ -1300,7 +1312,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 JsonObject info = resources.getJsonObject(i);
                 infos.add(parseResource(info));
             }
-            assertFunction.accept(new ResourcesPage(infos, result.getString("nextCursor")));
+            assertFunction.accept(new ResourcesPage(infos, result.getString("nextCursor"),
+                    parseCacheControl(result)));
         }
 
         private ResourceInfo parseResource(JsonObject resource) {
@@ -1324,7 +1337,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 JsonObject info = templates.getJsonObject(i);
                 infos.add(parseResourceTemplate(info));
             }
-            assertFunction.accept(new ResourcesTemplatesPage(infos, result.getString("nextCursor")));
+            assertFunction.accept(new ResourcesTemplatesPage(infos, result.getString("nextCursor"),
+                    parseCacheControl(result)));
         }
 
         private ResourceTemplateInfo parseResourceTemplate(JsonObject resource) {
@@ -1351,7 +1365,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 JsonObject prompt = prompts.getJsonObject(i);
                 infos.add(parsePrompt(prompt));
             }
-            assertFunction.accept(new PromptsPage(infos, result.getString("nextCursor")));
+            assertFunction.accept(new PromptsPage(infos, result.getString("nextCursor"),
+                    parseCacheControl(result)));
         }
 
         private PromptInfo parsePrompt(JsonObject prompt) {
@@ -1430,7 +1445,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 JsonObject tool = tools.getJsonObject(i);
                 infos.add(parseTool(tool));
             }
-            assertFunction.accept(new ToolsPage(infos, result.getString("nextCursor")));
+            assertFunction.accept(new ToolsPage(infos, result.getString("nextCursor"),
+                    parseCacheControl(result)));
         }
 
         private ToolInfo parseTool(JsonObject tool) {
@@ -1470,7 +1486,8 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                     resourceContents.add(Contents.parseResourceContents(contents.getJsonObject(i)));
                 }
             }
-            assertFunction.accept(new ResourceResponse(resourceContents, Contents.parseMeta(result)));
+            assertFunction.accept(new ResourceResponse(resourceContents, Contents.parseMeta(result),
+                    parseCacheControl(result)));
         }
 
     }

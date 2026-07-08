@@ -241,6 +241,20 @@ public class SearchPrompts {
 
 The `CompleteContext.arguments()` method returns a `Map<String, String>` containing all previously completed argument values.
 
+== Cache Control
+
+MCP supports optional caching hints (`ttlMs` and `cacheScope`) in the `prompts/list` result, allowing clients to reuse the prompt list without re-fetching.
+These hints are configured via application properties:
+
+[source,properties]
+----
+quarkus.mcp.server.prompts.ttl-ms=30000
+quarkus.mcp.server.prompts.cache-scope=private
+----
+
+`ttl-ms` is a freshness hint in milliseconds — clients may consider the result fresh for this duration.
+`cache-scope` controls whether shared intermediaries may cache the response: `public` (any cache) or `private` (same authorization context only).
+
 == Programmatic API
 
 It's also possible to register a prompt programmatically with the `io.quarkiverse.mcp.server.PromptManager` API.
