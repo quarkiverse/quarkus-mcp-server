@@ -40,6 +40,11 @@ public class CacheControlResources {
         return new TextResourceContents(uri.value(), "template-" + id, null);
     }
 
+    @ResourceTemplate(uriTemplate = "file:///cc/template_default_scope/{id}", cacheControl = @Resource.CacheControl(ttlMs = 7000))
+    TextResourceContents templateDefaultScope(String id, RequestUri uri) {
+        return new TextResourceContents(uri.value(), "template-default-scope-" + id, null);
+    }
+
     @Tool
     TextContent ccTool(String input) {
         return new TextContent(input);
