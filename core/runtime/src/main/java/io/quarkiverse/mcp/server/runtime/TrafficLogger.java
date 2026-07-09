@@ -31,10 +31,12 @@ public class TrafficLogger implements McpTrafficListener {
     }
 
     @Override
+    public boolean isEnabled() {
+        return anyServerEnabled;
+    }
+
+    @Override
     public void onMessageReceived(RawMessage message, McpConnection connection) {
-        if (!anyServerEnabled) {
-            return;
-        }
         McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
         if (!config.enabled()) {
             return;
@@ -45,9 +47,6 @@ public class TrafficLogger implements McpTrafficListener {
 
     @Override
     public void onMessageSent(RawMessage message, McpConnection connection) {
-        if (!anyServerEnabled) {
-            return;
-        }
         McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
         if (!config.enabled()) {
             return;
@@ -61,7 +60,7 @@ public class TrafficLogger implements McpTrafficListener {
     }
 
     private static String messageToString(RawMessage message, int textLimit) {
-        String encoded = message.asJsonObject().encodePrettily();
+        String encoded = message.asPrettyString();
         if (encoded == null || encoded.isBlank()) {
             return "n/a";
         } else if (textLimit < 0 || encoded.length() <= textLimit) {

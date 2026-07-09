@@ -15,6 +15,7 @@ class RawMessageImpl implements RawMessage {
     private final JsonObject message;
 
     private volatile String cachedString;
+    private volatile String cachedPrettyString;
     private volatile Optional<RequestId> cachedId;
 
     RawMessageImpl(JsonObject message) {
@@ -34,6 +35,16 @@ class RawMessageImpl implements RawMessage {
         if (s == null) {
             s = message.encode();
             cachedString = s;
+        }
+        return s;
+    }
+
+    @Override
+    public String asPrettyString() {
+        String s = cachedPrettyString;
+        if (s == null) {
+            s = message.encodePrettily();
+            cachedPrettyString = s;
         }
         return s;
     }

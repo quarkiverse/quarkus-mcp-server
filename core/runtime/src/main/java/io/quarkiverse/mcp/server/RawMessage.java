@@ -30,6 +30,13 @@ public interface RawMessage {
     String asString();
 
     /**
+     * Returns the message as a formatted JSON-encoded string.
+     *
+     * @return the message as a formatted JSON-encoded string
+     */
+    String asPrettyString();
+
+    /**
      * Returns the JSON-RPC {@code id} of the message, or {@code null} if the message is a notification.
      *
      * @return the request id, or {@code null} for notifications

@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.rawmessage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
@@ -58,6 +59,9 @@ public class RawMessageTest extends McpServerTest {
                     .getJsonObject("params")
                     .getJsonObject("arguments")
                     .getInteger("count");
+            String prettyString = message.asPrettyString();
+            assertTrue(prettyString.contains("\n"), "Pretty string should contain newlines");
+            assertTrue(prettyString.contains("tools/call"));
             return "foo".repeat(count * rawCount);
         }
 
