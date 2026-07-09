@@ -42,6 +42,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
+import org.jboss.jandex.Type;
 import org.jboss.jandex.Type.Kind;
 import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 import org.jboss.logging.Logger;
@@ -758,11 +759,11 @@ class McpServerProcessor {
         metadata.put(key.toString(), jsonValue);
     }
 
-    private ClassType outputSchemaFromReturnType(org.jboss.jandex.Type returnType) {
+    private Type outputSchemaFromReturnType(Type returnType) {
         if (DotNames.isAsyncType(returnType.name())) {
-            return ClassType.create(returnType.asParameterizedType().arguments().get(0).name());
+            return returnType.asParameterizedType().arguments().get(0);
         }
-        return ClassType.create(returnType.name());
+        return returnType;
     }
 
     private Content.Annotations parseResourceAnnotations(AnnotationInstance featureAnnotation) {
@@ -904,7 +905,7 @@ class McpServerProcessor {
                                                 prompt.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_PROMPT)
                                                         ? DotNames.MCPJAVA_PROMPT_ARG
                                                         : DotNames.PROMPT_ARG,
-                                                PromptArg.ELEMENT_NAME),
+                                                PromptArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -928,7 +929,7 @@ class McpServerProcessor {
                                                         .hasDeclaredAnnotation(DotNames.MCPJAVA_COMPLETE_PROMPT)
                                                                 ? DotNames.MCPJAVA_COMPLETE_ARG
                                                                 : DotNames.COMPLETE_ARG,
-                                                CompleteArg.ELEMENT_NAME),
+                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -952,7 +953,7 @@ class McpServerProcessor {
                                                 : tool.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_TOOL)
                                                         ? DotNames.MCPJAVA_TOOL_ARG
                                                         : DotNames.TOOL_ARG,
-                                        ToolArg.ELEMENT_NAME),
+                                        ToolArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -970,7 +971,8 @@ class McpServerProcessor {
                             .toList()) {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
-                                bc.invokeVirtual(processFeatureMethod(counter, cc, resource, null, null),
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, resource, null, null, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -994,7 +996,7 @@ class McpServerProcessor {
                                                         .hasDeclaredAnnotation(DotNames.MCPJAVA_RESOURCE_TEMPLATE)
                                                                 ? DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG
                                                                 : DotNames.RESOURCE_TEMPLATE_ARG,
-                                                ResourceTemplateArg.ELEMENT_NAME),
+                                                ResourceTemplateArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1019,7 +1021,7 @@ class McpServerProcessor {
                                                                 DotNames.MCPJAVA_COMPLETE_RESOURCE_TEMPLATE)
                                                                         ? DotNames.MCPJAVA_COMPLETE_ARG
                                                                         : DotNames.COMPLETE_ARG,
-                                                CompleteArg.ELEMENT_NAME),
+                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1038,7 +1040,8 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, notification, null, null),
+                                        processFeatureMethod(counter, cc, notification, null, null,
+                                                beanArchiveIndex.getIndex()),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1054,7 +1057,9 @@ class McpServerProcessor {
                             .sorted(Comparator.comparing(DefaultValueConverterBuildItem::getClassName))
                             .toList();
                     for (DefaultValueConverterBuildItem converter : sortedConverters) {
-                        LocalVar converterType = RuntimeTypeCreator.of(bc).create(converter.getArgumentType());
+                        LocalVar converterType = RuntimeTypeCreator.of(bc)
+                                .withIndex(beanArchiveIndex.getIndex())
+                                .create(converter.getArgumentType());
                         bc.withMap(ret).put(converterType, bc.new_(ClassDesc.of(converter.getClassName())));
                     }
                     bc.return_(ret);
@@ -1303,7 +1308,7 @@ class McpServerProcessor {
     }
 
     private MethodDesc processFeatureMethod(AtomicInteger counter, ClassCreator cc,
-            FeatureMethodBuildItem featureMethod, DotName argAnnotationName, String argNameSentinel) {
+            FeatureMethodBuildItem featureMethod, DotName argAnnotationName, String argNameSentinel, IndexView index) {
         return cc.method("meta$" + counter.incrementAndGet(), mc -> {
             mc.returning(FeatureMetadata.class);
 
@@ -1368,7 +1373,7 @@ class McpServerProcessor {
                                                 explicitAnnotation));
                     }
 
-                    LocalVar type = RuntimeTypeCreator.of(bc).create(param.type());
+                    LocalVar type = RuntimeTypeCreator.of(bc).withIndex(index).create(param.type());
                     // new FeatureArgument(String name, String title, String description, boolean
                     // required, Type type, String defaultValue, Provider provider)
                     LocalVar arg = bc.localVar("arg", bc.new_(FeatureArgument.class,
@@ -1488,8 +1493,9 @@ class McpServerProcessor {
                         resourceAnnotations,
                         cacheControl,
                         serverNames,
-                        featureMethod.getOutputSchemaFrom() == null ? Const.ofNull(Class.class)
-                                : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getOutputSchemaFrom().name())),
+                        featureMethod.getOutputSchemaFrom() == null
+                                ? Const.ofNull(java.lang.reflect.Type.class)
+                                : RuntimeTypeCreator.of(bc).withIndex(index).create(featureMethod.getOutputSchemaFrom()),
                         featureMethod.getOutputSchemaGenerator() == null ? Const.ofNull(Class.class)
                                 : Const.of(Jandex2Gizmo.classDescOf(featureMethod.getOutputSchemaGenerator().name())),
                         featureMethod.getInputSchemaGenerator() == null ? Const.ofNull(Class.class)

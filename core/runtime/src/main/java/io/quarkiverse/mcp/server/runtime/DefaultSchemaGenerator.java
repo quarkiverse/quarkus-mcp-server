@@ -99,7 +99,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     }
 
     @Override
-    public Object generate(Class<?> from) {
+    public Object generate(Type from) {
         return schemaGenerator.generateSchema(from);
     }
 

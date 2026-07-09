@@ -16,6 +16,8 @@ include::./includes/attributes.adoc[]
 [[version-2-0-breaking]]
 === Breaking Changes
 
+* [2.0.0] `OutputSchemaGenerator.generate(Type)` is now the primary method for output schema generation. The `generate(Class<?>)` method is deprecated. Existing implementations that override `generate(Class<?>)` continue to work — the default `generate(Type)` delegates to `generate(Class<?>)` for `Class` arguments. New implementations should override `generate(Type)` instead. `ToolDefinition.generateOutputSchema()` now also accepts `java.lang.reflect.Type`.
+
 * [2.0.0] The Maven artifact relocations and configuration property fallbacks for the old `quarkus-mcp-server-sse` artifact (renamed to `quarkus-mcp-server-http` in <<version-1-8,1.8.0>>) have been removed. Users still referencing `quarkus-mcp-server-sse` must switch to `quarkus-mcp-server-http`, and any configuration properties using the `sse.` prefix (e.g. `quarkus.mcp.server.sse.root-path`) must be updated to use the `http.` prefix (e.g. `quarkus.mcp.server.http.root-path`). (https://github.com/quarkiverse/quarkus-mcp-server/issues/826[#826])
 * [2.0.0] JSON-RPC batching support has been removed. Batching was added in MCP 2025-03-26 and removed in 2025-06-18. The server now rejects batch (JSON array) messages with a parse error. The `whenBatch()` method has been removed from the `McpAssured` test API. (https://github.com/quarkiverse/quarkus-mcp-server/issues/723[#723])
 * [2.0.0] `McpRequest.protocolVersion()` now returns `McpProtocolVersion` instead of `String`.
@@ -39,6 +41,8 @@ include::./includes/attributes.adoc[]
 * [2.0.0] HTTP GET (SSE stream) and DELETE (session termination) requests from stateless clients now return `405 Method Not Allowed`.
 * [2.0.0] `subscriptions/listen` support for stateless clients. Replaces `resources/subscribe`/`resources/unsubscribe` for protocol version `2026-07-28`+. Clients specify a notification filter (tools, prompts, resources list changes, and resource URI subscriptions) and receive matching notifications on the subscription stream. Supported on all transports (HTTP, WebSocket, stdio). See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 * [2.0.0] Initial support for https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations]. Both the Quarkus-specific and the standard Java MCP annotations are supported during the transitional period. (https://github.com/quarkiverse/quarkus-mcp-server/issues/823[#823])
+
+* [2.0.0] Output schema generation now preserves generic type information for tool return types (e.g. `List<MyPojo>`). Previously, parameterized return types with `structuredContent = true` produced incorrect schemas because generic type arguments were lost. See xref:guides-using-structured-content.adoc[Using Structured Content].
 
 [[version-2-0-fixes]]
 === Important Bug Fixes

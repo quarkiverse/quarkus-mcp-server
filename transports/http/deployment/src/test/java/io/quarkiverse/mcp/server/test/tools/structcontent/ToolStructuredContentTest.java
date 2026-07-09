@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.List;
 import java.util.Objects;
 
 import jakarta.inject.Inject;
@@ -20,9 +21,11 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
+import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ToolStructuredContentTest extends McpServerTest {
@@ -38,7 +41,7 @@ public class ToolStructuredContentTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(5, page.tools().size());
+                    assertEquals(7, page.tools().size());
                     JsonObject alphaSchema = page.findByName("alpha").outputSchema();
                     assertNotNull(alphaSchema);
                     assertEquals("integer", alphaSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
@@ -55,6 +58,18 @@ public class ToolStructuredContentTest extends McpServerTest {
                     JsonObject echoSchema = page.findByName("echo").outputSchema();
                     assertNotNull(echoSchema);
                     assertEquals("integer", echoSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
+                    JsonObject foxtrotSchema = page.findByName("foxtrot").outputSchema();
+                    assertNotNull(foxtrotSchema);
+                    assertEquals("array", foxtrotSchema.getString("type"));
+                    assertEquals("integer",
+                            foxtrotSchema.getJsonObject("items").getJsonObject("properties").getJsonObject("val")
+                                    .getString("type"));
+                    JsonObject golfSchema = page.findByName("golf").outputSchema();
+                    assertNotNull(golfSchema);
+                    assertEquals("array", golfSchema.getString("type"));
+                    assertEquals("integer",
+                            golfSchema.getJsonObject("items").getJsonObject("properties").getJsonObject("val")
+                                    .getString("type"));
                 })
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals(0, toolResponse.content().size());
@@ -99,6 +114,28 @@ public class ToolStructuredContentTest extends McpServerTest {
                         assertEquals(7, json.getInteger("val"));
                     } else {
                         fail("Not a JsonObject");
+                    }
+                })
+                .toolsCall("foxtrot", toolResponse -> {
+                    assertEquals(0, toolResponse.content().size());
+                    assertNotNull(toolResponse.structuredContent());
+                    if (toolResponse.structuredContent() instanceof JsonArray jsonArray) {
+                        assertEquals(2, jsonArray.size());
+                        assertEquals(1, jsonArray.getJsonObject(0).getInteger("val"));
+                        assertEquals(2, jsonArray.getJsonObject(1).getInteger("val"));
+                    } else {
+                        fail("Not a JsonArray");
+                    }
+                })
+                .toolsCall("golf", toolResponse -> {
+                    assertEquals(0, toolResponse.content().size());
+                    assertNotNull(toolResponse.structuredContent());
+                    if (toolResponse.structuredContent() instanceof JsonArray jsonArray) {
+                        assertEquals(2, jsonArray.size());
+                        assertEquals(3, jsonArray.getJsonObject(0).getInteger("val"));
+                        assertEquals(4, jsonArray.getJsonObject(1).getInteger("val"));
+                    } else {
+                        fail("Not a JsonArray");
                     }
                 })
                 .thenAssertResults();
@@ -155,6 +192,17 @@ public class ToolStructuredContentTest extends McpServerTest {
                         return ToolResponse.structuredSuccess(pojo);
                     })
                     .register();
+            toolManager.newTool("golf")
+                    .setDescription("Use golf for a list")
+                    .generateOutputSchema(new ParameterizedTypeImpl(List.class, MyPojo.class))
+                    .setHandler(toolArgs -> {
+                        MyPojo pojo1 = new MyPojo();
+                        pojo1.setVal(3);
+                        MyPojo pojo2 = new MyPojo();
+                        pojo2.setVal(4);
+                        return ToolResponse.structuredSuccess(List.of(pojo1, pojo2));
+                    })
+                    .register();
         }
 
         @Tool(description = "Use echo!", structuredContent = true)
@@ -162,6 +210,15 @@ public class ToolStructuredContentTest extends McpServerTest {
             MyPojo pojo = new MyPojo();
             pojo.setVal(7);
             return Uni.createFrom().item(pojo);
+        }
+
+        @Tool(description = "Use foxtrot!", structuredContent = true)
+        List<MyPojo> foxtrot() {
+            MyPojo pojo1 = new MyPojo();
+            pojo1.setVal(1);
+            MyPojo pojo2 = new MyPojo();
+            pojo2.setVal(2);
+            return List.of(pojo1, pojo2);
         }
 
     }
