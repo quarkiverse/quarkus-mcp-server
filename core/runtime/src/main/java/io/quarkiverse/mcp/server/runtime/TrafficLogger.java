@@ -61,7 +61,7 @@ public class TrafficLogger implements McpTrafficListener {
     }
 
     private static String messageToString(RawMessage message, int textLimit) {
-        String encoded = message.asJsonObject().encodePrettily();
+        String encoded = message.asPrettyString();
         if (encoded == null || encoded.isBlank()) {
             return "n/a";
         } else if (textLimit < 0 || encoded.length() <= textLimit) {
