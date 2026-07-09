@@ -26,4 +26,15 @@ public interface McpTrafficListener {
     default void onMessageSent(RawMessage message, McpConnection connection) {
     }
 
+    /**
+     * Returns {@code true} if this listener is enabled and should be notified about traffic messages.
+     * <p>
+     * A disabled listener is completely skipped during traffic processing.
+     *
+     * @return {@code true} if this listener is enabled
+     */
+    default boolean isEnabled() {
+        return true;
+    }
+
 }

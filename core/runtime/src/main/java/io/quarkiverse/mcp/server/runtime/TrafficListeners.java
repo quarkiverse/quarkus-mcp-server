@@ -19,7 +19,7 @@ public class TrafficListeners {
     private final List<McpTrafficListener> listeners;
 
     TrafficListeners(@All List<McpTrafficListener> listeners) {
-        this.listeners = listeners;
+        this.listeners = listeners.stream().filter(McpTrafficListener::isEnabled).toList();
     }
 
     public void messageReceived(JsonObject message, McpConnectionBase connection) {

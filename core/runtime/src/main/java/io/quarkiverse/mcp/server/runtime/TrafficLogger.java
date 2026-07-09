@@ -31,10 +31,12 @@ public class TrafficLogger implements McpTrafficListener {
     }
 
     @Override
+    public boolean isEnabled() {
+        return anyServerEnabled;
+    }
+
+    @Override
     public void onMessageReceived(RawMessage message, McpConnection connection) {
-        if (!anyServerEnabled) {
-            return;
-        }
         McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
         if (!config.enabled()) {
             return;
@@ -45,9 +47,6 @@ public class TrafficLogger implements McpTrafficListener {
 
     @Override
     public void onMessageSent(RawMessage message, McpConnection connection) {
-        if (!anyServerEnabled) {
-            return;
-        }
         McpServerRuntimeConfig.TrafficLogging config = trafficLoggingConfig(connection);
         if (!config.enabled()) {
             return;
