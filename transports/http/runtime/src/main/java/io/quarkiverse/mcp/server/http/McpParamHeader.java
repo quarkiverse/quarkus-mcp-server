@@ -20,8 +20,13 @@ import io.quarkiverse.mcp.server.Tool;
  *
  * <pre>
  * &#64;Tool
+ * String query(&#64;McpParamHeader String region, String value) {
+ *     // region is mirrored as Mcp-Param-region
+ * }
+ *
+ * &#64;Tool
  * String query(&#64;McpParamHeader("Region") String region, String value) {
- *     // ...
+ *     // region is mirrored as Mcp-Param-Region
  * }
  * </pre>
  *
@@ -32,10 +37,17 @@ import io.quarkiverse.mcp.server.Tool;
 public @interface McpParamHeader {
 
     /**
+     * Constant value for {@link #value()} indicating that the annotated parameter's name should be used as the header name.
+     */
+    String ELEMENT_NAME = "<<element name>>";
+
+    /**
      * The header name portion used to construct the HTTP header {@code Mcp-Param-{value}}.
      * <p>
      * Must be a non-empty, valid HTTP field-name token as defined by RFC 9110 Section 5.1.
+     * <p>
+     * If not specified, the parameter name is used.
      */
-    String value();
+    String value() default ELEMENT_NAME;
 
 }

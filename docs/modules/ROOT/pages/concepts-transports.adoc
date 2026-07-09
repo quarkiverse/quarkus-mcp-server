@@ -93,6 +93,47 @@ The `McpConnection.logLevel()` method returns this per-request value for transie
 
 See xref:getting-started-http.adoc[Getting Started with HTTP] for a complete tutorial.
 
+[[custom-headers-from-tool-parameters]]
+=== Custom Headers from Tool Parameters
+
+MCP servers can designate specific tool parameters to be mirrored into HTTP headers using the `x-mcp-header` extension property in the tool's `inputSchema`.
+This enables network intermediaries (load balancers, gateways, firewalls) to route and inspect requests based on parameter values without parsing the JSON-RPC body.
+
+When a tool parameter is annotated with `@McpParamHeader("Region")` (or the programmatic `x-mcp-header` equivalent), the client includes a `Mcp-Param-Region` header in the HTTP request whose value matches the argument in the body.
+
+**Server validation**::
+The server validates that every `Mcp-Param-{Name}` header value matches the corresponding value in the request body.
+A mismatch or missing header results in HTTP `400 Bad Request` with a `HeaderMismatch` JSON-RPC error (code `-32020`).
+
+The validation follows the MCP specification:
+
+[cols="1,1,1"]
+|===
+|Scenario |Client Behavior |Server Behavior
+
+|Parameter value provided
+|Client MUST include the header
+|Server MUST validate header matches body
+
+|Parameter value is `null`
+|Client MUST omit the header
+|Server MUST NOT expect the header
+
+|Parameter not in arguments
+|Client MUST omit the header
+|Server MUST NOT expect the header
+
+|Client omits header but value is in body
+|Non-conforming client
+|Server MUST reject the request
+|===
+
+**Value encoding**::
+Non-ASCII or otherwise unsafe header values are Base64-encoded using the sentinel format `=?base64?{Base64EncodedValue}?=`.
+The server decodes encoded values before comparing them to the body value.
+
+See xref:guides-implementing-tools.adoc#_custom_http_headers_from_tool_parameters[Implementing Tools - Custom HTTP Headers] for usage with `@McpParamHeader` and the programmatic API.
+
 == WebSocket Transport
 
 If you want to use the `WebSocket` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-websocket` extension to your build file first.

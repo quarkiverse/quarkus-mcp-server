@@ -138,7 +138,12 @@ public class HttpMcpServerProcessor {
                 if (mcpParamHeader == null) {
                     continue;
                 }
-                String headerName = mcpParamHeader.value().asString();
+                String headerName;
+                if (mcpParamHeader.value() == null || McpParamHeader.ELEMENT_NAME.equals(mcpParamHeader.value().asString())) {
+                    headerName = param.name();
+                } else {
+                    headerName = mcpParamHeader.value().asString();
+                }
                 // Validate header name is non-empty
                 if (headerName.isEmpty()) {
                     throw new IllegalStateException(

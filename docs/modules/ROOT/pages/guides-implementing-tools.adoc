@@ -68,6 +68,71 @@ A `@Tool` method can accept parameters with various types. The following additio
 
 See xref:reference-parameter-types.adoc[Parameter Types] for complete details on supported parameter types.
 
+== Custom HTTP Headers from Tool Parameters
+
+When using the Streamable HTTP transport, tool parameters can be mirrored into HTTP headers (`Mcp-Param-{Name}`) so that network intermediaries (load balancers, gateways, firewalls) can route and inspect requests without parsing the JSON-RPC body.
+
+Use the `@McpParamHeader` annotation to designate a tool parameter as a mirrored header:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.http.McpParamHeader;
+
+public class MyTools {
+
+    @Tool(description = "Execute a query on a regional database")
+    String query(@McpParamHeader String region, String value) { // <1>
+        return queryInRegion(region, value);
+    }
+}
+----
+<1> When the tool is called with `"region": "us-west1"`, the client adds the header `Mcp-Param-region: us-west1` to the HTTP request.
+
+By default, the parameter name is used as the header name portion.
+You can specify an explicit value to override it, e.g. `@McpParamHeader("Region")` produces `Mcp-Param-Region`.
+The value must be a non-empty, valid HTTP field-name token as defined by https://datatracker.ietf.org/doc/html/rfc9110#section-5.1[RFC 9110 Section 5.1].
+
+Supported parameter types are `String`, `int`/`Integer`, `long`/`Long`, and `boolean`/`Boolean`.
+
+The server validates that the header value matches the corresponding value in the request body.
+A mismatch or missing header results in HTTP `400 Bad Request` with a `HeaderMismatch` JSON-RPC error (code `-32020`).
+If the parameter is optional and not provided in the request body, the header is not required.
+
+NOTE: The `@McpParamHeader` annotation is only relevant for the Streamable HTTP transport. It is ignored by other transports (stdio, WebSocket).
+
+WARNING: Do not mark sensitive parameters (passwords, API keys, tokens, PII) with `@McpParamHeader`, as header values are visible to network intermediaries.
+
+=== Programmatic Registration
+
+Tools registered via the `ToolManager` API can also use `x-mcp-header`.
+Add the `x-mcp-header` extension property directly to the parameter's JSON Schema:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.vertx.core.json.JsonObject;
+
+toolManager.newTool("query")
+    .setDescription("Execute a query on a regional database")
+    .setInputSchema(new JsonObject()
+        .put("type", "object")
+        .put("properties", new JsonObject()
+            .put("region", new JsonObject()
+                .put("type", "string")
+                .put("x-mcp-header", "Region")) // <1>
+            .put("value", new JsonObject()
+                .put("type", "string")))
+        .put("required", new io.vertx.core.json.JsonArray().add("region").add("value")))
+    .setHandler(args -> ToolResponse.success(
+        queryInRegion(args.args().get("region").toString(), args.args().get("value").toString())))
+    .register();
+----
+<1> The `x-mcp-header` property on the `region` parameter produces the same `Mcp-Param-Region` header as the `@McpParamHeader("Region")` annotation.
+
+See xref:concepts-transports.adoc#custom-headers-from-tool-parameters[Custom Headers from Tool Parameters] for more details on the HTTP transport mechanics.
+
 == Programmatic API
 
 It's also possible to register a tool programmatically with the `io.quarkiverse.mcp.server.ToolManager` API.
