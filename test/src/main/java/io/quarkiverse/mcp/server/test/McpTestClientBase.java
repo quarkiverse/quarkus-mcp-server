@@ -1512,7 +1512,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
                 content = List.of();
             }
             assertFunction.accept(
-                    new ToolResponse(isError, content, result.getJsonObject("structuredContent"), Contents.parseMeta(result)));
+                    new ToolResponse(isError, content, result.getValue("structuredContent"), Contents.parseMeta(result)));
         }
     }
 

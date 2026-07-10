@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -125,10 +126,20 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         /**
          * Generate the output schema for structured content from the given class.
          *
-         * @param outputSchema
+         * @param from
          * @return self
          */
-        ToolDefinition generateOutputSchema(Class<?> from);
+        default ToolDefinition generateOutputSchema(Class<?> from) {
+            return generateOutputSchema((Type) from);
+        }
+
+        /**
+         * Generate the output schema for structured content from the given type.
+         *
+         * @param from
+         * @return self
+         */
+        ToolDefinition generateOutputSchema(Type from);
 
         /**
          * @param schema

@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.runtime;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,7 +25,7 @@ public record FeatureMethodInfo(String name,
         Content.Annotations resourceAnnotations,
         CacheControl cacheControl,
         Set<String> serverNames,
-        Class<?> outputSchemaFrom,
+        Type outputSchemaFrom,
         Class<? extends OutputSchemaGenerator> outputSchemaGenerator,
         Class<? extends InputSchemaGenerator<?>> inputSchemaGenerator,
         // meta key (prefix + name) -> json

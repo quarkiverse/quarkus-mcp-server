@@ -171,13 +171,14 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.Tool.OutputSchema;
 import jakarta.inject.Singleton;
 import io.vertx.core.json.JsonObject;
+import java.lang.reflect.Type;
 import java.util.List;
 
 @Singleton // <1>
 public class CustomSchemaGenerator implements OutputSchemaGenerator {
 
     @Override
-    public Object generate(Class<?> from) {
+    public Object generate(Type from) {
         return new JsonObject()
             .put("type", "object")
             .put("properties", new JsonObject()
@@ -218,12 +219,13 @@ To customize schema generation for all tools, implement `GlobalOutputSchemaGener
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import jakarta.inject.Singleton;
 import io.vertx.core.json.JsonObject;
+import java.lang.reflect.Type;
 
 @Singleton
 public class MyGlobalSchemaGenerator implements GlobalOutputSchemaGenerator {
 
     @Override
-    public Object generate(Class<?> from) {
+    public Object generate(Type from) {
         // Custom schema generation logic for all tools
         return new JsonObject()
             .put("type", "object")
@@ -231,8 +233,8 @@ public class MyGlobalSchemaGenerator implements GlobalOutputSchemaGenerator {
             .put("additionalProperties", false);
     }
 
-    private JsonObject generateProperties(Class<?> from) {
-        // Introspect the class and generate properties...
+    private JsonObject generateProperties(Type from) {
+        // Introspect the type and generate properties...
         return new JsonObject();
     }
 }
@@ -242,7 +244,8 @@ The global generator is used for all tools unless a specific generator is provid
 
 === Programmatic API
 
-When registering tools programmatically, use `generateOutputSchema(Class<?> from)` to set the output schema:
+When registering tools programmatically, use `generateOutputSchema()` to set the output schema.
+The method accepts a `java.lang.reflect.Type`, so you can pass a simple `Class` or a parameterized type:
 
 [source,java]
 ----
@@ -271,7 +274,7 @@ public class MyTools {
     }
 }
 ----
-<1> Generate the output schema from the `User` class.
+<1> Generate the output schema from the `User` class. A `Class` can be passed directly since it implements `java.lang.reflect.Type`.
 
 Alternatively, provide a schema object directly:
 

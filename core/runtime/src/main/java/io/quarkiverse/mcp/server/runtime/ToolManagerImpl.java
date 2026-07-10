@@ -369,7 +369,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             Class<? extends OutputSchemaGenerator> outputSchemaGeneratorClass = metadata.info().outputSchemaGenerator();
             if (outputSchemaGeneratorClass != null) {
                 Object outputSchema;
-                Class<?> outputSchemaFrom = metadata.info().outputSchemaFrom();
+                Type outputSchemaFrom = metadata.info().outputSchemaFrom();
                 if (GlobalOutputSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
                     outputSchema = globalOutputSchemaGenerator.generate(outputSchemaFrom);
                 } else {
@@ -602,7 +602,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
-        public ToolDefinition generateOutputSchema(Class<?> from) {
+        public ToolDefinition generateOutputSchema(Type from) {
             this.outputSchema = globalOutputSchemaGenerator.generate(from);
             return this;
         }
