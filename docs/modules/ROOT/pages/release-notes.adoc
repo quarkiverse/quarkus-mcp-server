@@ -54,6 +54,7 @@ include::./includes/attributes.adoc[]
 === Important Bug Fixes
 
 * [2.0.0] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
+* [2.0.0] `McpHttpServersRuntimeConfig` now uses the correct `RUN_TIME` config phase instead of `BUILD_AND_RUN_TIME_FIXED`. The HTTP transport runtime properties (`dns-rebinding-check.enabled`, `auto-init`, `lazy-sse-init`) can now be overridden at startup. (https://github.com/quarkiverse/quarkus-mcp-server/issues/904[#904])
 
 [[version-1-13]]
 == 1.13.x
