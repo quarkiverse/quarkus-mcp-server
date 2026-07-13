@@ -2,11 +2,13 @@ package io.quarkiverse.mcp.server.http.runtime;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -300,24 +302,20 @@ public class HttpMcpServerRecorder {
     }
 
     private static final Set<String> LOCAL_HOSTNAMES = Set.of("localhost", "127.0.0.1", "[::1]", "::1");
-    private static final Set<String> ORIGIN_LOCAL_HOSTS;
-
-    static {
-        Set<String> originLocalHosts = new HashSet<String>();
-        for (String hostname : LOCAL_HOSTNAMES) {
-            originLocalHosts.add("http://" + hostname);
-            originLocalHosts.add("https://" + hostname);
-        }
-        ORIGIN_LOCAL_HOSTS = Set.copyOf(originLocalHosts);
-    }
 
     private boolean isLocalhost(String origin) {
-        for (String host : ORIGIN_LOCAL_HOSTS) {
-            if (origin.startsWith(host)) {
-                return true;
-            }
+        URI uri;
+        try {
+            uri = new URI(origin);
+        } catch (URISyntaxException e) {
+            return false;
         }
-        return false;
+        String scheme = uri.getScheme();
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+            return false;
+        }
+        String host = uri.getHost();
+        return host != null && LOCAL_HOSTNAMES.contains(host.toLowerCase(Locale.ROOT));
     }
 
 }

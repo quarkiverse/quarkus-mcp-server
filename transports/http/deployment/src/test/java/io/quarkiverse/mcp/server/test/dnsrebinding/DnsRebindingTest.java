@@ -1,10 +1,15 @@
 package io.quarkiverse.mcp.server.test.dnsrebinding;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -17,7 +22,9 @@ public class DnsRebindingTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withEmptyApplication();
+            .withApplicationRoot(
+                    root -> root.addClasses(MyTools.class))
+            .overrideConfigKey("quarkus.mcp.server.http.streamable.auto-init", "true");
 
     @Test
     public void testNonLocalhostRequestRejected() {
@@ -35,6 +42,80 @@ public class DnsRebindingTest extends McpServerTest {
                 .post(endpoint)
                 .then()
                 .statusCode(403);
+    }
+
+    @Test
+    public void testLocalhostSubdomainOriginRejected() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        URI endpoint = client.mcpEndpoint();
+        RestAssured.given()
+                .when()
+                .headers(HttpHeaders.HOST + "", "localhost.evil.example",
+                        HttpHeaders.ORIGIN, "http://localhost.evil.example")
+                .body(new JsonObject()
+                        .put("jsonrpc", "2.0")
+                        .put("method", McpAssured.TOOLS_CALL)
+                        .put("id", 1)
+                        .put("params", new JsonObject().put("name", "foo")).encode())
+                .post(endpoint)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    public void testLocalhostOriginAccepted() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        URI endpoint = client.mcpEndpoint();
+        client.terminateSession();
+        client.disconnect();
+        String origin = endpoint.getScheme() + "://" + endpoint.getAuthority();
+        JsonObject response = new JsonObject(RestAssured.given()
+                .when()
+                .headers(HttpHeaders.ORIGIN + "", origin,
+                        HttpHeaders.ACCEPT, "application/json, text/event-stream")
+                .body(new JsonObject()
+                        .put("jsonrpc", "2.0")
+                        .put("method", McpAssured.TOOLS_CALL)
+                        .put("id", 1)
+                        .put("params", new JsonObject().put("name", "foo")).encode())
+                .post(endpoint)
+                .then()
+                .statusCode(200)
+                .extract().body().asString());
+        assertNotNull(response.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text"));
+        assertFalse(response.getJsonObject("result").getBoolean("isError"));
+    }
+
+    @Test
+    public void testIpv6LocalhostOriginAccepted() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        URI endpoint = client.mcpEndpoint();
+        client.terminateSession();
+        client.disconnect();
+        JsonObject response = new JsonObject(RestAssured.given()
+                .when()
+                .headers(HttpHeaders.ORIGIN + "", "http://[::1]:8080",
+                        HttpHeaders.ACCEPT, "application/json, text/event-stream")
+                .body(new JsonObject()
+                        .put("jsonrpc", "2.0")
+                        .put("method", McpAssured.TOOLS_CALL)
+                        .put("id", 1)
+                        .put("params", new JsonObject().put("name", "foo")).encode())
+                .post(endpoint)
+                .then()
+                .statusCode(200)
+                .extract().body().asString());
+        assertNotNull(response.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text"));
+        assertFalse(response.getJsonObject("result").getBoolean("isError"));
+    }
+
+    public static class MyTools {
+
+        @Tool
+        String foo(McpConnection connection) {
+            return connection.id();
+        }
+
     }
 
 }
