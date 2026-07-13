@@ -11,7 +11,7 @@ import io.smallrye.config.WithDefaults;
 import io.smallrye.config.WithParentName;
 import io.smallrye.config.WithUnnamedKey;
 
-@ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
+@ConfigRoot(phase = ConfigPhase.RUN_TIME)
 @ConfigMapping(prefix = "quarkus.mcp.server")
 public interface McpHttpServersRuntimeConfig {
 

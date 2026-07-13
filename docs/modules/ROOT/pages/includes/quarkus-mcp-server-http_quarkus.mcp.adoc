@@ -88,7 +88,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled[`+++quarkus.mcp.server.http.dns-rebinding-check.enabled+++`]##
+a| [[quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-dns-rebinding-check-enabled[`+++quarkus.mcp.server.http.dns-rebinding-check.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.http.dns-rebinding-check.enabled+++[]
 endif::add-copy-button-to-config-props[]
@@ -114,7 +114,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-auto-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-auto-init[`+++quarkus.mcp.server.http.streamable.auto-init+++`]##
+a| [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-auto-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-auto-init[`+++quarkus.mcp.server.http.streamable.auto-init+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.http.streamable.auto-init+++[]
 endif::add-copy-button-to-config-props[]
@@ -150,7 +150,7 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init[`+++quarkus.mcp.server.http.streamable.lazy-sse-init+++`]##
+a| [[quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init]] [.property-path]##link:#quarkus-mcp-server-http_quarkus-mcp-server-http-streamable-lazy-sse-init[`+++quarkus.mcp.server.http.streamable.lazy-sse-init+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.http.streamable.lazy-sse-init+++[]
 endif::add-copy-button-to-config-props[]
