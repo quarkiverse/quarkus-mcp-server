@@ -43,7 +43,7 @@
         <assertj.version>3.27.7</assertj.version>
         <jacoco.version>0.8.15</jacoco.version>
         <jacoco.dest-file>${maven.multiModuleProjectDirectory}/target/jacoco.exec</jacoco.dest-file>
-        <mcp-server-api.version>1.0.0-Beta4</mcp-server-api.version>
+        <mcp-server-api.version>1.0.0</mcp-server-api.version>
     </properties>
 
     <dependencyManagement>
