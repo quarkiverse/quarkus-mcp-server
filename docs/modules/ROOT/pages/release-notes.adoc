@@ -74,6 +74,7 @@ include::./includes/attributes.adoc[]
 === Breaking Changes
 
 * [1.13.0] The `audience` attribute of the `@Resource.Annotations` annotation and the `Content.Annotations` record now supports multiple roles. The annotation attribute type changed from `Role` to `Role[]` and the record field type changed from `Role` to `List<Role>`. A backwards-compatible constructor accepting a single `Role` is provided. (https://github.com/quarkiverse/quarkus-mcp-server/issues/788[#788])
+* [1.13.1] The `quarkus.mcp-server.metrics.enabled` config property is now read at runtime. Since it defaults to `false`, applications that rely on MCP metrics without explicitly setting `quarkus.mcp-server.metrics.enabled=true` will stop collecting them. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/844[#844])
 
 [[version-1-13-features]]
 === New Features
@@ -94,7 +95,6 @@ include::./includes/attributes.adoc[]
 * [1.13.0] Custom Jackson serializers and deserializers are now honored for `@ToolArg` parameters of scalar and custom types, fixing incorrect schema generation and argument conversion. (https://github.com/quarkiverse/quarkus-mcp-server/issues/774[#774])
 * [1.13.0] Client-side 4xx HTTP errors in Streamable HTTP are now logged at WARN level instead of ERROR, avoiding false production alerts. (https://github.com/quarkiverse/quarkus-mcp-server/issues/760[#760])
 * [1.13.1] `ToolInputGuardrail.ToolInputContext#setArguments()` and `ToolOutputGuardrail.ToolOutputContext#setResponse()` no longer accept null, avoiding NPE for guarded no-argument tool calls. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/819[#819])
-* [1.13.1] The `quarkus.mcp-server.metrics.enabled` config property is now read at runtime. Since it defaults to `false`, applications that rely on MCP metrics without explicitly setting `quarkus.mcp-server.metrics.enabled=true` will stop collecting them. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/844[#844])
 * [1.13.1] Tracing spans now include the `mcp.server.name` attribute and respect per-server `tracingEnabled` configuration instead of only checking the default server. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
 * [1.13.1] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
 * [1.13.1] When `notifications/initialized` arrives with an unknown session ID and auto-initialization is enabled, the server now returns 202 instead of an unsupported method error. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/878[#878])
@@ -183,6 +183,9 @@ include::./includes/attributes.adoc[]
 |===
 |Version |Date
 
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.7[1.10.7]
+|July 13, 2026
+
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.6[1.10.6]
 |June 2, 2026
 
@@ -209,6 +212,7 @@ include::./includes/attributes.adoc[]
 === Breaking Changes
 
 * [1.10.6] The `audience` attribute of the `@Resource.Annotations` annotation and the `Content.Annotations` record now supports multiple roles. The annotation attribute type changed from `Role` to `Role[]` and the record field type changed from `Role` to `List<Role>`. A backwards-compatible constructor accepting a single `Role` is provided. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/788[#788])
+* [1.10.7] The `quarkus.mcp-server.metrics.enabled` config property is now read at runtime. Since it defaults to `false`, applications that rely on MCP metrics without explicitly setting `quarkus.mcp-server.metrics.enabled=true` will stop collecting them. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/844[#844])
 
 [[version-1-10-features]]
 === New Features
@@ -234,6 +238,8 @@ include::./includes/attributes.adoc[]
 * [1.10.6] Empty `ToolAnnotations` title is no longer included in the JSON response, which caused some MCP clients (e.g. IBM Bob IDE) to not display available tools. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/748[#748])
 * [1.10.6] `McpLog#error(Throwable, String, Object...)` now correctly delegates to `logger.errorf(...)` instead of `logger.infof(...)`. _(backported from <<version-1-12,1.12.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/744[#744])
 * [1.10.6] Build-time validation of resource template methods now correctly considers the `name` attribute of `@ResourceTemplateArg` instead of only matching against method parameter names. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/806[#806])
+* [1.10.7] `ToolInputGuardrail.ToolInputContext#setArguments()` and `ToolOutputGuardrail.ToolOutputContext#setResponse()` no longer accept null, avoiding NPE for guarded no-argument tool calls. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/819[#819])
+* [1.10.7] `McpHttpServersRuntimeConfig` now uses the correct `RUN_TIME` config phase instead of `BUILD_AND_RUN_TIME_FIXED`. The HTTP transport runtime properties (`dns-rebinding-check.enabled`, `auto-init`, `lazy-sse-init`) can now be overridden at startup. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/904[#904])
 
 [[version-1-9]]
 == 1.9.x
