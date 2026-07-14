@@ -550,13 +550,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         SseStream sse = new SseStream(ConnectionManager.connectionId(), response);
         streamableConnection.addSse(sse);
 
-        // Send log notification to the client
-        JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
-                Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
-                        "Subsidiary SSE opened [%s]".formatted(connection.id())));
+        // Send log notification to the client if the log level allows it
+        if (McpLog.LogLevel.DEBUG.isAtLeast(connection.logLevel())) {
+            JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
+                    Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
+                            "Subsidiary SSE opened [%s]".formatted(connection.id())));
 
-        trafficListeners.messageSent(log, connection);
-        sse.sendEvent("message", log.encode());
+            trafficListeners.messageSent(log, connection);
+            sse.sendEvent("message", log.encode());
+        }
 
         HttpMcpServerRecorder.setCloseHandler(request, () -> {
             if (streamableConnection.removeSse(sse.id())) {

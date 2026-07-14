@@ -25,6 +25,8 @@ public abstract class McpServerTest {
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.text-limit", "" + textLimit);
         }
+        // Set the default log level to DEBUG so that the subsidiary SSE debug notification is sent
+        config.overrideRuntimeConfigKey("quarkus.mcp.server.client-logging.default-level", "DEBUG");
         // Disable all input schema generators by default
         config.overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "false");
         config.overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jakarta-validation.enabled", "false");
