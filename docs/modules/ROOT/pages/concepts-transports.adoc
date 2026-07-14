@@ -16,6 +16,23 @@ The "HTTP/SSE" transport is considered deprecated, but it's still supported by m
 This extension supports the `stdio` transport and both variants of the `HTTP` transport.
 Moreover, it also supports the unofficial `websocket` transport.
 
+[[choosing-a-transport]]
+=== Choosing a Transport
+
+The `stdio` and `HTTP` transports differ in their deployment model, not only in their wire protocol.
+
+With `stdio`, the client launches the server as a subprocess, so each user or session runs its own server process.
+Communication never crosses the network, which means there are no proxies, no TLS, no origin checks, and no state shared between users.
+The cost is that the server executable has to be distributed to each client, and a new process starts for every session.
+
+With `HTTP`, one long-running server is shared by many clients, and requests travel across the network.
+That network path introduces corporate proxies, the origin check described in xref:reference-security.adoc#dns-rebinding-protection[DNS Rebinding Protection], authentication, and TLS (see xref:reference-security.adoc[Security Reference]).
+In exchange, you get central deployment, shared state, and the ability to upgrade the server independently of its clients.
+
+Use `stdio` for local, single-user tooling such as desktop assistants, and `HTTP` for shared or remote services.
+Feature methods such as `@Tool` are transport-agnostic, so switching later is a packaging and configuration change rather than a rewrite.
+Note that falling back from `HTTP` to `stdio` changes the deployment model, not just the wire protocol.
+
 == STDIO Transport
 
 If you want to use the `stdio` transport you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-stdio` extension to your build file first.
@@ -177,3 +194,5 @@ TIP: You can also use the BOM (Bill Of Materials) to control the versions of all
 * xref:reference-security.adoc[Security Reference]
 * xref:getting-started-stdio.adoc[Getting Started with STDIO]
 * xref:getting-started-http.adoc[Getting Started with HTTP]
+* xref:guides-connecting-mcp-clients.adoc[Connecting MCP Clients to Your Server]
+* xref:guides-troubleshooting.adoc[Troubleshooting HTTP Connections]

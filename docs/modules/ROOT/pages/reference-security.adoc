@@ -74,6 +74,49 @@ quarkus.http.cors.origins=http://localhost:6274 <2>
 <2> Accept requests from a Single-Page MCP Client running at http://localhost:6274.
 ====
 
+[[dns-rebinding-protection]]
+== DNS Rebinding Protection
+
+DNS rebinding is an attack in which a malicious website causes a victim's browser to send requests to a server running on the victim's own machine, such as a local MCP server.
+Because the request originates from the attacker's page, the browser attaches the attacker's `Origin` header, which lets the server detect and reject the request.
+The Streamable HTTP transport validates this header to satisfy the DNS rebinding protection requirement of the https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#security-warning[MCP transport specification]. For more information, see https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices#local-mcp-server-compromise[MCP Security Best Practices].
+
+The check applies to the Streamable HTTP endpoint (`/mcp` by default) for all request methods.
+The deprecated SSE endpoint (`/mcp/sse`) and the WebSocket endpoint are not covered by this check; if you expose them, restrict access with the CORS filter and the authentication mechanisms described on this page.
+
+The check is active when both of the following are true:
+
+* The `quarkus.mcp.server.http.dns-rebinding-check.enabled` property is `true`, which is the default.
+* The effective `quarkus.http.host` value is a local address (`localhost`, `127.0.0.1`, `[::1]`, or `::1`), or is unset.
+
+Quarkus binds to `localhost` in dev and test mode and to `0.0.0.0` in production mode.
+With the default configuration, the check is therefore active during development and inactive in production.
+
+When the check rejects a request, the server returns an HTTP `403` response with the reason phrase `Invalid origin` and an empty body.
+Requests that carry no `Origin` header are never rejected, so command-line clients such as `curl` are unaffected unless you set the header explicitly.
+Each rejection is logged at `DEBUG` level in the `io.quarkiverse.mcp.server.http.runtime.HttpMcpServerRecorder` category as `Non-localhost origin rejected: <origin>`.
+Some MCP clients report any `403` response as an authentication failure, which can make an origin rejection look like a credentials problem.
+For help distinguishing the two, see xref:guides-troubleshooting.adoc#forbidden-403[Troubleshooting HTTP Connections].
+
+To disable the check, set the property to `false`.
+You can also disable it for a single named server:
+
+[source,properties]
+----
+quarkus.mcp.server.http.dns-rebinding-check.enabled=false
+quarkus.mcp.server."my-server".http.dns-rebinding-check.enabled=false
+----
+
+The property is read at startup, so you can override it at run time, for example with an environment variable or a system property.
+
+Explicitly setting `quarkus.http.host` to a non-local address, such as `0.0.0.0`, also deactivates the check.
+This value is read at startup, so it can be changed at run time.
+Any deployment that is reachable from outside localhost should enforce the authentication mechanisms described earlier on this page.
+
+This check is independent of the CORS filter.
+The CORS filter relies on the browser to enforce access rules and does not reject same-origin requests, whereas this check is enforced by the server.
+Enabling CORS neither replaces nor disables the check, so configure both for browser-facing deployments.
+
 == OAuth2/OIDC Integration
 
 Typically, to enforce the HTTP security policy configuration, you can use the https://quarkus.io/guides/security-oidc-bearer-token-authentication[Quarkus OIDC extension].
@@ -97,3 +140,4 @@ quarkus.oidc.resource-metadata.enabled=true <3>
 * https://quarkus.io/guides/security-oidc-bearer-token-authentication[Quarkus OIDC Extension]
 * https://modelcontextprotocol.io/specification/2025-11-25#security-and-trust--safety[MCP Security Specification]
 * xref:reference-configuration.adoc[Configuration Reference]
+* xref:guides-troubleshooting.adoc[Troubleshooting HTTP Connections]

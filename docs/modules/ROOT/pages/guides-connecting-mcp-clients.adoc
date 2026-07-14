@@ -1,0 +1,70 @@
+= Connecting MCP Clients to Your Server
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide shows how to connect MCP client applications, such as AI coding assistants, to a server that uses the HTTP transport.
+
+NOTE: This page is about connecting client applications to your server. For the server-initiated client features, such as sampling, elicitation, and roots, see xref:guides-client-integration.adoc[Client Integration].
+
+The only prerequisite is a running server that uses the HTTP transport.
+See xref:getting-started-http.adoc[Getting Started with HTTP Transport] to create one.
+
+== What Every Client Needs
+
+To connect to your server, a client needs three things:
+
+* The full endpoint URL, including the path, for example `http://localhost:8080/mcp`.
+* The transport type, which is Streamable HTTP. Point clients at `/mcp`, not `/mcp/sse`, unless the client only supports the legacy SSE protocol.
+* Network access to the server.
+
+A `localhost` URL works out of the box while you develop.
+Connecting by hostname or IP address, or through a proxy, engages the origin check described in xref:reference-security.adoc#dns-rebinding-protection[DNS Rebinding Protection], and a production server also needs authentication and TLS (see xref:reference-security.adoc[Security Reference]).
+
+== Claude Code
+
+Add the server with the Claude Code CLI:
+
+[source,bash]
+----
+claude mcp add --transport http greeting-server http://localhost:8080/mcp
+----
+
+Verify that it was added with `claude mcp list`.
+You can also define the server in a project-scoped `.mcp.json` file so that it is shared with your team.
+
+== Other Clients
+
+Most clients that are configured with JSON follow the same shape: a named entry with a type of `http` and the server URL.
+
+[source,json]
+----
+{
+  "mcpServers": {
+    "greeting-server": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+----
+
+The exact file name and location differ by client.
+Consult the https://modelcontextprotocol.io/clients[MCP clients documentation] and each client's own documentation for the authoritative configuration format, because these formats change over time.
+
+== Remote Servers
+
+To connect clients from other machines, bind the server to a reachable address by setting `quarkus.http.host`, enable authentication as described in xref:reference-security.adoc[Security Reference], and serve over HTTPS.
+If you place a reverse proxy in front of the server, see the origin-check note in xref:guides-troubleshooting.adoc#forbidden-403[Troubleshooting HTTP Connections].
+
+== When the Connection Fails
+
+If a client cannot connect, start with xref:guides-troubleshooting.adoc#forbidden-403[Troubleshooting HTTP Connections].
+A `403` response that a client reports as "authentication required" is usually not an authentication problem.
+
+== See Also
+
+* xref:getting-started-http.adoc[Getting Started with HTTP Transport]
+* xref:guides-troubleshooting.adoc[Troubleshooting HTTP Connections]
+* xref:reference-security.adoc[Security Reference]
+* xref:concepts-transports.adoc[Transports]

@@ -66,6 +66,8 @@ Your MCP server will be available at:
 * Streamable HTTP (2025-03-26): `http://localhost:8080/mcp`
 * HTTP/SSE (2024-11-05): `http://localhost:8080/mcp/sse` (legacy protocol)
 
+TIP: Keep testing with `localhost` URLs. A server bound to localhost rejects requests from other origins to prevent DNS rebinding attacks, so connecting by hostname or IP address can return a `403` response. See xref:reference-security.adoc#dns-rebinding-protection[DNS Rebinding Protection].
+
 == Testing Your Server
 
 === Testing with Dev UI
@@ -105,3 +107,5 @@ Congratulations! You've successfully created and tested your first MCP server us
 * xref:guides-implementing-resources.adoc[Expose resources]
 * xref:concepts-transports.adoc[Understand HTTP transports]
 * xref:guides-using-bom.adoc[Using the BOM for dependency management]
+* xref:guides-connecting-mcp-clients.adoc[Connect Claude Code and other MCP clients]
+* xref:guides-troubleshooting.adoc[Troubleshoot connection problems]

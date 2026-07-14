@@ -27,6 +27,8 @@
 *** xref:guides-cli-adapter.adoc[CLI Adapter]
 *** xref:guides-development-tools.adoc[Development Tools]
 *** xref:guides-testing.adoc[Testing with McpAssured]
+*** xref:guides-connecting-mcp-clients.adoc[Connecting MCP Clients]
+*** xref:guides-troubleshooting.adoc[Troubleshooting]
 
 .Reference
 ** xref:reference-content-types.adoc[Content Types]

@@ -171,6 +171,7 @@ Deploy MCP servers that:
 |xref:getting-started-stdio.adoc[**Getting Started**] |Build your first MCP server in 5 minutes
 |xref:guides-implementing-tools.adoc[**Implementing Tools**] |Learn all the ways to define and customize tools
 |xref:guides-multiple-servers.adoc[**Multiple Servers**] |Run different APIs with different security policies
+|xref:guides-connecting-mcp-clients.adoc[**Connecting Clients**] |Connect Claude Code and other MCP clients to your server
 |xref:guides-testing.adoc[**Testing**] |Write comprehensive tests with McpAssured
 |xref:concepts-architecture.adoc[**Architecture**] |Understand how Quarkus optimizes your MCP server
 |===
