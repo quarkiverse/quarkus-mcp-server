@@ -310,16 +310,17 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         SubsidiarySse sse = new SubsidiarySse(ConnectionManager.connectionId(), response);
         streamableConnection.addSse(sse);
 
-        // Send log notification to the client
-        JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
-                Messages.newLog(McpLog.LogLevel.DEBUG, "SubsidiarySse",
-                        "Subsidiary SSE opened [%s]".formatted(connection.id())));
-
-        TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
-        if (trafficLogging.enabled()) {
-            TrafficLogger.messageSent(log, connection, trafficLogging.textLimit());
+        // Send log notification to the client if the log level allows it
+        if (McpLog.LogLevel.DEBUG.isAtLeast(connection.logLevel())) {
+            JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
+                    Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
+                            "Subsidiary SSE opened [%s]".formatted(connection.id())));
+            TrafficLogging trafficLogging = config.servers().get(serverName).trafficLogging();
+            if (trafficLogging.enabled()) {
+                TrafficLogger.messageSent(log, connection, trafficLogging.textLimit());
+            }
+            sse.sendEvent("message", log.encode());
         }
-        sse.sendEvent("message", log.encode());
 
         HttpMcpServerRecorder.setCloseHandler(request, () -> {
             if (streamableConnection.removeSse(sse.id())) {
