@@ -20,6 +20,7 @@ public class LoggingTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
+            .overrideRuntimeConfigKey("quarkus.mcp.server.client-logging.default-level", "INFO")
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test
