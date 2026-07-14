@@ -88,6 +88,14 @@ public interface McpLog {
         ALERT,
         EMERGENCY;
 
+        /**
+         * @param threshold the minimum level
+         * @return {@code true} if this level is at least the given threshold
+         */
+        public boolean isAtLeast(LogLevel threshold) {
+            return this.ordinal() >= threshold.ordinal();
+        }
+
         public static LogLevel from(String val) {
             if (val == null || val.isBlank()) {
                 return null;
