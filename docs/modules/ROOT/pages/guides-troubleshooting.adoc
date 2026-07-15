@@ -1,0 +1,163 @@
+= Troubleshooting HTTP Connections
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide helps you diagnose problems when connecting an MCP client to a server that uses the HTTP transport.
+Each section starts from a symptom, lists the likely causes, and shows how to confirm and fix each one.
+
+[[forbidden-403]]
+== 403 Forbidden or "Authentication Required"
+
+A client that reports `403 Forbidden`, or that claims authentication is required when you have configured none, is the most common HTTP connection problem, because three unrelated causes produce a similar symptom.
+Some MCP clients, for example Claude Code, display any `403` response as an authentication error and may start an OAuth discovery flow even when the server has no authentication configured.
+Do not assume the problem is authentication until you have ruled out the other two causes.
+
+Inspect the actual HTTP response to tell the causes apart:
+
+[cols="2,1,2"]
+|===
+|Response |HTTP status |Most likely cause
+
+|Reason phrase `Invalid origin`, empty body
+|`403`
+|The DNS rebinding origin check
+
+|`WWW-Authenticate` header present, empty body
+|`401`
+|The server requires authentication
+
+|JSON-RPC error body with code `-32005`
+|`403`
+|The client is authenticated but not authorized
+
+|HTML or proxy-branded body, and nothing in the server log
+|`403` or another 4xx
+|An HTTP proxy between the client and the server
+|===
+
+=== Cause: the DNS rebinding origin check
+
+The Streamable HTTP transport rejects requests whose `Origin` header is not a localhost address.
+This is the most frequent cause when the client connects by hostname or IP address rather than `localhost`.
+The response is `403` with the reason phrase `Invalid origin` and an empty body, and the server logs `Non-localhost origin rejected: <origin>` at `DEBUG` level.
+
+To fix it, do one of the following:
+
+* Configure the client with a `http://localhost:...` URL instead of a hostname or LAN IP address.
+* Set `quarkus.http.host` explicitly, or disable the check, as described in xref:reference-security.adoc#dns-rebinding-protection[DNS Rebinding Protection].
+
+A reverse proxy in front of a server that is bound to `localhost` forwards the browser's `Origin` header unchanged, so remote clients are rejected with the same `403`.
+For that deployment, set `quarkus.http.host` to a non-local address and add authentication, rather than relying on the origin check.
+
+=== Cause: an HTTP proxy between the client and the server
+
+A corporate HTTP proxy can answer with `403` before the request reaches the server.
+In that case the server logs stay empty, because the request never arrives.
+
+To confirm, compare a request sent with and without your proxy environment variables:
+
+[source,bash]
+----
+curl --noproxy '*' -i http://your-server:8080/mcp
+----
+
+If the request succeeds only when the proxy is bypassed, the proxy is the cause.
+Check whether your client honors the `NO_PROXY` (or `no_proxy`) environment variable for MCP connections, and add the server's host to it if so.
+Otherwise, ask your proxy administrator to allow the server's host.
+
+=== Cause: an authentication or authorization failure
+
+If you have configured a security policy, an unauthenticated request is answered with a `401` response that carries a `WWW-Authenticate` header.
+A request that is authenticated but lacks the required role is answered with a `403` response whose body is a JSON-RPC error with code `-32005`.
+See xref:reference-security.adoc[Security Reference] for the available mechanisms.
+
+[[empty-server-logs]]
+== The Client Fails but the Server Logs Nothing
+
+When the client reports a failure but the server logs show no incoming request, the request is not reaching the server.
+Consider these causes:
+
+* An HTTP proxy is intercepting the request. See <<forbidden-403>>.
+* The client is using the wrong host or port.
+* The server is bound to `localhost` while the client connects from another machine. Set `quarkus.http.host` to a reachable address.
+
+To confirm whether requests arrive at all, enable the access log:
+
+[source,properties]
+----
+quarkus.http.access-log.enabled=true
+----
+
+[[wrong-endpoint-path]]
+== Client Connects to the Wrong Endpoint Path
+
+The HTTP transport exposes two endpoints, and a client that targets the wrong one typically fails with a `404` or `405` response or disconnects immediately.
+
+[cols="2,1,2"]
+|===
+|Client type |Default path |Protocol version
+
+|Streamable HTTP client
+|`/mcp`
+|2025-03-26
+
+|Legacy SSE client
+|`/mcp/sse`
+|2024-11-05
+|===
+
+Both paths move together when you change `quarkus.mcp.server.http.root-path`.
+For more information, see xref:concepts-transports.adoc[Transports].
+
+[[diagnostic-logging]]
+== Enabling Diagnostic Logging
+
+Two settings reveal most connection problems:
+
+[source,properties]
+----
+quarkus.log.category."io.quarkiverse.mcp".level=DEBUG
+quarkus.http.access-log.enabled=true
+----
+
+The first enables the transport's own `DEBUG` messages, including the `Non-localhost origin rejected: <origin>` line emitted when the origin check rejects a request.
+The second records every request that reaches the server, which distinguishes a rejected request from one that never arrived.
+For message-level tracing, see xref:guides-development-tools.adoc#_traffic_logging[Traffic Logging].
+
+[[curl-reproduction]]
+== Reproducing with curl
+
+To reproduce the origin check directly, send a request with a non-localhost `Origin` header against a server running in dev mode:
+
+[source,bash]
+----
+curl -i -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Origin: http://evil.example.com' \
+  -d '{"jsonrpc":"2.0","method":"ping","id":1}'
+----
+
+The server responds with `HTTP/1.1 403 Invalid origin` and an empty body.
+
+Send the same request without the `Origin` header to confirm that the origin check is the cause:
+
+[source,bash]
+----
+curl -i -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","method":"ping","id":1}'
+----
+
+Any response other than `403 Invalid origin` means the origin check passed.
+The request can still fail for protocol reasons, which is expected here, because this raw request skips the normal MCP initialization.
+
+== See Also
+
+* xref:reference-security.adoc#dns-rebinding-protection[DNS Rebinding Protection]
+* xref:guides-connecting-mcp-clients.adoc[Connecting MCP Clients to Your Server]
+* xref:concepts-transports.adoc[Transports]
+* xref:guides-development-tools.adoc[Development Tools]
+* xref:reference-configuration.adoc[Configuration Reference]
