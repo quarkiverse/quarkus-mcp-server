@@ -22,6 +22,7 @@
 *** xref:guides-using-filters-and-checks.adoc[Using Filters and Checks]
 *** xref:guides-schema-validator.adoc[Schema Validator]
 ** Integration
+*** xref:guides-oidc.adoc[OIDC Integration]
 *** xref:guides-client-integration.adoc[Client Integration]
 *** xref:guides-logging-progress-cancellation.adoc[Monitoring]
 *** xref:guides-cli-adapter.adoc[CLI Adapter]

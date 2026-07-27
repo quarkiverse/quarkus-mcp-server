@@ -1,0 +1,59 @@
+== OIDC Integration
+
+include::./includes/attributes.adoc[]
+:diataxis-type: howto
+
+The `quarkus-mcp-server-oidc` extension enhances the OAuth2/OIDC security of MCP HTTP servers by providing automatic https://modelcontextprotocol.io/specification/{spec-version}/basic/authorization#runtime-insufficient-scope-errors[Runtime Insufficient Scope Error] responses as required by the https://modelcontextprotocol.io/specification/{spec-version}/basic/authorization[MCP Authorization specification].
+
+When an authenticated MCP client makes a request with an access token that lacks the required scopes, the extension returns an HTTP `403 Forbidden` response with a `WWW-Authenticate` header containing the `insufficient_scope` error, the required scopes, and the URL of the https://datatracker.ietf.org/doc/html/rfc9728[OAuth2 Protected Resource Metadata] endpoint.
+This allows MCP clients to discover the authorization server and initiate a step-up authorization flow to obtain the necessary permissions.
+
+=== Dependency
+
+Add the `quarkus-mcp-server-oidc` extension to your build file.
+For instance, with Maven, add the following dependency to your POM file:
+
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.mcp</groupId>
+    <artifactId>quarkus-mcp-server-oidc</artifactId>
+    <version>${quarkus-mcp.version}</version>
+</dependency>
+----
+
+=== Configuration
+
+You must enable the OIDC resource metadata and configure the required scopes.
+
+.Example `application.properties`
+[source,properties]
+----
+quarkus.http.auth.permission.mcp-endpoints.paths=/mcp/* <1>
+quarkus.http.auth.permission.mcp-endpoints.policy=admin-scope-required <2>
+quarkus.http.auth.policy.admin-scope-required.roles-allowed=admin <3>
+
+quarkus.oidc.auth-server-url=${keycloak.url}/realms/quarkus <4>
+quarkus.oidc.token.audience=quarkus-mcp-server <5>
+quarkus.oidc.roles.role-claim-path=scope <6>
+quarkus.oidc.resource-metadata.enabled=true <7>
+quarkus.oidc.resource-metadata.scopes=admin <8>
+----
+<1> Protect all MCP endpoints.
+<2> Apply the custom `admin-scope-required` policy.
+<3> Require the `admin` role, mapped from the access token `scope` claim.
+<4> Keycloak realm address. Replace with your provider's address.
+<5> Only accept access tokens with a `quarkus-mcp-server` audience claim.
+<6> Map the `scope` claim to Quarkus security roles.
+<7> Enable the https://datatracker.ietf.org/doc/html/rfc9728[OAuth2 Protected Resource Metadata] endpoint.
+<8> Advertise the `admin` scope in the `WWW-Authenticate` header of `403` responses.
+
+With this configuration, when a client presents a valid token that lacks the `admin` scope, the extension returns:
+
+[source,http]
+----
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer error="insufficient_scope", scope="admin", resource_metadata="https://localhost:8080/.well-known/oauth-protected-resource"
+----
+
+The MCP client can then use the `resource_metadata` URL to discover the authorization server and request the missing scope.
