@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1135,6 +1136,8 @@ class McpServerProcessor {
     private record ManagerUsage(boolean resources, boolean resourceTemplates, boolean prompts, boolean tools) {
     }
 
+    private static final char[] INVALID_JVM_FIELD_NAME_CHARS = { '.', ';', '[', '/' };
+
     private String generateToolArgsHolder(Gizmo gizmo, FeatureMethodBuildItem tool,
             ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index) {
         // Generate a holder for each tool with at least one argument that is:
@@ -1157,6 +1160,13 @@ class McpServerProcessor {
         if (!generateHolder) {
             return null;
         }
+
+        DotName argAnnotationName = tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)
+                ? DotNames.LANGCHAIN4J_P
+                : tool.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_TOOL)
+                        ? DotNames.MCPJAVA_TOOL_ARG
+                        : DotNames.TOOL_ARG;
+
         // org.example.MyTool_foo
         String className = tool.getMethod().declaringClass().name().toString() + "_" + tool.getName();
         LOG.debugf("Generate tool arguments holder: %s", className);
@@ -1164,7 +1174,9 @@ class McpServerProcessor {
         gizmo.class_(className, cc -> {
             cc.defaultConstructor();
             for (MethodParameterInfo param : serializedArguments) {
-                cc.field(param.name(), fc -> {
+                String fieldName = resolveEffectiveArgName(param, argAnnotationName);
+                validateFieldName(fieldName, param, tool);
+                cc.field(fieldName, fc -> {
                     fc.public_();
                     fc.setType(Jandex2Gizmo.genericTypeOf(param.type()));
                     for (AnnotationInstance annotation : param.declaredAnnotations()) {
@@ -1174,6 +1186,38 @@ class McpServerProcessor {
             }
         });
         return className;
+    }
+
+    private String resolveEffectiveArgName(MethodParameterInfo param, DotName argAnnotationName) {
+        AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
+        if (argAnnotation != null) {
+            AnnotationValue nameValue;
+            if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
+                nameValue = argAnnotation.value();
+            } else {
+                nameValue = argAnnotation.value("name");
+            }
+            if (nameValue != null && !ToolArg.ELEMENT_NAME.equals(nameValue.asString())) {
+                return nameValue.asString();
+            }
+        }
+        return param.name();
+    }
+
+    private void validateFieldName(String name, MethodParameterInfo param, FeatureMethodBuildItem tool) {
+        if (name == null || name.isEmpty()) {
+            return;
+        }
+        for (char invalid : INVALID_JVM_FIELD_NAME_CHARS) {
+            if (name.indexOf(invalid) >= 0) {
+                throw new IllegalStateException(
+                        "Invalid argument name '%s' for parameter '%s' of method %s#%s() - the name must not contain '%c'"
+                                .formatted(name, param.name(),
+                                        tool.getMethod().declaringClass().name(),
+                                        tool.getMethod().name(),
+                                        invalid));
+            }
+        }
     }
 
     @BuildStep
@@ -1314,6 +1358,7 @@ class McpServerProcessor {
 
             mc.body(bc -> {
                 LocalVar args = bc.localVar("args", List.class, bc.new_(ArrayList.class));
+                Set<String> argNames = new HashSet<>();
 
                 for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
                     String name = param.name();
@@ -1373,6 +1418,16 @@ class McpServerProcessor {
                                                 explicitAnnotation));
                     }
 
+                    FeatureArgument.Provider provider = FeatureArguments.providerFrom(param.type());
+                    if (provider == FeatureArgument.Provider.PARAMS
+                            && !argNames.add(name)) {
+                        throw new IllegalStateException(
+                                "Duplicate argument name '%s' in method %s#%s()"
+                                        .formatted(name,
+                                                featureMethod.getMethod().declaringClass().name(),
+                                                featureMethod.getMethod().name()));
+                    }
+
                     LocalVar type = RuntimeTypeCreator.of(bc).withIndex(index).create(param.type());
                     // new FeatureArgument(String name, String title, String description, boolean
                     // required, Type type, String defaultValue, Provider provider)
@@ -1383,7 +1438,7 @@ class McpServerProcessor {
                             Const.of(required),
                             type,
                             defaultValue != null ? Const.of(defaultValue) : Const.ofNull(String.class),
-                            Const.of(FeatureArguments.providerFrom(param.type()))));
+                            Const.of(provider)));
                     bc.withList(args).add(arg);
                 }
 
