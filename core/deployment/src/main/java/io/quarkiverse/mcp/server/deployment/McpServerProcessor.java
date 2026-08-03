@@ -928,6 +928,8 @@ class McpServerProcessor {
                 .done());
     }
 
+    private static final char[] INVALID_JVM_FIELD_NAME_CHARS = { '.', ';', '[', '/' };
+
     private void generateToolArgsHolder(MethodCreator toolArgumentHolders, ResultHandle holders, FeatureMethodBuildItem tool,
             ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
         // Generate a holder for each tool with at least one argument that is:
@@ -947,6 +949,10 @@ class McpServerProcessor {
             }
         }
         if (generateHolder) {
+            DotName argAnnotationName = tool.getMethod().hasDeclaredAnnotation(DotNames.LANGCHAIN4J_TOOL)
+                    ? DotNames.LANGCHAIN4J_P
+                    : DotNames.TOOL_ARG;
+
             // org.example.MyTool_foo
             String className = tool.getMethod().declaringClass().name().toString() + "_" + tool.getName();
             LOG.debugf("Generate tool arguments holder: %s", className);
@@ -955,7 +961,9 @@ class McpServerProcessor {
                     .className(className)
                     .build();
             for (MethodParameterInfo param : serializedArguments) {
-                FieldCreator paramField = argumentsHolder.getFieldCreator(param.name(), param.type().name().toString());
+                String fieldName = resolveEffectiveArgName(param, argAnnotationName);
+                validateFieldName(fieldName, param, tool);
+                FieldCreator paramField = argumentsHolder.getFieldCreator(fieldName, param.type().name().toString());
                 paramField.setModifiers(Modifier.PUBLIC);
                 setSignature(paramField, param.type());
                 param.declaredAnnotations().forEach(paramField::addAnnotation);
@@ -987,6 +995,38 @@ class McpServerProcessor {
                     : io.quarkus.gizmo.Type.wildcardTypeWithUpperBound(gizmoType(wildcardType.extendsBound()));
         }
         throw new IllegalArgumentException("Unsupported type: " + type);
+    }
+
+    private String resolveEffectiveArgName(MethodParameterInfo param, DotName argAnnotationName) {
+        AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
+        if (argAnnotation != null) {
+            AnnotationValue nameValue;
+            if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
+                nameValue = argAnnotation.value();
+            } else {
+                nameValue = argAnnotation.value("name");
+            }
+            if (nameValue != null && !ToolArg.ELEMENT_NAME.equals(nameValue.asString())) {
+                return nameValue.asString();
+            }
+        }
+        return param.name();
+    }
+
+    private void validateFieldName(String name, MethodParameterInfo param, FeatureMethodBuildItem tool) {
+        if (name == null || name.isEmpty()) {
+            return;
+        }
+        for (char invalid : INVALID_JVM_FIELD_NAME_CHARS) {
+            if (name.indexOf(invalid) >= 0) {
+                throw new IllegalStateException(
+                        "Invalid argument name '%s' for parameter '%s' of method %s#%s() - the name must not contain '%c'"
+                                .formatted(name, param.name(),
+                                        tool.getMethod().declaringClass().name(),
+                                        tool.getMethod().name(),
+                                        invalid));
+            }
+        }
     }
 
     @BuildStep
@@ -1340,6 +1380,7 @@ class McpServerProcessor {
         MethodCreator metaMethod = clazz.getMethodCreator(methodName, FeatureMetadata.class);
 
         ResultHandle args = Gizmo.newArrayList(metaMethod);
+        Set<String> argNames = new HashSet<>();
         for (MethodParameterInfo param : featureMethod.getMethod().parameters()) {
             String name = param.name();
             String title = null;
@@ -1395,8 +1436,18 @@ class McpServerProcessor {
                                         argAnnotationName.withoutPackagePrefix()));
             }
 
+            FeatureArgument.Provider providerVal = providerFrom(param.type());
+            if (providerVal == FeatureArgument.Provider.PARAMS
+                    && !argNames.add(name)) {
+                throw new IllegalStateException(
+                        "Duplicate argument name '%s' in method %s#%s()"
+                                .formatted(name,
+                                        featureMethod.getMethod().declaringClass().name(),
+                                        featureMethod.getMethod().name()));
+            }
+
             ResultHandle type = Types.getTypeHandle(metaMethod, param.type());
-            ResultHandle provider = metaMethod.load(providerFrom(param.type()));
+            ResultHandle provider = metaMethod.load(providerVal);
             ResultHandle arg = metaMethod.newInstance(
                     MethodDescriptor.ofConstructor(FeatureArgument.class, String.class, String.class, String.class,
                             boolean.class,
