@@ -376,7 +376,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                 }
                 prompt.put("_meta", meta);
             }
-            if (icons != null) {
+            if (icons != null && !icons.isEmpty()) {
                 prompt.put("icons", icons);
             }
             return prompt;

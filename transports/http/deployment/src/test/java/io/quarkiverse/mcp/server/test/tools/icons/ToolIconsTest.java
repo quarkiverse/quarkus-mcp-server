@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.tools.icons;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
@@ -42,10 +43,15 @@ public class ToolIconsTest extends McpServerTest {
                 .setDescription("Charlie!")
                 .register();
 
+        toolManager.newTool("delta")
+                .setHandler(args -> ToolResponse.success("ok"))
+                .setDescription("Delta - no icons!")
+                .register();
+
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
         client.when().toolsList(page -> {
-            assertEquals(3, page.tools().size());
+            assertEquals(4, page.tools().size());
 
             ToolInfo alphaTool = page.findByName("alpha");
             JsonArray alphaIcons = alphaTool.icons();
@@ -64,6 +70,9 @@ public class ToolIconsTest extends McpServerTest {
             assertEquals(1, charlieIcons.size());
             assertEquals("file://baz", charlieIcons.getJsonObject(0).getString("src"));
             assertEquals("image/png", charlieIcons.getJsonObject(0).getString("mimeType"));
+
+            ToolInfo delta = page.findByName("delta");
+            assertNull(delta.icons());
         }).thenAssertResults();
     }
 

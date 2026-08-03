@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.resources.templates.icons;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
@@ -45,10 +46,17 @@ public class ResourceTemplateIconsTest extends McpServerTest {
                 .setDescription("Charlie!")
                 .register();
 
+        resourceTemplateManager.newResourceTemplate("delta")
+                .setUriTemplate("file:///project/delta/{foo}")
+                .setHandler(
+                        args -> new ResourceResponse(List.of(TextResourceContents.create("file:///project/delta", "ping"))))
+                .setDescription("Delta - no icons!")
+                .register();
+
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
         client.when().resourcesTemplatesList(page -> {
-            assertEquals(3, page.templates().size());
+            assertEquals(4, page.templates().size());
 
             ResourceTemplateInfo alpha = page.findByUriTemplate("file:///project/alpha/{foo}");
             JsonArray alphaIcons = alpha.icons();
@@ -67,6 +75,9 @@ public class ResourceTemplateIconsTest extends McpServerTest {
             assertEquals(1, charlieIcons.size());
             assertEquals("file://baz", charlieIcons.getJsonObject(0).getString("src"));
             assertEquals("image/png", charlieIcons.getJsonObject(0).getString("mimeType"));
+
+            ResourceTemplateInfo delta = page.findByUriTemplate("file:///project/delta/{foo}");
+            assertNull(delta.icons());
         }).thenAssertResults();
     }
 

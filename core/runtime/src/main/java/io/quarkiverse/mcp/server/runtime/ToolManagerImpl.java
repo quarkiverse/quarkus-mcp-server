@@ -793,7 +793,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 }
                 tool.put("_meta", meta);
             }
-            if (icons != null) {
+            if (icons != null && !icons.isEmpty()) {
                 tool.put("icons", icons);
             }
             return tool;

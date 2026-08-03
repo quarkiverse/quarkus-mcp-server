@@ -454,7 +454,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 }
                 ret.put("_meta", meta);
             }
-            if (icons != null) {
+            if (icons != null && !icons.isEmpty()) {
                 ret.put("icons", icons);
             }
             return ret;
