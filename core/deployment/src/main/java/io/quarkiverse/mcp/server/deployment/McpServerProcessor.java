@@ -765,6 +765,7 @@ class McpServerProcessor {
     void generateMetadata(McpServerRecorder recorder,
             RecorderContext recorderContext,
             BeanDiscoveryFinishedBuildItem beanDiscovery,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
             List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             List<ServerNameBuildItem> serverNames,
@@ -915,7 +916,8 @@ class McpServerProcessor {
         MethodCreator toolArgumentHolders = metadataCreator.getMethodCreator("toolArgumentHolders", Map.class);
         ResultHandle holders = Gizmo.newHashMap(toolArgumentHolders);
         for (FeatureMethodBuildItem tool : featureMethods.stream().filter(FeatureMethodBuildItem::isTool).toList()) {
-            generateToolArgsHolder(toolArgumentHolders, holders, tool, classOutput, reflectiveClasses);
+            generateToolArgsHolder(toolArgumentHolders, holders, tool, classOutput, reflectiveClasses,
+                    beanArchiveIndex.getIndex());
         }
         toolArgumentHolders.returnValue(holders);
 
@@ -930,21 +932,43 @@ class McpServerProcessor {
 
     private static final char[] INVALID_JVM_FIELD_NAME_CHARS = { '.', ';', '[', '/' };
 
+    private static boolean isSimpleType(org.jboss.jandex.Type type, IndexView index) {
+        if (type.kind() == Kind.PRIMITIVE) {
+            return true;
+        }
+        if (PrimitiveType.isBox(type)) {
+            return true;
+        }
+        DotName name = type.name();
+        if (DotNames.STRING.equals(name)) {
+            return true;
+        }
+        if (DotNames.OPTIONAL.equals(name)) {
+            return isSimpleType(type.asParameterizedType().arguments().get(0), index);
+        }
+        ClassInfo classInfo = index.getClassByName(name);
+        return classInfo != null && classInfo.isEnum();
+    }
+
     private void generateToolArgsHolder(MethodCreator toolArgumentHolders, ResultHandle holders, FeatureMethodBuildItem tool,
-            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
-        // Generate a holder for each tool with at least one argument that is:
-        // - serialized
-        // - annotated with any other annotation than @ToolArg and @P
+            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index) {
+        // Generate a holder for each tool with at least one serialized argument that either:
+        // - is annotated with any other annotation than @ToolArg and @P
+        // - has a non-simple type (i.e. not a primitive, wrapper, String, enum, or Optional of those)
         boolean generateHolder = false;
         List<MethodParameterInfo> serializedArguments = new ArrayList<>();
         for (MethodParameterInfo param : tool.getMethod().parameters()) {
             if (providerFrom(param.type()) == Provider.PARAMS) {
                 serializedArguments.add(param);
-                List<AnnotationInstance> annotations = param.declaredAnnotations();
-                if (!annotations.isEmpty()
-                        && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
-                                && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
-                    generateHolder = true;
+                if (!generateHolder) {
+                    List<AnnotationInstance> annotations = param.declaredAnnotations();
+                    if (!annotations.isEmpty()
+                            && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
+                                    && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
+                        generateHolder = true;
+                    } else if (!isSimpleType(param.type(), index)) {
+                        generateHolder = true;
+                    }
                 }
             }
         }
@@ -963,9 +987,13 @@ class McpServerProcessor {
             for (MethodParameterInfo param : serializedArguments) {
                 String fieldName = resolveEffectiveArgName(param, argAnnotationName);
                 validateFieldName(fieldName, param, tool);
-                FieldCreator paramField = argumentsHolder.getFieldCreator(fieldName, param.type().name().toString());
+                org.jboss.jandex.Type paramType = param.type();
+                if (DotNames.OPTIONAL.equals(paramType.name())) {
+                    paramType = paramType.asParameterizedType().arguments().get(0);
+                }
+                FieldCreator paramField = argumentsHolder.getFieldCreator(fieldName, paramType.name().toString());
                 paramField.setModifiers(Modifier.PUBLIC);
-                setSignature(paramField, param.type());
+                setSignature(paramField, paramType);
                 param.declaredAnnotations().forEach(paramField::addAnnotation);
             }
             argumentsHolder.close();
