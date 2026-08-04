@@ -43,6 +43,11 @@ public record MetaKey(String prefix, String name, String key) {
     public static final MetaKey SUBSCRIPTION_ID = new MetaKey("io.modelcontextprotocol/", "subscriptionId");
 
     /**
+     * The {@code io.modelcontextprotocol/serverInfo} key.
+     */
+    public static final MetaKey SERVER_INFO = new MetaKey("io.modelcontextprotocol/", "serverInfo");
+
+    /**
      * Create a new key with the specified prefix and name.
      *
      * @param prefix the optional prefix (e.g. {@code "io.modelcontextprotocol/"})

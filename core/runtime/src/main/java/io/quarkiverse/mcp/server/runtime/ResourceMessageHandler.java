@@ -46,7 +46,7 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
         // Send empty result
-        return mcpRequest.sender().sendResult(id, new JsonObject());
+        return mcpRequest.sender().sendEmptyResult(id);
     }
 
     Future<Void> resourcesUnsubscribe(JsonObject message, McpRequest mcpRequest) {
@@ -63,10 +63,10 @@ class ResourceMessageHandler extends MessageHandler {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
         // Send empty result
-        return mcpRequest.sender().sendResult(id, new JsonObject());
+        return mcpRequest.sender().sendEmptyResult(id);
     }
 
-    Future<Void> resourcesList(JsonObject message, McpRequest mcpRequest) {
+    Future<Void> resourcesList(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
@@ -92,10 +92,10 @@ class ResourceMessageHandler extends MessageHandler {
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
         putCacheControl(result, serverConfig.resources().ttlMs(), serverConfig.resources().cacheScope());
-        return mcpRequest.sender().sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 
-    Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest) {
+    Future<Void> resourcesRead(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         if (params == null) {
@@ -123,11 +123,11 @@ class ResourceMessageHandler extends MessageHandler {
                 } else {
                     ResourceResponse resolved = resolveResourceReadCacheControl(resourceResponse, resourceUri,
                             mcpRequest.serverName());
-                    return mcpRequest.sender().sendResult(id, resolved);
+                    return mcpRequest.sender().sendResult(id, JsonObject.mapFrom(resolved), responseMeta);
                 }
             },
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
-                            "Unable to read resource %s", resourceUri));
+                            "Unable to read resource %s", resourceUri, responseMeta));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }

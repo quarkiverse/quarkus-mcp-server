@@ -31,6 +31,7 @@ import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.ResponseServerInfo;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.Icon;
@@ -90,6 +91,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final McpRequestValidator mcpRequestValidator;
 
     private final CancellationRequests cancellationRequests;
+
+    private final ConcurrentHashMap<String, JsonObject> responseServerInfoCache = new ConcurrentHashMap<>();
 
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
@@ -412,17 +415,19 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         context.runOnContext(v -> {
             mcpRequest.contextStart();
+            JsonObject responseMeta = getResponseServerInfo(mcpRequest);
             Future<?> future = switch (method) {
-                case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest);
-                case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest);
-                case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest);
-                case TOOLS_CALL -> toolHandler.toolsCall(message, mcpRequest);
-                case RESOURCES_LIST -> resourceHandler.resourcesList(message, mcpRequest);
-                case RESOURCES_READ -> resourceHandler.resourcesRead(message, mcpRequest);
+                case PROMPTS_LIST -> promptHandler.promptsList(message, mcpRequest, responseMeta);
+                case PROMPTS_GET -> promptHandler.promptsGet(message, mcpRequest, responseMeta);
+                case TOOLS_LIST -> toolHandler.toolsList(message, mcpRequest, responseMeta);
+                case TOOLS_CALL -> toolHandler.toolsCall(message, mcpRequest, responseMeta);
+                case RESOURCES_LIST -> resourceHandler.resourcesList(message, mcpRequest, responseMeta);
+                case RESOURCES_READ -> resourceHandler.resourcesRead(message, mcpRequest, responseMeta);
                 case RESOURCES_SUBSCRIBE -> resourceHandler.resourcesSubscribe(message, mcpRequest);
                 case RESOURCES_UNSUBSCRIBE -> resourceHandler.resourcesUnsubscribe(message, mcpRequest);
-                case RESOURCE_TEMPLATES_LIST -> resourceTemplateHandler.resourceTemplatesList(message, mcpRequest);
-                case COMPLETION_COMPLETE -> complete(message, mcpRequest);
+                case RESOURCE_TEMPLATES_LIST ->
+                    resourceTemplateHandler.resourceTemplatesList(message, mcpRequest, responseMeta);
+                case COMPLETION_COMPLETE -> complete(message, mcpRequest, responseMeta);
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 case NOTIFICATIONS_INITIALIZED -> alreadyInitialized(mcpRequest);
@@ -565,13 +570,13 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             } else {
                 mcpRequest.connection().setLogLevel(logLevel);
                 // Send empty result
-                return mcpRequest.sender().sendResult(id, new JsonObject());
+                return mcpRequest.sender().sendEmptyResult(id);
             }
         }
 
     }
 
-    private Future<Void> complete(JsonObject message, MCP_REQUEST mcpRequest) {
+    private Future<Void> complete(JsonObject message, MCP_REQUEST mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
         JsonObject ref = params.getJsonObject("ref");
@@ -587,10 +592,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Argument not found");
                 } else {
                     if (Messages.isPromptRef(referenceType)) {
-                        return promptCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(), mcpRequest);
+                        return promptCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(), mcpRequest,
+                                responseMeta);
                     } else if (Messages.isResourceRef(referenceType)) {
                         return resourceTemplateCompleteHandler.complete(message, id, ref, argument, mcpRequest.sender(),
-                                mcpRequest);
+                                mcpRequest, responseMeta);
                     } else {
                         return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST,
                                 "Unsupported reference found: " + ref.getString("type"));
@@ -603,7 +609,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> ping(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         LOG.debugf("Ping [id: %s]", id);
-        return mcpRequest.sender().sendResult(id, new JsonObject());
+        return mcpRequest.sender().sendEmptyResult(id);
     }
 
     private Future<Void> alreadyInitialized(MCP_REQUEST mcpRequest) {
@@ -871,7 +877,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         return capabilities;
     }
 
-    private Object buildServerInfo(MCP_REQUEST mcpRequest) {
+    private Implementation resolveImplementation(MCP_REQUEST mcpRequest) {
         for (InitialResponseInfo info : initialResponseInfos) {
             Optional<Implementation> impl = info.implementation(mcpRequest.serverName());
             if (impl != null && impl.isPresent()) {
@@ -879,40 +885,91 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             }
         }
         ServerInfo serverInfo = serverConfig(mcpRequest).serverInfo();
-        JsonObject impl = new JsonObject();
-        String serverName = serverInfo.name()
+        String name = serverInfo.name()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.name", String.class)
                         .orElse("N/A"));
-        impl.put("name", serverName);
-        impl.put("version", serverInfo.version()
+        String version = serverInfo.version()
                 .orElse(ConfigProvider.getConfig().getOptionalValue("quarkus.application.version", String.class)
-                        .orElse("N/A")));
-        impl.put("title", serverInfo.title().orElse(serverName));
-        if (serverInfo.description().isPresent()) {
-            impl.put("description", serverInfo.description().get());
+                        .orElse("N/A"));
+        List<io.quarkiverse.mcp.server.Icon> icons = new ArrayList<>();
+        for (Icon icon : serverInfo.icons()) {
+            icons.add(new io.quarkiverse.mcp.server.Icon(
+                    icon.src(),
+                    icon.mimeType().orElse(null),
+                    icon.sizes(),
+                    icon.theme().orElse(null)));
         }
-        if (serverInfo.websiteUrl().isPresent()) {
-            impl.put("websiteUrl", serverInfo.websiteUrl().get());
+        return new Implementation(name, version,
+                serverInfo.title().orElse(name),
+                icons,
+                serverInfo.description().orElse(null),
+                serverInfo.websiteUrl().map(Object::toString).orElse(null));
+    }
+
+    private JsonObject buildServerInfo(MCP_REQUEST mcpRequest) {
+        return implementationToJson(resolveImplementation(mcpRequest));
+    }
+
+    protected JsonObject getResponseServerInfo(MCP_REQUEST mcpRequest) {
+        ResponseServerInfo mode = serverConfig(mcpRequest).responseServerInfo();
+        if (mode == ResponseServerInfo.NONE) {
+            return null;
         }
-        if (!serverInfo.icons().isEmpty()) {
+        return responseServerInfoCache.computeIfAbsent(mcpRequest.serverName(),
+                new java.util.function.Function<String, JsonObject>() {
+                    @Override
+                    public JsonObject apply(String key) {
+                        return buildResponseServerInfo(mcpRequest, mode);
+                    }
+                });
+    }
+
+    private JsonObject buildResponseServerInfo(MCP_REQUEST mcpRequest, ResponseServerInfo mode) {
+        Implementation impl = resolveImplementation(mcpRequest);
+        JsonObject info;
+        if (mode == ResponseServerInfo.FULL) {
+            info = implementationToJson(impl);
+        } else {
+            info = new JsonObject();
+            info.put("name", impl.name());
+            info.put("version", impl.version());
+        }
+        JsonObject meta = new JsonObject();
+        meta.put(MetaKey.SERVER_INFO.toString(), info);
+        return meta;
+    }
+
+    private static JsonObject implementationToJson(Implementation impl) {
+        JsonObject info = new JsonObject();
+        info.put("name", impl.name());
+        info.put("version", impl.version());
+        if (impl.title() != null) {
+            info.put("title", impl.title());
+        }
+        if (impl.description() != null) {
+            info.put("description", impl.description());
+        }
+        if (impl.websiteUrl() != null) {
+            info.put("websiteUrl", impl.websiteUrl());
+        }
+        if (!impl.icons().isEmpty()) {
             JsonArray icons = new JsonArray();
-            for (Icon icon : serverInfo.icons()) {
-                JsonObject i = new JsonObject()
-                        .put("src", icon.src());
-                if (icon.mimeType().isPresent()) {
-                    i.put("mimeType", icon.mimeType().get());
+            for (io.quarkiverse.mcp.server.Icon icon : impl.icons()) {
+                JsonObject i = new JsonObject().put("src", icon.src());
+                if (icon.mimeType() != null) {
+                    i.put("mimeType", icon.mimeType());
                 }
-                if (icon.theme().isPresent()) {
-                    i.put("theme", icon.theme().get().toString().toLowerCase());
+                if (icon.theme() != null) {
+                    i.put("theme", icon.theme().toString().toLowerCase());
                 }
-                if (!icon.sizes().isEmpty()) {
+                if (icon.sizes() != null && !icon.sizes().isEmpty()) {
                     i.put("sizes", icon.sizes());
                 }
                 icons.add(i);
             }
-            impl.put("icons", icons);
+            info.put("icons", icons);
         }
-        return impl;
+        return info;
     }
 
     private Optional<String> buildInstructions(MCP_REQUEST mcpRequest) {

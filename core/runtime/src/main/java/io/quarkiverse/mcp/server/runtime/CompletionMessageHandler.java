@@ -27,7 +27,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
     }
 
     Future<Void> complete(JsonObject message, Object id, JsonObject ref, JsonObject argument, Sender sender,
-            McpRequest mcpRequest) {
+            McpRequest mcpRequest, JsonObject responseMeta) {
         String referenceName = referenceName(ref);
         String argumentName = argument.getString("name");
         LOG.debugf("Complete %s for argument %s [id: %s]", referenceName, argumentName, id);
@@ -52,8 +52,9 @@ public abstract class CompletionMessageHandler extends MessageHandler {
                     completion.put("hasMore", completionResponse.hasMore());
                 }
                 result.put("completion", completion);
-                return sender.sendResult(id, result);
-            }, cause -> handleFailure(id, sender, mcpRequest, cause, LOG, "Unable to complete %s", referenceName));
+                return sender.sendResult(id, result, responseMeta);
+            }, cause -> handleFailure(id, sender, mcpRequest, cause, LOG, "Unable to complete %s", referenceName,
+                    responseMeta));
         } catch (McpException e) {
             return sender.sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
