@@ -39,7 +39,7 @@ public interface McpMetadata {
 
     Map<Type, DefaultValueConverter<?>> defaultValueConverters();
 
-    Map<String, Class<?>> toolArgumentHolders();
+    Map<FeatureKey, Class<?>> toolArgumentHolders();
 
     static <T> FeatureMetadata<T> findFeature(List<FeatureMetadata<T>> features, String name, String serverName) {
         return features.stream().filter(fm -> fm.info().name().equals(name) && fm.info().serverNames().contains(serverName))

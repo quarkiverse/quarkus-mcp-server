@@ -31,7 +31,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
 
     private final SchemaGenerator schemaGenerator;
 
-    private final Map<String, Class<?>> toolArgumentHolders;
+    private final Map<FeatureKey, Class<?>> toolArgumentHolders;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
@@ -45,7 +45,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
 
     @Override
     public InputSchema generate(ToolInfo tool) {
-        Class<?> holder = toolArgumentHolders.get(tool.name());
+        Class<?> holder = toolArgumentHolders.get(new FeatureKey(tool.name(), tool.serverNames().iterator().next()));
 
         if (holder != null) {
             JsonNode jsonNode = generateSchema(holder, tool.arguments());
@@ -71,7 +71,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
             return new InputSchemaImpl(schema);
 
         } else {
-            // Fallback for individual primitives (no complex recursive types expected here)
+            // Fallback for simple types (primitives, wrappers, String, enums)
             JsonObject properties = new JsonObject();
             for (ToolArgument a : tool.arguments()) {
                 properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
