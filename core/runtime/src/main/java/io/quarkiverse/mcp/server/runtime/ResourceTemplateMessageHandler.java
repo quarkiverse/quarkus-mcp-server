@@ -22,7 +22,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
         this.config = config;
     }
 
-    Future<Void> resourceTemplatesList(JsonObject message, McpRequest mcpRequest) {
+    Future<Void> resourceTemplatesList(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
@@ -48,7 +48,7 @@ class ResourceTemplateMessageHandler extends MessageHandler {
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
         putCacheControl(result, serverConfig.resourceTemplates().ttlMs(), serverConfig.resourceTemplates().cacheScope());
-        return mcpRequest.sender().sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 
 }

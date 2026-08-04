@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -1293,8 +1292,7 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
 
         @Override
         public void doAssert(JsonObject response) {
-            JsonObject result = assertResultResponse(request, response);
-            assertTrue(result.isEmpty());
+            assertResultResponse(request, response);
         }
 
     }

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.DayOfWeek;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -87,15 +86,15 @@ public class ToolsTest extends McpServerTest {
                     assertEquals("2025-08-26T08:40:00Z", t.annotations().lastModified());
                     assertEquals(0.5, t.annotations().priority());
                     // result _meta
-                    assertEquals(1, r._meta().size());
-                    Entry<MetaKey, Object> e = r._meta().entrySet().iterator().next();
-                    assertEquals("alpha-foo", e.getKey().toString());
-                    assertEquals(true, e.getValue());
+                    assertNotNull(r._meta());
+                    assertEquals(true, r._meta().get(MetaKey.from("alpha-foo")));
                 })
                 .toolsCall("uni_alpha", Map.of("uni_price", 1),
                         r -> {
                             assertEquals("Hello 1.0!", r.firstContent().asText().text());
-                            assertNull(r._meta());
+                            // response server info is injected by default (light mode)
+                            assertNotNull(r._meta());
+                            assertNotNull(r._meta().get(MetaKey.SERVER_INFO));
                         })
                 .toolsCall("bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.firstContent().asText().text()))
                 .toolsCall("uni_bravo", Map.of("price", 1), r -> assertEquals("Hello 1!", r.firstContent().asText().text()))

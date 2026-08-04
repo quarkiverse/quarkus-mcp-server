@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
+import io.quarkiverse.mcp.server.ResponseServerInfo;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 
@@ -75,6 +76,15 @@ public interface McpServerRuntimeConfig {
      * Elicitation config.
      */
     Elicitation elicitation();
+
+    /**
+     * Controls inclusion of {@code io.modelcontextprotocol/serverInfo} in the {@code _meta} of every JSON-RPC result.
+     * <p>
+     * {@code LIGHT} includes only name and version. {@code FULL} includes all available server info fields. {@code NONE} opts
+     * out entirely.
+     */
+    @WithDefault("light")
+    ResponseServerInfo responseServerInfo();
 
     /**
      * Dev mode config.

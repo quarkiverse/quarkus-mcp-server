@@ -27,7 +27,7 @@ public abstract class MessageHandler {
     private static final Logger LOG = Logger.getLogger(MessageHandler.class);
 
     protected Future<Void> handleFailure(Object requestId, Sender sender, McpRequest mcpRequest, Throwable cause,
-            Logger logger, String errorMessage, String featureId) {
+            Logger logger, String errorMessage, String featureId, JsonObject responseMeta) {
         if (cause instanceof InputRequiredException inputRequired) {
             JsonObject result = new JsonObject().put("resultType", "input_required");
             if (!inputRequired.inputRequests().isEmpty()) {
@@ -40,7 +40,7 @@ public abstract class MessageHandler {
             if (inputRequired.requestState() != null) {
                 result.put("requestState", inputRequired.requestState());
             }
-            return sender.sendResult(requestId, result);
+            return sender.sendResult(requestId, result, responseMeta);
         } else if (cause instanceof UrlElicitationRequiredException urlElicitation) {
             mcpRequest.setTracingErrorResponse(false, urlElicitation.getJsonRpcErrorCode(), urlElicitation.getMessage());
             JsonArray elicitations = new JsonArray();

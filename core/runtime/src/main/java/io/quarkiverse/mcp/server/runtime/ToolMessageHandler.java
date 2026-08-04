@@ -30,7 +30,7 @@ class ToolMessageHandler extends MessageHandler {
         this.config = config;
     }
 
-    Future<Void> toolsList(JsonObject message, McpRequest mcpRequest) {
+    Future<Void> toolsList(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         Cursor cursor = Messages.getCursor(message, mcpRequest.sender());
         if (cursor == null) {
@@ -63,10 +63,10 @@ class ToolMessageHandler extends MessageHandler {
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
         putCacheControl(result, serverConfig.tools().ttlMs(), serverConfig.tools().cacheScope());
-        return mcpRequest.sender().sendResult(id, result);
+        return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 
-    Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest) {
+    Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         JsonObject params = getParams(message);
         if (params == null) {
@@ -82,10 +82,10 @@ class ToolMessageHandler extends MessageHandler {
                 if (toolResponse.isError()) {
                     mcpRequest.setTracingErrorResponse(true, null, null);
                 }
-                return mcpRequest.sender().sendResult(id, toolResponse);
+                return mcpRequest.sender().sendResult(id, JsonObject.mapFrom(toolResponse), responseMeta);
             },
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
-                            "Unable to call tool %s", toolName));
+                            "Unable to call tool %s", toolName, responseMeta));
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }

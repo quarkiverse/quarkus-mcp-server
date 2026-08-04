@@ -1428,6 +1428,34 @@ endif::add-copy-button-to-env-var[]
 |link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-core_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
 |`+++10M+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-response-server-info]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-response-server-info[`+++quarkus.mcp.server.response-server-info+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.response-server-info+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".response-server-info+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".response-server-info+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+Controls inclusion of `io.modelcontextprotocol/serverInfo` in the `_meta` of every JSON-RPC result.
+
+`LIGHT` includes only name and version. `FULL` includes all available server info fields. `NONE` opts out entirely.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_RESPONSE_SERVER_INFO+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_RESPONSE_SERVER_INFO+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`light`, `full`, `none`
+|`+++light+++`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-dev-mode-dummy-init[`+++quarkus.mcp.server.dev-mode.dummy-init+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.dev-mode.dummy-init+++[]
