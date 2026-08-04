@@ -49,6 +49,7 @@ public class ToolComplexArgumentTest extends McpServerTest {
         client.when()
                 .toolsList(page -> {
                     // Test processOrder tool with multiple complex types and references
+                    // A holder class is generated for non-simple types, so $defs land at the schema root
                     JsonObject schema = page.findByName("processOrder").inputSchema();
                     assertNotNull(schema, "Schema should not be null");
 
@@ -58,15 +59,12 @@ public class ToolComplexArgumentTest extends McpServerTest {
                     assertNotNull(properties.getJsonObject("billingAddress"));
                     assertNotNull(properties.getJsonObject("shippingAddress"));
 
-                    JsonObject customerProp = properties.getJsonObject("customer");
-                    JsonObject customerDefs = customerProp.getJsonObject("$defs");
-                    assertNotNull(customerDefs,
-                            "Nested $defs in customer property must be preserved (issue #539 fix)");
+                    // $defs should be at the root of the schema
+                    JsonObject defs = schema.getJsonObject("$defs");
+                    assertNotNull(defs, "$defs should be at the schema root");
 
-                    // Verify Address definition is in the nested $defs
-                    JsonObject addressDef = customerDefs.getJsonObject("Address");
-                    assertNotNull(addressDef,
-                            "Address type should be defined in customer's $defs");
+                    JsonObject addressDef = defs.getJsonObject("Address");
+                    assertNotNull(addressDef, "Address type should be defined in $defs");
                     assertEquals("object", addressDef.getString("type"));
 
                     JsonObject addressProps = addressDef.getJsonObject("properties");
@@ -75,7 +73,15 @@ public class ToolComplexArgumentTest extends McpServerTest {
                     assertNotNull(addressProps.getJsonObject("city"));
                     assertNotNull(addressProps.getJsonObject("zipCode"));
 
-                    JsonObject customerProps = customerProp.getJsonObject("properties");
+                    // customer property should reference the Customer definition
+                    JsonObject customerProp = properties.getJsonObject("customer");
+                    assertNotNull(customerProp);
+                    assertEquals("#/$defs/Customer", customerProp.getString("$ref"));
+
+                    // Customer definition should reference Address for defaultAddress
+                    JsonObject customerDef = defs.getJsonObject("Customer");
+                    assertNotNull(customerDef, "Customer type should be defined in $defs");
+                    JsonObject customerProps = customerDef.getJsonObject("properties");
                     assertNotNull(customerProps);
                     JsonObject defaultAddressProp = customerProps.getJsonObject("defaultAddress");
                     assertNotNull(defaultAddressProp);
