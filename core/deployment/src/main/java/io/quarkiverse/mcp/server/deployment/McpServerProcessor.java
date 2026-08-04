@@ -47,6 +47,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 import org.jboss.jandex.PrimitiveType;
+import org.jboss.jandex.Type;
 import org.jboss.jandex.Type.Kind;
 import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 import org.jboss.logging.Logger;
@@ -95,6 +96,7 @@ import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
+import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
@@ -1089,7 +1091,11 @@ class McpServerProcessor {
                         String generatedClassName = generateToolArgsHolder(gizmo, tool, classOutput, reflectiveClasses,
                                 beanArchiveIndex.getIndex());
                         if (generatedClassName != null) {
-                            bc.withMap(ret).put(Const.of(tool.getName()), Const.of(ClassDesc.of(generatedClassName)));
+                            for (String server : tool.getServers()) {
+                                bc.withMap(ret).put(
+                                        bc.new_(FeatureKey.class, Const.of(tool.getName()), Const.of(server)),
+                                        Const.of(ClassDesc.of(generatedClassName)));
+                            }
                         }
                     }
                     bc.return_(ret);
@@ -1130,21 +1136,47 @@ class McpServerProcessor {
 
     private static final char[] INVALID_JVM_FIELD_NAME_CHARS = { '.', ';', '[', '/' };
 
+    private static boolean isSimpleType(Type type, IndexView index) {
+        if (type.kind() == Kind.PRIMITIVE) {
+            return true;
+        }
+        if (PrimitiveType.isBox(type)) {
+            return true;
+        }
+        DotName name = type.name();
+        if (DotNames.STRING.equals(name)) {
+            return true;
+        }
+        if (isOptionalType(name)) {
+            if (DotNames.OPTIONAL.equals(name)) {
+                return isSimpleType(type.asParameterizedType().arguments().get(0), index);
+            }
+            // OptionalInt, OptionalLong, OptionalDouble
+            return true;
+        }
+        ClassInfo classInfo = index.getClassByName(name);
+        return classInfo != null && classInfo.isEnum();
+    }
+
     private String generateToolArgsHolder(Gizmo gizmo, FeatureMethodBuildItem tool,
             ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index) {
-        // Generate a holder for each tool with at least one argument that is:
-        // - serialized
-        // - annotated with any other annotation than @ToolArg and @P
+        // Generate a holder for each tool with at least one serialized argument that either:
+        // - is annotated with any other annotation than @ToolArg, @P, @McpJavaToolArg
+        // - has a non-simple type (i.e. not a primitive, wrapper, String, enum, or Optional of those)
         boolean generateHolder = false;
         List<MethodParameterInfo> serializedArguments = new ArrayList<>();
         for (MethodParameterInfo param : tool.getMethod().parameters()) {
             if (providerFrom(param.type()) == Provider.PARAMS) {
                 serializedArguments.add(param);
-                List<AnnotationInstance> annotations = param.declaredAnnotations();
-                if (!annotations.isEmpty()
-                        && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
-                                && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
-                    generateHolder = true;
+                if (!generateHolder) {
+                    List<AnnotationInstance> annotations = param.declaredAnnotations();
+                    if (!annotations.isEmpty()
+                            && annotations.stream().anyMatch(a -> !a.name().equals(DotNames.TOOL_ARG)
+                                    && !a.name().equals(DotNames.LANGCHAIN4J_P))) {
+                        generateHolder = true;
+                    } else if (!isSimpleType(param.type(), index)) {
+                        generateHolder = true;
+                    }
                 }
             }
         }
@@ -1167,7 +1199,12 @@ class McpServerProcessor {
                 validateFieldName(fieldName, param, tool);
                 cc.field(fieldName, fc -> {
                     fc.public_();
-                    fc.setType(Jandex2Gizmo.genericTypeOf(param.type()));
+                    // Unwrap Optional<T> to T so that victools does not generate a nullable type
+                    Type paramType = param.type();
+                    if (DotNames.OPTIONAL.equals(paramType.name())) {
+                        paramType = paramType.asParameterizedType().arguments().get(0);
+                    }
+                    fc.setType(Jandex2Gizmo.genericTypeOf(paramType));
                     for (AnnotationInstance annotation : param.declaredAnnotations()) {
                         Jandex2Gizmo.addAnnotation(fc, annotation, index);
                     }
