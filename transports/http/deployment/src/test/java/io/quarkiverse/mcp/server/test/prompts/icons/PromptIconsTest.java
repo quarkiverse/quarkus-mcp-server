@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.prompts.icons;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
@@ -43,10 +44,15 @@ public class PromptIconsTest extends McpServerTest {
                 .setDescription("Charlie!")
                 .register();
 
+        promptManager.newPrompt("delta")
+                .setHandler(args -> PromptResponse.withMessages(PromptMessage.withUserRole("ok")))
+                .setDescription("Delta - no icons!")
+                .register();
+
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
         client.when().promptsList(page -> {
-            assertEquals(3, page.prompts().size());
+            assertEquals(4, page.prompts().size());
             PromptInfo alpha = page.findByName("alpha");
             JsonArray alphaIcons = alpha.icons();
             assertEquals(1, alphaIcons.size());
@@ -64,6 +70,9 @@ public class PromptIconsTest extends McpServerTest {
             assertEquals(1, charlieIcons.size());
             assertEquals("file://baz", charlieIcons.getJsonObject(0).getString("src"));
             assertEquals("image/png", charlieIcons.getJsonObject(0).getString("mimeType"));
+
+            PromptInfo delta = page.findByName("delta");
+            assertNull(delta.icons());
         }).thenAssertResults();
     }
 
