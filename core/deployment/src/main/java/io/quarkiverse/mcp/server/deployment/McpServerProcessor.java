@@ -96,6 +96,7 @@ import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
+import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
 import io.quarkiverse.mcp.server.runtime.FeatureMethodInfo;
 import io.quarkiverse.mcp.server.runtime.JsonTextContentEncoder;
@@ -1097,7 +1098,11 @@ class McpServerProcessor {
                         String generatedClassName = generateToolArgsHolder(gizmo, tool, classOutput, reflectiveClasses,
                                 beanArchiveIndex.getIndex());
                         if (generatedClassName != null) {
-                            bc.withMap(ret).put(Const.of(tool.getName()), Const.of(ClassDesc.of(generatedClassName)));
+                            for (String server : tool.getServers()) {
+                                bc.withMap(ret).put(
+                                        bc.new_(FeatureKey.class, Const.of(tool.getName()), Const.of(server)),
+                                        Const.of(ClassDesc.of(generatedClassName)));
+                            }
                         }
                     }
                     bc.return_(ret);

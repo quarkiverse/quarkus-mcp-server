@@ -31,7 +31,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
 
     private final SchemaGenerator schemaGenerator;
 
-    private final Map<String, Class<?>> toolArgumentHolders;
+    private final Map<FeatureKey, Class<?>> toolArgumentHolders;
 
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
@@ -45,7 +45,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
 
     @Override
     public InputSchema generate(ToolInfo tool) {
-        Class<?> holder = toolArgumentHolders.get(tool.name());
+        Class<?> holder = toolArgumentHolders.get(new FeatureKey(tool.name(), tool.serverNames().iterator().next()));
 
         if (holder != null) {
             JsonNode jsonNode = generateSchema(holder, tool.arguments());

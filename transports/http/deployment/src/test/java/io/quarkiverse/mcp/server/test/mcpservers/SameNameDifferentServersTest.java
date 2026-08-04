@@ -2,6 +2,9 @@ package io.quarkiverse.mcp.server.test.mcpservers;
 
 import static io.quarkiverse.mcp.server.McpServer.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -18,6 +21,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Tests that the same feature name can be used on different servers.
@@ -41,10 +45,20 @@ public class SameNameDifferentServersTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(1, page.size());
-                    assertEquals("query", page.tools().get(0).name());
+                    assertEquals(2, page.size());
+                    assertEquals("query", page.tools().get(1).name());
+
+                    // Verify the schema uses AlphaItem (has "label" property)
+                    JsonObject schema = page.findByName("analyze").inputSchema();
+                    JsonObject properties = schema.getJsonObject("properties");
+                    assertNotNull(properties);
+                    JsonObject itemProps = properties.getJsonObject("item").getJsonObject("properties");
+                    assertNotNull(itemProps.getJsonObject("label"),
+                            "Alpha's analyze tool should use AlphaItem with 'label' property");
                 })
                 .toolsCall("query", r -> assertEquals("alpha_result", r.firstContent().asText().text()))
+                .toolsCall("analyze", Map.of("item", new AlphaItem("test")),
+                        r -> assertEquals("alpha:test", r.firstContent().asText().text()))
                 .promptsGet("summarize", r -> assertEquals("alpha_prompt", r.messages().get(0).content().asText().text()))
                 .resourcesRead("file://data", r -> assertEquals("alpha_data", r.contents().get(0).asText().text()))
                 .thenAssertResults();
@@ -59,13 +73,29 @@ public class SameNameDifferentServersTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(1, page.size());
-                    assertEquals("query", page.tools().get(0).name());
+                    assertEquals(2, page.size());
+                    assertEquals("query", page.tools().get(1).name());
+
+                    // Verify the schema uses BravoItem (has "code" property)
+                    JsonObject schema = page.findByName("analyze").inputSchema();
+                    JsonObject properties = schema.getJsonObject("properties");
+                    assertNotNull(properties);
+                    JsonObject itemProps = properties.getJsonObject("item").getJsonObject("properties");
+                    assertNotNull(itemProps.getJsonObject("code"),
+                            "Bravo's analyze tool should use BravoItem with 'code' property");
                 })
                 .toolsCall("query", r -> assertEquals("bravo_result", r.firstContent().asText().text()))
+                .toolsCall("analyze", Map.of("item", new BravoItem(42)),
+                        r -> assertEquals("bravo:42", r.firstContent().asText().text()))
                 .promptsGet("summarize", r -> assertEquals("bravo_prompt", r.messages().get(0).content().asText().text()))
                 .resourcesRead("file://data", r -> assertEquals("bravo_data", r.contents().get(0).asText().text()))
                 .thenAssertResults();
+    }
+
+    public record AlphaItem(String label) {
+    }
+
+    public record BravoItem(int code) {
     }
 
     @McpServer(DEFAULT)
@@ -74,6 +104,11 @@ public class SameNameDifferentServersTest extends McpServerTest {
         @Tool
         ToolResponse query() {
             return ToolResponse.success("alpha_result");
+        }
+
+        @Tool
+        String analyze(AlphaItem item) {
+            return "alpha:" + item.label();
         }
 
         @Prompt
@@ -93,6 +128,11 @@ public class SameNameDifferentServersTest extends McpServerTest {
         @Tool
         ToolResponse query() {
             return ToolResponse.success("bravo_result");
+        }
+
+        @Tool
+        String analyze(BravoItem item) {
+            return "bravo:" + item.code();
         }
 
         @Prompt
