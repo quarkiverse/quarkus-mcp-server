@@ -71,7 +71,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
             return new InputSchemaImpl(schema);
 
         } else {
-            // Fallback for individual primitives (no complex recursive types expected here)
+            // Fallback for simple types (primitives, wrappers, String, enums)
             JsonObject properties = new JsonObject();
             for (ToolArgument a : tool.arguments()) {
                 properties.put(a.name(), generateSchema(a.type(), a.description(), a.defaultValue()));
