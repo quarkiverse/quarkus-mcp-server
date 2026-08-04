@@ -32,12 +32,12 @@ include::./includes/attributes.adoc[]
 * [2.0.0] New `McpConnection.isTransient()` method to check if a connection is transient (per-request, not tracked on the server).
 * [2.0.0] New `McpProtocolVersion` class as the public API for protocol version handling, with `isStateless()`, `isKnown()`, `from(String)`, and semantic constants (`FIRST_STATELESS`, `LATEST_STATEFUL`, `DEFAULT_ASSUMED`).
 * [2.0.0] Tracing spans now include the `mcp.server.name` attribute, identifying the MCP server configuration that handled the request. (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
-* [2.0.0] New `McpTrafficListener` API for custom traffic message listeners. Unlike built-in traffic logging, custom listeners are always invoked regardless of the `traffic-logging.enabled` configuration. See xref:guides-development-tools.adoc#_custom_traffic_listeners[Custom Traffic Listeners]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/860[#860])
+* [2.0.0] New `McpTrafficListener` API for custom traffic message listeners. Unlike built-in traffic logging, custom listeners are always invoked regardless of the `traffic-logging.enabled` configuration. The `isEnabled()` default method allows listeners to be filtered out at construction time, avoiding unnecessary allocations when no listener is active. See xref:guides-development-tools.adoc#_custom_traffic_listeners[Custom Traffic Listeners]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/860[#860])
 * [2.0.0] `RawMessage#id()` and `RawMessage#method()` methods to obtain the JSON-RPC message id and method name respectively. (https://github.com/quarkiverse/quarkus-mcp-server/issues/860[#860])
 * [2.0.0] `RawMessage#asPrettyString()` method to get the formatted JSON message. (https://github.com/quarkiverse/quarkus-mcp-server/issues/893[#893])
 * [2.0.0] New `Cancellation#onCancelled(Consumer<Optional<String>>)` method to register a callback that is executed when a cancellation of the current MCP request is requested by the client. The consumer receives the optional cancellation reason provided by the client. Unlike `check()`, this push-based approach does not require polling and is useful for cancelling async operations such as ``CompletableFuture``s. See xref:guides-logging-progress-cancellation.adoc#_cancellation_callback[Cancellation Callback]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/866[#866])
 * [2.0.0] Per-request log level via `_meta` field `io.modelcontextprotocol/logLevel` for stateless clients.
-* [2.0.0] New `MetaKey.LOG_LEVEL` and `MetaKey.PROTOCOL_VERSION` constants.
+* [2.0.0] New `MetaKey.LOG_LEVEL`, `MetaKey.PROTOCOL_VERSION`, `MetaKey.SUBSCRIPTION_ID`, and `MetaKey.SERVER_INFO` constants.
 * [2.0.0] Multi Round-Trip Requests (MRTR) support for stateless clients. Server feature methods can throw `InputRequiredException` to request additional input (elicitation, sampling, or roots) from the client. The client retries the original request with the gathered input via `InputResponses`. See xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request (MRTR)]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 * [2.0.0] New `MrtrRequest` interface implemented by `Elicitation`, `Sampling`, and `Roots` — provides `isServerInitiatedRequestSupported()`, `inputResponses()`, `requestState()`, and `inputRequired()` builder.
 * [2.0.0] HTTP GET (SSE stream) and DELETE (session termination) requests from stateless clients now return `405 Method Not Allowed`.
@@ -48,6 +48,8 @@ include::./includes/attributes.adoc[]
 * [2.0.0] Cache control support for MCP results. Caching hints (`ttlMs`, `cacheScope`) can be added to `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, `resources/read`, and `server/discover` responses. Cache control for list endpoints and `server/discover` is configuration-driven; for `resources/read` it can be set via annotation or programmatically. (https://github.com/quarkiverse/quarkus-mcp-server/pull/885[#885])
 * [2.0.0] Initial support for https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations]. Both the Quarkus-specific and the standard Java MCP annotations are supported during the transitional period. (https://github.com/quarkiverse/quarkus-mcp-server/issues/823[#823])
 
+* [2.0.0] Per-response `serverInfo` in `_meta` and `resultType` in results. Per the 2026-07-28 spec, every JSON-RPC result includes `io.modelcontextprotocol/serverInfo` in `_meta` and `resultType: "complete"`. A new `ResponseServerInfo` config enum (`LIGHT`/`FULL`/`NONE`) controls the level of detail; `LIGHT` (name and version only) is the default. (https://github.com/quarkiverse/quarkus-mcp-server/pull/937[#937])
+
 * [2.0.0] Output schema generation now preserves generic type information for tool return types (e.g. `List<MyPojo>`). Previously, parameterized return types with `structuredContent = true` produced incorrect schemas because generic type arguments were lost. See xref:guides-using-structured-content.adoc[Using Structured Content].
 
 [[version-2-0-fixes]]
@@ -55,6 +57,12 @@ include::./includes/attributes.adoc[]
 
 * [2.0.0] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
 * [2.0.0] `McpHttpServersRuntimeConfig` now uses the correct `RUN_TIME` config phase instead of `BUILD_AND_RUN_TIME_FIXED`. The HTTP transport runtime properties (`dns-rebinding-check.enabled`, `auto-init`, `lazy-sse-init`) can now be overridden at startup. (https://github.com/quarkiverse/quarkus-mcp-server/issues/904[#904])
+* [2.0.0] DNS rebinding protection now matches the Origin host exactly instead of using `startsWith`, which could be bypassed by domains like `localhost.evil.example`. (https://github.com/quarkiverse/quarkus-mcp-server/pull/902[#902])
+* [2.0.0] Subscriptions over stdio are now properly cancelled when `notifications/canceled` is received. (https://github.com/quarkiverse/quarkus-mcp-server/pull/926[#926])
+* [2.0.0] Tool input schema generation now correctly produces `$ref` pointers for recursive and complex types used as `@ToolArg` parameters, by generating holder classes for non-simple argument types. (https://github.com/quarkiverse/quarkus-mcp-server/issues/919[#919])
+* [2.0.0] The generated tool arguments holder class now uses the effective argument name (from `@ToolArg` etc.) instead of the Java parameter name, fixing mismatches between schema property keys and argument binding. (https://github.com/quarkiverse/quarkus-mcp-server/issues/918[#918])
+* [2.0.0] Empty `icons` array is no longer included in JSON responses for programmatically added features. (https://github.com/quarkiverse/quarkus-mcp-server/issues/916[#916])
+* [2.0.0] The subsidiary SSE debug notification now respects the connection's current log level instead of being sent unconditionally. (https://github.com/quarkiverse/quarkus-mcp-server/issues/910[#910])
 
 [[version-1-13]]
 == 1.13.x
