@@ -475,7 +475,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 String reason = params.getString("reason");
                 LOG.debugf("Cancel request with id %s: %s [%s]", requestId, reason != null ? reason : "no reason",
                         mcpRequest.connection().id());
-            } else if (requestId != null && mcpRequest.connection().removeSubscription(requestId)) {
+            } else if (requestId != null && cancelSubscription(requestId, mcpRequest)) {
                 LOG.debugf("Subscription %s cancelled [%s]", requestId, mcpRequest.connection().id());
             } else {
                 LOG.warnf("Ignored unknown/completed/invalid cancel request with id %s [%s]", requestId,
@@ -483,6 +483,25 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             }
         }
         return Future.succeededFuture();
+    }
+
+    private boolean cancelSubscription(Object requestId, MCP_REQUEST mcpRequest) {
+        // First try the current request's connection
+        if (mcpRequest.connection().removeSubscription(requestId)) {
+            return true;
+        } else if (transport() == InitialRequest.Transport.STDIO) {
+            // For stateless protocols (modern 2026-07-28), each message may arrive on a
+            // different transient connection, so we need to search all connections
+            for (McpConnectionBase connection : connectionManager) {
+                if (connection.removeSubscription(requestId)) {
+                    if (connection.isTransient() && connectionManager.remove(connection.id())) {
+                        LOG.debugf("Transient subscription connection removed [%s]", connection.id());
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private Future<Void> subscriptionsListen(JsonObject message, MCP_REQUEST mcpRequest) {

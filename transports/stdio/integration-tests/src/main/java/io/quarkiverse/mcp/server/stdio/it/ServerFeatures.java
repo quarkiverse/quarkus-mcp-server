@@ -10,6 +10,7 @@ import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -23,6 +24,9 @@ public class ServerFeatures {
 
     @Inject
     ToolManager toolManager;
+
+    @Inject
+    ResourceManager resourceManager;
 
     @Tool
     TextContent toLowerCase(String value) {
@@ -55,6 +59,12 @@ public class ServerFeatures {
     @Tool
     String logLevelInfo(McpConnection connection) {
         return connection.logLevel().name();
+    }
+
+    @Tool
+    String triggerAlphaUpdate() {
+        resourceManager.getResource("file:///project/alpha").sendUpdateAndForget();
+        return "OK";
     }
 
 }
