@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import io.quarkiverse.mcp.server.PromptManager.PromptInfo;
 
@@ -59,6 +60,17 @@ public interface PromptManager extends FeatureManager<PromptInfo> {
      * @see #removePrompt(String, String)
      */
     PromptInfo removePrompt(String name);
+
+    /**
+     * Sends a {@code notifications/prompts/list_changed} notification to the connections that match the given filter.
+     * <p>
+     * Unlike {@link PromptDefinition#register()} and {@link #removePrompt(String)}, which broadcast to all connections,
+     * this method allows targeted notification delivery. This is useful when the effective prompt list changes for specific
+     * connections only, for example due to a {@link PromptFilter} state change.
+     *
+     * @param filter the predicate used to select connections to notify
+     */
+    void notifyListChanged(Predicate<McpConnection> filter);
 
     /**
      * Prompt info.

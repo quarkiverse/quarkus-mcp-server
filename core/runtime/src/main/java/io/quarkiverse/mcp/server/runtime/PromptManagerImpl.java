@@ -5,11 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,6 +27,7 @@ import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
@@ -138,6 +141,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
         }
         return removed.get();
+    }
+
+    @Override
+    public void notifyListChanged(Predicate<McpConnection> filter) {
+        notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, Objects.requireNonNull(filter));
     }
 
     IllegalArgumentException promptWithNameAlreadyExists(String name, String serverName) {

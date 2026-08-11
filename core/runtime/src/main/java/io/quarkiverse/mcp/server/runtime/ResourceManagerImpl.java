@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -31,6 +32,7 @@ import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
@@ -216,6 +218,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
         }
         return removed.get();
+    }
+
+    @Override
+    public void notifyListChanged(Predicate<McpConnection> filter) {
+        notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Objects.requireNonNull(filter));
     }
 
     @SuppressWarnings("unchecked")

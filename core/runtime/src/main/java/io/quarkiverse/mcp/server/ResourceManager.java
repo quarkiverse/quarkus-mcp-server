@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.Predicate;
 
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
 
@@ -62,6 +63,17 @@ public interface ResourceManager extends FeatureManager<ResourceInfo> {
      * @see #removeResource(String, String)
      */
     ResourceInfo removeResource(String uri);
+
+    /**
+     * Sends a {@code notifications/resources/list_changed} notification to the connections that match the given filter.
+     * <p>
+     * Unlike {@link ResourceDefinition#register()} and {@link #removeResource(String)}, which broadcast to all connections,
+     * this method allows targeted notification delivery. This is useful when the effective resource list changes for specific
+     * connections only, for example due to a {@link ResourceFilter} state change.
+     *
+     * @param filter the predicate used to select connections to notify
+     */
+    void notifyListChanged(Predicate<McpConnection> filter);
 
     /**
      * Resource info.
