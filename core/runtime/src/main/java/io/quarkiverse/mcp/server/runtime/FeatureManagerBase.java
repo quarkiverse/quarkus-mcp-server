@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
@@ -381,9 +382,17 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected void notifyConnections(McpMethod method) {
+        notifyConnections(method, null);
+    }
+
+    protected void notifyConnections(McpMethod method, Predicate<McpConnection> filter) {
+        Objects.requireNonNull(method);
         JsonObject notification = Messages.newNotification(method.jsonRpcName());
         for (McpConnectionBase c : connectionManager) {
             if (c.status() != McpConnection.Status.IN_OPERATION) {
+                continue;
+            }
+            if (filter != null && !filter.test(c)) {
                 continue;
             }
             if (c.supportsSubscriptionsListen()) {

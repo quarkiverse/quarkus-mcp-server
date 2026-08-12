@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -208,6 +209,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             toolRemovedEvent.fire(new ToolRemoved(removedTool));
         }
         return removedTool;
+    }
+
+    @Override
+    public void notifyListChanged(Predicate<McpConnection> filter) {
+        notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, Objects.requireNonNull(filter));
     }
 
     @SuppressWarnings("unchecked")

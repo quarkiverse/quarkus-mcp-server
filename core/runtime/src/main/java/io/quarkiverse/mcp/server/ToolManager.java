@@ -4,6 +4,7 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 
@@ -61,6 +62,17 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
      * @see #removeTool(String, String)
      */
     ToolInfo removeTool(String name);
+
+    /**
+     * Sends a {@code notifications/tools/list_changed} notification to the connections that match the given filter.
+     * <p>
+     * Unlike {@link ToolDefinition#register()} and {@link #removeTool(String)}, which broadcast to all connections,
+     * this method allows targeted notification delivery. This is useful when the effective tool list changes for specific
+     * connections only, for example due to a {@link ToolFilter} state change.
+     *
+     * @param filter the predicate used to select connections to notify
+     */
+    void notifyListChanged(Predicate<McpConnection> filter);
 
     /**
      * Tool info.
