@@ -18,8 +18,9 @@ public abstract class McpServerTest {
 
     public static QuarkusUnitTest defaultConfig(int textLimit) {
         QuarkusUnitTest config = new QuarkusUnitTest();
-        // Disable OTel by default
+        // Disable OTel and Micrometer by default
         config.overrideConfigKey("quarkus.otel.enabled", "false");
+        config.overrideConfigKey("quarkus.micrometer.enabled", "false");
         // Enabled traffic logging if -DlogTraffic is used
         if (System.getProperty("logTraffic") != null) {
             config.overrideConfigKey("quarkus.mcp.server.traffic-logging.enabled", "true");
