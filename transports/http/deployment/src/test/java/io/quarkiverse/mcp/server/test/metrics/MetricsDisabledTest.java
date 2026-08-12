@@ -24,7 +24,8 @@ public class MetricsDisabledTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest test = defaultConfig()
             .withApplicationRoot(root -> root
-                    .addClasses(MyFeatures.class));
+                    .addClasses(MyFeatures.class))
+            .overrideConfigKey("quarkus.micrometer.enabled", "true");
 
     @Inject
     MeterRegistry registry;
