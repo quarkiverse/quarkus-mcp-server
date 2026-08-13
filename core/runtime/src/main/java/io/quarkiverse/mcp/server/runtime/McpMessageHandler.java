@@ -818,12 +818,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ret.put("instructions", instructions.get());
         }
         McpServerRuntimeConfig.Discover discover = serverConfig(mcpRequest).discover();
-        if (discover.ttlMs() >= 0) {
-            ret.put("ttlMs", discover.ttlMs());
-        }
-        if (discover.cacheScope().isPresent()) {
-            ret.put("cacheScope", discover.cacheScope().get().getName());
-        }
+        ret.put("ttlMs", discover.ttlMs());
+        ret.put("cacheScope", discover.cacheScope().getName());
         return mcpRequest.sender().sendResult(id, ret);
     }
 

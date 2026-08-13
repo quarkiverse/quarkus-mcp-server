@@ -91,6 +91,7 @@ public class CacheControlTest extends McpServerTest {
 
     @Test
     public void testResourceReadNoAnnotationNoCacheControl() {
+        // Default client negotiates 2025-11-25 (stateful), where ttlMs/cacheScope are not part of the schema
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 // bravo has no @CacheControl and no programmatic override - no cache control in response
@@ -99,6 +100,33 @@ public class CacheControlTest extends McpServerTest {
                     assertNull(r.cacheControl());
                 })
                 .thenAssertResults();
+    }
+
+    @Test
+    public void testResourceReadDefaultCacheControlStateless() {
+        // Under a negotiated 2026-07-28 (stateless) session, ttlMs/cacheScope are required
+        // fields of ReadResourceResult, so a resource without any configured cache control must still emit spec-valid
+        // defaults (immediately stale, public) instead of omitting the fields.
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless()
+                .build()
+                .connect();
+        client.when()
+                // bravo has no @CacheControl and no programmatic override - defaults are emitted
+                .resourcesRead("file:///cc/bravo", r -> {
+                    assertEquals("bravo", r.contents().get(0).asText().text());
+                    assertNotNull(r.cacheControl());
+                    assertEquals(0L, r.cacheControl().ttlMs());
+                    assertEquals(CacheScope.PUBLIC, r.cacheControl().cacheScope());
+                })
+                // alpha has an explicit @CacheControl which must still take precedence over the default
+                .resourcesRead("file:///cc/alpha", r -> {
+                    assertEquals("alpha", r.contents().get(0).asText().text());
+                    assertEquals(5000L, r.cacheControl().ttlMs());
+                    assertEquals(CacheScope.PRIVATE, r.cacheControl().cacheScope());
+                })
+                .thenAssertResults();
+        client.disconnect();
     }
 
     @Test

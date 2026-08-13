@@ -62,7 +62,8 @@ class ToolMessageHandler extends MessageHandler {
             ToolManager.ToolInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
-        putCacheControl(result, serverConfig.tools().ttlMs(), serverConfig.tools().cacheScope());
+        putCacheControl(result, serverConfig.tools().ttlMs(), serverConfig.tools().cacheScope(),
+                mcpRequest.protocolVersion().isStateless());
         return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 

@@ -382,16 +382,23 @@ public interface McpServerRuntimeConfig {
 
         /**
          * The time-to-live in milliseconds for the {@code server/discover} result. Clients may consider the result fresh for
-         * this duration. A value of {@code 0} means immediately stale. A negative value (default) means the field is not
-         * included in the response.
+         * this duration. A value of {@code 0} (default) means immediately stale.
+         * <p>
+         * {@code ttlMs} is a required field of {@code DiscoverResult}, which is why it defaults to {@code 0} and is always
+         * included; {@code server/discover} was introduced in protocol version {@code 2026-07-28} where the field is mandatory.
          */
-        @WithDefault("-1")
+        @WithDefault("0")
         long ttlMs();
 
         /**
-         * The cache scope for the {@code server/discover} result. If not set, the field is not included in the response.
+         * The cache scope for the {@code server/discover} result.
+         * <p>
+         * {@code cacheScope} is a required field of {@code DiscoverResult}, which is why it defaults to {@code public} and is
+         * always included; {@code server/discover} was introduced in protocol version {@code 2026-07-28} where the field is
+         * mandatory.
          */
-        Optional<CacheScope> cacheScope();
+        @WithDefault("PUBLIC")
+        CacheScope cacheScope();
 
     }
 

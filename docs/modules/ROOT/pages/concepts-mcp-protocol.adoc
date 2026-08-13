@@ -206,7 +206,9 @@ The server responds with its supported versions, capabilities, and server info:
     "serverInfo": {
       "name": "acme-quarkus-server",
       "version": "1.0.0"
-    }
+    },
+    "ttlMs": 0,
+    "cacheScope": "public"
   }
 }
 ----
@@ -214,7 +216,8 @@ The server responds with its supported versions, capabilities, and server info:
 No `initialized` notification is sent. Each subsequent request is self-contained.
 See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on required headers and `_meta` fields.
 
-The `server/discover` result can include optional caching hints, configured via application properties:
+The `server/discover` result carries caching hints (`ttlMs` and `cacheScope`), which are required fields of this result.
+They default to `ttlMs = 0` (immediately stale) and `cacheScope = public`, and can be configured via application properties:
 
 [source,properties]
 ----

@@ -91,12 +91,27 @@ public abstract class MessageHandler {
         throw new IllegalArgumentException("Unknown input request entry type: " + entry.getClass());
     }
 
-    static void putCacheControl(JsonObject result, long ttlMs, Optional<CacheScope> cacheScope) {
+    /**
+     * Adds the {@code ttlMs} and {@code cacheScope} cache control fields to a {@code CacheableResult}.
+     * <p>
+     * Both fields are required as of protocol version {@code 2026-07-28}. When they are not
+     * explicitly configured and the negotiated protocol version requires them ({@code stateless}), spec-valid defaults
+     * are emitted: {@code ttlMs: 0} (immediately stale) and {@code cacheScope: public}. For earlier protocol versions
+     * the fields are omitted unless explicitly configured.
+     *
+     * @param stateless whether the negotiated protocol version requires the cache control fields (i.e.
+     *        {@code >= 2026-07-28})
+     */
+    static void putCacheControl(JsonObject result, long ttlMs, Optional<CacheScope> cacheScope, boolean stateless) {
         if (ttlMs >= 0) {
             result.put("ttlMs", ttlMs);
+        } else if (stateless) {
+            result.put("ttlMs", 0);
         }
         if (cacheScope.isPresent()) {
             result.put("cacheScope", cacheScope.get().getName());
+        } else if (stateless) {
+            result.put("cacheScope", CacheScope.PUBLIC.getName());
         }
     }
 }
