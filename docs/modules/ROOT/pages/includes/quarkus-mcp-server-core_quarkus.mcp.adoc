@@ -1285,7 +1285,9 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The time-to-live in milliseconds for the `server/discover` result. Clients may consider the result fresh for this duration. A value of `0` means immediately stale. A negative value (default) means the field is not included in the response.
+The time-to-live in milliseconds for the `server/discover` result. Clients may consider the result fresh for this duration. A value of `0` (default) means immediately stale.
+
+`ttlMs` is a required field of `DiscoverResult`, which is why it defaults to `0` and is always included; `server/discover` was introduced in protocol version `2026-07-28` where the field is mandatory.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -1296,7 +1298,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_DISCOVER_TTL_MS+++`
 endif::add-copy-button-to-env-var[]
 --
 |long
-|`+++-1+++`
+|`+++0+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-discover-cache-scope]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-discover-cache-scope[`+++quarkus.mcp.server.discover.cache-scope+++`]##
 ifdef::add-copy-button-to-config-props[]
@@ -1311,7 +1313,9 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-The cache scope for the `server/discover` result. If not set, the field is not included in the response.
+The cache scope for the `server/discover` result.
+
+`cacheScope` is a required field of `DiscoverResult`, which is why it defaults to `public` and is always included; `server/discover` was introduced in protocol version `2026-07-28` where the field is mandatory.
 
 
 ifdef::add-copy-button-to-env-var[]
@@ -1322,7 +1326,7 @@ Environment variable: `+++QUARKUS_MCP_SERVER_DISCOVER_CACHE_SCOPE+++`
 endif::add-copy-button-to-env-var[]
 --
 a|`public`, `private`
-|
+|`+++public+++`
 
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-sampling-default-timeout[`+++quarkus.mcp.server.sampling.default-timeout+++`]##
 ifdef::add-copy-button-to-config-props[]

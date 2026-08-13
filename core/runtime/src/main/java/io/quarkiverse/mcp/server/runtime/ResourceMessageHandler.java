@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CacheControl;
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
@@ -91,7 +92,8 @@ class ResourceMessageHandler extends MessageHandler {
             ResourceInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
-        putCacheControl(result, serverConfig.resources().ttlMs(), serverConfig.resources().cacheScope());
+        putCacheControl(result, serverConfig.resources().ttlMs(), serverConfig.resources().cacheScope(),
+                mcpRequest.protocolVersion().isStateless());
         return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 
@@ -122,7 +124,7 @@ class ResourceMessageHandler extends MessageHandler {
                             "Resource not found: " + resourceUri);
                 } else {
                     ResourceResponse resolved = resolveResourceReadCacheControl(resourceResponse, resourceUri,
-                            mcpRequest.serverName());
+                            mcpRequest.serverName(), mcpRequest.protocolVersion().isStateless());
                     return mcpRequest.sender().sendResult(id, JsonObject.mapFrom(resolved), responseMeta);
                 }
             },
@@ -133,9 +135,9 @@ class ResourceMessageHandler extends MessageHandler {
         }
     }
 
-    // Precedence: ResourceResponse cache control > resource/template cache control
+    // Precedence: ResourceResponse cache control > resource/template cache control > protocol default
     private ResourceResponse resolveResourceReadCacheControl(ResourceResponse response, String resourceUri,
-            String serverName) {
+            String serverName, boolean stateless) {
         if (response.cacheControl() != null) {
             return response;
         }
@@ -151,6 +153,11 @@ class ResourceMessageHandler extends MessageHandler {
         }
         if (cc.isPresent()) {
             return new ResourceResponse(response.contents(), response._meta(), cc.get());
+        }
+        if (stateless) {
+            // ttlMs/cacheScope are required fields of ReadResourceResult as of protocol version 2026-07-28;
+            // default to a non-cacheable result (immediately stale, public) when nothing else is configured
+            return new ResourceResponse(response.contents(), response._meta(), new CacheControl(0, CacheScope.PUBLIC));
         }
         return response;
     }

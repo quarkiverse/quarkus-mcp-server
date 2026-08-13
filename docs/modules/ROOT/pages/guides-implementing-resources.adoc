@@ -224,8 +224,18 @@ BlobResourceContents largeFile(McpLog log, Progress progress) throws Exception {
 
 == Cache Control
 
-MCP supports optional caching hints (`ttlMs` and `cacheScope`) in results, allowing clients to reuse responses without re-fetching.
+MCP supports caching hints (`ttlMs` and `cacheScope`) in results, allowing clients to reuse responses without re-fetching.
 Cache control can be applied to `resources/list`, `resources/templates/list`, and `resources/read` results.
+
+`ttlMs` is a freshness hint in milliseconds; `0` means the result should be considered immediately stale, and the value must not be negative.
+`cacheScope` controls whether shared intermediaries may cache the response — `PUBLIC` (any cache) or `PRIVATE` (same authorization context only).
+
+[NOTE]
+====
+As of protocol version `2026-07-28`, `ttlMs` and `cacheScope` are *required* fields of these results.
+When no cache control is configured (via annotation, programmatically, or application properties), the server emits spec-valid defaults — `ttlMs = 0` (immediately stale) and `cacheScope = public` — for clients that negotiated `2026-07-28` or later.
+For earlier protocol versions, where the fields are not part of the schema, they are omitted unless explicitly configured.
+====
 
 === List Results
 
@@ -262,9 +272,6 @@ public class MyResources {
     }
 }
 ----
-
-`ttlMs` is a freshness hint in milliseconds.
-`cacheScope` controls whether shared intermediaries may cache the response — `PUBLIC` (any cache) or `PRIVATE` (same authorization context only).
 
 ==== Programmatic
 

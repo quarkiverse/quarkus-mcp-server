@@ -53,7 +53,8 @@ class PromptMessageHandler extends MessageHandler {
             PromptManager.PromptInfo last = page.lastInfo();
             result.put("nextCursor", Cursor.encode(last.createdAt(), cursor.snapshotTimestamp()));
         }
-        putCacheControl(result, serverConfig.prompts().ttlMs(), serverConfig.prompts().cacheScope());
+        putCacheControl(result, serverConfig.prompts().ttlMs(), serverConfig.prompts().cacheScope(),
+                mcpRequest.protocolVersion().isStateless());
         return mcpRequest.sender().sendResult(id, result, responseMeta);
     }
 
