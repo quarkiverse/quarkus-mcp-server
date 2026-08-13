@@ -65,6 +65,8 @@ public class JsonSchemaValidator implements McpRequestValidator {
         methodSchemas.put(McpMethod.TOOLS_CALL, "CallToolRequest");
         methodSchemas.put(McpMethod.LOGGING_SET_LEVEL, "SetLevelRequest");
         methodSchemas.put(McpMethod.COMPLETION_COMPLETE, "CompleteRequest");
+        // server/discover is only used by the stateless protocol (2026-07-28 and later)
+        methodSchemas.put(McpMethod.SERVER_DISCOVER, "DiscoverRequest");
         // notifications
         methodSchemas.put(McpMethod.NOTIFICATIONS_CANCELLED, "CancelledNotification");
         methodSchemas.put(McpMethod.NOTIFICATIONS_INITIALIZED, "InitializedNotification");
