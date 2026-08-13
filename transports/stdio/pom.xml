@@ -10,7 +10,7 @@
     </parent>
     <artifactId>quarkus-mcp-server-stdio-parent</artifactId>
     <packaging>pom</packaging>
-    <name>Quarkus MCP Server Transport - stdio - Parent</name>
+    <name>Quarkus MCP Server - Transport - stdio - Parent</name>
 
     <modules>
         <module>deployment</module>

@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-sse-client</artifactId>
-    <name>Quarkus MCP Server SSE Client</name>
+    <name>Quarkus MCP Server - SSE Client</name>
 
     <dependencies>
         <dependency>

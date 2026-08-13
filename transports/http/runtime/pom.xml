@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-http</artifactId>
-    <name>Quarkus MCP Server Transport - HTTP - Runtime</name>
+    <name>Quarkus MCP Server - Transport - HTTP - Runtime</name>
 
     <dependencies>
         <dependency>

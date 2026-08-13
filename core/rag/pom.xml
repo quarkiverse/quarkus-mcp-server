@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>quarkus-mcp-server-core-rag</artifactId>
-    <name>Quarkus MCP Server Core - RAG</name>
+    <name>Quarkus MCP Server - Core - RAG</name>
     <description>RAG vector embeddings for Quarkus MCP Server documentation</description>
 
     <properties>
