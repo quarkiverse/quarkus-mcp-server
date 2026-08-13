@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-websocket</artifactId>
-    <name>Quarkus MCP Server Transport - WebSocket - Runtime</name>
+    <name>Quarkus MCP Server - Transport - WebSocket - Runtime</name>
 
     <dependencies>
         <dependency>

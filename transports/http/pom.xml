@@ -9,7 +9,7 @@
     </parent>
     <artifactId>quarkus-mcp-server-http-parent</artifactId>
     <packaging>pom</packaging>
-    <name>Quarkus MCP Server Transport - HTTP - Parent</name>
+    <name>Quarkus MCP Server - Transport - HTTP - Parent</name>
     <modules>
         <module>deployment</module>
         <module>runtime</module>

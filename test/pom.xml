@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-test</artifactId>
-    <name>Quarkus MCP Server Test Utils</name>
+    <name>Quarkus MCP Server - Test Utils</name>
 
     <dependencies>
         <dependency>

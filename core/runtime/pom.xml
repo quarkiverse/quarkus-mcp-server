@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-core</artifactId>
-    <name>Quarkus MCP Server Core - Runtime</name>
+    <name>Quarkus MCP Server - Core - Runtime</name>
 
     <dependencies>
         <dependency>

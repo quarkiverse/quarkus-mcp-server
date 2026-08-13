@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>quarkus-mcp-server-websocket-integration-tests</artifactId>
-    <name>Quarkus MCP Server Transport - WebSocket - Integration Tests</name>
+    <name>Quarkus MCP Server - Transport - WebSocket - Integration Tests</name>
 
     <properties>
         <skipITs>true</skipITs>
