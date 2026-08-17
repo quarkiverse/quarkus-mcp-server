@@ -57,6 +57,30 @@ public class CancellationTest extends McpServerTest {
                 .thenAssertResults();
     }
 
+    @Test
+    public void testCancellationErrorMessage() throws InterruptedException {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        MyTools.CANCELLED.set(false);
+        MyTools.CANCEL_REASON.set(null);
+
+        JsonObject request = client.newRequest("tools/call")
+                .put("params", new JsonObject()
+                        .put("name", "alpha"));
+        client.sendAndForget(request);
+
+        assertTrue(MyTools.ALPHA_LATCH.await(5, TimeUnit.SECONDS));
+
+        JsonObject notification = client.newMessage("notifications/cancelled").put("params",
+                new JsonObject()
+                        .put("requestId", request.getValue("id"))
+                        .put("reason", "Test cancellation"));
+
+        client.sendAndForget(notification);
+        Awaitility.await().until(() -> MyTools.CANCELLED.get());
+
+        assertTrue(MyTools.CANCELLED.get(), "Tool should have been cancelled");
+    }
+
     private void assertCancellationMultipleActions() throws InterruptedException {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         MyTools.CANCELLED.set(false);

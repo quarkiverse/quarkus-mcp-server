@@ -68,6 +68,10 @@ public interface Cancellation {
 
         private static final long serialVersionUID = 1L;
 
+        public OperationCancellationException() {
+            super("Operation cancelled");
+        }
+
     }
 
 }
