@@ -1311,7 +1311,8 @@ class McpServerProcessor {
                 ModelHint.class,
                 IncludeContext.class,
                 SamplingRequestImpl.class,
-                Icon.class)
+                Icon.class,
+                McpObjectMapperCustomizer.ResourceResponseMixin.class)
                 .methods().build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(List.class).build());
         reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(Map.class).build());

@@ -7,6 +7,7 @@ import java.util.Optional;
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
@@ -20,10 +21,12 @@ import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolManager;
 import io.smallrye.mutiny.Uni;
@@ -51,6 +54,12 @@ public class ServerFeatures {
     @Resource(uri = "file:///project/alpha", cacheControl = @Resource.CacheControl(ttlMs = 15000, cacheScope = CacheScope.PUBLIC))
     BlobResourceContents alpha(RequestUri uri) {
         return BlobResourceContents.create(uri.value(), "data".getBytes());
+    }
+
+    @Resource(uri = "file:///project/bravo")
+    ResourceResponse bravo(RequestUri uri) {
+        return new ResourceResponse(List.of(TextResourceContents.create(uri.value(), "data")), null,
+                new CacheControl(15000, CacheScope.PRIVATE));
     }
 
     @Tool
