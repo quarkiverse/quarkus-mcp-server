@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-18-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-19-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -112,6 +112,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/rolfedh"><img src="https://avatars.githubusercontent.com/u/350907?v=4?s=100" width="100px;" alt="Rolfe Dlugy-Hegwer"/><br /><sub><b>Rolfe Dlugy-Hegwer</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=rolfedh" title="Documentation">📖</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=rolfedh" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://brunobat.com/about"><img src="https://avatars.githubusercontent.com/u/2318030?v=4?s=100" width="100px;" alt="Bruno Baptista"/><br /><sub><b>Bruno Baptista</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=brunobat" title="Documentation">📖</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=brunobat" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/moayad-alyaghshi"><img src="https://avatars.githubusercontent.com/u/49444460?v=4?s=100" width="100px;" alt="Moayad Alyaghshi"/><br /><sub><b>Moayad Alyaghshi</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Amoayad-alyaghshi" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=moayad-alyaghshi" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.dkornel.com"><img src="https://avatars.githubusercontent.com/u/11318335?v=4?s=100" width="100px;" alt="David Kornel"/><br /><sub><b>David Kornel</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Akornys" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=kornys" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
