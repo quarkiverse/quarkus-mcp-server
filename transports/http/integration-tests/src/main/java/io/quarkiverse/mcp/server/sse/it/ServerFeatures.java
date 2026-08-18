@@ -7,6 +7,7 @@ import java.util.Optional;
 import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
@@ -47,7 +48,7 @@ public class ServerFeatures {
         return PromptMessage.withUserRole(new TextContent(codeService.assist(language)));
     }
 
-    @Resource(uri = "file:///project/alpha")
+    @Resource(uri = "file:///project/alpha", cacheControl = @Resource.CacheControl(ttlMs = 15000, cacheScope = CacheScope.PUBLIC))
     BlobResourceContents alpha(RequestUri uri) {
         return BlobResourceContents.create(uri.value(), "data".getBytes());
     }

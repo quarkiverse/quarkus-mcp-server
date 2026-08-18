@@ -102,6 +102,18 @@ class ServerFeaturesTest {
                     assertEquals(Base64.getMimeEncoder().encodeToString("data".getBytes()),
                             r.contents().get(0).asBlob().blob());
                 })
+                // Verify the cache control wire shape (also exercised against the native image via ServerFeaturesIT):
+                // ttlMs/cacheScope must be flat top-level fields, never nested under a cacheControl object
+                .resourcesRead("file:///project/alpha")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertFalse(result.containsKey("cacheControl"),
+                            "cacheControl must not be nested; expected flat ttlMs/cacheScope");
+                    assertEquals(15000L, result.getLong("ttlMs"));
+                    assertEquals("public", result.getString("cacheScope"));
+                })
+                .send()
                 .thenAssertResults();
     }
 

@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.CacheControl;
-import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ResourceManager.ResourceInfo;
@@ -123,9 +122,14 @@ class ResourceMessageHandler extends MessageHandler {
                                     : JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
                             "Resource not found: " + resourceUri);
                 } else {
-                    ResourceResponse resolved = resolveResourceReadCacheControl(resourceResponse, resourceUri,
-                            mcpRequest.serverName(), mcpRequest.protocolVersion().isStateless());
-                    return mcpRequest.sender().sendResult(id, JsonObject.mapFrom(resolved), responseMeta);
+                    // The cacheControl record property is ignored; the cache control hints are emitted
+                    // as flat top-level ttlMs/cacheScope fields
+                    JsonObject result = JsonObject.mapFrom(resourceResponse);
+                    Optional<CacheControl> cacheControl = resolveResourceReadCacheControl(resourceResponse, resourceUri,
+                            mcpRequest.serverName());
+                    putCacheControl(result, cacheControl.map(CacheControl::ttlMs).orElse(-1L),
+                            cacheControl.map(CacheControl::cacheScope), mcpRequest.protocolVersion().isStateless());
+                    return mcpRequest.sender().sendResult(id, result, responseMeta);
                 }
             },
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
@@ -135,31 +139,21 @@ class ResourceMessageHandler extends MessageHandler {
         }
     }
 
-    // Precedence: ResourceResponse cache control > resource/template cache control > protocol default
-    private ResourceResponse resolveResourceReadCacheControl(ResourceResponse response, String resourceUri,
-            String serverName, boolean stateless) {
+    // Precedence: ResourceResponse cache control > resource/template cache control > none
+    private Optional<CacheControl> resolveResourceReadCacheControl(ResourceResponse response, String resourceUri,
+            String serverName) {
         if (response.cacheControl() != null) {
-            return response;
+            return Optional.of(response.cacheControl());
         }
-        Optional<CacheControl> cc = Optional.empty();
         ResourceInfo info = manager.getResource(resourceUri, serverName);
         if (info != null) {
-            cc = info.cacheControl();
-        } else {
-            ResourceTemplateInfo templateInfo = manager.resourceTemplateManager.findMatching(resourceUri, serverName);
-            if (templateInfo != null) {
-                cc = templateInfo.cacheControl();
-            }
+            return info.cacheControl();
         }
-        if (cc.isPresent()) {
-            return new ResourceResponse(response.contents(), response._meta(), cc.get());
+        ResourceTemplateInfo templateInfo = manager.resourceTemplateManager.findMatching(resourceUri, serverName);
+        if (templateInfo != null) {
+            return templateInfo.cacheControl();
         }
-        if (stateless) {
-            // ttlMs/cacheScope are required fields of ReadResourceResult as of protocol version 2026-07-28;
-            // default to a non-cacheable result (immediately stale, public) when nothing else is configured
-            return new ResourceResponse(response.contents(), response._meta(), new CacheControl(0, CacheScope.PUBLIC));
-        }
-        return response;
+        return Optional.empty();
     }
 
 }

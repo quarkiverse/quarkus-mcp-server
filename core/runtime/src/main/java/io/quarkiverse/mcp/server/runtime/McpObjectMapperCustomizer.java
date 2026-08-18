@@ -2,9 +2,9 @@ package io.quarkiverse.mcp.server.runtime;
 
 import jakarta.enterprise.context.Dependent;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.AudioContent;
@@ -56,8 +56,12 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
 
     @JsonInclude(Include.NON_NULL)
     static abstract class ResourceResponseMixin {
-        @JsonUnwrapped
-        CacheControl cacheControl;
+        // The cache control hints are serialized as flat top-level fields (ttlMs/cacheScope) by
+        // ResourceMessageHandler#resourcesRead; the record property itself must never be serialized.
+        // A method-level annotation is used intentionally so that native image reflection registration
+        // (which registers the accessors via .methods()) is sufficient to honor it.
+        @JsonIgnore
+        abstract CacheControl cacheControl();
     }
 
 }
