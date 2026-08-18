@@ -5,8 +5,11 @@ import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
 
+import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.InputRequiredException;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.smallrye.mutiny.Uni;
 
@@ -31,6 +34,10 @@ public class WrapBusinessErrorInterceptor {
     }
 
     private Throwable wrapIfNecessary(Throwable t, InvocationContext context) {
+        if (isControlFlowException(t)) {
+            return t;
+        }
+
         if (context.getMethod().isAnnotationPresent(Tool.class) && matches(t, context)) {
             return new ToolCallException(t);
         }
@@ -50,6 +57,14 @@ public class WrapBusinessErrorInterceptor {
             }
         }
         return false;
+    }
+
+    private boolean isControlFlowException(Throwable t) {
+        return t instanceof ToolCallException
+                || t instanceof Cancellation.OperationCancellationException
+                || t instanceof org.mcpjava.server.Cancellation.OperationCancelledException
+                || t instanceof InputRequiredException
+                || t instanceof UrlElicitationRequiredException;
     }
 
     @SuppressWarnings("unchecked")
