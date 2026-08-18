@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test.cachecontrol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -12,6 +13,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonObject;
 
 public class CacheControlTest extends McpServerTest {
 
@@ -86,6 +88,17 @@ public class CacheControlTest extends McpServerTest {
                     assertEquals(5000L, r.cacheControl().ttlMs());
                     assertEquals(CacheScope.PRIVATE, r.cacheControl().cacheScope());
                 })
+                // Verify the wire shape: cache control must be flat top-level fields, never nested under cacheControl
+                .resourcesRead("file:///cc/alpha")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertFalse(result.containsKey("cacheControl"),
+                            "cacheControl must not be nested; expected flat ttlMs/cacheScope");
+                    assertEquals(5000L, result.getLong("ttlMs"));
+                    assertEquals("private", result.getString("cacheScope"));
+                })
+                .send()
                 .thenAssertResults();
     }
 
@@ -99,6 +112,16 @@ public class CacheControlTest extends McpServerTest {
                     assertEquals("bravo", r.contents().get(0).asText().text());
                     assertNull(r.cacheControl());
                 })
+                // Verify no cache control fields are emitted at all (neither flat nor nested)
+                .resourcesRead("file:///cc/bravo")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertFalse(result.containsKey("cacheControl"), "cacheControl must not be present");
+                    assertNull(result.getLong("ttlMs"), "ttlMs must not be present");
+                    assertNull(result.getString("cacheScope"), "cacheScope must not be present");
+                })
+                .send()
                 .thenAssertResults();
     }
 
@@ -119,6 +142,17 @@ public class CacheControlTest extends McpServerTest {
                     assertEquals(0L, r.cacheControl().ttlMs());
                     assertEquals(CacheScope.PUBLIC, r.cacheControl().cacheScope());
                 })
+                // Verify the required defaults are emitted as flat top-level fields, never nested
+                .resourcesRead("file:///cc/bravo")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertFalse(result.containsKey("cacheControl"),
+                            "cacheControl must not be nested; expected flat ttlMs/cacheScope");
+                    assertEquals(0L, result.getLong("ttlMs"));
+                    assertEquals("public", result.getString("cacheScope"));
+                })
+                .send()
                 // alpha has an explicit @CacheControl which must still take precedence over the default
                 .resourcesRead("file:///cc/alpha", r -> {
                     assertEquals("alpha", r.contents().get(0).asText().text());
