@@ -48,9 +48,10 @@ public class InputRequiredException extends RuntimeException {
     }
 
     /**
+     * @return a new builder
      * @see MrtrRequest#inputRequired()
      */
-    static Builder builder() {
+    public static Builder builder() {
         return new Builder();
     }
 
