@@ -177,6 +177,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "kornys",
+      "name": "David Kornel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11318335?v=4",
+      "profile": "http://www.dkornel.com",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
