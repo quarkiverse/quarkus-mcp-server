@@ -33,8 +33,8 @@ public class WrapBusinessErrorInterceptor {
         }
     }
 
-    private Throwable wrapIfNecessary(Throwable t, InvocationContext context) {
-        if (isControlFlowException(t)) {
+    static Throwable wrapIfNecessary(Throwable t, InvocationContext context) {
+        if (isUnwrappable(t)) {
             return t;
         }
 
@@ -44,7 +44,7 @@ public class WrapBusinessErrorInterceptor {
         return t;
     }
 
-    private boolean matches(Throwable t, InvocationContext context) {
+    private static boolean matches(Throwable t, InvocationContext context) {
         WrapBusinessError businessError = context.getInterceptorBinding(WrapBusinessError.class);
         for (Class<? extends Throwable> e : businessError.unless()) {
             if (e.isAssignableFrom(t.getClass())) {
@@ -59,7 +59,7 @@ public class WrapBusinessErrorInterceptor {
         return false;
     }
 
-    private boolean isControlFlowException(Throwable t) {
+    private static boolean isUnwrappable(Throwable t) {
         return t instanceof ToolCallException
                 || t instanceof Cancellation.OperationCancellationException
                 || t instanceof org.mcpjava.server.Cancellation.OperationCancelledException

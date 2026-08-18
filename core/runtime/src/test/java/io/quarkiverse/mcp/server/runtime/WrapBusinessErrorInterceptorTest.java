@@ -10,7 +10,6 @@ import java.lang.reflect.Method;
 
 import jakarta.interceptor.InvocationContext;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.Cancellation;
@@ -21,13 +20,6 @@ import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
 import io.quarkiverse.mcp.server.WrapBusinessError;
 
 class WrapBusinessErrorInterceptorTest {
-
-    private WrapBusinessErrorInterceptor interceptor;
-
-    @BeforeEach
-    void setUp() {
-        interceptor = new WrapBusinessErrorInterceptor();
-    }
 
     @Test
     void testToolCallExceptionNotWrapped() throws Exception {
@@ -104,40 +96,22 @@ class WrapBusinessErrorInterceptorTest {
         assertSame(original, result, "Non-@Tool method should not wrap exceptions");
     }
 
-    private InputRequiredException createInputRequiredException() throws Exception {
-        Method builderMethod = InputRequiredException.class.getDeclaredMethod("builder");
-        builderMethod.setAccessible(true);
-        Object builder = builderMethod.invoke(null);
-
-        Method addRootsMethod = builder.getClass().getMethod("addRootsRequest", String.class);
-        addRootsMethod.invoke(builder, "test-roots");
-
-        Method buildMethod = builder.getClass().getMethod("build");
-        return (InputRequiredException) buildMethod.invoke(builder);
+    private InputRequiredException createInputRequiredException() {
+        return InputRequiredException.builder()
+                .addRootsRequest("test-roots")
+                .build();
     }
 
-    private UrlElicitationRequiredException createUrlElicitationRequiredException() throws Exception {
-        Method builderMethod = UrlElicitationRequiredException.class.getDeclaredMethod("builder");
-        builderMethod.setAccessible(true);
-        Object builder = builderMethod.invoke(null);
-
-        Method setMessageMethod = builder.getClass().getMethod("setMessage", String.class);
-        setMessageMethod.invoke(builder, "URL elicitation required");
-
-        Method addElicitationMethod = builder.getClass().getMethod("addElicitation", String.class, String.class);
-        addElicitationMethod.invoke(builder, "https://example.com/auth", "Auth needed");
-
-        Method buildMethod = builder.getClass().getMethod("build");
-        return (UrlElicitationRequiredException) buildMethod.invoke(builder);
+    private UrlElicitationRequiredException createUrlElicitationRequiredException() {
+        UrlElicitationRequiredException.Builder builder = UrlElicitationRequiredException.builder();
+        builder.setMessage("URL elicitation required");
+        builder.addElicitation("https://example.com/auth", "Auth needed");
+        return builder.build();
     }
 
-    private Throwable invokeWrapIfNecessary(Throwable t, Method toolMethod) throws Exception {
+    private Throwable invokeWrapIfNecessary(Throwable t, Method toolMethod) {
         InvocationContext context = new TestInvocationContext(toolMethod);
-
-        Method method = WrapBusinessErrorInterceptor.class.getDeclaredMethod(
-                "wrapIfNecessary", Throwable.class, InvocationContext.class);
-        method.setAccessible(true);
-        return (Throwable) method.invoke(interceptor, t, context);
+        return WrapBusinessErrorInterceptor.wrapIfNecessary(t, context);
     }
 
     private static class TestInvocationContext implements InvocationContext {
