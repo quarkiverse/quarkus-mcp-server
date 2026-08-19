@@ -55,11 +55,12 @@ public class McpObjectMapperCustomizer implements ObjectMapperCustomizer {
     }
 
     @JsonInclude(Include.NON_NULL)
-    static abstract class ResourceResponseMixin {
+    public static abstract class ResourceResponseMixin {
         // The cache control hints are serialized as flat top-level fields (ttlMs/cacheScope) by
         // ResourceMessageHandler#resourcesRead; the record property itself must never be serialized.
-        // A method-level annotation is used intentionally so that native image reflection registration
-        // (which registers the accessors via .methods()) is sufficient to honor it.
+        // A method-level annotation is used intentionally: it needs only this mixin registered for
+        // reflection, whereas a field-level one also needs ResourceResponse.fields() and the
+        // CacheControl/CacheScope types (see McpServerProcessor#registerForReflection).
         @JsonIgnore
         abstract CacheControl cacheControl();
     }

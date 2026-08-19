@@ -95,8 +95,9 @@ class ServerFeaturesTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
         client.when()
                 .resourcesList(p -> {
-                    assertEquals(1, p.size());
+                    assertEquals(2, p.size());
                     assertEquals("alpha", p.findByUri("file:///project/alpha").name());
+                    assertEquals("bravo", p.findByUri("file:///project/bravo").name());
                 })
                 .resourcesRead("file:///project/alpha", r -> {
                     assertEquals(Base64.getMimeEncoder().encodeToString("data".getBytes()),
@@ -112,6 +113,17 @@ class ServerFeaturesTest {
                             "cacheControl must not be nested; expected flat ttlMs/cacheScope");
                     assertEquals(15000L, result.getLong("ttlMs"));
                     assertEquals("public", result.getString("cacheScope"));
+                })
+                .send()
+                // bravo has a non-null cacheControl, so only @JsonIgnore keeps it off the wire
+                .resourcesRead("file:///project/bravo")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertFalse(result.containsKey("cacheControl"),
+                            "cacheControl must not be nested; expected flat ttlMs/cacheScope");
+                    assertEquals(15000L, result.getLong("ttlMs"));
+                    assertEquals("private", result.getString("cacheScope"));
                 })
                 .send()
                 .thenAssertResults();
