@@ -110,6 +110,30 @@ The `McpConnection.logLevel()` method returns this per-request value for transie
 
 See xref:getting-started-http.adoc[Getting Started with HTTP] for a complete tutorial.
 
+=== Sessions, Horizontal Scaling, and Load Balancing
+
+In the stateful mode, the `initialize`/`initialized` handshake establishes a session identified by the `Mcp-Session-Id` header.
+The server keeps this session in memory, so **every subsequent request for that session must reach the same server instance**.
+
+This becomes a problem when the server is scaled horizontally and requests are distributed across instances without session affinity — for example on serverless platforms or behind a non-sticky load balancer.
+If the instance that created the session (instance A) is not the one that receives a follow-up request (instance B), instance B does not recognize the session and the request fails.
+
+CAUTION: The symptom is easy to misdiagnose: sessions work fine with a single instance and fail only intermittently under load, typically surfacing as "unknown session" errors. If you observe this, the first thing to check is whether session affinity is actually guaranteed end-to-end.
+
+There are two ways to address this:
+
+Enable session affinity (sticky sessions)::
+Configure your load balancer or ingress to route all requests carrying the same `Mcp-Session-Id` to the instance that owns the session.
+This keeps the stateful protocol working unchanged.
+
+Use the stateless protocol::
+Stateless requests (protocol version `2026-07-28` or later) are self-contained and establish no session, so they can be handled by any instance.
+This removes the affinity requirement entirely and is the recommended approach when sticky sessions cannot be guaranteed.
++
+If you want to *guarantee* that clients use the stateless protocol, you can reject stateful clients with an `InitialCheck`.
+Initial checks are applied only to the stateful `initialize` handshake, so stateless clients bypass them and are unaffected.
+See xref:guides-using-filters-and-checks.adoc#reject-stateful-clients[Reject Stateful Clients] for a ready-to-use example.
+
 [[custom-headers-from-tool-parameters]]
 === Custom Headers from Tool Parameters
 

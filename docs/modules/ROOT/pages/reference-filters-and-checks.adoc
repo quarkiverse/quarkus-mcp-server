@@ -104,12 +104,12 @@ The `McpConnection` object provides access to:
 InitialRequest initialRequest = connection.initialRequest();
 
 // Access client information
-String clientName = initialRequest.clientInfo().name();
-String clientVersion = initialRequest.clientInfo().version();
+String clientName = initialRequest.implementation().name();
+String clientVersion = initialRequest.implementation().version();
 
 // Check client capabilities
 boolean supportsSampling = initialRequest.supportsSampling();
-boolean supportsElicitation = initialRequest.supportsElicitation();
+boolean supportsElicitation = initialRequest.supportsElicitationFormMode();
 boolean supportsRoots = initialRequest.supportsRoots();
 ----
 
@@ -214,11 +214,11 @@ The `InitialRequest` object provides access to client information and capabiliti
 [source,java]
 ----
 // Get client name and version
-String clientName = initialRequest.clientInfo().name();
-String clientVersion = initialRequest.clientInfo().version();
+String clientName = initialRequest.implementation().name();
+String clientVersion = initialRequest.implementation().version();
 
 // Protocol version
-String protocolVersion = initialRequest.protocolVersion();
+String protocolVersion = initialRequest.protocolVersion().version();
 ----
 
 === Client Capabilities
@@ -231,7 +231,7 @@ Check what capabilities the client supports:
 boolean supportsSampling = initialRequest.supportsSampling();
 
 // Check for elicitation support
-boolean supportsElicitation = initialRequest.supportsElicitation();
+boolean supportsElicitation = initialRequest.supportsElicitationFormMode();
 
 // Check for roots support
 boolean supportsRoots = initialRequest.supportsRoots();
@@ -244,15 +244,15 @@ boolean supportsRoots = initialRequest.supportsRoots();
 @Override
 public Uni<CheckResult> perform(InitialRequest initialRequest) {
     // Protocol version
-    String version = initialRequest.protocolVersion();
+    String version = initialRequest.protocolVersion().version();
 
     // Client information
-    String clientName = initialRequest.clientInfo().name();
-    String clientVersion = initialRequest.clientInfo().version();
+    String clientName = initialRequest.implementation().name();
+    String clientVersion = initialRequest.implementation().version();
 
     // Client capabilities
     boolean hasSampling = initialRequest.supportsSampling();
-    boolean hasElicitation = initialRequest.supportsElicitation();
+    boolean hasElicitation = initialRequest.supportsElicitationFormMode();
     boolean hasRoots = initialRequest.supportsRoots();
 
     // Make decision based on this information
