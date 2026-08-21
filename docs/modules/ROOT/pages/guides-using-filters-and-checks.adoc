@@ -487,7 +487,7 @@ public class ProtocolVersionCheck implements InitialCheck {
 
     @Override
     public Uni<CheckResult> perform(InitialRequest initialRequest) {
-        String version = initialRequest.protocolVersion();
+        String version = initialRequest.protocolVersion().version();
 
         // Check if version is supported
         if (!SUPPORTED_VERSIONS.contains(version)) {
@@ -506,6 +506,37 @@ public class ProtocolVersionCheck implements InitialCheck {
     }
 }
 ----
+
+[[reject-stateful-clients]]
+=== Reject Stateful Clients (Serverless / Non-Sticky Load Balancers)
+
+Stateful clients establish a session (via the `Mcp-Session-Id` header) that must be handled by the same server instance for every subsequent request.
+In deployments where session affinity cannot be guaranteed — for example serverless platforms or horizontally scaled instances behind a non-sticky load balancer — this leads to intermittent failures when a follow-up request is routed to an instance that does not know the session.
+
+To avoid this, you can require clients to use the stateless protocol (version `2026-07-28` or later) and reject any client that attempts a stateful `initialize` handshake:
+
+[source,java]
+----
+@Singleton
+public class RejectStatefulClients implements InitialCheck {
+
+    @Override
+    public Uni<CheckResult> perform(InitialRequest initialRequest) {
+        if (!initialRequest.protocolVersion().isStateless()) {
+            return CheckResult.error(
+                "This server only accepts stateless clients "
+                    + "(protocol version 2026-07-28 or later)");
+        }
+        return CheckResult.success();
+    }
+}
+----
+
+A rejected stateful client receives a JSON-RPC error (HTTP status `200` with an `error` object using code `-32603`) in response to its `initialize` request, so it can react accordingly.
+
+NOTE: Initial checks are applied only to the stateful `initialize` handshake. Stateless clients do not perform a handshake, so they bypass initial checks entirely and are unaffected by this check.
+
+See xref:concepts-transports.adoc#_sessions_horizontal_scaling_and_load_balancing[Sessions, Horizontal Scaling, and Load Balancing] for the operational background.
 
 === Environment-Based Filtering
 
