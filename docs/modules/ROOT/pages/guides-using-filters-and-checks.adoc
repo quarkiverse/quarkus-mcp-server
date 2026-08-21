@@ -253,7 +253,7 @@ public class DatabaseAuthCheck implements InitialCheck {
     }
 
     private String extractClientId(InitialRequest request) {
-        return request.clientInfo().name();
+        return request.implementation().name();
     }
 }
 ----
@@ -273,7 +273,7 @@ public class RateLimitCheck implements InitialCheck {
 
     @Override
     public Uni<CheckResult> perform(InitialRequest initialRequest) {
-        String clientId = initialRequest.clientInfo().name();
+        String clientId = initialRequest.implementation().name();
 
         if (rateLimiter.isExceeded(clientId)) {
             return CheckResult.error("Rate limit exceeded");
@@ -291,7 +291,7 @@ public class CapabilityCheck implements InitialCheck {
     public Uni<CheckResult> perform(InitialRequest initialRequest) {
         // Require at least one client capability
         if (!initialRequest.supportsSampling() &&
-            !initialRequest.supportsElicitation()) {
+            !initialRequest.supportsElicitationFormMode()) {
             return CheckResult.error(
                 "Client must support sampling or elicitation");
         }
@@ -405,7 +405,7 @@ public class FeatureFlagFilter implements ToolFilter, PromptFilter {
 
     @Override
     public boolean test(ToolInfo tool, FilterContext context) {
-        String clientId = context.connection().initialRequest().clientInfo().name();
+        String clientId = context.connection().initialRequest().implementation().name();
 
         // Beta features only if flag enabled for this client
         if (tool.name().startsWith("beta_")) {
@@ -422,7 +422,7 @@ public class FeatureFlagFilter implements ToolFilter, PromptFilter {
 
     @Override
     public boolean test(PromptInfo prompt, FilterContext context) {
-        String clientId = context.connection().initialRequest().clientInfo().name();
+        String clientId = context.connection().initialRequest().implementation().name();
 
         // A/B test: show new prompts to 50% of users
         if (prompt.name().startsWith("new_")) {
@@ -449,7 +449,7 @@ public class ConnectionQuotaCheck implements InitialCheck {
 
     @Override
     public Uni<CheckResult> perform(InitialRequest initialRequest) {
-        String clientId = initialRequest.clientInfo().name();
+        String clientId = initialRequest.implementation().name();
 
         // Check concurrent connections
         int activeConnections = connectionTracker.getActiveConnections(clientId);
@@ -595,7 +595,7 @@ public class SubscriptionFilter implements ToolFilter {
 
     @Override
     public boolean test(ToolInfo tool, FilterContext context) {
-        String clientId = context.connection().initialRequest().clientInfo().name();
+        String clientId = context.connection().initialRequest().implementation().name();
         String tier = subscriptionService.getTier(clientId);
 
         // Basic tier: limited tools
