@@ -74,6 +74,9 @@ include::./includes/attributes.adoc[]
 |===
 |Version |Date
 
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.13.2[1.13.2]
+|August 26, 2026
+
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.13.1[1.13.1]
 |July 2, 2026
 
@@ -109,6 +112,10 @@ include::./includes/attributes.adoc[]
 * [1.13.1] Tracing spans now include the `mcp.server.name` attribute and respect per-server `tracingEnabled` configuration instead of only checking the default server. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
 * [1.13.1] The OIDC security failure handler now always ends the HTTP response, fixing a connection leak when the request body is empty (e.g. SSE stream GET requests). _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/853[#853])
 * [1.13.1] When `notifications/initialized` arrives with an unknown session ID and auto-initialization is enabled, the server now returns 202 instead of an unsupported method error. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/878[#878])
+* [1.13.2] `McpHttpServersRuntimeConfig` now uses the correct `RUN_TIME` config phase instead of `BUILD_AND_RUN_TIME_FIXED`. The HTTP transport runtime properties (`dns-rebinding-check.enabled`, `auto-init`, `lazy-sse-init`) can now be overridden at startup. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/904[#904])
+* [1.13.2] The subsidiary SSE debug notification now respects the connection's current log level instead of being sent unconditionally. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/910[#910])
+* [1.13.2] Tool input schema generation now correctly produces `$ref` pointers for recursive and complex types used as `@ToolArg` parameters, by generating holder classes for non-simple argument types. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/919[#919])
+* [1.13.2] The generated tool arguments holder class now uses the effective argument name (from `@ToolArg` etc.) instead of the Java parameter name, fixing mismatches between schema property keys and argument binding. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/918[#918])
 
 [[version-1-12]]
 == 1.12.x
@@ -194,6 +201,9 @@ include::./includes/attributes.adoc[]
 |===
 |Version |Date
 
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.8[1.10.8]
+|August 26, 2026
+
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/1.10.7[1.10.7]
 |July 13, 2026
 
@@ -251,6 +261,9 @@ include::./includes/attributes.adoc[]
 * [1.10.6] Build-time validation of resource template methods now correctly considers the `name` attribute of `@ResourceTemplateArg` instead of only matching against method parameter names. _(backported from <<version-1-13,1.13.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/806[#806])
 * [1.10.7] `ToolInputGuardrail.ToolInputContext#setArguments()` and `ToolOutputGuardrail.ToolOutputContext#setResponse()` no longer accept null, avoiding NPE for guarded no-argument tool calls. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/819[#819])
 * [1.10.7] `McpHttpServersRuntimeConfig` now uses the correct `RUN_TIME` config phase instead of `BUILD_AND_RUN_TIME_FIXED`. The HTTP transport runtime properties (`dns-rebinding-check.enabled`, `auto-init`, `lazy-sse-init`) can now be overridden at startup. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/904[#904])
+* [1.10.8] The subsidiary SSE debug notification now respects the connection's current log level instead of being sent unconditionally. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/910[#910])
+* [1.10.8] Tool input schema generation now correctly produces `$ref` pointers for recursive and complex types used as `@ToolArg` parameters, by generating holder classes for non-simple argument types. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/919[#919])
+* [1.10.8] The generated tool arguments holder class now uses the effective argument name (from `@ToolArg` etc.) instead of the Java parameter name, fixing mismatches between schema property keys and argument binding. _(backported from <<version-2-0,2.0.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/918[#918])
 
 [[version-1-9]]
 == 1.9.x
