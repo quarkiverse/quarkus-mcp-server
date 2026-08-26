@@ -2,6 +2,7 @@ package io.quarkiverse.mcp.server;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import io.quarkiverse.mcp.server.ResourceTemplateManager.ResourceTemplateInfo;
 
@@ -62,6 +63,17 @@ public interface ResourceTemplateManager extends FeatureManager<ResourceTemplate
      * @see #removeResourceTemplate(String, String)
      */
     ResourceTemplateInfo removeResourceTemplate(String name);
+
+    /**
+     * Sends a {@code notifications/resources/list_changed} notification to the connections that match the given filter.
+     * <p>
+     * Unlike {@link ResourceTemplateDefinition#register()} and {@link #removeResourceTemplate(String)}, which broadcast to all
+     * connections, this method allows targeted notification delivery. This is useful when the effective resource template list
+     * changes for specific connections only, for example due to a {@link ResourceTemplateFilter} state change.
+     *
+     * @param filter the predicate used to select connections to notify
+     */
+    void notifyListChanged(Predicate<McpConnection> filter);
 
     /**
      * Resource template info.

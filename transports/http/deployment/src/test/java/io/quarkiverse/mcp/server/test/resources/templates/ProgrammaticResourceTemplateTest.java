@@ -23,6 +23,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ResourceTemplateInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonObject;
 
 public class ProgrammaticResourceTemplateTest extends McpServerTest {
 
@@ -53,6 +54,9 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
         assertThrows(IllegalStateException.class, () -> myTemplates.registerNoUriTemplate("alphas"));
         assertThrows(NullPointerException.class, () -> myTemplates.register(null));
 
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
+        assertEquals("notifications/resources/list_changed", notifications.get(0).getString("method"));
+
         client.when()
                 .resourcesTemplatesList(p -> {
                     assertEquals(1, p.size());
@@ -71,7 +75,13 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                 .resourcesRead("file:///bravo/bim", r -> assertEquals("bim", r.contents().get(0).asText().text()))
                 .thenAssertResults();
 
+        assertEquals("notifications/resources/list_changed",
+                client.waitForNotifications(2).notifications().get(1).getString("method"));
+
         myTemplates.remove("alpha");
+
+        assertEquals("notifications/resources/list_changed",
+                client.waitForNotifications(3).notifications().get(2).getString("method"));
 
         client.when()
                 .resourcesTemplatesList(p -> assertEquals(1, p.size()))
