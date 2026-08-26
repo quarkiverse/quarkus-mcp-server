@@ -6,6 +6,7 @@ import java.net.URI;
 
 import jakarta.inject.Inject;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -57,7 +58,7 @@ public class AutoInitConfigFallbackTest extends McpServerTest {
                 .extract().body().asString());
         String connectionId = response.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text");
         // The auto-initialized connection should have been removed
-        assertFalse(connectionManager.has(connectionId));
+        Awaitility.await().until(() -> !connectionManager.has(connectionId));
         assertFalse(response.getJsonObject("result").getBoolean("isError"));
     }
 

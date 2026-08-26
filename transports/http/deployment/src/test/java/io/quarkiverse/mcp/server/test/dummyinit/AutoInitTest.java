@@ -57,7 +57,8 @@ public class AutoInitTest extends McpServerTest {
                 .statusCode(200)
                 .extract().body().asString());
         String connectionId = response.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text");
-        assertFalse(connectionManager.has(connectionId));
+        // The auto-initialized connection should have been removed
+        Awaitility.await().until(() -> !connectionManager.has(connectionId));
         assertFalse(response.getJsonObject("result").getBoolean("isError"));
 
         response = new JsonObject(RestAssured.given()
@@ -100,7 +101,13 @@ public class AutoInitTest extends McpServerTest {
                 .statusCode(202);
 
         // Auto-initialized connection should have been removed
-        assertFalse(connectionManager.iterator().hasNext());
+        try {
+            Awaitility.await().until(() -> !connectionManager.iterator().hasNext());
+        } catch (ConditionTimeoutException e) {
+            fail("Some connections still exists: "
+                    + StreamSupport.stream(connectionManager.spliterator(), false)
+                            .map(c -> c.id() + "[" + c.initialRequest().implementation().name() + "]").toList());
+        }
     }
 
     private JsonObject notificationsInitialized() {
