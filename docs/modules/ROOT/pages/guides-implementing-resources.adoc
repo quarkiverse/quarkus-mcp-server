@@ -511,9 +511,11 @@ public class MyResourceTemplates {
 <1> The injected manager can be used to obtain metadata and register a new resource template programmatically.
 <2> Ensure that `addResourceTemplate` is executed when the application starts.
 <3> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition`, a builder-like API.
-<4> Registers the resource template definition.
+<4> Registers the resource template definition and sends the `notifications/resources/list_changed` notification to all connected clients.
 
-The programmatic API also allows you to remove existing resource templates at runtime (using `removeResourceTemplate(String name)`), which is not possible with the annotation-based approach.
+The programmatic API also allows you to remove existing resource templates at runtime (using `removeResourceTemplate(String name)`, which also sends the `notifications/resources/list_changed` notification), which is not possible with the annotation-based approach.
+
+NOTE: The MCP specification does not define a dedicated notification for resource template list changes. Therefore, the `notifications/resources/list_changed` notification is reused; clients that support it should re-fetch both the resource list and the resource template list.
 
 TIP: When using the Streamable HTTP transport, features added programmatically always force SSE initialization because it's not possible to determine whether SSE-dependent functionality (such as `Progress`, `McpLog`, `Sampling`, `Roots`, or `Elicitation`) will be used. If your handler does not use any of these, you can add the `TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT` hint via `addHint(TransportHint.STREAMABLE_HTTP_SKIP_SSE_INIT)` to skip the SSE initialization and improve performance.
 

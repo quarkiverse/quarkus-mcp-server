@@ -28,7 +28,7 @@ include::./includes/attributes.adoc[]
 [[version-2-0-features]]
 === New Features
 
-* [2.0.0] Targeted `notifyListChanged(Predicate<McpConnection>)` on `ToolManager`, `PromptManager`, and `ResourceManager`. Sends a `list_changed` notification only to connections matching the predicate, instead of broadcasting to all connections. This is useful when the effective feature list changes for specific connections, e.g. due to a filter state change. (https://github.com/quarkiverse/quarkus-mcp-server/issues/943[#943])
+* [2.0.0] Targeted `notifyListChanged(Predicate<McpConnection>)` on `ToolManager`, `PromptManager`, `ResourceManager`, and `ResourceTemplateManager`. Sends a `list_changed` notification only to connections matching the predicate, instead of broadcasting to all connections. This is useful when the effective feature list changes for specific connections, e.g. due to a filter state change. (https://github.com/quarkiverse/quarkus-mcp-server/issues/943[#943])
 
 * [2.0.0] Stateless MCP protocol support (protocol version `2026-07-28`). The server supports both stateful and stateless clients simultaneously. Stateless clients use `server/discover` instead of the `initialize`/`initialized` handshake. See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/824[#824])
 * [2.0.0] New `McpConnection.isTransient()` method to check if a connection is transient (per-request, not tracked on the server).
@@ -65,6 +65,7 @@ include::./includes/attributes.adoc[]
 * [2.0.0] The generated tool arguments holder class now uses the effective argument name (from `@ToolArg` etc.) instead of the Java parameter name, fixing mismatches between schema property keys and argument binding. (https://github.com/quarkiverse/quarkus-mcp-server/issues/918[#918])
 * [2.0.0] Empty `icons` array is no longer included in JSON responses for programmatically added features. (https://github.com/quarkiverse/quarkus-mcp-server/issues/916[#916])
 * [2.0.0] The subsidiary SSE debug notification now respects the connection's current log level instead of being sent unconditionally. (https://github.com/quarkiverse/quarkus-mcp-server/issues/910[#910])
+* [2.0.0] Registering or removing a resource template programmatically via `ResourceTemplateManager` now sends the `notifications/resources/list_changed` notification, consistent with programmatic resource changes. (https://github.com/quarkiverse/quarkus-mcp-server/issues/944[#944])
 
 [[version-1-13]]
 == 1.13.x

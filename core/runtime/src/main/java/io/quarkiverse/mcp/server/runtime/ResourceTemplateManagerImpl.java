@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpMethod;
@@ -140,6 +142,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         templates.computeIfPresent(key, (k, value) -> {
             if (!value.info().isMethod()) {
                 removed.set(value.info());
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
                 return null;
             }
             return value;
@@ -157,7 +160,15 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             }
             return false;
         });
+        if (removed.get() != null) {
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+        }
         return removed.get();
+    }
+
+    @Override
+    public void notifyListChanged(Predicate<McpConnection> filter) {
+        notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Objects.requireNonNull(filter));
     }
 
     private VariableMatcher getVariableMatcher(String name, String serverName) {
@@ -605,6 +616,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             } finally {
                 registrationLock.unlock();
             }
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
             return ret;
         }
     }
