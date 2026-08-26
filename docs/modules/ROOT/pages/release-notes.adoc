@@ -66,6 +66,9 @@ include::./includes/attributes.adoc[]
 * [2.0.0] Empty `icons` array is no longer included in JSON responses for programmatically added features. (https://github.com/quarkiverse/quarkus-mcp-server/issues/916[#916])
 * [2.0.0] The subsidiary SSE debug notification now respects the connection's current log level instead of being sent unconditionally. (https://github.com/quarkiverse/quarkus-mcp-server/issues/910[#910])
 * [2.0.0] Registering or removing a resource template programmatically via `ResourceTemplateManager` now sends the `notifications/resources/list_changed` notification, consistent with programmatic resource changes. (https://github.com/quarkiverse/quarkus-mcp-server/issues/944[#944])
+* [2.0.0] `@WrapBusinessError` no longer wraps control-flow exceptions (`InputRequiredException`, `UrlElicitationRequiredException`, cancellation exceptions, and `ToolCallException`), which previously could break Multi Round-Trip Requests and request cancellation. (https://github.com/quarkiverse/quarkus-mcp-server/pull/959[#959])
+* [2.0.0] `ToolInputGuardrail.ToolInputContext#setArguments()` and `ToolOutputGuardrail.ToolOutputContext#setResponse()` no longer accept null, avoiding NPE for guarded no-argument tool calls. (https://github.com/quarkiverse/quarkus-mcp-server/issues/819[#819])
+* [2.0.0] When `notifications/initialized` arrives with an unknown session ID and auto-initialization is enabled, the server now returns 202 instead of an unsupported method error. (https://github.com/quarkiverse/quarkus-mcp-server/pull/878[#878])
 
 [[version-1-13]]
 == 1.13.x
