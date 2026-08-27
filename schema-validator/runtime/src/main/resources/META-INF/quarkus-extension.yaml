@@ -5,5 +5,5 @@ metadata:
     - mcp, json-schema, validator
   guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "artificial-intelligence"
+    - "aigence"
   status: "stable"
