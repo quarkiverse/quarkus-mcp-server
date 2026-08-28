@@ -5,6 +5,6 @@ metadata:
     - mcp
   guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/
   categories:
-    - "aigence"
+    - "ai"
   status: "stable"
   unlisted: true
