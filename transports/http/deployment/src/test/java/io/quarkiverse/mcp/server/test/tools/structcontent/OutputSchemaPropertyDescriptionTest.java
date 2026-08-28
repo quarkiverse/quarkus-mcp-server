@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -30,7 +32,7 @@ public class OutputSchemaPropertyDescriptionTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(2, page.tools().size());
+                    assertEquals(3, page.tools().size());
 
                     // Verify output schema for tool returning a class with @JsonPropertyDescription on a field
                     JsonObject fooSchema = page.findByName("fooTool").outputSchema();
@@ -51,6 +53,19 @@ public class OutputSchemaPropertyDescriptionTest extends McpServerTest {
                     assertNotNull(valueProp);
                     assertEquals("string", valueProp.getString("type"));
                     assertEquals("value description", valueProp.getString("description"));
+
+                    // Verify output schema for tool returning a List of records with @JsonPropertyDescription
+                    JsonObject barsSchema = page.findByName("barsTool").outputSchema();
+                    assertNotNull(barsSchema, "Output schema for barsTool should not be null");
+                    assertEquals("array", barsSchema.getString("type"));
+                    JsonObject itemsSchema = barsSchema.getJsonObject("items");
+                    assertNotNull(itemsSchema);
+                    JsonObject itemsProperties = itemsSchema.getJsonObject("properties");
+                    assertNotNull(itemsProperties);
+                    JsonObject itemValueProp = itemsProperties.getJsonObject("value");
+                    assertNotNull(itemValueProp);
+                    assertEquals("string", itemValueProp.getString("type"));
+                    assertEquals("value description", itemValueProp.getString("description"));
                 })
                 .toolsCall("fooTool", toolResponse -> {
                     assertEquals(0, toolResponse.content().size());
@@ -69,6 +84,10 @@ public class OutputSchemaPropertyDescriptionTest extends McpServerTest {
                     } else {
                         fail("Not a JsonObject");
                     }
+                })
+                .toolsCall("barsTool", toolResponse -> {
+                    assertEquals(0, toolResponse.content().size());
+                    assertNotNull(toolResponse.structuredContent());
                 })
                 .thenAssertResults();
     }
@@ -95,6 +114,11 @@ public class OutputSchemaPropertyDescriptionTest extends McpServerTest {
         @Tool(description = "Returns a Bar", structuredContent = true)
         Bar barTool() {
             return new Bar("world");
+        }
+
+        @Tool(description = "Returns a list of Bar", structuredContent = true)
+        List<Bar> barsTool() {
+            return List.of(new Bar("world"));
         }
     }
 }

@@ -135,6 +135,60 @@ Product getProduct(String productId) {
 
 The generated schema will include type information for all fields in the `Product` class.
 
+==== Enriching the Output Schema
+
+By default, the generated output schema only contains type information; extra metadata such as field descriptions or constraints is not included.
+Just like for input schemas, the output schema can be enriched by adding one of the optional Victools schema generator modules to the classpath, so that the corresponding annotations are taken into account:
+
+* `com.github.victools:jsonschema-module-jackson` - Jackson annotations, e.g. `@JsonPropertyDescription` or `@JsonProperty`
+* `com.github.victools:jsonschema-module-jakarta-validation` - Jakarta Validation constraints, e.g. `@NotNull` or `@Size`
+* `com.github.victools:jsonschema-module-swagger-2` - Swagger 2 annotations, e.g. `@Schema`
+
+IMPORTANT: The relevant annotations are only taken into account when the corresponding module dependency is present on the classpath. For example, the `quarkus.mcp.server.schema-generator.jackson.enabled` configuration property (enabled by default) has _no effect_ unless the `jsonschema-module-jackson` dependency is present.
+
+For example, with the `jsonschema-module-jackson` dependency on the classpath, `@JsonPropertyDescription` adds a `description` to the corresponding output schema field:
+
+[source,java]
+----
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+
+public record Parameter(
+    @JsonPropertyDescription("Identifier of the parameter.") // <1>
+    String paramId,
+
+    @JsonPropertyDescription("Description of the parameter.")
+    String description) {
+}
+
+public class MyTools {
+
+    @Tool(description = "Returns the list of available parameters", structuredContent = true)
+    List<Parameter> getParameters() { // <2>
+        return List.of(new Parameter("id", "A parameter"));
+    }
+}
+----
+<1> The description is added to the corresponding field in the generated output schema.
+<2> Metadata is also generated for nested types, e.g. for the item type of a `List`.
+
+The generated output schema looks like this:
+
+[source,json]
+----
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "paramId": { "type": "string", "description": "Identifier of the parameter." },
+      "description": { "type": "string", "description": "Description of the parameter." }
+    }
+  }
+}
+----
+
+TIP: See xref:guides-implementing-tools.adoc#customizing-json-schema-generation[Customizing JSON Schema Generation] for more details about the schema generator modules and relevant configuration properties.
+
 === Explicit Schema Source
 
 Use `@OutputSchema(from = ...)` to specify which class to generate the schema from:
