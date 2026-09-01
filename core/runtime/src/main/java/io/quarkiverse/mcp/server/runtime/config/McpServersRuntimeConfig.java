@@ -42,4 +42,24 @@ public interface McpServersRuntimeConfig {
         IGNORE,
     }
 
+    /**
+     * The strategy used to select the client connections that receive the automatic
+     * {@code notifications/*_list_changed} notification sent when a feature (tool, prompt, resource or resource template) is
+     * registered or removed programmatically at runtime.
+     */
+    @WithDefault("matching-server")
+    AutoListChangedStrategy autoListChangedStrategy();
+
+    enum AutoListChangedStrategy {
+        /**
+         * Only connections whose server name matches the server(s) the affected feature is registered for are notified.
+         */
+        MATCHING_SERVER,
+        /**
+         * All open connections are notified, regardless of the server they are connected to. This was the behavior in versions
+         * 2.0.0 and earlier.
+         */
+        ALL,
+    }
+
 }

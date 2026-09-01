@@ -467,7 +467,7 @@ public class MyResources {
 <1> The injected manager can be used to obtain metadata and register a new resource programmatically.
 <2> Ensure that `addResource` is executed when the application starts.
 <3> The `ResourceManager#newResource(String)` method returns `ResourceDefinition`, a builder-like API.
-<4> Registers the resource definition and sends the `notifications/resources/list_changed` notification to all connected clients.
+<4> Registers the resource definition and sends the `notifications/resources/list_changed` notification to the clients connected to the server(s) the resource is bound to. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification] for details.
 
 The programmatic API also allows you to remove existing resources at runtime (using `removeResource(String uri)`), which is not possible with the annotation-based approach.
 
@@ -511,7 +511,7 @@ public class MyResourceTemplates {
 <1> The injected manager can be used to obtain metadata and register a new resource template programmatically.
 <2> Ensure that `addResourceTemplate` is executed when the application starts.
 <3> The `ResourceTemplateManager#newResourceTemplate(String)` method returns `ResourceTemplateDefinition`, a builder-like API.
-<4> Registers the resource template definition and sends the `notifications/resources/list_changed` notification to all connected clients.
+<4> Registers the resource template definition and sends the `notifications/resources/list_changed` notification to the clients connected to the server(s) the resource template is bound to. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification] for details.
 
 The programmatic API also allows you to remove existing resource templates at runtime (using `removeResourceTemplate(String name)`, which also sends the `notifications/resources/list_changed` notification), which is not possible with the annotation-based approach.
 
