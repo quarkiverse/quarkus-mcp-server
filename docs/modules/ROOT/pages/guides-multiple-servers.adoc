@@ -355,6 +355,23 @@ Set it to `all` to restore the behavior of versions 2.0.0 and earlier, where the
 
 NOTE: This setting only affects the automatic notification sent on registration/removal. The `FeatureManager#notifyListChanged(Predicate)` method always uses the supplied filter and is not affected.
 
+=== Suppressing the automatic notification for a single feature
+
+The automatic notification can also be turned off per feature via `setNotifyListChanged(false)` on the definition builder. When disabled, no `list_changed` notification is sent when the feature is registered nor when it is later removed, and the caller becomes responsible for sending it — typically via `notifyListChanged(Predicate)`.
+
+[source,java]
+----
+toolManager.newTool("query")
+    .setServerName("bravo")
+    .setNotifyListChanged(false) // <1>
+    .setDescription("...")
+    .setHandler(...)
+    .register();
+----
+<1> No automatic `notifications/tools/list_changed` is sent on register or on the later `removeTool("query", "bravo")`.
+
+This is useful when a xref:guides-using-filters-and-checks.adoc[filter] hides the feature for some connections: an unconditional notification would be wasted for the connections that cannot see the feature anyway. The caller can then send a filter-aware notification with `notifyListChanged(conn -> ...)`.
+
 == Testing Multiple Servers
 
 Test each server independently using McpAssured:

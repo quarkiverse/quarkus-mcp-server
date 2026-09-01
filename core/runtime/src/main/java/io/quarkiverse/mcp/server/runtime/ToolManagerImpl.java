@@ -181,7 +181,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         tools.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, Set.of(serverName));
+                if (shouldNotifyListChanged(value)) {
+                    notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, Set.of(serverName));
+                }
                 return null;
             }
             return value;
@@ -205,7 +207,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         });
         ToolInfo removedTool = removed.get();
         if (removedTool != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, removedTool.serverNames());
+            if (shouldNotifyListChanged(removedTool)) {
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, removedTool.serverNames());
+            }
             toolRemovedEvent.fire(new ToolRemoved(removedTool));
         }
         return removedTool;
@@ -682,7 +686,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
-                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons, transportHints);
+                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons, transportHints,
+                    notifyListChanged);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
@@ -697,7 +702,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, ret.serverNames());
+            if (ret.notifyListChanged()) {
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, ret.serverNames());
+            }
             toolAddedEvent.fire(new ToolAdded(ret));
             return ret;
         }
@@ -734,8 +741,9 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 Function<ToolArguments, Uni<ToolResponse>> asyncFun, boolean runOnVirtualThread, List<ToolArgument> arguments,
                 ToolAnnotations annotations,
                 Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata, List<ToolInputGuardrail> input,
-                List<ToolOutputGuardrail> output, List<Icon> icons, Map<TransportHint, Object> transportHints) {
-            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
+                List<ToolOutputGuardrail> output, List<Icon> icons, Map<TransportHint, Object> transportHints,
+                boolean notifyListChanged) {
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, notifyListChanged);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.annotations = Optional.ofNullable(annotations);
