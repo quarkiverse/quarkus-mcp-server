@@ -1,5 +1,0 @@
-= Release Notes
-
-include::./includes/attributes.adoc[]
-
-See the https://docs.quarkiverse.io/quarkus-mcp-server/dev/release-notes.html[latest Release Notes^].
