@@ -295,7 +295,7 @@ public class MyPrompts {
 <1> The injected manager can be used to obtain metadata and register a new prompt programmatically.
 <2> Ensure that `addPrompt` is executed when the application starts.
 <3> The `PromptManager#newPrompt(String)` method returns `PromptDefinition`, a builder-like API.
-<4> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to all connected clients.
+<4> Registers the prompt definition and sends the `notifications/prompts/list_changed` notification to the clients connected to the server(s) the prompt is bound to. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification] for details.
 
 The programmatic API also allows you to remove existing prompts at runtime (using `removePrompt(String name)`), which is not possible with the annotation-based approach.
 

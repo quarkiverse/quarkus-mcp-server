@@ -195,7 +195,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             if (!value.isMethod()) {
                 removed.set(value);
                 resourceNames.remove(new FeatureKey(value.name(), serverName));
-                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Set.of(serverName));
                 return null;
             }
             return value;
@@ -215,7 +215,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             return false;
         });
         if (removed.get() != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, removed.get().serverNames());
         }
         return removed.get();
     }
@@ -591,7 +591,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, ret.serverNames());
             return ret;
         }
     }

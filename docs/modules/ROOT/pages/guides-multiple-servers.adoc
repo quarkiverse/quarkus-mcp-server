@@ -322,6 +322,39 @@ public class MyFeatures {
 }
 ----
 
+[[list-changed-notification-scope]]
+== Scope of the automatic list-changed notification
+
+When a feature (tool, prompt, resource or resource template) is registered or removed programmatically at runtime, an automatic `notifications/*_list_changed` notification is sent to the affected clients.
+By default, this notification is scoped to the server(s) the feature is bound to; only the clients connected to those servers are notified.
+Clients connected to other servers are not notified, because their feature list did not change.
+
+For example, registering a tool bound to the `bravo` server only notifies the clients connected to `bravo`:
+
+[source,java]
+----
+toolManager.newTool("query")
+    .setServerName("bravo") // <1>
+    .setDescription("...")
+    .setHandler(...)
+    .register(); // <2>
+----
+<1> The tool is bound to the `bravo` server.
+<2> Only clients connected to `bravo` receive the `notifications/tools/list_changed` notification.
+
+This behavior is controlled by the `quarkus.mcp.server.auto-list-changed-strategy` configuration property:
+
+[source,properties]
+----
+# matching-server (default): notify only the clients connected to the affected server(s)
+# all: notify all connected clients, regardless of the server they are connected to
+quarkus.mcp.server.auto-list-changed-strategy=matching-server
+----
+
+Set it to `all` to restore the behavior of versions 2.0.0 and earlier, where the notification was broadcast to all connected clients.
+
+NOTE: This setting only affects the automatic notification sent on registration/removal. The `FeatureManager#notifyListChanged(Predicate)` method always uses the supplied filter and is not affected.
+
 == Testing Multiple Servers
 
 Test each server independently using McpAssured:

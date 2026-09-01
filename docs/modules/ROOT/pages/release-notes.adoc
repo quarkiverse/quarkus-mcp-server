@@ -2,6 +2,22 @@
 
 include::./includes/attributes.adoc[]
 
+[[version-2-1]]
+== 2.1.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|2.1.0
+|TBD
+|===
+
+[[version-2-1-breaking]]
+=== Breaking Changes
+
+* [2.1.0] The automatic `notifications/*_list_changed` notification sent when a tool, prompt, resource or resource template is registered or removed programmatically at runtime is now scoped to the server(s) the feature is bound to; only the clients connected to those servers are notified. Previously the notification was broadcast to all connections, regardless of the server they were connected to. Set `quarkus.mcp.server.auto-list-changed-strategy=all` to restore the previous behavior. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/983[#983])
+
 [[version-2-0]]
 == 2.0.x
 

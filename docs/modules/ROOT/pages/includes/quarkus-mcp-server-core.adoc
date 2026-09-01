@@ -481,6 +481,27 @@ endif::add-copy-button-to-env-var[]
 a|`fail`, `ignore`
 |`+++fail+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-auto-list-changed-strategy]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-auto-list-changed-strategy[`+++quarkus.mcp.server.auto-list-changed-strategy+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.auto-list-changed-strategy+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The strategy used to select the client connections that receive the automatic `notifications/++*++_list_changed` notification sent when a feature (tool, prompt, resource or resource template) is registered or removed programmatically at runtime.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_AUTO_LIST_CHANGED_STRATEGY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_AUTO_LIST_CHANGED_STRATEGY+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`matching-server`, `all`
+|`+++matching-server+++`
+
 a|icon:lock[title=Fixed at build time] [[quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-name-max-length[`+++quarkus.mcp.server.tools.name-max-length+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.tools.name-max-length+++[]

@@ -119,7 +119,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         prompts.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, Set.of(serverName));
                 return null;
             }
             return value;
@@ -138,7 +138,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             return false;
         });
         if (removed.get() != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, removed.get().serverNames());
         }
         return removed.get();
     }
@@ -297,7 +297,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, ret.serverNames());
             return ret;
         }
     }
