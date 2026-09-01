@@ -61,6 +61,7 @@ import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
+import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.AutoListChangedStrategy;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
 import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaCancellationAdapter;
 import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaMcpRequestAdapter;
@@ -91,6 +92,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     // used to validate server name if InvalidServerNameStrategy.FAIL is set
     protected final Set<String> serverNames;
 
+    // determines which connections receive the automatic list_changed notification on register/remove
+    protected final AutoListChangedStrategy autoListChangedStrategy;
+
     // used to ensure atomic registration of features across multiple server keys
     protected final Lock registrationLock = new ReentrantLock();
 
@@ -111,6 +115,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         this.serverRequests = serverRequests;
         this.cancellationRequests = cancellationRequests;
         this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
+        this.autoListChangedStrategy = config.autoListChangedStrategy();
         jakarta.enterprise.inject.Instance<McpTracing> mcpTracingInstance = Arc.container().select(McpTracing.class);
         this.mcpTracing = mcpTracingInstance.isResolvable() ? mcpTracingInstance.get() : null;
     }
@@ -381,8 +386,22 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         return metadata.feature().toString().toLowerCase() + ":" + metadata.info().name();
     }
 
-    protected void notifyConnections(McpMethod method) {
-        notifyConnections(method, null);
+    /**
+     * Notifies the connections affected by a change of the features registered for the specified servers.
+     * <p>
+     * Depending on {@link AutoListChangedStrategy}, this either notifies only the connections whose server name is in
+     * {@code serverNames} ({@link AutoListChangedStrategy#MATCHING_SERVER}) or all open connections
+     * ({@link AutoListChangedStrategy#ALL}).
+     *
+     * @param method the notification method
+     * @param serverNames the server names the affected feature is registered for
+     */
+    protected void notifyConnections(McpMethod method, Set<String> serverNames) {
+        if (autoListChangedStrategy == AutoListChangedStrategy.ALL) {
+            notifyConnections(method, (Predicate<McpConnection>) null);
+        } else {
+            notifyConnections(method, c -> serverNames.contains(c.serverName()));
+        }
     }
 
     protected void notifyConnections(McpMethod method, Predicate<McpConnection> filter) {

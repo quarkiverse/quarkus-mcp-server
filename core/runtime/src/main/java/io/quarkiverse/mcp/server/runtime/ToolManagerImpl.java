@@ -181,7 +181,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         tools.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, Set.of(serverName));
                 return null;
             }
             return value;
@@ -205,7 +205,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         });
         ToolInfo removedTool = removed.get();
         if (removedTool != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, removedTool.serverNames());
             toolRemovedEvent.fire(new ToolRemoved(removedTool));
         }
         return removedTool;
@@ -697,7 +697,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED);
+            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, ret.serverNames());
             toolAddedEvent.fire(new ToolAdded(ret));
             return ret;
         }
