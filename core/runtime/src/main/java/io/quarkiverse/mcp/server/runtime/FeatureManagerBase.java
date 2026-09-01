@@ -404,6 +404,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
     }
 
+    /**
+     * @param info the feature that was registered or removed
+     * @return {@code true} if the automatic {@code list_changed} notification should be sent for the given feature
+     * @see FeatureManager.FeatureDefinition#setNotifyListChanged(boolean)
+     */
+    protected static boolean shouldNotifyListChanged(FeatureManager.FeatureInfo info) {
+        if (info instanceof FeatureDefinitionInfoBase<?, ?> def) {
+            return def.notifyListChanged();
+        }
+        return true;
+    }
+
     protected void notifyConnections(McpMethod method, Predicate<McpConnection> filter) {
         Objects.requireNonNull(method);
         JsonObject notification = Messages.newNotification(method.jsonRpcName());
@@ -558,6 +570,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected Set<String> serverNames;
         protected List<Icon> icons = List.of();
         protected Map<TransportHint, Object> transportHints = Map.of();
+        protected boolean notifyListChanged = true;
 
         protected FeatureDefinitionBase(String name, Set<String> knownServerNames) {
             this.name = Objects.requireNonNull(name);
@@ -602,6 +615,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         public THIS setIcons(Icon... icons) {
             this.icons = List.of(icons);
+            return self();
+        }
+
+        public THIS setNotifyListChanged(boolean value) {
+            this.notifyListChanged = value;
             return self();
         }
 
@@ -654,10 +672,18 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected final Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
         protected final boolean runOnVirtualThread;
         protected final List<Icon> icons;
+        protected final boolean notifyListChanged;
 
         protected FeatureDefinitionInfoBase(String name, String description, Set<String> serverNames,
                 Function<ARGUMENTS, RESPONSE> fun,
                 Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread, List<Icon> icons) {
+            this(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, true);
+        }
+
+        protected FeatureDefinitionInfoBase(String name, String description, Set<String> serverNames,
+                Function<ARGUMENTS, RESPONSE> fun,
+                Function<ARGUMENTS, Uni<RESPONSE>> asyncFun, boolean runOnVirtualThread, List<Icon> icons,
+                boolean notifyListChanged) {
             this.name = name;
             this.description = description;
             this.serverNames = serverNames;
@@ -666,6 +692,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             this.asyncFun = asyncFun;
             this.runOnVirtualThread = runOnVirtualThread;
             this.icons = icons;
+            this.notifyListChanged = notifyListChanged;
+        }
+
+        public boolean notifyListChanged() {
+            return notifyListChanged;
         }
 
         @Override

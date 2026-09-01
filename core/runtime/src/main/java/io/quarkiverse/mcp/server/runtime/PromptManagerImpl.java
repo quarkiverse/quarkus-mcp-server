@@ -119,7 +119,9 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         prompts.computeIfPresent(key, (k, value) -> {
             if (!value.isMethod()) {
                 removed.set(value);
-                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, Set.of(serverName));
+                if (shouldNotifyListChanged(value)) {
+                    notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, Set.of(serverName));
+                }
                 return null;
             }
             return value;
@@ -137,10 +139,11 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             }
             return false;
         });
-        if (removed.get() != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, removed.get().serverNames());
+        PromptInfo removedPrompt = removed.get();
+        if (removedPrompt != null && shouldNotifyListChanged(removedPrompt)) {
+            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, removedPrompt.serverNames());
         }
-        return removed.get();
+        return removedPrompt;
     }
 
     @Override
@@ -282,7 +285,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         public PromptInfo register() {
             validate();
             PromptDefinitionInfo ret = new PromptDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, arguments, metadata, icons, transportHints);
+                    runOnVirtualThread, arguments, metadata, icons, transportHints, notifyListChanged);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
@@ -297,7 +300,9 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, ret.serverNames());
+            if (ret.notifyListChanged()) {
+                notifyConnections(McpMethod.NOTIFICATIONS_PROMPTS_LIST_CHANGED, ret.serverNames());
+            }
             return ret;
         }
     }
@@ -314,8 +319,8 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
                 Function<PromptArguments, PromptResponse> fun,
                 Function<PromptArguments, Uni<PromptResponse>> asyncFun, boolean runOnVirtualThread,
                 List<PromptArgument> arguments, Map<MetaKey, Object> metadata, List<Icon> icons,
-                Map<TransportHint, Object> transportHints) {
-            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
+                Map<TransportHint, Object> transportHints, boolean notifyListChanged) {
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, notifyListChanged);
             this.title = title;
             this.arguments = List.copyOf(arguments);
             this.metadata = Map.copyOf(metadata);

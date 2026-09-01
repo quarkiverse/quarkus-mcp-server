@@ -177,7 +177,24 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
         THIS setIcons(Icon... icons);
 
         /**
-         * Registers the resulting info and sends notifications to all connected clients.
+         * By default, {@link #register()} sends an automatic {@code list_changed} notification to the clients connected to the
+         * affected server(s), and the corresponding {@code remove} method of the feature manager does the same when this
+         * feature is later removed.
+         * <p>
+         * If set to {@code false}, both of these automatic notifications are suppressed for this feature and the caller becomes
+         * responsible for sending them, e.g. via {@link FeatureManager#notifyListChanged(java.util.function.Predicate)}. This
+         * is
+         * useful when a filter hides the feature for some connections, in which case an unconditional notification would be
+         * wasted.
+         *
+         * @param value
+         * @return self
+         */
+        THIS setNotifyListChanged(boolean value);
+
+        /**
+         * Registers the resulting info and, unless suppressed via {@link #setNotifyListChanged(boolean)}, sends a
+         * {@code list_changed} notification to the clients connected to the affected server(s).
          *
          * @return the info
          */

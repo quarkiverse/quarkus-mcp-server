@@ -195,7 +195,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             if (!value.isMethod()) {
                 removed.set(value);
                 resourceNames.remove(new FeatureKey(value.name(), serverName));
-                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Set.of(serverName));
+                if (shouldNotifyListChanged(value)) {
+                    notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Set.of(serverName));
+                }
                 return null;
             }
             return value;
@@ -214,10 +216,11 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             }
             return false;
         });
-        if (removed.get() != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, removed.get().serverNames());
+        ResourceInfo removedResource = removed.get();
+        if (removedResource != null && shouldNotifyListChanged(removedResource)) {
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, removedResource.serverNames());
         }
-        return removed.get();
+        return removedResource;
     }
 
     @Override
@@ -385,8 +388,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 Function<ResourceArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType, int size, Content.Annotations annotations, CacheControl cacheControl,
                 Map<MetaKey, Object> metadata, List<Icon> icons,
-                Map<TransportHint, Object> transportHints) {
-            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
+                Map<TransportHint, Object> transportHints, boolean notifyListChanged) {
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, notifyListChanged);
             this.title = title;
             this.uri = uri;
             this.mimeType = mimeType;
@@ -569,7 +572,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
                 throw new IllegalStateException("uri must be set");
             }
             ResourceDefinitionInfo ret = new ResourceDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
-                    runOnVirtualThread, uri, mimeType, size, annotations, cacheControl, metadata, icons, transportHints);
+                    runOnVirtualThread, uri, mimeType, size, annotations, cacheControl, metadata, icons, transportHints,
+                    notifyListChanged);
             List<FeatureKey> nameKeys = FeatureKey.list(name, serverNames);
             List<FeatureKey> uriKeys = FeatureKey.list(uri, serverNames);
             registrationLock.lock();
@@ -591,7 +595,9 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, ret.serverNames());
+            if (ret.notifyListChanged()) {
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, ret.serverNames());
+            }
             return ret;
         }
     }

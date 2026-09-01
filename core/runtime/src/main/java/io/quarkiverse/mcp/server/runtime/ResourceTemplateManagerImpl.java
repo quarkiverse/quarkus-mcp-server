@@ -142,7 +142,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         templates.computeIfPresent(key, (k, value) -> {
             if (!value.info().isMethod()) {
                 removed.set(value.info());
-                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Set.of(serverName));
+                if (shouldNotifyListChanged(value.info())) {
+                    notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, Set.of(serverName));
+                }
                 return null;
             }
             return value;
@@ -160,10 +162,11 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             }
             return false;
         });
-        if (removed.get() != null) {
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, removed.get().serverNames());
+        ResourceTemplateInfo removedTemplate = removed.get();
+        if (removedTemplate != null && shouldNotifyListChanged(removedTemplate)) {
+            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, removedTemplate.serverNames());
         }
-        return removed.get();
+        return removedTemplate;
     }
 
     @Override
@@ -423,8 +426,8 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
                 Function<ResourceTemplateArguments, Uni<ResourceResponse>> asyncFun, boolean runOnVirtualThread, String uri,
                 String mimeType, Content.Annotations annotations, CacheControl cacheControl, Map<MetaKey, Object> metadata,
                 List<Icon> icons,
-                Map<TransportHint, Object> transportHints) {
-            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons);
+                Map<TransportHint, Object> transportHints, boolean notifyListChanged) {
+            super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, notifyListChanged);
             this.title = title;
             this.uriTemplate = uri;
             this.mimeType = mimeType;
@@ -599,7 +602,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             }
             ResourceTemplateDefinitionInfo ret = new ResourceTemplateDefinitionInfo(name, title, description, serverNames,
                     fun, asyncFun, runOnVirtualThread, uriTemplate, mimeType, annotations, cacheControl, metadata, icons,
-                    transportHints);
+                    transportHints, notifyListChanged);
             VariableMatcher variableMatcher = createMatcherFromUriTemplate(uriTemplate);
             ResourceTemplateMetadata templateMetadata = new ResourceTemplateMetadata(variableMatcher, ret);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
@@ -616,7 +619,9 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, ret.serverNames());
+            if (ret.notifyListChanged()) {
+                notifyConnections(McpMethod.NOTIFICATIONS_RESOURCES_LIST_CHANGED, ret.serverNames());
+            }
             return ret;
         }
     }
