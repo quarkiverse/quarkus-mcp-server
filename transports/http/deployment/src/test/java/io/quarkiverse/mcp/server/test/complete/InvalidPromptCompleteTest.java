@@ -6,8 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpMethod;
+import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -27,6 +30,19 @@ public class InvalidPromptCompleteTest extends McpServerTest {
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
                     assertEquals("Prompt completion does not exist: bar_name", error.message());
+                })
+                .send()
+                .thenAssertResults();
+    }
+
+    @Test
+    public void testMissingParams() {
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                .message(Messages.newRequest(100, McpMethod.COMPLETION_COMPLETE.jsonRpcName()))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
+                    assertEquals("Missing required params", error.message());
                 })
                 .send()
                 .thenAssertResults();
