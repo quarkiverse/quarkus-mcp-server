@@ -30,6 +30,12 @@ public class LoggingSetLevelTest extends McpServerTest {
         McpSseTestClient client = McpAssured.newConnectedSseClient();
 
         client.when()
+                .message(client.newRequest(McpMethod.LOGGING_SET_LEVEL))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
+                    assertEquals("Missing required params", error.message());
+                })
+                .send()
                 .message(client.newRequest(McpMethod.LOGGING_SET_LEVEL)
                         .put("params", new JsonObject()))
                 .withErrorAssert(error -> {
