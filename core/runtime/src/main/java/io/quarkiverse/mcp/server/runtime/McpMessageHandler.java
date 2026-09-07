@@ -560,6 +560,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> setLogLevel(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Missing required params");
+        }
         String level = params.getString("level");
         if (level == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Log level not set");
@@ -579,6 +582,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> complete(JsonObject message, MCP_REQUEST mcpRequest, JsonObject responseMeta) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
+        if (params == null) {
+            return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Missing required params");
+        }
         JsonObject ref = params.getJsonObject("ref");
         if (ref == null) {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_REQUEST, "Reference not found");
