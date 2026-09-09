@@ -814,19 +814,27 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Future<Void> serverDiscover(JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
-        FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.SERVER_DISCOVER, message, mcpRequest);
-        Map<String, Object> ret = new HashMap<>();
-        ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
-        ret.put("capabilities", buildCapabilities(filterContext));
-        ret.put("serverInfo", buildServerInfo(mcpRequest));
-        Optional<String> instructions = buildInstructions(mcpRequest);
-        if (instructions.isPresent()) {
-            ret.put("instructions", instructions.get());
+        // Filters may inject request-scoped beans (e.g. SecurityIdentity), so evaluate
+        // the capabilities with an active request context and associated identity
+        mcpRequest.contextStart();
+        try {
+            FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.SERVER_DISCOVER, message, mcpRequest);
+            Map<String, Object> ret = new HashMap<>();
+            ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
+            ret.put("capabilities", buildCapabilities(filterContext));
+            ret.put("serverInfo", buildServerInfo(mcpRequest));
+            Optional<String> instructions = buildInstructions(mcpRequest);
+            if (instructions.isPresent()) {
+                ret.put("instructions", instructions.get());
+            }
+            McpServerRuntimeConfig.Discover discover = serverConfig(mcpRequest).discover();
+            ret.put("ttlMs", discover.ttlMs());
+            ret.put("cacheScope", discover.cacheScope().getName());
+            return mcpRequest.sender().sendResult(id, ret).onComplete(r -> mcpRequest.contextEnd(r.cause()));
+        } catch (RuntimeException e) {
+            mcpRequest.contextEnd(e);
+            throw e;
         }
-        McpServerRuntimeConfig.Discover discover = serverConfig(mcpRequest).discover();
-        ret.put("ttlMs", discover.ttlMs());
-        ret.put("cacheScope", discover.cacheScope().getName());
-        return mcpRequest.sender().sendResult(id, ret);
     }
 
     private Map<String, Object> initResult(MCP_REQUEST mcpRequest, InitialRequest initialRequest, JsonObject message) {
