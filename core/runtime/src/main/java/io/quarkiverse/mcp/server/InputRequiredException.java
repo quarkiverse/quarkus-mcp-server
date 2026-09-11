@@ -4,6 +4,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import io.quarkiverse.mcp.server.runtime.InputRequestSupport;
+import io.vertx.core.json.JsonObject;
+
 /**
  * Indicates that a request cannot be processed until additional input is provided by the client.
  * <p>
@@ -17,7 +20,7 @@ import java.util.Objects;
  * @see MrtrRequest#isServerInitiatedRequestSupported()
  * @see MrtrRequest#inputRequired()
  */
-public class InputRequiredException extends RuntimeException {
+public class InputRequiredException extends McpResultException {
 
     private static final long serialVersionUID = 1L;
 
@@ -47,6 +50,22 @@ public class InputRequiredException extends RuntimeException {
         return requestState;
     }
 
+    @Override
+    public JsonObject result() {
+        JsonObject result = new JsonObject().put("resultType", "input_required");
+        if (!inputRequests.isEmpty()) {
+            JsonObject requests = new JsonObject();
+            for (Map.Entry<String, InputRequestEntry> e : inputRequests.entrySet()) {
+                requests.put(e.getKey(), InputRequestSupport.toInputRequestJson(e.getValue()));
+            }
+            result.put("inputRequests", requests);
+        }
+        if (requestState != null) {
+            result.put("requestState", requestState);
+        }
+        return result;
+    }
+
     /**
      * @return a new builder
      * @see MrtrRequest#inputRequired()
@@ -58,7 +77,8 @@ public class InputRequiredException extends RuntimeException {
     /**
      * An input request entry included in the {@code InputRequiredResult}.
      */
-    public sealed interface InputRequestEntry {
+    public sealed interface InputRequestEntry
+            permits ElicitationInputRequest, UrlElicitationInputRequest, SamplingInputRequest, RootsInputRequest {
     }
 
     /**
@@ -95,7 +115,7 @@ public class InputRequiredException extends RuntimeException {
     }
 
     /**
-     * A roots/list input request entry.
+     * A roots/list input request entry. It carries no request object.
      */
     public record RootsInputRequest() implements InputRequestEntry {
     }

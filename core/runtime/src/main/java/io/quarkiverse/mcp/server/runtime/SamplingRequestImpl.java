@@ -25,7 +25,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 @JsonInclude(Include.NON_NULL)
-public class SamplingRequestImpl implements SamplingRequest {
+public final class SamplingRequestImpl implements SamplingRequest, InputRequestSerializable {
 
     private static final Logger LOG = Logger.getLogger(SamplingRequestImpl.class);
 
@@ -118,7 +118,8 @@ public class SamplingRequestImpl implements SamplingRequest {
         return meta;
     }
 
-    JsonObject toInputRequestJson() {
+    @Override
+    public JsonObject toInputRequestJson() {
         JsonObject params = JsonObject.mapFrom(this);
         // Remove internal fields that are not part of the protocol
         params.remove("_meta");

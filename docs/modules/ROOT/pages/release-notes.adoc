@@ -13,9 +13,15 @@ include::./includes/attributes.adoc[]
 |TBD
 |===
 
+[[version-2-1-breaking]]
+=== Breaking Changes
+
+* [2.1.0] `McpException` is no longer wrapped by `@WrapBusinessError`, even when it matches the annotation's `value()`. Previously, an `McpException` thrown from a tool method annotated with `@WrapBusinessError` was converted into a `ToolCallException` (a failed tool result); it is now always emitted as a JSON-RPC error, consistent with `McpException`'s documented behavior. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1004[#1004])
+
 [[version-2-1-features]]
 === New Features
 
+* **`McpResponseException` hierarchy**: A new abstract supertype `McpResponseException` for exceptions that a server feature method (tool, prompt or resource) can throw to produce a JSON-RPC response instead of an internal error. It has two branches: `McpException` (a JSON-RPC error) and the new `McpResultException` (supplies a successful JSON-RPC result payload via `result()`). Extensions can subclass either branch; such subtypes are handled automatically, without any additional registration. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1004[#1004])
 * **Suppress the automatic list-changed notification per feature**: `FeatureDefinition#setNotifyListChanged(false)` disables the automatic `list_changed` notification for a programmatically registered feature, both on registration and removal, leaving the caller to notify explicitly via `notifyListChanged(Predicate)`. (https://github.com/quarkiverse/quarkus-mcp-server/issues/983[#983])
 
 [[version-2-1-fixes]]
