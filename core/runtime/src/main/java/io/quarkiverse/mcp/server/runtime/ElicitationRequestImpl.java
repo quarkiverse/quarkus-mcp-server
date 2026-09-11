@@ -21,7 +21,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class ElicitationRequestImpl implements ElicitationRequest {
+public final class ElicitationRequestImpl implements ElicitationRequest, InputRequestSerializable {
 
     private static final Logger LOG = Logger.getLogger(ElicitationRequestImpl.class);
 
@@ -110,7 +110,8 @@ public class ElicitationRequestImpl implements ElicitationRequest {
         return ret;
     }
 
-    JsonObject toInputRequestJson() {
+    @Override
+    public JsonObject toInputRequestJson() {
         JsonObject properties = new JsonObject();
         JsonObject schema = new JsonObject().put("type", "object").put("properties", properties);
         JsonArray required = new JsonArray();

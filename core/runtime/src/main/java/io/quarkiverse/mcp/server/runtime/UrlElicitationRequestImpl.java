@@ -14,7 +14,7 @@ import io.smallrye.mutiny.TimeoutException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
-public class UrlElicitationRequestImpl implements UrlElicitationRequest {
+public final class UrlElicitationRequestImpl implements UrlElicitationRequest, InputRequestSerializable {
 
     private static final Logger LOG = Logger.getLogger(UrlElicitationRequestImpl.class);
 
@@ -60,7 +60,8 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
         return elicitationId;
     }
 
-    JsonObject toInputRequestJson() {
+    @Override
+    public JsonObject toInputRequestJson() {
         JsonObject params = new JsonObject()
                 .put("mode", "url")
                 .put("message", message)

@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.InputRequiredException;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.McpResultException;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.UrlElicitationRequiredException;
@@ -64,6 +67,24 @@ class WrapBusinessErrorInterceptorTest {
         Throwable result = invokeWrapIfNecessary(original, TestTools.class.getMethod("toolWithWrapBusinessError"));
 
         assertSame(original, result, "UrlElicitationRequiredException should not be wrapped");
+    }
+
+    @Test
+    void testMcpExceptionNotWrapped() throws Exception {
+        McpException original = new McpException("Protocol error", JsonRpcErrorCodes.INVALID_PARAMS);
+
+        Throwable result = invokeWrapIfNecessary(original, TestTools.class.getMethod("toolWithWrapBusinessError"));
+
+        assertSame(original, result, "McpException should not be wrapped");
+    }
+
+    @Test
+    void testCustomMcpResultExceptionNotWrapped() throws Exception {
+        CustomResultException original = new CustomResultException();
+
+        Throwable result = invokeWrapIfNecessary(original, TestTools.class.getMethod("toolWithWrapBusinessError"));
+
+        assertSame(original, result, "A custom McpResultException subtype should not be wrapped");
     }
 
     @Test
@@ -168,6 +189,19 @@ class WrapBusinessErrorInterceptorTest {
         @Override
         public java.lang.reflect.Constructor<?> getConstructor() {
             return null;
+        }
+    }
+
+    // A custom result-producing exception, simulating an MCP extension module (see #1000)
+    static class CustomResultException extends McpResultException {
+
+        CustomResultException() {
+            super("Custom result");
+        }
+
+        @Override
+        public Object result() {
+            return java.util.Map.of("resultType", "custom");
         }
     }
 

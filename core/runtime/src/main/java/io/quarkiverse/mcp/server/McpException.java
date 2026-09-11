@@ -7,8 +7,9 @@ package io.quarkiverse.mcp.server;
  * automatically converted to a JSON-RPC error message.
  *
  * @see JsonRpcErrorCodes
+ * @see McpResponseException
  */
-public class McpException extends RuntimeException {
+public class McpException extends McpResponseException {
 
     private static final long serialVersionUID = -1270119918348689418L;
 
