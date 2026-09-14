@@ -22,31 +22,30 @@ public interface Sender {
     }
 
     @SuppressWarnings("unchecked")
-    default Future<Void> sendResult(Object id, Object result, JsonObject responseServerInfoMeta) {
+    default Future<Void> sendResult(Object id, Object result, JsonObject responseMeta) {
         JsonObject message = newResult(id, result);
-        Object resultObj = message.getValue("result");
-        if (resultObj instanceof JsonObject resultJson) {
+        if (result instanceof JsonObject resultJson) {
             if (!resultJson.containsKey("resultType")) {
                 resultJson.put("resultType", "complete");
             }
-            if (responseServerInfoMeta != null) {
+            if (responseMeta != null) {
                 JsonObject existingMeta = resultJson.getJsonObject("_meta");
                 if (existingMeta != null) {
-                    existingMeta.mergeIn(responseServerInfoMeta);
+                    existingMeta.mergeIn(responseMeta);
                 } else {
-                    resultJson.put("_meta", responseServerInfoMeta.copy());
+                    resultJson.put("_meta", responseMeta.copy());
                 }
             }
-        } else if (resultObj instanceof Map resultMap) {
+        } else if (result instanceof Map resultMap) {
             if (!resultMap.containsKey("resultType")) {
                 resultMap.put("resultType", "complete");
             }
-            if (responseServerInfoMeta != null) {
+            if (responseMeta != null) {
                 Object existingMeta = resultMap.get("_meta");
                 if (existingMeta instanceof Map existingMetaMap) {
-                    existingMetaMap.putAll(responseServerInfoMeta.getMap());
+                    existingMetaMap.putAll(responseMeta.getMap());
                 } else {
-                    resultMap.put("_meta", responseServerInfoMeta.copy().getMap());
+                    resultMap.put("_meta", responseMeta.copy().getMap());
                 }
             }
         }

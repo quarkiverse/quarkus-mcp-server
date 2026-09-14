@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+
 /**
  * Indicates that a request cannot be processed until one or more URL mode elicitations are completed.
  * <p>
@@ -30,6 +33,19 @@ public class UrlElicitationRequiredException extends McpException {
      */
     public List<ElicitationEntry> elicitations() {
         return elicitations;
+    }
+
+    @Override
+    public Object getData() {
+        JsonArray array = new JsonArray();
+        for (ElicitationEntry entry : elicitations) {
+            array.add(new JsonObject()
+                    .put("mode", "url")
+                    .put("elicitationId", entry.elicitationId())
+                    .put("url", entry.url())
+                    .put("message", entry.message()));
+        }
+        return new JsonObject().put("elicitations", array);
     }
 
     /**

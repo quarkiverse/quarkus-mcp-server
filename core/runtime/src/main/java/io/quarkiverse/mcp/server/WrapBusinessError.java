@@ -16,9 +16,14 @@ import jakarta.interceptor.InterceptorBinding;
  * <p>
  * For example, if a {@link Tool} method throws an exception it's wrapped with a {@link ToolCallException} which is
  * automatically converted to a failed {@link ToolResponse}.
+ * <p>
+ * Instances of {@link McpResponseException} (including {@link McpException} and {@link McpResultException}) are never
+ * wrapped, even if they match {@link #value()}. Such an exception already carries an explicit JSON-RPC response, which
+ * takes precedence over business-error wrapping.
  *
  * @see Tool
  * @see ToolCallException
+ * @see McpResponseException
  */
 @InterceptorBinding
 @Retention(RUNTIME)
