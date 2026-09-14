@@ -26,6 +26,7 @@ import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.SamplingResponse;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.UrlElicitationRequest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
@@ -86,6 +87,55 @@ public class InputRequiredTest extends McpServerTest {
                 .withAssert(r -> {
                     assertFalse(r.isError());
                     assertEquals("Hello Alice! [some-state]", r.firstContent().asText().text());
+                })
+                .send()
+                .thenAssertResults();
+
+        client.disconnect();
+    }
+
+    @Test
+    public void testUrlElicitationInputRequired() {
+        // The client advertises URL-mode elicitation support via `elicitation: { "url": {} }`
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless()
+                .setClientCapabilities(new ClientCapability(ClientCapability.ELICITATION, Map.of("url", Map.of())))
+                .build()
+                .connect();
+
+        // 1. First call — no inputResponses, tool throws InputRequiredException with a URL elicitation entry
+        client.when()
+                .toolsCall("urlElicitationMrtr")
+                .withRawAssert(firstResponse -> {
+                    JsonObject result = firstResponse.getJsonObject("result");
+                    assertNotNull(result);
+                    assertEquals("input_required", result.getString("resultType"));
+
+                    JsonObject inputRequests = result.getJsonObject("inputRequests");
+                    assertNotNull(inputRequests);
+
+                    JsonObject apiKey = inputRequests.getJsonObject("apiKey");
+                    assertNotNull(apiKey);
+                    assertEquals("elicitation/create", apiKey.getString("method"));
+                    JsonObject params = apiKey.getJsonObject("params");
+                    assertNotNull(params);
+                    assertEquals("url", params.getString("mode"));
+                    assertEquals("Please provide your API key", params.getString("message"));
+                    assertEquals("https://example.com/api-key", params.getString("url"));
+                    assertNotNull(params.getString("elicitationId"));
+                })
+                .send()
+                .thenAssertResults();
+
+        // 2. Second call — with the accepted URL elicitation response
+        client.when()
+                .toolsCall("urlElicitationMrtr")
+                .withInputResponses(new JsonObject()
+                        .put("apiKey", new JsonObject()
+                                .put("action", "accept")))
+                .withAssert(r -> {
+                    assertFalse(r.isError());
+                    assertEquals("API key provided", r.firstContent().asText().text());
                 })
                 .send()
                 .thenAssertResults();
@@ -326,6 +376,26 @@ public class InputRequiredTest extends McpServerTest {
             throw elicitation.inputRequired()
                     .addElicitationRequest("userInput", request)
                     .setRequestState("some-state")
+                    .build();
+        }
+
+        @Tool
+        String urlElicitationMrtr(Elicitation elicitation) {
+            InputResponses inputResponses = elicitation.inputResponses();
+            if (!inputResponses.isEmpty() && inputResponses.has("apiKey")) {
+                ElicitationResponse response = inputResponses.getElicitationResponse("apiKey");
+                if (response.actionAccepted()) {
+                    return "API key provided";
+                }
+                return "Declined";
+            }
+
+            UrlElicitationRequest request = elicitation.urlRequestBuilder()
+                    .setMessage("Please provide your API key")
+                    .setUrl("https://example.com/api-key")
+                    .build();
+            throw elicitation.inputRequired()
+                    .addUrlElicitationRequest("apiKey", request)
                     .build();
         }
 
