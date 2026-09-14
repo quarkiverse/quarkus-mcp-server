@@ -651,23 +651,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (protocolVersion == null) {
             protocolVersion = McpProtocolVersion.LATEST_STATEFUL;
         }
-        List<ClientCapability> clientCapabilities = new ArrayList<>();
-        JsonObject capabilities = params.getJsonObject("capabilities");
-        if (capabilities != null) {
-            for (String name : capabilities.fieldNames()) {
-                Map<String, Object> properties;
-                Object value = capabilities.getValue(name);
-                if (value instanceof JsonObject obj && !obj.isEmpty()) {
-                    properties = new HashMap<>();
-                    for (String key : obj.fieldNames()) {
-                        properties.put(key, obj.getValue(key));
-                    }
-                } else {
-                    properties = Map.of();
-                }
-                clientCapabilities.add(new ClientCapability(name, properties));
-            }
-        }
+        List<ClientCapability> clientCapabilities = decodeClientCapabilities(params.getJsonObject("capabilities"));
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport());
     }
 
@@ -770,11 +754,34 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         Implementation implementation = Messages.decodeImplementation(meta.getJsonObject(MetaKey.CLIENT_INFO.toString()));
         JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
-        List<ClientCapability> clientCapabilities = new ArrayList<>();
-        for (String name : capabilities.fieldNames()) {
-            clientCapabilities.add(new ClientCapability(name, Map.of()));
-        }
+        List<ClientCapability> clientCapabilities = decodeClientCapabilities(capabilities);
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport, true);
+    }
+
+    /**
+     * Decodes the client capabilities, preserving the nested properties of each capability.
+     *
+     * @param capabilities the {@code capabilities} JSON object, may be {@code null}
+     * @return the list of client capabilities, never {@code null}
+     */
+    private static List<ClientCapability> decodeClientCapabilities(JsonObject capabilities) {
+        List<ClientCapability> clientCapabilities = new ArrayList<>();
+        if (capabilities != null) {
+            for (String name : capabilities.fieldNames()) {
+                Map<String, Object> properties;
+                Object value = capabilities.getValue(name);
+                if (value instanceof JsonObject obj && !obj.isEmpty()) {
+                    properties = new HashMap<>();
+                    for (String key : obj.fieldNames()) {
+                        properties.put(key, obj.getValue(key));
+                    }
+                } else {
+                    properties = Map.of();
+                }
+                clientCapabilities.add(new ClientCapability(name, properties));
+            }
+        }
+        return clientCapabilities;
     }
 
     /**
