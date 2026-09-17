@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
+import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.Tool.OutputSchema;
 import io.quarkiverse.mcp.server.ToolManager;
@@ -41,7 +42,7 @@ public class ToolStructuredContentTest extends McpServerTest {
 
         client.when()
                 .toolsList(page -> {
-                    assertEquals(7, page.tools().size());
+                    assertEquals(8, page.tools().size());
                     JsonObject alphaSchema = page.findByName("alpha").outputSchema();
                     assertNotNull(alphaSchema);
                     assertEquals("integer", alphaSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
@@ -70,6 +71,9 @@ public class ToolStructuredContentTest extends McpServerTest {
                     assertEquals("integer",
                             golfSchema.getJsonObject("items").getJsonObject("properties").getJsonObject("val")
                                     .getString("type"));
+                    JsonObject hotelSchema = page.findByName("hotel").outputSchema();
+                    assertNotNull(hotelSchema);
+                    assertEquals("integer", hotelSchema.getJsonObject("properties").getJsonObject("val").getString("type"));
                 })
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals(0, toolResponse.content().size());
@@ -136,6 +140,17 @@ public class ToolStructuredContentTest extends McpServerTest {
                         assertEquals(4, jsonArray.getJsonObject(1).getInteger("val"));
                     } else {
                         fail("Not a JsonArray");
+                    }
+                })
+                .toolsCall("hotel", toolResponse -> {
+                    // The tool returns a ToolResponse with both content and structured content
+                    assertEquals(1, toolResponse.content().size());
+                    assertEquals("{\"val\":10}", toolResponse.firstContent().asText().text());
+                    assertNotNull(toolResponse.structuredContent());
+                    if (toolResponse.structuredContent() instanceof JsonObject json) {
+                        assertEquals(10, json.getInteger("val"));
+                    } else {
+                        fail("Not a JsonObject");
                     }
                 })
                 .thenAssertResults();
@@ -219,6 +234,13 @@ public class ToolStructuredContentTest extends McpServerTest {
             MyPojo pojo2 = new MyPojo();
             pojo2.setVal(2);
             return List.of(pojo1, pojo2);
+        }
+
+        @Tool(description = "Use hotel!", outputSchema = @OutputSchema(from = MyPojo.class))
+        ToolResponse hotel() {
+            MyPojo pojo = new MyPojo();
+            pojo.setVal(10);
+            return new ToolResponse(false, List.of(new TextContent("{\"val\":10}")), pojo, null);
         }
 
     }
