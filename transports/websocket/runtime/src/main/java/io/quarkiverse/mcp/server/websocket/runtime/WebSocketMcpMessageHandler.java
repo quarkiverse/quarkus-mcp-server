@@ -18,6 +18,7 @@ import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
+import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -71,6 +72,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
+            ExtensionMethodManagerImpl extensionMethodManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             McpMetadata metadata,
@@ -83,7 +85,8 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             Instance<McpRequestValidator> mcpRequestValidator,
             TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager,
+                serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);

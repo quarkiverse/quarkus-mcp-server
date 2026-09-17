@@ -15,6 +15,7 @@ import io.quarkiverse.mcp.server.http.runtime.SseMcpMessageHandler.SseMcpRequest
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
+import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
 import io.quarkiverse.mcp.server.runtime.McpConnectionBase;
 import io.quarkiverse.mcp.server.runtime.McpMessageHandler;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
@@ -65,6 +66,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
+            ExtensionMethodManagerImpl extensionMethodManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
@@ -77,7 +79,8 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             Instance<McpTracing> tracing,
             Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, serverRequests, metadata, vertx,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager,
+                serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
                 mcpRequestValidator.isResolvable() ? mcpRequestValidator.get() : null, cancellationRequests);

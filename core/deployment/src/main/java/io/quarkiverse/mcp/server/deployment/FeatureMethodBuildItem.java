@@ -226,6 +226,10 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
         return feature == Feature.NOTIFICATION;
     }
 
+    public boolean isExtensionMethod() {
+        return feature == Feature.EXTENSION_METHOD;
+    }
+
     @Override
     public String toString() {
         return "FeatureMethodBuildItem [name=" + name + ", method=" + method.declaringClass() + "#"

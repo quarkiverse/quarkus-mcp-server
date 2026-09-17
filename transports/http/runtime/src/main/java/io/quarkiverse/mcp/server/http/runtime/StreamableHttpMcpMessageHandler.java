@@ -50,6 +50,7 @@ import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ContextSupport;
+import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.runtime.FeatureMetadata;
@@ -129,6 +130,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl notificationManager,
+            ExtensionMethodManagerImpl extensionMethodManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
@@ -143,7 +145,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             TrafficListeners trafficListeners,
             McpParamHeaderMetadata headerMetadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, serverRequests,
+                resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, extensionMethodManager,
+                serverRequests,
                 metadata,
                 vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,

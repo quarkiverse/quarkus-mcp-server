@@ -41,6 +41,11 @@ public enum McpMethod {
 
     // non-standard methods
     Q_CLOSE("q/close"),
+
+    // Sentinel for custom methods contributed by an MCP extension (@McpExtensionMethod).
+    // Extension methods have dynamic names, so this constant is never resolved from the wire (its name is empty and
+    // McpMethod.from() returns null for an empty input); it only drives the dispatch switch.
+    EXTENSION_METHOD(""),
     ;
 
     private static final Map<String, McpMethod> BY_NAME;

@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import static io.quarkiverse.mcp.server.runtime.Feature.EXTENSION_METHOD;
 import static io.quarkiverse.mcp.server.runtime.Feature.NOTIFICATION;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
@@ -51,6 +52,7 @@ final class FeatureMethods {
     static final Set<DotName> ARG_ANNOTATIONS = Set.of(DotNames.TOOL_ARG, DotNames.PROMPT_ARG,
             DotNames.COMPLETE_ARG,
             DotNames.RESOURCE_TEMPLATE_ARG,
+            DotNames.MCP_EXTENSION_METHOD_ARG,
             DotNames.MCPJAVA_TOOL_ARG, DotNames.MCPJAVA_PROMPT_ARG, DotNames.MCPJAVA_COMPLETE_ARG,
             DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG);
 
@@ -91,6 +93,7 @@ final class FeatureMethods {
                     Set.of(DotNames.RESOURCE_TEMPLATE_ARG, DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG);
                 case PROMPT_COMPLETE, RESOURCE_TEMPLATE_COMPLETE ->
                     Set.of(DotNames.COMPLETE_ARG, DotNames.MCPJAVA_COMPLETE_ARG);
+                case EXTENSION_METHOD -> Set.of(DotNames.MCP_EXTENSION_METHOD_ARG);
                 default -> Set.of();
             };
             Set<DotName> invalidAnnotations = new HashSet<>(ARG_ANNOTATIONS);
@@ -110,6 +113,7 @@ final class FeatureMethods {
             case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation);
             case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
             case NOTIFICATION -> validateNotificationMethod(method);
+            case EXTENSION_METHOD -> parameters(method, EXTENSION_METHOD);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
@@ -439,6 +443,25 @@ final class FeatureMethods {
                     ret.add(classAnnotations.get(0).value().asString());
                 }
             }
+        }
+        return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
+    }
+
+    /**
+     * Resolves the {@code @McpServer} bindings declared on a class (e.g. an {@link io.quarkiverse.mcp.server.McpExtension}
+     * class). Only class-level bindings are considered.
+     */
+    static Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, ClassInfo clazz) {
+        List<AnnotationInstance> classAnnotations = new ArrayList<>(
+                clazz.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
+        classAnnotations.addAll(clazz.declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
+        if (!config.supportMultiServerBindings().orElse(true) && classAnnotations.size() > 1) {
+            throw new IllegalStateException(
+                    "Only single @McpServer binding is allowed in compatibility mode: " + clazz.name());
+        }
+        Set<String> ret = new HashSet<>();
+        for (AnnotationInstance a : classAnnotations) {
+            ret.add(a.value().asString());
         }
         return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }

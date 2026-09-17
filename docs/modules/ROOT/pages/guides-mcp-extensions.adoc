@@ -1,0 +1,407 @@
+= MCP Extensions
+
+include::includes/attributes.adoc[]
+:diataxis-type: howto
+
+This guide covers how to implement an https://modelcontextprotocol.io/extensions/overview[MCP _extension_] with the Quarkus MCP Server extension: how to advertise an extension during capability negotiation and how to handle custom top-level JSON-RPC methods.
+
+== What is an MCP extension?
+
+The MCP specification defines a mechanism for extending the protocol beyond the standard tools, resources and prompts.
+An extension is:
+
+* *advertised* to clients during capability negotiation, as a key inside the `capabilities.extensions` object of the `initialize` and `server/discover` responses. The key is the extension _id_ and the value is the extension's _settings object_.
+* *implemented* by one or more custom top-level JSON-RPC methods (such as `skills/list`) that are dispatched just like the built-in methods (`tools/call`, `resources/read`, etc.).
+
+Typical examples are the https://modelcontextprotocol.io/[Skills] extension (`skills/list`, `skills/get`) and the Tasks extension (`tasks/*` combined with `tools/call`).
+
+TIP: MCP extensions are part of the core `quarkus-mcp-server` API; no additional dependency is required.
+
+The Quarkus MCP Server extension provides a declarative API built around three annotations:
+
+[cols="1,3"]
+|===
+|Annotation |Description
+
+|`@McpExtension`
+|Marks a CDI bean class as an MCP extension and declares its `id`.
+
+|`@McpExtensionSetting`
+|Declares a single entry of the extension's settings object (repeatable).
+
+|`@McpExtensionMethod`
+|Marks a method as the handler for a custom top-level JSON-RPC method.
+|===
+
+== Declaring an extension
+
+Annotate a bean class with `@McpExtension` and give it an identifier:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpExtension;
+import io.quarkiverse.mcp.server.McpExtensionMethod;
+
+// @Singleton <1>
+@McpExtension(id = "io.modelcontextprotocol/skills") // <2>
+public class SkillsExtension {
+
+    @McpExtensionMethod("skills/list") // <3>
+    public SkillsResult list() {
+        return new SkillsResult(List.of(
+                new Skill("code-review", "Reviews code"),
+                new Skill("summarize", "Summarizes text")));
+    }
+
+    public record Skill(String uri, String description) {
+    }
+
+    public record SkillsResult(List<Skill> skills) {
+    }
+}
+----
+<1> Like other feature methods, an extension is an ordinary CDI bean; the `@Singleton` scope is added automatically to a class that declares an `@McpExtensionMethod`, if needed.
+<2> The extension identifier; advertised as a key under `capabilities.extensions`.
+<3> A custom JSON-RPC method handled by this extension.
+
+An extension declared this way is advertised to the client with an empty settings object:
+
+[source,json]
+----
+{
+  "capabilities": {
+    "extensions": {
+      "io.modelcontextprotocol/skills": {}
+    }
+  }
+}
+----
+
+[[extension-id]]
+=== The extension identifier
+
+The `id()` follows the `_meta` key naming rules and, unlike a generic `_meta` key, the prefix is *mandatory*.
+The identifier has the form `{prefix}/{extension-name}`, e.g. `io.modelcontextprotocol/skills`:
+
+* the *prefix* is a series of labels separated by dots (`.`) followed by a slash (`/`); each label starts with a letter and ends with a letter or digit, with letters, digits or hyphens (`-`) in between,
+* the *name* begins and ends with an alphanumeric character and may contain hyphens, underscores (`_`), dots and alphanumerics in between.
+
+[IMPORTANT]
+====
+Third-party extensions should use a reversed domain name as the prefix (e.g. `com.acme/my-extension`).
+The `modelcontextprotocol` and `mcp` labels are reserved for the MCP specification.
+
+An identifier without a prefix, or one that violates the naming rules, results in a *build failure*.
+====
+
+== Advertising settings
+
+The value advertised under the extension key is the extension's _settings object_.
+Declare its entries statically with the repeatable `@McpExtensionSetting` annotation:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpExtension;
+import io.quarkiverse.mcp.server.McpExtensionSetting;
+import io.quarkiverse.mcp.server.MetaField.Type;
+
+@McpExtension(id = "io.modelcontextprotocol/skills")
+@McpExtensionSetting(name = "directoryRead", type = Type.BOOLEAN, value = "true") // <1>
+public class SkillsExtension {
+    // ...
+}
+----
+<1> Declares a single boolean setting `directoryRead`.
+
+This advertises the following settings object:
+
+[source,json]
+----
+{
+  "capabilities": {
+    "extensions": {
+      "io.modelcontextprotocol/skills": {
+        "directoryRead": true
+      }
+    }
+  }
+}
+----
+
+The `type()` reuses `MetaField.Type` and controls how `value()` is coerced into JSON:
+
+[cols="1,3"]
+|===
+|Type |Description
+
+|`STRING` (default)
+|The value is used as-is (a JSON string).
+
+|`INT`
+|The value is parsed as an integer.
+
+|`BOOLEAN`
+|The value is parsed as a boolean.
+
+|`JSON`
+|The value is parsed as raw JSON (object, array, etc.).
+|===
+
+[NOTE]
+====
+The setting `name()` is an ordinary JSON object key defined by the extension's own schema; it is *not* subject to the `_meta`/id naming rules described in <<extension-id>>.
+It must only be non-blank and unique within the extension — a blank or duplicate setting name results in a *build failure*.
+====
+
+== Handling custom methods
+
+Methods annotated with `@McpExtensionMethod` handle custom top-level JSON-RPC methods.
+The `value()` is the JSON-RPC method name, e.g. `skills/get`.
+
+[source,java]
+----
+@McpExtensionMethod("skills/get")
+public Skill get(String uri) { // <1>
+    return new Skill(uri, "Skill for " + uri);
+}
+----
+<1> The `uri` parameter is bound from the top-level `params` object of the request (see <<parameter-binding>>).
+
+The returned value is serialized (via Jackson) straight into the JSON-RPC `result`.
+You may return a POJO, a record, a `JsonObject`, a `Map`, or an asynchronous `Uni`/`CompletionStage` of any of those:
+
+[source,java]
+----
+import io.smallrye.mutiny.Uni;
+
+@McpExtensionMethod("skills/getAsync")
+public Uni<Skill> getAsync(String uri) {
+    return Uni.createFrom().item(new Skill(uri, "Async skill for " + uri));
+}
+----
+
+[[parameter-binding]]
+=== Parameter binding
+
+Named parameters are bound from the request's top-level `params` object.
+
+IMPORTANT: This is the one deviation from `@Tool` methods. Tool arguments are read from `params.arguments`, whereas extension-method parameters are read directly from `params` — matching the MCP extension specification (e.g. `skills/get` uses `params.uri`).
+
+For example, the request:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "skills/get",
+  "params": { "uri": "code-review" }
+}
+----
+
+binds `code-review` to the `uri` parameter. A missing required parameter results in an `-32602` (Invalid params) error.
+Use `java.util.Optional` for optional parameters.
+
+By default the parameter name is derived from the reflection metadata, so the class must be compiled with `-parameters` (the Quarkus Maven and Gradle plugins enable this by default).
+Use `@McpExtensionMethodArg` to override the wire name — useful when the JSON-RPC parameter name declared by the extension is not a valid or desirable Java identifier — or to control whether a parameter is required and provide a default value:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpExtensionMethodArg;
+
+@McpExtensionMethod("skills/get")
+public Skill get(
+        @McpExtensionMethodArg(name = "skill-uri") String uri, // <1>
+        @McpExtensionMethodArg(defaultValue = "text") String format) { // <2>
+    return new Skill(uri, "Skill for " + uri + " (" + format + ")");
+}
+----
+<1> The parameter is read from `params."skill-uri"` instead of `params.uri`.
+<2> The parameter is optional; when the client omits it, `text` is used.
+
+A parameter is required by default, exactly as for `@Tool` arguments: it becomes optional only if its type is `Optional`, a `defaultValue` is set, or `required = false` is declared explicitly.
+Setting a `defaultValue` therefore already makes the parameter optional — there is no need to also declare `required = false`.
+
+In addition to named parameters, extension methods support most of the _provider_ parameters available to feature methods — they are injected based on their type. This includes `McpConnection`, `McpLog`, `Meta`, `RawMessage`, `RequestId`, `Progress`, `Cancellation`, `Roots`, and the interactive `Sampling` and `Elicitation` providers:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
+import io.quarkiverse.mcp.server.Meta;
+import io.quarkiverse.mcp.server.RawMessage;
+import io.quarkiverse.mcp.server.RequestId;
+import io.quarkiverse.mcp.server.Progress;
+import io.quarkiverse.mcp.server.Roots;
+import io.quarkiverse.mcp.server.Sampling;
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.Cancellation;
+
+@McpExtensionMethod("skills/connection")
+public JsonObject connection(McpConnection connection, McpLog log, RawMessage rawMessage,
+        Meta meta, RequestId requestId, Progress progress, Roots roots,
+        Sampling sampling, Elicitation elicitation, Cancellation cancellation) {
+    return new JsonObject().put("connectionId", connection.id());
+}
+----
+
+As with any request handler, `Sampling`, `Elicitation` and `Roots` involve server-initiated requests back to the client, so they are only usable when the connected client advertised the corresponding capability (and, for `Sampling`/`Elicitation`, over a non-stateless connection). Guard their use with `isSupported()` / `isServerInitiatedRequestSupported()`.
+
+TIP: The whole raw request message (including the top-level `params`) is available through a `RawMessage` parameter. `RequestUri` and completion-context providers are not applicable to extension methods. See xref:reference-parameter-types.adoc[Parameter Types] for the full list of supported provider types.
+
+=== Error handling
+
+Throwing an `McpException` propagates a JSON-RPC error with the given code and message:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+
+@McpExtensionMethod("skills/get")
+public Skill get(String uri) {
+    if (!exists(uri)) {
+        throw new McpException("Unknown skill: " + uri, JsonRpcErrorCodes.INVALID_REQUEST);
+    }
+    // ...
+}
+----
+
+A request for a method that is not registered results in an `-32601` (Method not found) error.
+
+== Binding an extension to servers
+
+An extension binds to servers as a *unit*, using the same `@McpServer` annotation as feature methods.
+The bindings are declared on the `@McpExtension` class and apply to all of its methods.
+If no binding is declared, the extension is bound to the default server.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpServer;
+
+@McpServer("bravo") // <1>
+@McpServer(McpServer.DEFAULT) // <2>
+@McpExtension(id = "com.acme/multi")
+public class MultiExtension {
+
+    @McpExtensionMethod("multi/ping")
+    public JsonObject ping() {
+        return new JsonObject().put("ok", true);
+    }
+}
+----
+<1> The extension (its settings object and all of its methods) is bound to the `bravo` server.
+<2> ...and to the default server. `@McpServer` is repeatable.
+
+Only the servers an extension is bound to advertise its settings object and dispatch its methods.
+A request for an extension method on a server the extension is not bound to results in an `-32601` (Method not found) error.
+
+[IMPORTANT]
+.`@McpServer` is not allowed on an individual method
+====
+An extension is discovered by the client as a whole via its advertised settings object, so registering only a subset of its methods on a server does not map to the specification.
+Declaring `@McpServer` on an `@McpExtensionMethod` is therefore *not allowed and fails the build*.
+
+If a method needs to behave differently per server, inspect `McpConnection#serverName()` at runtime instead.
+====
+
+See xref:guides-multiple-servers.adoc[Multiple Server Configurations] for details on multi-server setups and the `quarkus.mcp.server.support-multi-server-bindings` property.
+
+== Build-time validation
+
+The following mistakes are detected at build time and cause a build failure:
+
+* an extension `id` without a mandatory prefix, or one that violates the `_meta` key naming rules,
+* two `@McpExtension` classes declaring the same `id` and bound to an overlapping set of servers,
+* a blank `@McpExtensionSetting` name, or two settings declaring the same name within one extension,
+* an extension method name that collides with a built-in method name (e.g. `@McpExtensionMethod("tools/call")`),
+* two extension methods with the same name bound to an overlapping set of servers,
+* an `@McpExtensionMethod` declared on a class that is not annotated with `@McpExtension`,
+* an `@McpServer` annotation declared on an individual `@McpExtensionMethod`.
+
+NOTE: The same method name bound to *different* (non-overlapping) servers is allowed — each server dispatches to its own handler.
+
+== Returning a custom result type (e.g. Tasks)
+
+Some extensions, such as Tasks, integrate with the standard `tools/call` method and return a non-standard result shape (for example `resultType: "task"`).
+This does not require any extension-specific API — it reuses the existing xref:guides-error-handling.adoc[error handling] seam.
+
+Throw a subclass of `McpResultException` and override `result()` to supply the raw JSON-RPC `result`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpResultException;
+import io.quarkiverse.mcp.server.Tool;
+import io.vertx.core.json.JsonObject;
+
+public class TaskTools {
+
+    @Tool(description = "Starts a long-running task and returns a task handle")
+    String startTask() {
+        throw new CreateTaskException("task-123");
+    }
+
+    static final class CreateTaskException extends McpResultException {
+
+        private final String taskId;
+
+        CreateTaskException(String taskId) {
+            super("Task created: " + taskId);
+            this.taskId = taskId;
+        }
+
+        @Override
+        public JsonObject result() {
+            return new JsonObject()
+                    .put("resultType", "task") // <1>
+                    .put("task", new JsonObject()
+                            .put("taskId", taskId)
+                            .put("status", "working"));
+        }
+    }
+}
+----
+<1> The custom `resultType` is preserved as-is (it is not overwritten with the default `"complete"`).
+
+== Testing extensions
+
+Extensions are tested like any other feature with xref:guides-testing.adoc[McpAssured].
+Custom methods that are not part of the McpAssured fluent API can be invoked with a generic request:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.vertx.core.json.JsonObject;
+
+@Test
+public void testSkillsGet() {
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
+            .build()
+            .connect();
+
+    try (client) {
+        client.when()
+                .message(client.newRequest("skills/get") // <1>
+                        .put("params", new JsonObject().put("uri", "code-review")))
+                .withAssert(response -> { // <2>
+                    JsonObject result = response.getJsonObject("result");
+                    assertEquals("code-review", result.getString("uri"));
+                })
+                .send()
+                .thenAssertResults();
+    }
+}
+----
+<1> Build a raw JSON-RPC request for the custom method; the parameters go into the top-level `params` object.
+<2> `withAssert` receives the full JSON-RPC response; read the `result` object from it. Use `withErrorAssert` to assert an error response.
+
+The advertised settings object can be verified from the `initialize` (or `server/discover`) response captured on connect.
+
+== See Also
+
+* xref:guides-multiple-servers.adoc[Multiple Server Configurations]
+* xref:guides-error-handling.adoc[Error Handling]
+* xref:reference-parameter-types.adoc[Parameter Types]
+* xref:reference-return-types.adoc[Return Types]
+* xref:guides-testing.adoc[Testing with McpAssured]
