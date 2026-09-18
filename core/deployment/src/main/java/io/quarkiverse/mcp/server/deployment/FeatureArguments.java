@@ -1,12 +1,18 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodParameterInfo;
+import org.jboss.jandex.Type;
 
+import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 
 final class FeatureArguments {
@@ -49,6 +55,34 @@ final class FeatureArguments {
             return Provider.CUSTOM;
         }
         return PROVIDERS.getOrDefault(type.name(), Provider.PARAMS);
+    }
+
+    /**
+     * @param type the parameter type
+     * @param customTypes the custom argument types registered via {@link CustomArgumentTypeBuildItem}
+     * @return the provider
+     */
+    static Provider providerFrom(Type type, Map<DotName, Set<Feature>> customTypes) {
+        Provider provider = PROVIDERS.get(type.name());
+        if (provider != null) {
+            return provider;
+        }
+        return customTypes.containsKey(type.name()) ? Provider.CUSTOM : Provider.PARAMS;
+    }
+
+    static Map<DotName, Set<Feature>> customTypes(List<CustomArgumentTypeBuildItem> customArgumentTypes) {
+        if (customArgumentTypes.isEmpty()) {
+            return Map.of();
+        }
+        Map<DotName, Set<Feature>> ret = new HashMap<>();
+        for (CustomArgumentTypeBuildItem item : customArgumentTypes) {
+            ret.merge(item.getType(), item.getFeatures(), (f1, f2) -> {
+                Set<Feature> merged = new HashSet<>(f1);
+                merged.addAll(f2);
+                return merged;
+            });
+        }
+        return ret;
     }
 
     static boolean isOptionalType(DotName name) {

@@ -75,6 +75,11 @@ public record FeatureArgument(String name,
         COMPLETE_CONTEXT,
         META,
         ELICITATION,
+        /**
+         * A custom argument type contributed by an MCP extension; the value is resolved from
+         * {@link ArgumentProviders#customProvider(Class)}.
+         */
+        CUSTOM,
         MCPJAVA_PROGRESS,
         MCPJAVA_CANCELLATION,
         MCPJAVA_MCP_REQUEST,

@@ -7,7 +7,6 @@ import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ROOTS;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.SAMPLING;
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -612,11 +611,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
                 JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
                 if (capabilities != null) {
-                    List<ClientCapability> decoded = new ArrayList<>();
-                    for (String name : capabilities.fieldNames()) {
-                        decoded.add(new ClientCapability(name, Map.of()));
-                    }
-                    clientCapabilities = List.copyOf(decoded);
+                    clientCapabilities = List.copyOf(decodeClientCapabilities(capabilities));
                 }
             }
 

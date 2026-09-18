@@ -8,7 +8,12 @@ import io.quarkiverse.mcp.server.RequestId;
 
 public class CancellationImpl implements Cancellation {
 
-    public static CancellationImpl from(ArgumentProviders argProviders) {
+    public static Cancellation from(ArgumentProviders argProviders) {
+        // An MCP extension may supply a custom cancellation, e.g. a tool executed as a task is cancelled via tasks/cancel
+        Cancellation custom = argProviders.customProvider(Cancellation.class);
+        if (custom != null) {
+            return custom;
+        }
         return new CancellationImpl(argProviders.connection(), argProviders.requestId(), argProviders.cancellationRequests());
     }
 
