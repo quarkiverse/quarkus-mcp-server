@@ -13,12 +13,20 @@ import io.quarkiverse.mcp.server.SamplingResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-class InputResponsesImpl implements InputResponses {
+public class InputResponsesImpl implements InputResponses {
 
     private static final InputResponsesImpl EMPTY = new InputResponsesImpl(null);
 
     static InputResponsesImpl from(JsonObject params) {
         JsonObject inputResponses = params != null ? params.getJsonObject("inputResponses") : null;
+        return inputResponses != null ? new InputResponsesImpl(inputResponses) : EMPTY;
+    }
+
+    /**
+     * @param inputResponses the {@code inputResponses} object, may be {@code null}
+     * @return the input responses
+     */
+    public static InputResponses of(JsonObject inputResponses) {
         return inputResponses != null ? new InputResponsesImpl(inputResponses) : EMPTY;
     }
 

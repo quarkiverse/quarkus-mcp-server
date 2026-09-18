@@ -13,7 +13,9 @@ An extension is:
 * *advertised* to clients during capability negotiation, as a key inside the `capabilities.extensions` object of the `initialize` and `server/discover` responses. The key is the extension _id_ and the value is the extension's _settings object_.
 * *implemented* by one or more custom top-level JSON-RPC methods (such as `skills/list`) that are dispatched just like the built-in methods (`tools/call`, `resources/read`, etc.).
 
-Typical examples are the https://modelcontextprotocol.io/[Skills] extension (`skills/list`, `skills/get`) and the Tasks extension (`tasks/*` combined with `tools/call`).
+Typical examples are the https://modelcontextprotocol.io/[Skills] extension (`skills/list`, `skills/get`) and the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`tasks/*` combined with `tools/call`).
+
+TIP: The Tasks extension is supported out of the box; see xref:guides-mcp-tasks.adoc[MCP Tasks]. This guide covers the generic API used to implement other extensions.
 
 TIP: MCP extensions are part of the core `quarkus-mcp-server` API; no additional dependency is required.
 
@@ -326,9 +328,9 @@ The following mistakes are detected at build time and cause a build failure:
 
 NOTE: The same method name bound to *different* (non-overlapping) servers is allowed — each server dispatches to its own handler.
 
-== Returning a custom result type (e.g. Tasks)
+== Returning a custom result type
 
-Some extensions, such as Tasks, integrate with the standard `tools/call` method and return a non-standard result shape (for example `resultType: "task"`).
+Some extensions integrate with a standard method such as `tools/call` and return a non-standard result shape, identified by a custom `resultType` (the built-in xref:guides-mcp-tasks.adoc[Tasks] support returns `resultType: "task"` this way).
 This does not require any extension-specific API — it reuses the existing xref:guides-error-handling.adoc[error handling] seam.
 
 Throw a subclass of `McpResultException` and override `result()` to supply the raw JSON-RPC `result`:
@@ -405,6 +407,7 @@ The advertised settings object can be verified from the `initialize` (or `server
 
 == See Also
 
+* xref:guides-mcp-tasks.adoc[MCP Tasks]
 * xref:guides-multiple-servers.adoc[Multiple Server Configurations]
 * xref:guides-error-handling.adoc[Error Handling]
 * xref:reference-parameter-types.adoc[Parameter Types]

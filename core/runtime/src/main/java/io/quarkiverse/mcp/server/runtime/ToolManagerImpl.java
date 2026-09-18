@@ -87,6 +87,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final List<ToolFilter> filters;
 
+    final List<ToolCallInterceptor> interceptors;
+
     final McpServersBuildTimeConfig buildTimeConfig;
 
     final Instance<ToolInputGuardrail> inputGuardrails;
@@ -104,6 +106,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<ToolFilter> filters,
+            @All List<ToolCallInterceptor> toolCallInterceptors,
             @Any Instance<ToolInputGuardrail> inputGuardrails,
             @Any Instance<ToolOutputGuardrail> outputGuardrails,
             @Any Instance<IconsProvider> iconsProviders,
@@ -128,6 +131,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.inputSchemaGenerator = inputSchemaGenerator;
         this.defaultValueConverters = metadata.defaultValueConverters();
         this.filters = filters;
+        this.interceptors = toolCallInterceptors;
         this.buildTimeConfig = buildTimeConfig;
         this.config = config;
         this.toolAddedEvent = toolAddedEvent;
@@ -230,6 +234,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             return fi;
         }
         return null;
+    }
+
+    /**
+     * @return {@code true} if the tool passes the tool filters for the given request
+     */
+    boolean isAvailable(ToolInfo tool, McpRequest mcpRequest, JsonObject message) {
+        return test(tool, FilterContextImpl.of(McpMethod.TOOLS_CALL, message, mcpRequest));
     }
 
     @Override

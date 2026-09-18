@@ -25,6 +25,7 @@
         <module>hibernate-validator</module>
         <module>oidc</module>
         <module>schema-validator</module>
+        <module>extensions/tasks</module>
     </modules>
 
     <scm>
