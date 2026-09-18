@@ -27,6 +27,7 @@ final class FeatureArguments {
             Map.entry(DotNames.COMPLETE_CONTEXT, Provider.COMPLETE_CONTEXT),
             Map.entry(DotNames.META, Provider.META),
             Map.entry(DotNames.ELICITATION, Provider.ELICITATION),
+            Map.entry(DotNames.TASK_CONTEXT, Provider.TASK_CONTEXT),
             Map.entry(DotNames.MCPJAVA_PROGRESS, Provider.MCPJAVA_PROGRESS),
             Map.entry(DotNames.MCPJAVA_CANCELLATION, Provider.MCPJAVA_CANCELLATION),
             Map.entry(DotNames.MCPJAVA_MCP_REQUEST, Provider.MCPJAVA_MCP_REQUEST),

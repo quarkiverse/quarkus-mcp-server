@@ -32,6 +32,7 @@ import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.NotificationManager;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.ResponseServerInfo;
+import io.quarkiverse.mcp.server.TaskManager;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.Icon;
@@ -66,6 +67,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     protected final ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager;
     protected final NotificationManagerImpl notificationManager;
     protected final ExtensionMethodManagerImpl extensionMethodManager;
+    protected final TaskManagerImpl taskManager;
 
     private final ToolMessageHandler toolHandler;
     private final PromptMessageHandler promptHandler;
@@ -74,6 +76,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
     private final ExtensionMethodMessageHandler extensionMethodHandler;
+    private final TaskMessageHandler taskHandler;
 
     private final ServerRequests serverRequests;
     private final List<InitialCheck> initialChecks;
@@ -105,6 +108,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
             ExtensionMethodManagerImpl extensionMethodManager,
+            TaskManagerImpl taskManager,
             ServerRequests serverRequests,
             McpMetadata metadata, Vertx vertx,
             List<InitialCheck> initialChecks,
@@ -120,7 +124,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.resourceTemplateManager = resourceTemplateManager;
         this.promptCompletionManager = promptCompletionManager;
         this.resourceTemplateCompletionManager = resourceTemplateCompletionManager;
-        this.toolHandler = new ToolMessageHandler(toolManager, config);
+        this.toolHandler = new ToolMessageHandler(toolManager, taskManager, config);
         this.promptHandler = new PromptMessageHandler(promptManager, config);
         this.promptCompleteHandler = new PromptCompleteMessageHandler(promptCompletionManager);
         this.resourceHandler = new ResourceMessageHandler(resourceManager, config);
@@ -129,6 +133,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.notificationManager = notificationManager;
         this.extensionMethodManager = extensionMethodManager;
         this.extensionMethodHandler = new ExtensionMethodMessageHandler(extensionMethodManager);
+        this.taskManager = taskManager;
+        this.taskHandler = new TaskMessageHandler(taskManager);
         this.serverRequests = serverRequests;
         this.initialChecks = initialChecks;
         this.initialResponseInfos = initialResponseInfos;
@@ -446,6 +452,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 case NOTIFICATIONS_INITIALIZED -> alreadyInitialized(mcpRequest);
                 case EXTENSION_METHOD -> extensionMethodHandler.extensionCall(message, mcpRequest, responseMeta);
+                case TASKS_GET -> taskHandler.tasksGet(message, mcpRequest, responseMeta);
+                case TASKS_UPDATE -> taskHandler.tasksUpdate(message, mcpRequest, responseMeta);
+                case TASKS_CANCEL -> taskHandler.tasksCancel(message, mcpRequest, responseMeta);
                 default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
@@ -536,6 +545,22 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                     "Missing notifications in params");
         }
         SubscriptionFilter filter = SubscriptionFilter.parse(notifications);
+        if (!filter.taskIds().isEmpty()) {
+            // Task status notifications require the tasks extension capability
+            if (!TaskMessageHandler.supportsTasks(mcpRequest)) {
+                return TaskMessageHandler.sendMissingCapability(id, mcpRequest);
+            }
+            // Only agree to notify about the tasks that actually exist
+            Set<String> knownTaskIds = new HashSet<>();
+            for (String taskId : filter.taskIds()) {
+                if (taskManager.exists(taskId, mcpRequest.serverName())) {
+                    knownTaskIds.add(taskId);
+                }
+            }
+            if (knownTaskIds.size() != filter.taskIds().size()) {
+                filter = filter.withTaskIds(knownTaskIds);
+            }
+        }
         Subscription subscription = new Subscription(id, filter);
         mcpRequest.connection().addSubscription(subscription);
         LOG.debugf("Subscription %s opened [%s]", id, mcpRequest.connection().id());
@@ -779,7 +804,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
      * @param capabilities the {@code capabilities} JSON object, may be {@code null}
      * @return the list of client capabilities, never {@code null}
      */
-    private static List<ClientCapability> decodeClientCapabilities(JsonObject capabilities) {
+    protected static List<ClientCapability> decodeClientCapabilities(JsonObject capabilities) {
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         if (capabilities != null) {
             for (String name : capabilities.fieldNames()) {
@@ -907,6 +932,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
         capabilities.put("logging", Map.of());
         Map<String, Object> extensions = buildExtensions(filterContext);
+        if (toolManager.hasTaskAugmentedTools(filterContext)) {
+            // The tasks extension is advertised automatically if a task-augmented tool is available
+            extensions.putIfAbsent(TaskManager.EXTENSION_ID, Map.of());
+        }
         if (!extensions.isEmpty()) {
             capabilities.put("extensions", extensions);
         }
@@ -915,11 +944,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private Map<String, Object> buildExtensions(FilterContextImpl filterContext) {
         List<ExtensionMetadata> extensionMetadata = metadata.extensions();
+        Map<String, Object> extensions = new HashMap<>();
         if (extensionMetadata.isEmpty()) {
-            return Map.of();
+            return extensions;
         }
         String serverName = filterContext.mcpRequest.serverName();
-        Map<String, Object> extensions = new HashMap<>();
         for (ExtensionMetadata extension : extensionMetadata) {
             if (!extension.serverNames().contains(serverName)) {
                 continue;

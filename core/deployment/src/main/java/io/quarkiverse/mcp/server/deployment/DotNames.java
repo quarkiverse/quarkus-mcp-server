@@ -56,6 +56,8 @@ import io.quarkiverse.mcp.server.ResourceTemplateManager;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SupportedExecutionModels;
+import io.quarkiverse.mcp.server.Task;
+import io.quarkiverse.mcp.server.TaskContext;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
@@ -120,6 +122,8 @@ class DotNames {
     static final DotName STRING = DotName.createSimple(String.class);
     static final DotName TEXT_CONTENT = DotName.createSimple(TextContent.class);
     static final DotName TEXT_RESOURCE_CONTENTS = DotName.createSimple(TextResourceContents.class);
+    static final DotName TASK = DotName.createSimple(Task.class);
+    static final DotName TASK_CONTEXT = DotName.createSimple(TaskContext.class);
     static final DotName TOOL = DotName.createSimple(Tool.class);
     static final DotName TOOL_ARG = DotName.createSimple(ToolArg.class);
     static final DotName TOOL_MANAGER = DotName.createSimple(ToolManager.class);

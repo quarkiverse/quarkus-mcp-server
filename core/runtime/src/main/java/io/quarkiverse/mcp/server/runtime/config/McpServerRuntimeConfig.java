@@ -78,6 +78,11 @@ public interface McpServerRuntimeConfig {
     Elicitation elicitation();
 
     /**
+     * Tasks config.
+     */
+    Tasks tasks();
+
+    /**
      * Controls inclusion of {@code io.modelcontextprotocol/serverInfo} in the {@code _meta} of every JSON-RPC result.
      * <p>
      * {@code LIGHT} includes only name and version. {@code FULL} includes all available server info fields. {@code NONE} opts
@@ -437,6 +442,24 @@ public interface McpServerRuntimeConfig {
          */
         @WithDefault("10m")
         Duration defaultCompletionTimeout();
+    }
+
+    public interface Tasks {
+
+        /**
+         * The default time-to-live of a task created for a task-augmented tool, measured from its creation. Once elapsed,
+         * the task may be discarded, including its result. Negative and zero durations imply an unlimited time-to-live.
+         * It can be overridden per tool with {@code @Task#ttl()}.
+         */
+        @WithDefault("1h")
+        Duration defaultTtl();
+
+        /**
+         * The default polling interval suggested to clients polling a task. It must be positive. It can be overridden per
+         * tool with {@code @Task#pollInterval()}.
+         */
+        @WithDefault("5s")
+        Duration defaultPollInterval();
     }
 
 }

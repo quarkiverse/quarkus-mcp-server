@@ -162,16 +162,17 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
      * into {@code _meta}, and the notification is delivered via {@link #deliverSubscriptionNotification}.
      *
      * @param notification the notification to deliver
-     * @param resourceUri the resource URI (for {@code notifications/resources/updated}), or {@code null}
+     * @param key the resource URI (for {@code notifications/resources/updated}), the task id (for
+     *        {@code notifications/tasks}), or {@code null}
      */
-    public void sendNotification(JsonObject notification, String resourceUri) {
+    public void sendNotification(JsonObject notification, String key) {
         List<Subscription> subs = this.subscriptions;
         if (subs == null || subs.isEmpty()) {
             return;
         }
         String method = notification.getString("method");
         for (Subscription sub : subs) {
-            if (sub.filter().matches(method, resourceUri)) {
+            if (sub.filter().matches(method, key)) {
                 JsonObject clone = notification.copy();
                 injectSubscriptionId(clone, sub.subscriptionId());
                 deliverSubscriptionNotification(clone, sub);

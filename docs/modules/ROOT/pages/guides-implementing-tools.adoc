@@ -63,6 +63,7 @@ A `@Tool` method can accept parameters with various types. The following additio
 `io.quarkiverse.mcp.server.Sampling`::  Used to request LLM sampling from models.
 `io.quarkiverse.mcp.server.Elicitation`:: Used to request additional information from the client.
 `io.quarkiverse.mcp.server.Cancellation`:: Used to determine if an MCP client requested a cancellation of an in-progress request.
+`io.quarkiverse.mcp.server.TaskContext`:: The task a `@Task`-annotated tool is executed as; see xref:guides-mcp-tasks.adoc[MCP Tasks].
 `io.quarkiverse.mcp.server.RawMessage`:: Represents an unprocessed MCP request or notification from an MCP client.
 `io.quarkiverse.mcp.server.Meta`:: Additional metadata sent from the client to the server, i.e. the `_meta` part of the message.
 

@@ -38,6 +38,11 @@ public enum McpMethod {
 
     SUBSCRIPTIONS_LISTEN("subscriptions/listen"),
     NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED("notifications/subscriptions/acknowledged"),
+    // MCP Tasks extension
+    TASKS_GET("tasks/get"),
+    TASKS_UPDATE("tasks/update"),
+    TASKS_CANCEL("tasks/cancel"),
+    NOTIFICATIONS_TASKS("notifications/tasks"),
 
     // non-standard methods
     Q_CLOSE("q/close"),

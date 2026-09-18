@@ -54,6 +54,7 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
 
     // Tool-only
     private final ToolManager.ToolAnnotations toolAnnotations;
+    private final ToolManager.TaskOptions taskOptions;
     private final boolean structuredContent;
     private final Type outputSchemaFrom;
     private final Type outputSchemaGenerator;
@@ -80,7 +81,8 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
             List<DotName> inputGuardrails,
             List<DotName> outputGuardrails,
             ExecutionModel executionModel,
-            DotName iconsProvider) {
+            DotName iconsProvider,
+            ToolManager.TaskOptions taskOptions) {
         this.bean = Objects.requireNonNull(bean);
         this.method = Objects.requireNonNull(method);
         this.invoker = Objects.requireNonNull(invoker);
@@ -104,6 +106,7 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
         this.outputGuardrails = outputGuardrails;
         this.executionModel = executionModel;
         this.iconsProvider = iconsProvider;
+        this.taskOptions = taskOptions;
     }
 
     public BeanInfo getBean() {
@@ -148,6 +151,13 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
 
     public ToolManager.ToolAnnotations getToolAnnotations() {
         return toolAnnotations;
+    }
+
+    /**
+     * @return the task options of a task-augmented tool, or {@code null}
+     */
+    public ToolManager.TaskOptions getTaskOptions() {
+        return taskOptions;
     }
 
     public Set<String> getServers() {

@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server;
 
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -86,6 +87,14 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         Optional<ToolAnnotations> annotations();
 
         Map<MetaKey, Object> metadata();
+
+        /**
+         * @return the task options if the tool is task-augmented, an empty {@link Optional} otherwise
+         * @see Task
+         */
+        default Optional<TaskOptions> taskOptions() {
+            return Optional.empty();
+        }
 
     }
 
@@ -186,6 +195,16 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         ToolDefinition setOutputGuardrails(List<Class<? extends ToolOutputGuardrail>> outputGuardrails);
 
         /**
+         * Makes the tool task-augmented, i.e. eligible for asynchronous execution as defined by the MCP Tasks extension.
+         *
+         * @param taskOptions the task options, or {@code null} to disable task-augmented execution
+         * @return self
+         * @see Task
+         * @see TaskOptions
+         */
+        ToolDefinition setTaskOptions(TaskOptions taskOptions);
+
+        /**
          * @return the tool info
          * @throws IllegalArgumentException if a tool with the given name already exists for the same server configuration
          */
@@ -198,6 +217,13 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         Map<String, Object> args();
 
+        /**
+         * @return the task context; {@link TaskContext#isTaskAugmented()} returns {@code false} if the tool is executed
+         *         synchronously
+         * @see ToolDefinition#setTaskOptions(TaskOptions)
+         */
+        TaskContext taskContext();
+
     }
 
     record ToolArgument(String name, String description, boolean required, java.lang.reflect.Type type, String defaultValue) {
@@ -208,5 +234,32 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
      */
     record ToolAnnotations(String title, boolean readOnlyHint, boolean destructiveHint, boolean idempotentHint,
             boolean openWorldHint) {
+    }
+
+    /**
+     * The options of a task-augmented tool; the programmatic counterpart of the {@link Task} annotation.
+     *
+     * @param required if {@code true}, the tool can only be executed as a task; see {@link Task#required()}
+     * @param ttl the time-to-live of a task, or {@code null} to use {@code quarkus.mcp.server.tasks.default-ttl}; a zero or
+     *        negative duration means unlimited
+     * @param pollInterval the polling interval suggested to the client, or {@code null} to use
+     *        {@code quarkus.mcp.server.tasks.default-poll-interval}; must be positive if set
+     * @see Task
+     */
+    record TaskOptions(boolean required, Duration ttl, Duration pollInterval) {
+
+        public TaskOptions {
+            if (pollInterval != null && (pollInterval.isZero() || pollInterval.isNegative())) {
+                throw new IllegalArgumentException("pollInterval must be positive");
+            }
+        }
+
+        /**
+         * @return the options of a task-augmented tool that falls back to synchronous execution and uses the configured
+         *         defaults
+         */
+        public static TaskOptions defaults() {
+            return new TaskOptions(false, null, null);
+        }
     }
 }

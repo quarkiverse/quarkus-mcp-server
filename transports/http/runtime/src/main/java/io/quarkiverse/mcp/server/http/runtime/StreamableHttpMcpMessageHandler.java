@@ -7,7 +7,6 @@ import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.ROOTS;
 import static io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider.SAMPLING;
 import static io.quarkiverse.mcp.server.runtime.Messages.newError;
 
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -72,6 +71,7 @@ import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.Subscription;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
@@ -131,6 +131,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl notificationManager,
             ExtensionMethodManagerImpl extensionMethodManager,
+            TaskManagerImpl taskManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
@@ -146,7 +147,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             McpParamHeaderMetadata headerMetadata) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
                 resourceTemplateManager, resourceTemplateCompleteManager, notificationManager, extensionMethodManager,
-                serverRequests,
+                taskManager, serverRequests,
                 metadata,
                 vertx, initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
@@ -326,6 +327,15 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             JsonObject params = Messages.getParams(message);
             String bodyUri = params != null ? params.getString("uri") : null;
             if (!validateMcpNameHeader(ctx, bodyUri)) {
+                return false;
+            }
+        } else if (McpMethod.TASKS_GET == mcpMethod
+                || McpMethod.TASKS_UPDATE == mcpMethod
+                || McpMethod.TASKS_CANCEL == mcpMethod) {
+            // The Tasks extension requires Mcp-Name to be set to the task id
+            JsonObject params = Messages.getParams(message);
+            String bodyTaskId = params != null ? params.getString("taskId") : null;
+            if (!validateMcpNameHeader(ctx, bodyTaskId)) {
                 return false;
             }
         }
@@ -612,11 +622,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 }
                 JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
                 if (capabilities != null) {
-                    List<ClientCapability> decoded = new ArrayList<>();
-                    for (String name : capabilities.fieldNames()) {
-                        decoded.add(new ClientCapability(name, Map.of()));
-                    }
-                    clientCapabilities = List.copyOf(decoded);
+                    clientCapabilities = List.copyOf(decodeClientCapabilities(capabilities));
                 }
             }
 

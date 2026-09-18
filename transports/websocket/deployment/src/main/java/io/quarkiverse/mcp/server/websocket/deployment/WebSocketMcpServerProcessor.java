@@ -28,6 +28,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -130,6 +131,7 @@ public class WebSocketMcpServerProcessor {
                             ResourceTemplateCompletionManagerImpl.class);
                     ParamVar p8 = conc.parameter("notificationManager", NotificationManagerImpl.class);
                     ParamVar p9 = conc.parameter("extensionMethodManager", ExtensionMethodManagerImpl.class);
+                    ParamVar p9a = conc.parameter("taskManager", TaskManagerImpl.class);
                     ParamVar p10 = conc.parameter("serverRequests", ServerRequests.class);
                     ParamVar p11 = conc.parameter("cancellationRequests", CancellationRequests.class);
                     ParamVar p12 = conc.parameter("mcpMetadata", McpMetadata.class);
@@ -169,6 +171,7 @@ public class WebSocketMcpServerProcessor {
                             ResourceTemplateCompletionManagerImpl.class,
                             NotificationManagerImpl.class,
                             ExtensionMethodManagerImpl.class,
+                            TaskManagerImpl.class,
                             ServerRequests.class,
                             CancellationRequests.class,
                             McpMetadata.class,
@@ -181,8 +184,8 @@ public class WebSocketMcpServerProcessor {
                             Instance.class,
                             TrafficListeners.class);
                     conc.body(bc -> {
-                        bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
-                                p13, p14, p15, p16, p17, p18, p19, p20);
+                        bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p9a, p10, p11,
+                                p12, p13, p14, p15, p16, p17, p18, p19, p20);
                         bc.return_();
                     });
                 });

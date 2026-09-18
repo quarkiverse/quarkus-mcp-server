@@ -10,7 +10,12 @@ import io.vertx.core.json.JsonObject;
  * Captures the subset of notification types a client subscribed to via {@code subscriptions/listen}.
  */
 public record SubscriptionFilter(boolean toolsListChanged, boolean promptsListChanged, boolean resourcesListChanged,
-        Set<String> resourceSubscriptions) {
+        Set<String> resourceSubscriptions, Set<String> taskIds) {
+
+    public SubscriptionFilter(boolean toolsListChanged, boolean promptsListChanged, boolean resourcesListChanged,
+            Set<String> resourceSubscriptions) {
+        this(toolsListChanged, promptsListChanged, resourcesListChanged, resourceSubscriptions, Set.of());
+    }
 
     public static SubscriptionFilter parse(JsonObject notifications) {
         boolean tools = notifications.getBoolean("toolsListChanged", false);
@@ -27,15 +32,37 @@ public record SubscriptionFilter(boolean toolsListChanged, boolean promptsListCh
         } else {
             resourceSubs = Set.of();
         }
-        return new SubscriptionFilter(tools, prompts, resources, resourceSubs);
+        return new SubscriptionFilter(tools, prompts, resources, resourceSubs, parseStrings(notifications, "taskIds"));
+    }
+
+    private static Set<String> parseStrings(JsonObject notifications, String name) {
+        JsonArray arr = notifications.getJsonArray(name);
+        if (arr != null && !arr.isEmpty()) {
+            String[] values = new String[arr.size()];
+            for (int i = 0; i < arr.size(); i++) {
+                values[i] = arr.getString(i);
+            }
+            return Set.of(values);
+        }
+        return Set.of();
+    }
+
+    /**
+     * @param taskIds the task ids to keep
+     * @return a copy of this filter with the given task ids
+     */
+    public SubscriptionFilter withTaskIds(Set<String> taskIds) {
+        return new SubscriptionFilter(toolsListChanged, promptsListChanged, resourcesListChanged, resourceSubscriptions,
+                Set.copyOf(taskIds));
     }
 
     /**
      * @param notificationMethod the JSON-RPC method of the notification
-     * @param resourceUri the resource URI for {@code notifications/resources/updated}, or {@code null}
+     * @param key the resource URI for {@code notifications/resources/updated}, the task id for {@code notifications/tasks},
+     *        or {@code null}
      * @return {@code true} if this filter accepts the given notification
      */
-    public boolean matches(String notificationMethod, String resourceUri) {
+    public boolean matches(String notificationMethod, String key) {
         if (notificationMethod == null) {
             return false;
         }
@@ -43,7 +70,8 @@ public record SubscriptionFilter(boolean toolsListChanged, boolean promptsListCh
             case "notifications/tools/list_changed" -> toolsListChanged;
             case "notifications/prompts/list_changed" -> promptsListChanged;
             case "notifications/resources/list_changed" -> resourcesListChanged;
-            case "notifications/resources/updated" -> resourceUri != null && resourceSubscriptions.contains(resourceUri);
+            case "notifications/resources/updated" -> key != null && resourceSubscriptions.contains(key);
+            case "notifications/tasks" -> key != null && taskIds.contains(key);
             default -> false;
         };
     }
@@ -64,6 +92,9 @@ public record SubscriptionFilter(boolean toolsListChanged, boolean promptsListCh
         }
         if (!resourceSubscriptions.isEmpty()) {
             ret.put("resourceSubscriptions", new JsonArray(List.copyOf(resourceSubscriptions)));
+        }
+        if (!taskIds.isEmpty()) {
+            ret.put("taskIds", new JsonArray(List.copyOf(taskIds)));
         }
         return ret;
     }

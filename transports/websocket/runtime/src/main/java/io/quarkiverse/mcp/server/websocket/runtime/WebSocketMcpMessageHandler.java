@@ -35,6 +35,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -73,6 +74,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
             ExtensionMethodManagerImpl extensionMethodManager,
+            TaskManagerImpl taskManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             McpMetadata metadata,
@@ -85,7 +87,7 @@ public abstract class WebSocketMcpMessageHandler extends McpMessageHandler<WebSo
             Instance<McpRequestValidator> mcpRequestValidator,
             TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager, taskManager,
                 serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,
