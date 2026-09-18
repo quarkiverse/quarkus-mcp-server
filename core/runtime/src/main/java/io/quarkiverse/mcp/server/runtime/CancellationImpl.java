@@ -8,7 +8,11 @@ import io.quarkiverse.mcp.server.RequestId;
 
 public class CancellationImpl implements Cancellation {
 
-    public static CancellationImpl from(ArgumentProviders argProviders) {
+    public static Cancellation from(ArgumentProviders argProviders) {
+        if (argProviders.task() != null) {
+            // A tool executed as a task is cancelled via tasks/cancel
+            return argProviders.task().cancellation();
+        }
         return new CancellationImpl(argProviders.connection(), argProviders.requestId(), argProviders.cancellationRequests());
     }
 

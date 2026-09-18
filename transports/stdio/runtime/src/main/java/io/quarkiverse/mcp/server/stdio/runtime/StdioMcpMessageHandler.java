@@ -46,6 +46,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
@@ -80,6 +81,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager, NotificationManagerImpl initManager,
             ExtensionMethodManagerImpl extensionMethodManager,
+            TaskManagerImpl taskManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
@@ -91,7 +93,7 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
             Instance<McpRequestValidator> mcpRequestValidator,
             TrafficListeners trafficListeners) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager, taskManager,
                 serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,

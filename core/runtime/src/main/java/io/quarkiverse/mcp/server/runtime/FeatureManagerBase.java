@@ -130,7 +130,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                             .chain(args -> {
                                 ArgumentProviders p = executionContext.argumentProviders();
                                 if (p == null) {
-                                    p = argProviders(executionContext.message(), executionContext.mcpRequest(), args);
+                                    p = argProviders(executionContext.message(), executionContext.mcpRequest(), args,
+                                            executionContext.task());
                                 }
                                 return invoker.call(p);
                             });
@@ -166,17 +167,30 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     }
 
     protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments) {
+        return argProviders(message, mcpRequest, arguments, null);
+    }
+
+    protected ArgumentProviders argProviders(JsonObject message, McpRequest mcpRequest, JsonObject arguments,
+            TaskImpl task) {
         Object id = Messages.getId(message);
         Map<String, Object> args = arguments != null ? arguments.getMap() : new HashMap<>();
         return new ArgumentProviders(message, args, mcpRequest.connection(), id, null,
                 mcpRequest.sender(), getProgressToken(message), serverRequests, mcpRequest.serverName(),
-                cancellationRequests, mcpTracing);
+                cancellationRequests, mcpTracing, task);
     }
 
-    record FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders) {
+    /**
+     * @param task the task if the feature is a tool executed as a task (MCP Tasks extension), {@code null} otherwise
+     */
+    record FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders,
+            TaskImpl task) {
 
         public FeatureExecutionContext(JsonObject message, McpRequest mcpRequest) {
-            this(message, mcpRequest, null);
+            this(message, mcpRequest, null, null);
+        }
+
+        public FeatureExecutionContext(JsonObject message, McpRequest mcpRequest, ArgumentProviders argumentProviders) {
+            this(message, mcpRequest, argumentProviders, null);
         }
 
         FeatureExecutionContext {
@@ -278,6 +292,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case COMPLETE_CONTEXT -> CompleteContextImpl.from(argProviders);
                 case META -> MetaImpl.from(Messages.getParams(argProviders.rawMessage()));
                 case ELICITATION -> ElicitationImpl.from(argProviders);
+                case TASK_CONTEXT -> argProviders.task() != null ? argProviders.task() : TaskImpl.NoTaskContext.INSTANCE;
                 case MCPJAVA_PROGRESS -> McpJavaProgressAdapter.from(argProviders);
                 case MCPJAVA_CANCELLATION -> McpJavaCancellationAdapter.from(argProviders);
                 case MCPJAVA_MCP_REQUEST -> McpJavaMcpRequestAdapter.from(argProviders);

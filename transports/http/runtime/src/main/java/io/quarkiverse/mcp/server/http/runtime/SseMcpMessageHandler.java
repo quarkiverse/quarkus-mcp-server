@@ -32,6 +32,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
@@ -67,6 +68,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             ResourceTemplateCompletionManagerImpl resourceTemplateCompleteManager,
             NotificationManagerImpl initManager,
             ExtensionMethodManagerImpl extensionMethodManager,
+            TaskManagerImpl taskManager,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<InitialCheck> initialChecks,
@@ -79,7 +81,7 @@ public class SseMcpMessageHandler extends McpMessageHandler<SseMcpRequest> imple
             Instance<McpTracing> tracing,
             Instance<McpRequestValidator> mcpRequestValidator) {
         super(config, connectionManager, promptManager, toolManager, resourceManager, promptCompleteManager,
-                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager,
+                resourceTemplateManager, resourceTemplateCompleteManager, initManager, extensionMethodManager, taskManager,
                 serverRequests, metadata, vertx,
                 initialChecks, initialResponseInfos, metrics.isResolvable() ? metrics.get() : null,
                 tracing.isResolvable() ? tracing.get() : null,

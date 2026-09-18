@@ -13,6 +13,7 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 import java.lang.annotation.Annotation;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Modifier;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -90,6 +91,7 @@ import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolManager;
+import io.quarkiverse.mcp.server.ToolManager.TaskOptions;
 import io.quarkiverse.mcp.server.ToolManager.ToolAnnotations;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.WrapBusinessError;
@@ -122,6 +124,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
 import io.quarkiverse.mcp.server.runtime.SamplingRequestImpl;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
+import io.quarkiverse.mcp.server.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ToolStructuredContentResultMapper;
@@ -185,6 +188,7 @@ import io.quarkus.gizmo2.desc.Descs.MD_Collection;
 import io.quarkus.gizmo2.desc.Descs.MD_Map;
 import io.quarkus.gizmo2.desc.FieldDesc;
 import io.quarkus.gizmo2.desc.MethodDesc;
+import io.quarkus.runtime.configuration.DurationConverter;
 import io.quarkus.runtime.metrics.MetricsFactory;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -236,7 +240,8 @@ class McpServerProcessor {
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
-                ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class, ExtensionMethodManagerImpl.class);
+                ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class, ExtensionMethodManagerImpl.class,
+                TaskManagerImpl.class);
         // Encoders
         unremovable.addBeanClasses(JsonTextContentEncoder.class, DefaultResourceContentsEncoder.class);
         // mcpjava encoders
@@ -314,6 +319,18 @@ class McpServerProcessor {
                 featureAnnotations, errors);
         if (!wrongUsages.isEmpty()) {
             errors.produce(new ValidationErrorBuildItem(wrongUsages));
+        }
+
+        // @Task may only be declared on a tool method
+        for (AnnotationInstance task : beanArchiveIndex.getIndex().getAnnotations(DotNames.TASK)) {
+            if (task.target().kind() == AnnotationTarget.Kind.METHOD) {
+                MethodInfo method = task.target().asMethod();
+                AnnotationInstance featureAnnotation = featureAnnotations.getFeatureAnnotation(method);
+                if (featureAnnotation == null || featureAnnotations.getFeature(featureAnnotation) != TOOL) {
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                            "@Task may only be declared on a @Tool method: " + FeatureMethods.methodDesc(method))));
+                }
+            }
         }
 
         Map<Feature, List<FeatureMethodBuildItem>> found = new HashMap<>();
@@ -488,6 +505,20 @@ class McpServerProcessor {
                         }
                     }
 
+                    // @Task - task-augmented tool (MCP Tasks extension)
+                    TaskOptions taskOptions = null;
+                    AnnotationInstance taskAnnotation = method.declaredAnnotation(DotNames.TASK);
+                    if (taskAnnotation != null && feature == TOOL) {
+                        try {
+                            taskOptions = parseTaskOptions(taskAnnotation);
+                        } catch (IllegalArgumentException e) {
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                    "Invalid @Task declared on " + FeatureMethods.methodDesc(method) + ": " + e.getMessage(),
+                                    e)));
+                            break feature;
+                        }
+                    }
+
                     // @McpServer bindings
                     Set<String> servers = FeatureMethods.initServerBindings(config, beanArchiveIndex.getIndex(), method);
 
@@ -578,7 +609,7 @@ class McpServerProcessor {
                             metadata,
                             inputGuardrails, outputGuardrails,
                             FeatureMethods.executionModel(method, transformedAnnotations),
-                            iconsProvider);
+                            iconsProvider, taskOptions);
                     features.produce(fm);
                     found.compute(feature, (f, list) -> {
                         if (list == null) {
@@ -775,6 +806,31 @@ class McpServerProcessor {
                                 featureMethod.getExecutionModel(), featureMethod.getMethod().declaringClass(),
                                 featureMethod.getMethod().name()))));
             }
+        }
+    }
+
+    /**
+     * @throws IllegalArgumentException if a duration is not valid
+     */
+    static TaskOptions parseTaskOptions(AnnotationInstance taskAnnotation) {
+        AnnotationValue requiredValue = taskAnnotation.value("required");
+        boolean required = requiredValue != null && requiredValue.asBoolean();
+        Duration ttl = parseTaskDuration(taskAnnotation.value("ttl"), "ttl");
+        Duration pollInterval = parseTaskDuration(taskAnnotation.value("pollInterval"), "pollInterval");
+        if (pollInterval != null && (pollInterval.isZero() || pollInterval.isNegative())) {
+            throw new IllegalArgumentException("pollInterval must be positive: " + pollInterval);
+        }
+        return new TaskOptions(required, ttl, pollInterval);
+    }
+
+    private static Duration parseTaskDuration(AnnotationValue value, String name) {
+        if (value == null || value.asString().isBlank()) {
+            return null;
+        }
+        try {
+            return DurationConverter.parseDuration(value.asString());
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("Invalid " + name + " duration: " + value.asString(), e);
         }
     }
 
@@ -1696,6 +1752,19 @@ class McpServerProcessor {
                     toolAnnotations = bc.localVar("toolAnnotations", Const.ofNull(ToolManager.ToolAnnotations.class));
                 }
 
+                LocalVar taskOptions;
+                if (featureMethod.isTool() && featureMethod.getTaskOptions() != null) {
+                    TaskOptions options = featureMethod.getTaskOptions();
+                    // new TaskOptions(boolean required, Duration ttl, Duration pollInterval)
+                    taskOptions = bc.localVar("taskOptions", bc.new_(
+                            ConstructorDesc.of(TaskOptions.class, boolean.class, Duration.class, Duration.class),
+                            Const.of(options.required()),
+                            durationExpr(bc, options.ttl()),
+                            durationExpr(bc, options.pollInterval())));
+                } else {
+                    taskOptions = bc.localVar("taskOptions", Const.ofNull(TaskOptions.class));
+                }
+
                 LocalVar resourceAnnotations;
                 if ((featureMethod.isResource() || featureMethod.isResourceTemplate())
                         && featureMethod.getResourceAnnotations() != null) {
@@ -1784,6 +1853,7 @@ class McpServerProcessor {
                         Const.of(featureMethod.getMethod().declaringClass().name().toString()),
                         Const.of(featureMethod.getMethod().name()),
                         toolAnnotations,
+                        taskOptions,
                         resourceAnnotations,
                         cacheControl,
                         serverNames,
@@ -1816,6 +1886,15 @@ class McpServerProcessor {
             });
 
         });
+    }
+
+    private static Expr durationExpr(BlockCreator bc, Duration duration) {
+        if (duration == null) {
+            return Const.ofNull(Duration.class);
+        }
+        // Duration.ofMillis(long)
+        return bc.invokeStatic(MethodDesc.of(Duration.class, "ofMillis", Duration.class, long.class),
+                Const.of(duration.toMillis()));
     }
 
     private Var getMapper(BlockCreator bc, FeatureMethodBuildItem featureMethod) {

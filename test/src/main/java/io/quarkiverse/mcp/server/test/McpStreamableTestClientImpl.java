@@ -204,7 +204,7 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                 }
                 JsonObject params = message.getJsonObject("params");
                 if (params != null) {
-                    // Mcp-Name for tools/call and prompts/get (name), resources/read (uri)
+                    // Mcp-Name for tools/call and prompts/get (name), resources/read (uri), tasks/* (taskId)
                     if ("tools/call".equals(method) || "prompts/get".equals(method)) {
                         String name = params.getString("name");
                         if (name != null) {
@@ -214,6 +214,13 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
                         String uri = params.getString("uri");
                         if (uri != null) {
                             ret.add("Mcp-Name", uri);
+                        }
+                    } else if ("tasks/get".equals(method) || "tasks/update".equals(method)
+                            || "tasks/cancel".equals(method)) {
+                        // MCP Tasks extension - Mcp-Name is set to the task id
+                        String taskId = params.getString("taskId");
+                        if (taskId != null) {
+                            ret.add("Mcp-Name", taskId);
                         }
                     }
                 }

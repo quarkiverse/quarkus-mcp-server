@@ -45,7 +45,6 @@ If you encounter any issues or discrepancies with the specification, please open
 The following MCP features are not currently supported:
 
 * https://modelcontextprotocol.io/specification/{spec-version}/basic/transports#resumability-and-redelivery[Streamable HTTP - Resumability and Redelivery] (optional feature)
-* https://modelcontextprotocol.io/specification/{spec-version}/basic/utilities/tasks[Tasks] (experimental feature)
 * https://modelcontextprotocol.io/specification/{spec-version}/client/elicitation#url-mode-flow[Elicitation - URL Mode]
 
 If you encounter a problem or discrepancy, please https://github.com/quarkiverse/quarkus-mcp-server/issues[file an issue].
@@ -466,6 +465,32 @@ sequenceDiagram
 ----
 
 See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on which protocol versions use this pattern.
+
+=== Task-augmented Tool Call
+
+A tool annotated with `@Task` is executed asynchronously for clients that declared the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`io.modelcontextprotocol/tasks`).
+The server responds immediately with a task handle and the client polls the task until it reaches a terminal status.
+
+[mermaid,mcp-tasks-tool-call-flow,svg]
+----
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 1. tools/call (name: "index", tasks capability)
+    Note over Server: Task created,<br/>tool executed asynchronously
+    Server-->>Client: 2. result (resultType: "task",<br/>taskId, status: "working")
+    loop Poll (pollIntervalMs)
+        Client->>Server: 3. tasks/get (taskId)
+        Server-->>Client: 4. result (status: "working",<br/>statusMessage)
+    end
+    Client->>Server: 5. tasks/get (taskId)
+    Server-->>Client: 6. result (status: "completed", result)
+----
+
+A task that needs input moves to the `input_required` status; the client fulfills the `inputRequests` via `tasks/update`.
+A task is cancelled with `tasks/cancel`.
+See xref:guides-mcp-tasks.adoc[MCP Tasks] for details.
 
 == See Also
 

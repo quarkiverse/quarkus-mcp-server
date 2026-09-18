@@ -48,6 +48,7 @@ import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import io.quarkiverse.mcp.server.RequestId;
 import io.quarkiverse.mcp.server.SupportedExecutionModels;
+import io.quarkiverse.mcp.server.TaskContext;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolFilter;
 import io.quarkiverse.mcp.server.ToolInputGuardrail;
@@ -231,6 +232,20 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return null;
     }
 
+    /**
+     * @return {@code true} if the tool passes the tool filters for the given request
+     */
+    boolean isAvailable(ToolInfo tool, McpRequest mcpRequest, JsonObject message) {
+        return test(tool, FilterContextImpl.of(McpMethod.TOOLS_CALL, message, mcpRequest));
+    }
+
+    /**
+     * @return {@code true} if at least one task-augmented tool is available for the request
+     */
+    boolean hasTaskAugmentedTools(FilterContextImpl filterContext) {
+        return infosForRequest(filterContext).anyMatch(t -> t.taskOptions().isPresent());
+    }
+
     @Override
     protected boolean transformsExecutionFailure() {
         return true;
@@ -346,6 +361,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public Optional<ToolAnnotations> annotations() {
             return Optional.ofNullable(metadata.info().toolAnnotations());
+        }
+
+        @Override
+        public Optional<TaskOptions> taskOptions() {
+            return Optional.ofNullable(metadata.info().taskOptions());
         }
 
         @Override
@@ -585,6 +605,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private Object inputSchema;
         private Map<MetaKey, Object> metadata = Map.of();
         private ToolAnnotations annotations;
+        private TaskOptions taskOptions;
         private List<Class<? extends ToolInputGuardrail>> inputGuardrails;
         private List<Class<? extends ToolOutputGuardrail>> outputGuardrails;
 
@@ -648,6 +669,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public ToolDefinition setTaskOptions(TaskOptions taskOptions) {
+            this.taskOptions = taskOptions;
+            return this;
+        }
+
+        @Override
         public ToolInfo register() {
             validate();
             for (String serverName : serverNames) {
@@ -687,7 +714,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
                     initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons, transportHints,
-                    notifyListChanged);
+                    notifyListChanged, taskOptions);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
@@ -735,6 +762,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolInputGuardrail> input;
         private final List<ToolOutputGuardrail> output;
         private final Map<TransportHint, Object> transportHints;
+        private final Optional<TaskOptions> taskOptions;
 
         private ToolDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ToolArguments, ToolResponse> fun,
@@ -742,7 +770,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 ToolAnnotations annotations,
                 Object outputSchema, Object inputSchema, Map<MetaKey, Object> metadata, List<ToolInputGuardrail> input,
                 List<ToolOutputGuardrail> output, List<Icon> icons, Map<TransportHint, Object> transportHints,
-                boolean notifyListChanged) {
+                boolean notifyListChanged, TaskOptions taskOptions) {
             super(name, description, serverNames, fun, asyncFun, runOnVirtualThread, icons, notifyListChanged);
             this.title = title;
             this.arguments = List.copyOf(arguments);
@@ -753,6 +781,12 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             this.input = input;
             this.output = output;
             this.transportHints = Map.copyOf(transportHints);
+            this.taskOptions = Optional.ofNullable(taskOptions);
+        }
+
+        @Override
+        public Optional<TaskOptions> taskOptions() {
+            return taskOptions;
         }
 
         @Override
@@ -864,6 +898,11 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         @Override
         public Map<String, Object> args() {
             return args;
+        }
+
+        @Override
+        public TaskContext taskContext() {
+            return argProviders.task() != null ? argProviders.task() : TaskImpl.NoTaskContext.INSTANCE;
         }
 
     }

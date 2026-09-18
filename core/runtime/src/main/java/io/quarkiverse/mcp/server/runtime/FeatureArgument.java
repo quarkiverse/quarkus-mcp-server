@@ -67,6 +67,7 @@ public record FeatureArgument(String name,
         COMPLETE_CONTEXT,
         META,
         ELICITATION,
+        TASK_CONTEXT,
         MCPJAVA_PROGRESS,
         MCPJAVA_CANCELLATION,
         MCPJAVA_MCP_REQUEST,
@@ -76,6 +77,7 @@ public record FeatureArgument(String name,
             return switch (this) {
                 case REQUEST_ID -> feature != Feature.NOTIFICATION;
                 case REQUEST_URI -> feature == Feature.RESOURCE || feature == Feature.RESOURCE_TEMPLATE;
+                case TASK_CONTEXT -> feature == Feature.TOOL;
                 case COMPLETE_CONTEXT,
                         MCPJAVA_COMPLETION_CONTEXT ->
                     feature == Feature.PROMPT_COMPLETE || feature == Feature.RESOURCE_TEMPLATE_COMPLETE;
