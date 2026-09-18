@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.deployment;
 
+import static io.quarkiverse.mcp.server.runtime.Feature.EXTENSION_METHOD;
 import static io.quarkiverse.mcp.server.runtime.Feature.NOTIFICATION;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
 import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
@@ -35,6 +36,7 @@ import jakarta.enterprise.invoke.Invoker;
 import jakarta.inject.Singleton;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassInfo.NestingType;
@@ -63,6 +65,8 @@ import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.ImageContent;
 import io.quarkiverse.mcp.server.InitialCheck;
+import io.quarkiverse.mcp.server.McpExtensionMethodArg;
+import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.McpTrafficListener;
 import io.quarkiverse.mcp.server.MetaField;
@@ -93,6 +97,8 @@ import io.quarkiverse.mcp.server.runtime.BuiltinDefaultValueConverters;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.DefaultResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
+import io.quarkiverse.mcp.server.runtime.ExtensionMetadata;
+import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
 import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
@@ -197,6 +203,7 @@ class McpServerProcessor {
         annotationToFeature.put(DotNames.COMPLETE_RESOURCE_TEMPLATE, RESOURCE_TEMPLATE_COMPLETE);
         annotationToFeature.put(DotNames.TOOL, TOOL);
         annotationToFeature.put(DotNames.NOTIFICATION, NOTIFICATION);
+        annotationToFeature.put(DotNames.MCP_EXTENSION_METHOD, EXTENSION_METHOD);
         if (config.supportLangchain4jAnnotations()) {
             annotationToFeature.put(DotNames.LANGCHAIN4J_TOOL, TOOL);
         }
@@ -229,7 +236,7 @@ class McpServerProcessor {
         // Managers
         unremovable.addBeanClasses(PromptManagerImpl.class, ToolManagerImpl.class, ResourceManagerImpl.class,
                 PromptCompletionManagerImpl.class, ResourceTemplateManagerImpl.class,
-                ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class);
+                ResourceTemplateCompletionManagerImpl.class, NotificationManagerImpl.class, ExtensionMethodManagerImpl.class);
         // Encoders
         unremovable.addBeanClasses(JsonTextContentEncoder.class, DefaultResourceContentsEncoder.class);
         // mcpjava encoders
@@ -321,12 +328,45 @@ class McpServerProcessor {
                             defaultValueConverters, beanArchiveIndex.getIndex());
                     String name;
                     if (feature == PROMPT_COMPLETE
-                            || feature == RESOURCE_TEMPLATE_COMPLETE) {
+                            || feature == RESOURCE_TEMPLATE_COMPLETE
+                            || feature == EXTENSION_METHOD) {
                         name = featureAnnotation.value().asString();
                     } else {
                         AnnotationValue nameValue = featureAnnotation.value("name");
                         name = nameValue != null ? nameValue.asString() : method.name();
                     }
+
+                    if (feature == EXTENSION_METHOD) {
+                        // The declaring class must be annotated with @McpExtension
+                        if (method.declaringClass().declaredAnnotation(DotNames.MCP_EXTENSION) == null) {
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                    "The class that declares an @McpExtensionMethod must be annotated with @McpExtension: "
+                                            + method.declaringClass().name() + "#" + method.name())));
+                            break feature;
+                        }
+                        // A custom method must not shadow a built-in MCP method (built-in methods are bound to every
+                        // server, so reusing one would always collide)
+                        if (McpMethod.from(name) != null) {
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                    "The @McpExtensionMethod name [%s] clashes with a built-in MCP method: %s#%s"
+                                            .formatted(name, method.declaringClass().name(), method.name()))));
+                            break feature;
+                        }
+                        // An extension binds as a unit at the class level; @McpServer is not allowed on a single
+                        // extension method (use McpConnection#serverName() for per-server behavior instead)
+                        if (!method.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, beanArchiveIndex.getIndex())
+                                .isEmpty()
+                                || !method
+                                        .declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER,
+                                                beanArchiveIndex.getIndex())
+                                        .isEmpty()) {
+                            errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                    "@McpServer must be declared on the @McpExtension class, not on the extension method: %s#%s"
+                                            .formatted(method.declaringClass().name(), method.name()))));
+                            break feature;
+                        }
+                    }
+
                     String title = null;
                     AnnotationValue titleValue = featureAnnotation.value("title");
                     if (titleValue != null) {
@@ -742,10 +782,18 @@ class McpServerProcessor {
         AnnotationValue prefixValue = metaEntry.value("prefix");
         String name = metaEntry.value("name").asString();
         MetaKey key = new MetaKey(prefixValue != null ? prefixValue.asString() : null, name);
-        String value = metaEntry.value("value").asString();
-        AnnotationValue typeValue = metaEntry.value("type");
+        metadata.put(key.toString(), coerceJsonValue(metaEntry));
+    }
+
+    /**
+     * Coerces the {@code value}/{@code type} pair of a {@code @MetaField} or {@code @McpExtensionSetting} annotation into a
+     * JSON-encoded value (a string that can be reconstructed at runtime with {@code Json.decodeValue(...)}).
+     */
+    private static String coerceJsonValue(AnnotationInstance entry) {
+        String value = entry.value("value").asString();
+        AnnotationValue typeValue = entry.value("type");
         MetaField.Type type = typeValue != null ? MetaField.Type.valueOf(typeValue.asEnum()) : MetaField.Type.STRING;
-        String jsonValue = switch (type) {
+        return switch (type) {
             case STRING -> Json.encode(value);
             case BOOLEAN, INT -> value;
             case JSON -> {
@@ -759,7 +807,107 @@ class McpServerProcessor {
             }
             default -> throw new IllegalArgumentException("Unexpected value: " + type);
         };
-        metadata.put(key.toString(), jsonValue);
+    }
+
+    /**
+     * Scans for {@link io.quarkiverse.mcp.server.McpExtension} classes and collects their id, server bindings and settings
+     * object (declared with {@link io.quarkiverse.mcp.server.McpExtensionSetting}).
+     */
+    @BuildStep
+    void collectExtensions(McpServersBuildTimeConfig config,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
+            BuildProducer<ExtensionBuildItem> extensions,
+            BuildProducer<ValidationErrorBuildItem> errors) {
+        IndexView index = beanArchiveIndex.getIndex();
+        List<ExtensionBuildItem> found = new ArrayList<>();
+        for (AnnotationInstance annotation : index.getAnnotations(DotNames.MCP_EXTENSION)) {
+            if (annotation.target().kind() != AnnotationTarget.Kind.CLASS) {
+                continue;
+            }
+            ClassInfo clazz = annotation.target().asClass();
+            String id = annotation.value("id").asString();
+            if (id == null || id.isBlank()) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "@McpExtension declared on " + clazz.name() + " must define a non-blank id")));
+                continue;
+            }
+            // Per the spec, the extension id follows the _meta key naming rules and the prefix is mandatory,
+            // e.g. "io.modelcontextprotocol/skills"
+            try {
+                if (MetaKey.from(id).prefix() == null) {
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                            "@McpExtension id [" + id + "] declared on " + clazz.name()
+                                    + " must include a mandatory prefix, e.g. \"io.modelcontextprotocol/skills\"")));
+                    continue;
+                }
+            } catch (IllegalArgumentException e) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "@McpExtension id [" + id + "] declared on " + clazz.name()
+                                + " is not a valid _meta key: " + e.getMessage())));
+                continue;
+            }
+            Set<String> servers;
+            try {
+                servers = FeatureMethods.initServerBindings(config, index, clazz);
+            } catch (IllegalStateException e) {
+                errors.produce(new ValidationErrorBuildItem(e));
+                continue;
+            }
+            // Collect the settings annotations (single or repeatable)
+            List<AnnotationInstance> settingAnnotations = new ArrayList<>();
+            AnnotationInstance setting = clazz.declaredAnnotation(DotNames.MCP_EXTENSION_SETTING);
+            if (setting != null) {
+                settingAnnotations.add(setting);
+            } else {
+                AnnotationInstance repeatable = clazz.declaredAnnotation(DotNames.MCP_EXTENSION_SETTINGS);
+                if (repeatable != null) {
+                    Collections.addAll(settingAnnotations, repeatable.value().asNestedArray());
+                }
+            }
+            // A setting name is an ordinary JSON object key (extension-defined schema); it only has to be non-blank
+            // and unique within the extension
+            Map<String, String> settings = new HashMap<>();
+            boolean settingsValid = true;
+            for (AnnotationInstance entry : settingAnnotations) {
+                AnnotationValue nameValue = entry.value("name");
+                String name = nameValue != null ? nameValue.asString() : null;
+                if (name == null || name.isBlank()) {
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                            "@McpExtensionSetting declared on " + clazz.name() + " must define a non-blank name")));
+                    settingsValid = false;
+                    continue;
+                }
+                if (settings.containsKey(name)) {
+                    errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                            "Duplicate @McpExtensionSetting name [" + name + "] declared on " + clazz.name())));
+                    settingsValid = false;
+                    continue;
+                }
+                settings.put(name, coerceJsonValue(entry));
+            }
+            if (!settingsValid) {
+                continue;
+            }
+            found.add(new ExtensionBuildItem(id, servers, settings, clazz));
+        }
+
+        // Fail if two extensions share the same id and overlapping server bindings
+        Map<String, List<ExtensionBuildItem>> byId = found.stream()
+                .collect(Collectors.groupingBy(ExtensionBuildItem::getId));
+        for (Entry<String, List<ExtensionBuildItem>> e : byId.entrySet()) {
+            List<ExtensionBuildItem> group = e.getValue();
+            for (int i = 0; i < group.size(); i++) {
+                for (int j = i + 1; j < group.size(); j++) {
+                    if (!Collections.disjoint(group.get(i).getServers(), group.get(j).getServers())) {
+                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                "Duplicate MCP extension id [" + e.getKey() + "] found for:\n\t"
+                                        + group.stream().map(Object::toString).collect(Collectors.joining("\n\t")))));
+                    }
+                }
+            }
+        }
+
+        found.forEach(extensions::produce);
     }
 
     private Type outputSchemaFromReturnType(Type returnType) {
@@ -845,6 +993,7 @@ class McpServerProcessor {
             List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
             List<ServerNameBuildItem> serverNames,
+            List<ExtensionBuildItem> extensions,
             BeanArchiveIndexBuildItem beanArchiveIndex,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
             BuildProducer<GeneratedResourceBuildItem> generatedResources,
@@ -1046,6 +1195,58 @@ class McpServerProcessor {
                                         processFeatureMethod(counter, cc, notification, null, null,
                                                 beanArchiveIndex.getIndex()),
                                         cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
+
+            // McpMetadata.extensionMethods()
+            cc.method("extensionMethods", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (FeatureMethodBuildItem extensionMethod : featureMethods.stream()
+                            .filter(FeatureMethodBuildItem::isExtensionMethod)
+                            .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
+                            .toList()) {
+                        // ret.add(meta$123());
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.invokeVirtual(
+                                        processFeatureMethod(counter, cc, extensionMethod,
+                                                DotNames.MCP_EXTENSION_METHOD_ARG, McpExtensionMethodArg.ELEMENT_NAME,
+                                                beanArchiveIndex.getIndex()),
+                                        cc.this_()));
+                    }
+                    bc.return_(ret);
+                });
+            });
+
+            // McpMetadata.extensions()
+            cc.method("extensions", mc -> {
+                mc.returning(List.class);
+                mc.body(bc -> {
+                    LocalVar ret = bc.localVar("ret", bc.new_(ArrayList.class));
+                    for (ExtensionBuildItem extension : extensions.stream()
+                            .sorted(Comparator.comparing(ExtensionBuildItem::getId))
+                            .toList()) {
+                        Expr servers = bc.setOf(extension.getServers().stream()
+                                .sorted()
+                                .map(Const::of)
+                                .toList());
+                        Map<String, String> extSettings = extension.getSettings();
+                        Expr settings;
+                        if (extSettings.isEmpty()) {
+                            settings = bc.mapOf();
+                        } else {
+                            settings = bc.invokeStatic(MD_Map.ofEntries, bc.newArray(Entry.class, extSettings.entrySet()
+                                    .stream()
+                                    .sorted(Comparator.comparing(Entry::getKey))
+                                    .map(e -> bc.mapEntry(Const.of(e.getKey()), Const.of(e.getValue())))
+                                    .toList()));
+                        }
+                        // ret.add(new ExtensionMetadata(id, servers, settings));
+                        bc.invokeInterface(MD_Collection.add, ret,
+                                bc.new_(ExtensionMetadata.class, Const.of(extension.getId()), servers, settings));
                     }
                     bc.return_(ret);
                 });
@@ -1630,6 +1831,7 @@ class McpServerProcessor {
             case RESOURCE, RESOURCE_TEMPLATE -> resourceResultMapper(featureMethod, bc, returnType);
             case RESOURCE_TEMPLATE_COMPLETE -> completionResultMapper(bc, returnType);
             case NOTIFICATION -> readResultMapper(bc, returnType.kind() == Kind.VOID ? "ToUni" : "Identity");
+            case EXTENSION_METHOD -> readResultMapper(bc, DotNames.isAsyncType(returnType.name()) ? "Identity" : "ToUni");
             default -> throw new IllegalArgumentException("Unsupported feature: " + featureMethod.getFeature());
         };
     }

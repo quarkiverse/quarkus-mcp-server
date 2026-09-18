@@ -49,6 +49,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -64,6 +65,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     protected final ResourceTemplateManagerImpl resourceTemplateManager;
     protected final ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager;
     protected final NotificationManagerImpl notificationManager;
+    protected final ExtensionMethodManagerImpl extensionMethodManager;
 
     private final ToolMessageHandler toolHandler;
     private final PromptMessageHandler promptHandler;
@@ -71,6 +73,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private final ResourceMessageHandler resourceHandler;
     private final ResourceTemplateMessageHandler resourceTemplateHandler;
     private final ResourceTemplateCompleteMessageHandler resourceTemplateCompleteHandler;
+    private final ExtensionMethodMessageHandler extensionMethodHandler;
 
     private final ServerRequests serverRequests;
     private final List<InitialCheck> initialChecks;
@@ -101,6 +104,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             ResourceTemplateManagerImpl resourceTemplateManager,
             ResourceTemplateCompletionManagerImpl resourceTemplateCompletionManager,
             NotificationManagerImpl notificationManager,
+            ExtensionMethodManagerImpl extensionMethodManager,
             ServerRequests serverRequests,
             McpMetadata metadata, Vertx vertx,
             List<InitialCheck> initialChecks,
@@ -123,6 +127,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.resourceTemplateHandler = new ResourceTemplateMessageHandler(resourceTemplateManager, config);
         this.resourceTemplateCompleteHandler = new ResourceTemplateCompleteMessageHandler(resourceTemplateCompletionManager);
         this.notificationManager = notificationManager;
+        this.extensionMethodManager = extensionMethodManager;
+        this.extensionMethodHandler = new ExtensionMethodMessageHandler(extensionMethodManager);
         this.serverRequests = serverRequests;
         this.initialChecks = initialChecks;
         this.initialResponseInfos = initialResponseInfos;
@@ -171,10 +177,18 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest) {
-        McpMethod method = McpMethod.from(message.getString("method"));
-        if (method == null) {
-            return unsupportedMethod(message, mcpRequest);
+        String methodName = message.getString("method");
+        McpMethod resolvedMethod = McpMethod.from(methodName);
+        if (resolvedMethod == null) {
+            // A custom method contributed by an MCP extension (@McpExtensionMethod) has a dynamic name
+            // that is not part of the McpMethod enum; route it via the EXTENSION_METHOD sentinel if registered
+            if (extensionMethodManager.isKnownMethod(methodName, mcpRequest.serverName())) {
+                resolvedMethod = McpMethod.EXTENSION_METHOD;
+            } else {
+                return unsupportedMethod(message, mcpRequest);
+            }
         }
+        final McpMethod method = resolvedMethod;
         long start = System.nanoTime();
         // Prepare tracing - starts the span immediately
         mcpRequest.prepareTracing(mcpTracing, method, message, transport());
@@ -431,6 +445,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 case NOTIFICATIONS_ROOTS_LIST_CHANGED -> rootsListChanged(message, mcpRequest);
                 case NOTIFICATIONS_CANCELLED -> cancelRequest(message, mcpRequest);
                 case NOTIFICATIONS_INITIALIZED -> alreadyInitialized(mcpRequest);
+                case EXTENSION_METHOD -> extensionMethodHandler.extensionCall(message, mcpRequest, responseMeta);
                 default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
@@ -891,7 +906,32 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             capabilities.put("completions", Map.of());
         }
         capabilities.put("logging", Map.of());
+        Map<String, Object> extensions = buildExtensions(filterContext);
+        if (!extensions.isEmpty()) {
+            capabilities.put("extensions", extensions);
+        }
         return capabilities;
+    }
+
+    private Map<String, Object> buildExtensions(FilterContextImpl filterContext) {
+        List<ExtensionMetadata> extensionMetadata = metadata.extensions();
+        if (extensionMetadata.isEmpty()) {
+            return Map.of();
+        }
+        String serverName = filterContext.mcpRequest.serverName();
+        Map<String, Object> extensions = new HashMap<>();
+        for (ExtensionMetadata extension : extensionMetadata) {
+            if (!extension.serverNames().contains(serverName)) {
+                continue;
+            }
+            // The settings object; values are stored JSON-encoded and decoded here (same as _meta fields)
+            Map<String, Object> settings = new HashMap<>();
+            for (Map.Entry<String, String> e : extension.settings().entrySet()) {
+                settings.put(e.getKey(), Json.decodeValue(e.getValue()));
+            }
+            extensions.put(extension.id(), settings);
+        }
+        return extensions;
     }
 
     private Implementation resolveImplementation(MCP_REQUEST mcpRequest) {

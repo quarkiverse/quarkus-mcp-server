@@ -31,6 +31,9 @@
 *** xref:guides-connecting-mcp-clients.adoc[Connecting MCP Clients]
 *** xref:guides-troubleshooting.adoc[Troubleshooting]
 
+.MCP Extensions
+** xref:guides-mcp-extensions.adoc[Implementing MCP Extensions]
+
 .Reference
 ** xref:reference-content-types.adoc[Content Types]
 ** xref:reference-annotations.adoc[Annotations]

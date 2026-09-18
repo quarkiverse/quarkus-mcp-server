@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStdioTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
+import io.vertx.core.json.JsonObject;
 
 public class ServerFeaturesIT {
 
@@ -87,6 +89,34 @@ public class ServerFeaturesIT {
                         assertEquals(Base64.getMimeEncoder().encodeToString("data".getBytes()),
                                 blob.blob());
                     })
+                    .thenAssertResults();
+        }
+    }
+
+    @Test
+    public void testExtension() {
+        try (McpStdioTestClient client = McpAssured.newStdioClient()
+                .build()
+                .connect(initResult -> {
+                    // The extension is advertised during capability negotiation
+                    ServerCapability extensions = initResult.capabilities().stream()
+                            .filter(c -> c.name().equals("extensions"))
+                            .findFirst()
+                            .orElse(null);
+                    assertNotNull(extensions, "The extensions capability should be advertised");
+                    assertEquals(Map.of("directoryRead", Boolean.TRUE),
+                            extensions.properties().get("io.modelcontextprotocol/skills"));
+                })) {
+            // A custom top-level method contributed by the extension is dispatched
+            client.when()
+                    .message(client.newRequest("skills/get").put("params", new JsonObject().put("uri", "code-review")))
+                    .withAssert(response -> {
+                        JsonObject result = response.getJsonObject("result");
+                        assertNotNull(result);
+                        assertEquals("code-review", result.getString("uri"));
+                        assertEquals("Skill for code-review", result.getString("description"));
+                    })
+                    .send()
                     .thenAssertResults();
         }
     }

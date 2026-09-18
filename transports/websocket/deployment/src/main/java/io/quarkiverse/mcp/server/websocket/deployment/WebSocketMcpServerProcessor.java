@@ -16,6 +16,7 @@ import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
+import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
 import io.quarkiverse.mcp.server.runtime.McpMetadata;
 import io.quarkiverse.mcp.server.runtime.McpMetrics;
 import io.quarkiverse.mcp.server.runtime.McpRequestValidator;
@@ -128,33 +129,34 @@ public class WebSocketMcpServerProcessor {
                     ParamVar p7 = conc.parameter("resourceTemplateCompletionManager",
                             ResourceTemplateCompletionManagerImpl.class);
                     ParamVar p8 = conc.parameter("notificationManager", NotificationManagerImpl.class);
-                    ParamVar p9 = conc.parameter("serverRequests", ServerRequests.class);
-                    ParamVar p10 = conc.parameter("cancellationRequests", CancellationRequests.class);
-                    ParamVar p11 = conc.parameter("mcpMetadata", McpMetadata.class);
-                    ParamVar p12 = conc.parameter("vertx", Vertx.class);
+                    ParamVar p9 = conc.parameter("extensionMethodManager", ExtensionMethodManagerImpl.class);
+                    ParamVar p10 = conc.parameter("serverRequests", ServerRequests.class);
+                    ParamVar p11 = conc.parameter("cancellationRequests", CancellationRequests.class);
+                    ParamVar p12 = conc.parameter("mcpMetadata", McpMetadata.class);
+                    ParamVar p13 = conc.parameter("vertx", Vertx.class);
                     // @All List<InitialCheck>
-                    ParamVar p13 = conc.parameter("initialChecks", pp -> {
+                    ParamVar p14 = conc.parameter("initialChecks", pp -> {
                         pp.setType(GenericType.of(List.class, List.of(TypeArgument.of(InitialCheck.class))));
                         pp.addAnnotation(All.class);
                     });
                     // @All List<InitialResponseInfo>
-                    ParamVar p14 = conc.parameter("initialResponseInfos", pp -> {
+                    ParamVar p15 = conc.parameter("initialResponseInfos", pp -> {
                         pp.setType(GenericType.of(List.class, List.of(TypeArgument.of(InitialResponseInfo.class))));
                         pp.addAnnotation(All.class);
                     });
                     // Instance<CurrentIdentityAssociation>
-                    ParamVar p15 = conc.parameter("currentIdentityAssociation",
+                    ParamVar p16 = conc.parameter("currentIdentityAssociation",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(CurrentIdentityAssociation.class))));
                     // Instance<McpMetrics>
-                    ParamVar p16 = conc.parameter("metrics",
+                    ParamVar p17 = conc.parameter("metrics",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpMetrics.class))));
                     // Instance<McpTracing>
-                    ParamVar p17 = conc.parameter("mcpTracing",
+                    ParamVar p18 = conc.parameter("mcpTracing",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpTracing.class))));
                     // Instance<McpRequestValidator>
-                    ParamVar p18 = conc.parameter("mcpRequestValidator",
+                    ParamVar p19 = conc.parameter("mcpRequestValidator",
                             GenericType.of(Instance.class, List.of(TypeArgument.of(McpRequestValidator.class))));
-                    ParamVar p19 = conc.parameter("trafficListeners", TrafficListeners.class);
+                    ParamVar p20 = conc.parameter("trafficListeners", TrafficListeners.class);
 
                     ConstructorDesc superConstructor = ConstructorDesc.of(WebSocketMcpMessageHandler.class,
                             McpServersRuntimeConfig.class,
@@ -166,6 +168,7 @@ public class WebSocketMcpServerProcessor {
                             ResourceTemplateManagerImpl.class,
                             ResourceTemplateCompletionManagerImpl.class,
                             NotificationManagerImpl.class,
+                            ExtensionMethodManagerImpl.class,
                             ServerRequests.class,
                             CancellationRequests.class,
                             McpMetadata.class,
@@ -179,7 +182,7 @@ public class WebSocketMcpServerProcessor {
                             TrafficListeners.class);
                     conc.body(bc -> {
                         bc.invokeSpecial(superConstructor, cc.this_(), p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
-                                p13, p14, p15, p16, p17, p18, p19);
+                                p13, p14, p15, p16, p17, p18, p19, p20);
                         bc.return_();
                     });
                 });

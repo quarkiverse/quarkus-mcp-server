@@ -29,6 +29,10 @@ public interface McpMetadata {
 
     List<FeatureMetadata<Void>> notifications();
 
+    List<FeatureMetadata<Object>> extensionMethods();
+
+    List<ExtensionMetadata> extensions();
+
     boolean isPromptManagerUsed();
 
     boolean isToolManagerUsed();

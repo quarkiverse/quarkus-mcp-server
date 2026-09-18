@@ -7,7 +7,8 @@ public enum Feature {
     RESOURCE_TEMPLATE,
     PROMPT_COMPLETE,
     RESOURCE_TEMPLATE_COMPLETE,
-    NOTIFICATION;
+    NOTIFICATION,
+    EXTENSION_METHOD;
 
     public boolean requiresUri() {
         return this == RESOURCE || this == RESOURCE_TEMPLATE;
