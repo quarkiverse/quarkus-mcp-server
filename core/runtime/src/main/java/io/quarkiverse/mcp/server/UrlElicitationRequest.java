@@ -93,6 +93,10 @@ public interface UrlElicitationRequest {
          * <p>
          * If no completion timeout is set then the default value configured with the
          * {@code quarkus.mcp.server.elicitation.default-completion-timeout} is used.
+         * <p>
+         * This setting applies only to the server-initiated URL mode flow, i.e. when the request is sent with
+         * {@link UrlElicitationRequest#send()}. It has no effect when the request is used with the Multi Round-Trip
+         * Requests (MRTR) pattern for stateless protocol versions, where no pending elicitation entry is registered.
          *
          * @param completionTimeout
          * @return self
