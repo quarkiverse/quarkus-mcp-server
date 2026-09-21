@@ -1,5 +1,5 @@
 :project-version: ${release.current-version}
 
 :examples-dir: ./../examples/
-:spec-version: 2025-11-25
+:spec-version: 2026-07-28
 :quarkus-version: ${quarkus.version}
