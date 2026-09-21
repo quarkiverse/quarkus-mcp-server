@@ -889,6 +889,50 @@ public class MyTools {
 ----
 <1> The request state is an opaque string echoed back by the client. Use it to identify the retry context.
 
+=== URL Mode Elicitation with MRTR
+
+URL mode elicitation also works with the MRTR pattern. Guard on `isUrlModeSupported()`, build the request with `urlRequestBuilder()`, and add it to the `InputRequiredException` with `addUrlElicitationRequest()`:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.Elicitation;
+import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.UrlElicitationRequest;
+
+public class MyTools {
+
+    @Tool(description = "Connect account")
+    String connect(Elicitation elicitation) {
+        if (!elicitation.isUrlModeSupported()) { // <1>
+            return "URL mode elicitation not supported";
+        }
+
+        if (elicitation.inputResponses().isEmpty()) {
+            UrlElicitationRequest request = elicitation.urlRequestBuilder()
+                .setMessage("Authorize access:")
+                .setUrl("https://example.com/oauth/authorize")
+                .build();
+            throw elicitation.inputRequired()
+                .addUrlElicitationRequest("oauth", request) // <2>
+                .setRequestState("connect-account")
+                .build();
+        }
+
+        var response = elicitation.inputResponses()
+            .getElicitationResponse("oauth"); // <3>
+        return response.actionAccepted() ? "Connected" : "Cancelled";
+    }
+}
+----
+<1> Check for URL mode support (not form mode).
+<2> Add the URL elicitation request to the `InputRequiredException`.
+<3> Retrieve the response with `getElicitationResponse()` — the same getter used for form mode.
+
+[NOTE]
+====
+The `ElicitationCompletion` interface and the `setCompletionTimeout()` builder method apply only to the server-initiated URL mode flow (`UrlElicitationRequest.send()`). They have no effect with the MRTR pattern, where no pending elicitation entry is registered and the server cannot send `notifications/elicitation/complete` back to a stateless client. The client drives completion by retrying the original request.
+====
+
 === Combining Multiple Input Requests
 
 A single `InputRequiredException` can request multiple inputs at once:
