@@ -520,7 +520,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceDefinitionImpl(String name) {
-            super(name, ResourceManagerImpl.this.serverNames);
+            super(name, ResourceManagerImpl.this.serverNames, ResourceManagerImpl.this.validateServerNames);
         }
 
         @Override

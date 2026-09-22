@@ -246,6 +246,30 @@ public class SpecialFeatures {
 <1> Inherits "special" from class-level annotation
 <2> Explicitly override to use default server
 
+== All Servers Constant
+
+Use `McpServer.ALL` to bind a feature to _all_ server configurations declared by the application, without knowing their names upfront.
+This is primarily intended for features and extensions provided by libraries.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.McpServer;
+
+public class SharedFeatures {
+
+    @Tool
+    @McpServer(McpServer.ALL) // <1>
+    String sharedTool() {
+        return "Available on every server";
+    }
+}
+----
+<1> The tool is bound to every server configuration, i.e. the default server and all named servers.
+
+NOTE: A binding to `McpServer.ALL` is expanded to the concrete set of known server names.
+As a result, `serverNames()` (e.g. `ToolManager.ToolInfo#serverNames()`) returns the actual server names and never contains the `<all>` value.
+The constant also works for programmatic registration, e.g. `toolManager.newTool("shared").setServerName(McpServer.ALL)`.
+
 == Per-Server Configuration
 
 Configure each server independently using the naming pattern:

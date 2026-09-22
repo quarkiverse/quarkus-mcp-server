@@ -589,7 +589,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private List<Class<? extends ToolOutputGuardrail>> outputGuardrails;
 
         private ToolDefinitionImpl(String name) {
-            super(name, ToolManagerImpl.this.serverNames);
+            super(name, ToolManagerImpl.this.serverNames, ToolManagerImpl.this.validateServerNames);
             this.arguments = new ArrayList<>();
         }
 

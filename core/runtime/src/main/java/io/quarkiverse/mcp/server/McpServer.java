@@ -41,6 +41,16 @@ public @interface McpServer {
     String DEFAULT = "<default>";
 
     /**
+     * Constant value used to bind a feature to all server configurations.
+     * <p>
+     * This is primarily intended for features and extensions provided by libraries that should be exposed by all servers
+     * declared by the application, without knowing the concrete server names upfront. A binding to {@code ALL} is expanded
+     * to the set of all known server configurations; as a result {@link FeatureManager.FeatureInfo#serverNames()} returns
+     * the concrete server names and never contains this value.
+     */
+    String ALL = "<all>";
+
+    /**
      * The name of the server.
      */
     String value();

@@ -89,8 +89,11 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
     protected final CurrentIdentityAssociation currentIdentityAssociation;
 
-    // used to validate server name if InvalidServerNameStrategy.FAIL is set
+    // the set of all known server names; used to validate/expand server bindings during programmatic registration
     protected final Set<String> serverNames;
+
+    // whether the server name should be validated during programmatic registration (InvalidServerNameStrategy.FAIL)
+    protected final boolean validateServerNames;
 
     // determines which connections receive the automatic list_changed notification on register/remove
     protected final AutoListChangedStrategy autoListChangedStrategy;
@@ -114,7 +117,8 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         this.currentIdentityAssociation = currentIdentityAssociation.isResolvable() ? currentIdentityAssociation.get() : null;
         this.serverRequests = serverRequests;
         this.cancellationRequests = cancellationRequests;
-        this.serverNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL ? metadata.serverNames() : null;
+        this.serverNames = metadata.serverNames();
+        this.validateServerNames = config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL;
         this.autoListChangedStrategy = config.autoListChangedStrategy();
         jakarta.enterprise.inject.Instance<McpTracing> mcpTracingInstance = Arc.container().select(McpTracing.class);
         this.mcpTracing = mcpTracingInstance.isResolvable() ? mcpTracingInstance.get() : null;
@@ -563,6 +567,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
 
         protected final String name;
         protected final Set<String> knownServerNames;
+        protected final boolean validateServerNames;
         protected String description;
         protected Function<ARGUMENTS, RESPONSE> fun;
         protected Function<ARGUMENTS, Uni<RESPONSE>> asyncFun;
@@ -572,9 +577,10 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         protected Map<TransportHint, Object> transportHints = Map.of();
         protected boolean notifyListChanged = true;
 
-        protected FeatureDefinitionBase(String name, Set<String> knownServerNames) {
+        protected FeatureDefinitionBase(String name, Set<String> knownServerNames, boolean validateServerNames) {
             this.name = Objects.requireNonNull(name);
             this.knownServerNames = knownServerNames;
+            this.validateServerNames = validateServerNames;
             this.serverNames = Set.of(McpServer.DEFAULT);
         }
 
@@ -589,7 +595,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
         }
 
         public THIS setServerName(String serverName) {
-            this.serverNames = Set.of(Objects.requireNonNull(serverName));
+            this.serverNames = expandAll(Set.of(Objects.requireNonNull(serverName)));
             return self();
         }
 
@@ -598,8 +604,13 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             if (serverNames.length == 0) {
                 throw new IllegalArgumentException("Server names must not be empty");
             }
-            this.serverNames = Set.of(serverNames);
+            this.serverNames = expandAll(Set.of(serverNames));
             return self();
+        }
+
+        // Expands McpServer.ALL to the set of all known server names
+        private Set<String> expandAll(Set<String> serverNames) {
+            return serverNames.contains(McpServer.ALL) ? knownServerNames : serverNames;
         }
 
         public THIS setHandler(Function<ARGUMENTS, RESPONSE> fun, boolean runOnVirtualThread) {
@@ -649,7 +660,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             if (requireDescription && description == null) {
                 throw new IllegalStateException("Description must be set");
             }
-            if (knownServerNames != null) {
+            if (validateServerNames) {
                 // Validate server name if InvalidServerNameStrategy.FAIL
                 for (String serverName : serverNames) {
                     if (!knownServerNames.contains(serverName)) {

@@ -381,7 +381,8 @@ final class FeatureMethods {
         return false;
     }
 
-    static Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, MethodInfo method) {
+    static Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, MethodInfo method,
+            Set<String> knownServerNames) {
         Set<String> ret = new HashSet<String>();
         Optional<Boolean> multiServerBindings = config.supportMultiServerBindings();
         if (multiServerBindings.orElse(true)) {
@@ -444,6 +445,9 @@ final class FeatureMethods {
                 }
             }
         }
+        if (ret.contains(McpServer.ALL)) {
+            return knownServerNames;
+        }
         return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }
 
@@ -451,7 +455,8 @@ final class FeatureMethods {
      * Resolves the {@code @McpServer} bindings declared on a class (e.g. an {@link io.quarkiverse.mcp.server.McpExtension}
      * class). Only class-level bindings are considered.
      */
-    static Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, ClassInfo clazz) {
+    static Set<String> initServerBindings(McpServersBuildTimeConfig config, IndexView index, ClassInfo clazz,
+            Set<String> knownServerNames) {
         List<AnnotationInstance> classAnnotations = new ArrayList<>(
                 clazz.declaredAnnotationsWithRepeatable(DotNames.MCP_SERVER, index));
         classAnnotations.addAll(clazz.declaredAnnotationsWithRepeatable(DotNames.MCPJAVA_MCP_SERVER, index));
@@ -462,6 +467,9 @@ final class FeatureMethods {
         Set<String> ret = new HashSet<>();
         for (AnnotationInstance a : classAnnotations) {
             ret.add(a.value().asString());
+        }
+        if (ret.contains(McpServer.ALL)) {
+            return knownServerNames;
         }
         return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }

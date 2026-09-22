@@ -164,7 +164,7 @@ public class NotificationManagerImpl extends FeatureManagerBase<Void, Notificati
         private Notification.Type type;
 
         private NotificationDefinitionImpl(String name) {
-            super(name, NotificationManagerImpl.this.serverNames);
+            super(name, NotificationManagerImpl.this.serverNames, NotificationManagerImpl.this.validateServerNames);
         }
 
         @Override

@@ -140,7 +140,7 @@ public abstract class CompletionManagerBase extends FeatureManagerBase<Completio
         private String argumentName;
 
         private CompletionDefinitionImpl(String name) {
-            super(name, CompletionManagerBase.this.serverNames);
+            super(name, CompletionManagerBase.this.serverNames, CompletionManagerBase.this.validateServerNames);
             setDescription("");
         }
 
