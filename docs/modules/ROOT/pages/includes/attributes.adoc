@@ -1,5 +1,5 @@
 :project-version: 2.0.0
 
 :examples-dir: ./../examples/
-:spec-version: 2025-11-25
+:spec-version: 2026-07-28
 :quarkus-version: 3.33.3.2

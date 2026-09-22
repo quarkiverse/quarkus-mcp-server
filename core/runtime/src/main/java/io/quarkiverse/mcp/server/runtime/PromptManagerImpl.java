@@ -258,7 +258,7 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         private Map<MetaKey, Object> metadata = Map.of();
 
         PromptDefinitionImpl(String name) {
-            super(name, PromptManagerImpl.this.serverNames);
+            super(name, PromptManagerImpl.this.serverNames, PromptManagerImpl.this.validateServerNames);
             this.arguments = new ArrayList<>();
         }
 

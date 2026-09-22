@@ -32,7 +32,7 @@ public class ExtensionServerBindingTest extends McpServerTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
-            .withApplicationRoot(root -> root.addClasses(DefaultExtension.class, MultiExtension.class))
+            .withApplicationRoot(root -> root.addClasses(DefaultExtension.class, MultiExtension.class, AllExtension.class))
             .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "true")
             .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")
             .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp");
@@ -44,9 +44,10 @@ public class ExtensionServerBindingTest extends McpServerTest {
                 .build()
                 .connect(initResult -> {
                     Map<String, Object> extensions = extensions(initResult);
-                    // Both the default-bound and the multi-bound (default + bravo) extensions are advertised here
+                    // The default-bound, the multi-bound (default + bravo) and the ALL-bound extensions are advertised here
                     assertEquals(Map.of("read", Boolean.TRUE), extensions.get("com.acme/default"));
                     assertEquals(Map.of("read", Boolean.TRUE), extensions.get("com.acme/multi"));
+                    assertEquals(Map.of("read", Boolean.TRUE), extensions.get("com.acme/all"));
                 });
         try (client) {
             client.when()
@@ -55,6 +56,9 @@ public class ExtensionServerBindingTest extends McpServerTest {
                     .send()
                     .message(client.newRequest("multi/ping"))
                     .withAssert(response -> assertEquals("multi", response.getJsonObject("result").getString("ext")))
+                    .send()
+                    .message(client.newRequest("all/ping"))
+                    .withAssert(response -> assertEquals("all", response.getJsonObject("result").getString("ext")))
                     .send()
                     .thenAssertResults();
         }
@@ -67,8 +71,9 @@ public class ExtensionServerBindingTest extends McpServerTest {
                 .build()
                 .connect(initResult -> {
                     Map<String, Object> extensions = extensions(initResult);
-                    // Only the multi-bound extension reaches the bravo server
+                    // The multi-bound and the ALL-bound extensions reach the bravo server
                     assertEquals(Map.of("read", Boolean.TRUE), extensions.get("com.acme/multi"));
+                    assertEquals(Map.of("read", Boolean.TRUE), extensions.get("com.acme/all"));
                     assertFalse(extensions.containsKey("com.acme/default"),
                             "The default-bound extension must not be advertised on the bravo server");
                 });
@@ -77,6 +82,10 @@ public class ExtensionServerBindingTest extends McpServerTest {
                     // multi/ping is bound to bravo -> handled
                     .message(client.newRequest("multi/ping"))
                     .withAssert(response -> assertEquals("multi", response.getJsonObject("result").getString("ext")))
+                    .send()
+                    // all/ping is bound to every server -> handled
+                    .message(client.newRequest("all/ping"))
+                    .withAssert(response -> assertEquals("all", response.getJsonObject("result").getString("ext")))
                     .send()
                     // default/ping is not bound to bravo -> unknown method
                     .message(client.newRequest("default/ping"))
@@ -116,6 +125,18 @@ public class ExtensionServerBindingTest extends McpServerTest {
         @McpExtensionMethod("multi/ping")
         public JsonObject ping() {
             return new JsonObject().put("ext", "multi");
+        }
+    }
+
+    // Bound to ALL servers (default + bravo) via @McpServer(McpServer.ALL)
+    @McpServer(McpServer.ALL)
+    @McpExtension(id = "com.acme/all")
+    @McpExtensionSetting(name = "read", type = Type.BOOLEAN, value = "true")
+    public static class AllExtension {
+
+        @McpExtensionMethod("all/ping")
+        public JsonObject ping() {
+            return new JsonObject().put("ext", "all");
         }
     }
 

@@ -307,8 +307,12 @@ class McpServerProcessor {
             BeanArchiveIndexBuildItem beanArchiveIndex,
             TransformedAnnotationsBuildItem transformedAnnotations,
             FeatureAnnotationsBuildItem featureAnnotations,
+            List<ServerNameBuildItem> serverNames,
             BuildProducer<FeatureMethodBuildItem> features,
             BuildProducer<ValidationErrorBuildItem> errors) {
+
+        Set<String> knownServerNames = serverNames.stream().map(ServerNameBuildItem::getName)
+                .collect(Collectors.toUnmodifiableSet());
 
         List<Throwable> wrongUsages = FeatureMethods.findWrongAnnotationUsage(beanArchiveIndex.getIndex(),
                 featureAnnotations, errors);
@@ -489,7 +493,8 @@ class McpServerProcessor {
                     }
 
                     // @McpServer bindings
-                    Set<String> servers = FeatureMethods.initServerBindings(config, beanArchiveIndex.getIndex(), method);
+                    Set<String> servers = FeatureMethods.initServerBindings(config, beanArchiveIndex.getIndex(), method,
+                            knownServerNames);
 
                     // Process metadata entries
                     AnnotationInstance metaField = method.declaredAnnotation(DotNames.META_FIELD);
@@ -816,9 +821,12 @@ class McpServerProcessor {
     @BuildStep
     void collectExtensions(McpServersBuildTimeConfig config,
             BeanArchiveIndexBuildItem beanArchiveIndex,
+            List<ServerNameBuildItem> serverNames,
             BuildProducer<ExtensionBuildItem> extensions,
             BuildProducer<ValidationErrorBuildItem> errors) {
         IndexView index = beanArchiveIndex.getIndex();
+        Set<String> knownServerNames = serverNames.stream().map(ServerNameBuildItem::getName)
+                .collect(Collectors.toUnmodifiableSet());
         List<ExtensionBuildItem> found = new ArrayList<>();
         for (AnnotationInstance annotation : index.getAnnotations(DotNames.MCP_EXTENSION)) {
             if (annotation.target().kind() != AnnotationTarget.Kind.CLASS) {
@@ -848,7 +856,7 @@ class McpServerProcessor {
             }
             Set<String> servers;
             try {
-                servers = FeatureMethods.initServerBindings(config, index, clazz);
+                servers = FeatureMethods.initServerBindings(config, index, clazz, knownServerNames);
             } catch (IllegalStateException e) {
                 errors.produce(new ValidationErrorBuildItem(e));
                 continue;

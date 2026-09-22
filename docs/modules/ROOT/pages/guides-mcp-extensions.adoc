@@ -296,6 +296,9 @@ public class MultiExtension {
 Only the servers an extension is bound to advertise its settings object and dispatch its methods.
 A request for an extension method on a server the extension is not bound to results in an `-32601` (Method not found) error.
 
+TIP: Use `@McpServer(McpServer.ALL)` to bind an extension to _all_ server configurations declared by the application without knowing their names upfront.
+This is particularly useful for extensions provided by libraries.
+
 [IMPORTANT]
 .`@McpServer` is not allowed on an individual method
 ====

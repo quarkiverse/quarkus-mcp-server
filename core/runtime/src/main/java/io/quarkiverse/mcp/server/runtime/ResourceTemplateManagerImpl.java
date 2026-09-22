@@ -555,7 +555,7 @@ public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResp
         private Map<MetaKey, Object> metadata = Map.of();
 
         ResourceTemplateDefinitionImpl(String name) {
-            super(name, ResourceTemplateManagerImpl.this.serverNames);
+            super(name, ResourceTemplateManagerImpl.this.serverNames, ResourceTemplateManagerImpl.this.validateServerNames);
         }
 
         @Override
