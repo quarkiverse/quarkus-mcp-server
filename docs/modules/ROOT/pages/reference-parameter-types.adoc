@@ -555,6 +555,71 @@ public class MyTools {
 
 The same `DefaultValueConverter` instances are used for both declarative and programmatic API default values.
 
+[[custom-injectable-parameters]]
+== Custom Injectable Parameters
+
+A Quarkus extension can register a custom parameter type for feature methods by implementing
+`io.quarkiverse.mcp.server.FeatureArgumentProvider<T>` in its runtime module.
+The provider receives the current `FeatureManager.RequestFeatureArguments` and supplies the parameter value.
+These parameters are injected instead of being read from client arguments and are excluded from tool input schemas.
+
+[source,java]
+----
+import jakarta.inject.Singleton;
+
+import io.quarkiverse.mcp.server.FeatureArgumentProvider;
+import io.quarkiverse.mcp.server.FeatureManager.RequestFeatureArguments;
+
+@Singleton
+public class GreeterProvider implements FeatureArgumentProvider<Greeter> {
+
+    @Override
+    public Greeter provide(RequestFeatureArguments arguments) {
+        return new Greeter("Hello from " + arguments.connection().serverName());
+    }
+}
+----
+
+Here, `Greeter` is a custom type, for example `public record Greeter(String greeting) {}`.
+Register the type and provider in the extension's deployment module:
+
+[source,java]
+----
+import org.jboss.jandex.DotName;
+
+import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
+import io.quarkus.deployment.annotations.BuildStep;
+
+class GreeterProcessor {
+
+    @BuildStep
+    FeatureArgumentProviderBuildItem greeter() {
+        return new FeatureArgumentProviderBuildItem(DotName.createSimple(Greeter.class), GreeterProvider.class.getName());
+    }
+}
+----
+
+A feature method can then declare the registered type:
+
+[source,java]
+----
+@Tool
+String greet(String name, Greeter greeter) {
+    return greeter.greeting() + ", " + name + "!";
+}
+----
+
+Only `name` is supplied by the client.
+Providers must be CDI beans or declare a public no-argument constructor.
+For CDI providers, exactly one bean must expose the provider class as a bean type; qualifiers are ignored.
+The bean's context must be active during invocation, and dependent-scoped provider instances are reused.
+
+By default, a registration applies to all features.
+The three-argument `FeatureArgumentProviderBuildItem` constructor accepts a nonempty set of
+`io.quarkiverse.mcp.server.runtime.Feature` values to restrict its use.
+A feature method outside that set cannot declare the registered parameter type.
+Built-in injectable types cannot be overridden, and each custom parameter type can have only one registration.
+
 == See Also
 
 * xref:guides-implementing-tools.adoc[Implementing Tools]

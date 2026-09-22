@@ -60,6 +60,7 @@ import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.Icon;
@@ -147,6 +148,7 @@ import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.OpenTelemetrySdkBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
+import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.Annotations;
@@ -304,6 +306,7 @@ class McpServerProcessor {
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             InvokerFactoryBuildItem invokerFactory,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
+            List<FeatureArgumentProviderBuildItem> customArguments,
             BeanArchiveIndexBuildItem beanArchiveIndex,
             TransformedAnnotationsBuildItem transformedAnnotations,
             FeatureAnnotationsBuildItem featureAnnotations,
@@ -313,6 +316,8 @@ class McpServerProcessor {
 
         Set<String> knownServerNames = serverNames.stream().map(ServerNameBuildItem::getName)
                 .collect(Collectors.toUnmodifiableSet());
+
+        Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders = customArgumentProviders(customArguments);
 
         List<Throwable> wrongUsages = FeatureMethods.findWrongAnnotationUsage(beanArchiveIndex.getIndex(),
                 featureAnnotations, errors);
@@ -329,7 +334,7 @@ class McpServerProcessor {
                 if (featureAnnotation != null) {
                     Feature feature = featureAnnotations.getFeature(featureAnnotation);
                     FeatureMethods.validateFeatureMethod(method, feature, featureAnnotation,
-                            defaultValueConverters, beanArchiveIndex.getIndex());
+                            defaultValueConverters, beanArchiveIndex.getIndex(), customArgumentProviders);
                     String name;
                     if (feature == PROMPT_COMPLETE
                             || feature == RESOURCE_TEMPLATE_COMPLETE
@@ -600,12 +605,13 @@ class McpServerProcessor {
         // have overlapping server bindings
         for (List<FeatureMethodBuildItem> featureMethods : found.values()) {
             Map<String, List<FeatureMethodBuildItem>> byName = featureMethods.stream()
-                    .collect(Collectors.toMap(this::getDuplicateValidationName, List::of, (v1, v2) -> {
-                        List<FeatureMethodBuildItem> list = new ArrayList<>();
-                        list.addAll(v1);
-                        list.addAll(v2);
-                        return list;
-                    }));
+                    .collect(Collectors.toMap(fm -> getDuplicateValidationName(fm, customArgumentProviders), List::of,
+                            (v1, v2) -> {
+                                List<FeatureMethodBuildItem> list = new ArrayList<>();
+                                list.addAll(v1);
+                                list.addAll(v2);
+                                return list;
+                            }));
             for (Entry<String, List<FeatureMethodBuildItem>> e : byName.entrySet()) {
                 if (e.getValue().size() > 1) {
                     checkOverlappingServers(e.getKey(), e.getValue(), "Duplicate feature method", errors);
@@ -695,16 +701,20 @@ class McpServerProcessor {
             }
             DotName iconsProviderClazzName = featureMethod.getIconsProvider();
             if (iconsProviderClazzName != null) {
-                validateBeanOrPublicNoArgsConstructor("IconsProvider", iconsProviderClazzName, featureMethod,
+                validateBeanOrPublicNoArgsConstructor("IconsProvider", iconsProviderClazzName, declaredOn(featureMethod),
                         beanArchiveIndex.getIndex(),
                         validationPhase.getContext(), errors, reflectiveClasses);
             }
         }
     }
 
+    private static String declaredOn(FeatureMethodBuildItem featureMethod) {
+        return featureMethod.getMethod().declaringClass().name() + "#" + featureMethod.getMethod().name() + "()";
+    }
+
     private void validateBeanOrPublicNoArgsConstructor(String componentType,
             DotName clazzName,
-            FeatureMethodBuildItem featureMethod,
+            String declaredOn,
             IndexView index,
             ValidationContext validationContext,
             BuildProducer<ValidationErrorBuildItem> errors,
@@ -717,8 +727,7 @@ class McpServerProcessor {
                         "There must be exactly one bean that matches %s: \"%s\" declared on: %s; beans: %s",
                         componentType,
                         clazzName,
-                        featureMethod.getMethod().declaringClass().name() + "#" + featureMethod.getMethod().name()
-                                + "()",
+                        declaredOn,
                         beans);
                 errors.produce(new ValidationErrorBuildItem(new IllegalStateException(message)));
             } else if (beans.isEmpty()) {
@@ -763,7 +772,7 @@ class McpServerProcessor {
     private void validateGuardrail(IndexView index, FeatureMethodBuildItem featureMethod, DotName guardrailClazzName,
             ValidationContext validationContext, BuildProducer<ValidationErrorBuildItem> errors,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
-        validateBeanOrPublicNoArgsConstructor("Guardrail", guardrailClazzName, featureMethod, index,
+        validateBeanOrPublicNoArgsConstructor("Guardrail", guardrailClazzName, declaredOn(featureMethod), index,
                 validationContext, errors, reflectiveClasses);
 
         ClassInfo clazz = index.getClassByName(guardrailClazzName);
@@ -961,10 +970,12 @@ class McpServerProcessor {
         return null;
     }
 
-    private String getDuplicateValidationName(FeatureMethodBuildItem featureMethod) {
+    private String getDuplicateValidationName(FeatureMethodBuildItem featureMethod,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         if (featureMethod.getFeature() == PROMPT_COMPLETE || featureMethod.getFeature() == RESOURCE_TEMPLATE_COMPLETE) {
             MethodParameterInfo argument = featureMethod.getMethod().parameters().stream()
-                    .filter(p -> FeatureArguments.providerFrom(p.type()) == Provider.PARAMS).findFirst().orElseThrow();
+                    .filter(p -> FeatureArguments.providerFrom(p.type(), customArgumentProviders) == Provider.PARAMS)
+                    .findFirst().orElseThrow();
             String argumentName = argument.name();
             AnnotationInstance completeArg = argument.declaredAnnotation(DotNames.COMPLETE_ARG);
             if (completeArg != null) {
@@ -1000,6 +1011,7 @@ class McpServerProcessor {
             BeanDiscoveryFinishedBuildItem beanDiscovery,
             List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
+            List<FeatureArgumentProviderBuildItem> customArguments,
             List<ServerNameBuildItem> serverNames,
             List<ExtensionBuildItem> extensions,
             BeanArchiveIndexBuildItem beanArchiveIndex,
@@ -1007,6 +1019,8 @@ class McpServerProcessor {
             BuildProducer<GeneratedResourceBuildItem> generatedResources,
             BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+
+        Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders = customArgumentProviders(customArguments);
 
         // Note that the generated McpMetadata impl must be considered an application
         // class
@@ -1065,7 +1079,7 @@ class McpServerProcessor {
                                                 prompt.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_PROMPT)
                                                         ? DotNames.MCPJAVA_PROMPT_ARG
                                                         : DotNames.PROMPT_ARG,
-                                                PromptArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
+                                                PromptArg.ELEMENT_NAME, beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1089,7 +1103,7 @@ class McpServerProcessor {
                                                         .hasDeclaredAnnotation(DotNames.MCPJAVA_COMPLETE_PROMPT)
                                                                 ? DotNames.MCPJAVA_COMPLETE_ARG
                                                                 : DotNames.COMPLETE_ARG,
-                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
+                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1113,7 +1127,7 @@ class McpServerProcessor {
                                                 : tool.getMethod().hasDeclaredAnnotation(DotNames.MCPJAVA_TOOL)
                                                         ? DotNames.MCPJAVA_TOOL_ARG
                                                         : DotNames.TOOL_ARG,
-                                        ToolArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
+                                        ToolArg.ELEMENT_NAME, beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1132,7 +1146,8 @@ class McpServerProcessor {
                         // ret.add(meta$123());
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
-                                        processFeatureMethod(counter, cc, resource, null, null, beanArchiveIndex.getIndex()),
+                                        processFeatureMethod(counter, cc, resource, null, null, beanArchiveIndex.getIndex(),
+                                                customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1156,7 +1171,8 @@ class McpServerProcessor {
                                                         .hasDeclaredAnnotation(DotNames.MCPJAVA_RESOURCE_TEMPLATE)
                                                                 ? DotNames.MCPJAVA_RESOURCE_TEMPLATE_ARG
                                                                 : DotNames.RESOURCE_TEMPLATE_ARG,
-                                                ResourceTemplateArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
+                                                ResourceTemplateArg.ELEMENT_NAME, beanArchiveIndex.getIndex(),
+                                                customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1181,7 +1197,7 @@ class McpServerProcessor {
                                                                 DotNames.MCPJAVA_COMPLETE_RESOURCE_TEMPLATE)
                                                                         ? DotNames.MCPJAVA_COMPLETE_ARG
                                                                         : DotNames.COMPLETE_ARG,
-                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex()),
+                                                CompleteArg.ELEMENT_NAME, beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1201,7 +1217,7 @@ class McpServerProcessor {
                         bc.invokeInterface(MD_Collection.add, ret,
                                 bc.invokeVirtual(
                                         processFeatureMethod(counter, cc, notification, null, null,
-                                                beanArchiveIndex.getIndex()),
+                                                beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1222,7 +1238,7 @@ class McpServerProcessor {
                                 bc.invokeVirtual(
                                         processFeatureMethod(counter, cc, extensionMethod,
                                                 DotNames.MCP_EXTENSION_METHOD_ARG, McpExtensionMethodArg.ELEMENT_NAME,
-                                                beanArchiveIndex.getIndex()),
+                                                beanArchiveIndex.getIndex(), customArgumentProviders),
                                         cc.this_()));
                     }
                     bc.return_(ret);
@@ -1305,7 +1321,7 @@ class McpServerProcessor {
                             .sorted(FeatureMethodBuildItem.NAME_COMPARATOR)
                             .toList()) {
                         String generatedClassName = generateToolArgsHolder(gizmo, tool, classOutput, reflectiveClasses,
-                                beanArchiveIndex.getIndex());
+                                beanArchiveIndex.getIndex(), customArgumentProviders);
                         if (generatedClassName != null) {
                             for (String server : tool.getServers()) {
                                 bc.withMap(ret).put(
@@ -1376,14 +1392,15 @@ class McpServerProcessor {
     }
 
     private String generateToolArgsHolder(Gizmo gizmo, FeatureMethodBuildItem tool,
-            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index) {
+            ClassOutput classOutput, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses, IndexView index,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         // Generate a holder for each tool with at least one serialized argument that either:
         // - is annotated with any other annotation than @ToolArg, @P, @McpJavaToolArg
         // - has a non-simple type (i.e. not a primitive, wrapper, String, enum, or Optional of those)
         boolean generateHolder = false;
         List<MethodParameterInfo> serializedArguments = new ArrayList<>();
         for (MethodParameterInfo param : tool.getMethod().parameters()) {
-            if (FeatureArguments.providerFrom(param.type()) == Provider.PARAMS) {
+            if (FeatureArguments.providerFrom(param.type(), customArgumentProviders) == Provider.PARAMS) {
                 serializedArguments.add(param);
                 if (!generateHolder) {
                     List<AnnotationInstance> annotations = param.declaredAnnotations();
@@ -1469,9 +1486,11 @@ class McpServerProcessor {
     @BuildStep
     void registerForReflection(List<FeatureMethodBuildItem> featureMethods,
             List<DefaultValueConverterBuildItem> defaultValueConverters,
+            List<FeatureArgumentProviderBuildItem> customArguments,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
             BuildProducer<ReflectiveHierarchyBuildItem> reflectiveHierarchies,
             BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+        Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders = customArgumentProviders(customArguments);
         // JsonObject.encode() may use Jackson under the hood which requires reflection
         for (FeatureMethodBuildItem m : featureMethods) {
             org.jboss.jandex.Type returnType = m.getMethod().returnType();
@@ -1485,7 +1504,7 @@ class McpServerProcessor {
                 reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(m.getMethod().returnType()).build());
             }
             for (org.jboss.jandex.Type paramType : m.getMethod().parameterTypes()) {
-                if (FeatureMethods.isParamTypeReflectionNeeded(paramType)) {
+                if (FeatureMethods.isParamTypeReflectionNeeded(paramType, customArgumentProviders)) {
                     reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
                 }
             }
@@ -1588,6 +1607,69 @@ class McpServerProcessor {
         services.produce(ServiceProviderBuildItem.allProvidersFromClassPath(McpServerSPI.class.getName()));
     }
 
+    @BuildStep
+    void registerCustomArgumentProviders(List<FeatureArgumentProviderBuildItem> customArguments,
+            BuildProducer<UnremovableBeanBuildItem> unremovableBeans) {
+        if (customArguments.isEmpty()) {
+            return;
+        }
+        DotName[] providerTypes = customArguments.stream()
+                .map(FeatureArgumentProviderBuildItem::getProviderClassName)
+                .map(DotName::createSimple)
+                .distinct()
+                .toArray(DotName[]::new);
+        // The providers are looked up programmatically, so the beans must not be removed
+        unremovableBeans.produce(UnremovableBeanBuildItem.beanTypes(providerTypes));
+    }
+
+    @BuildStep
+    void validateCustomArgumentProviders(List<FeatureArgumentProviderBuildItem> providers,
+            ValidationPhaseBuildItem validationPhase,
+            BeanArchiveIndexBuildItem beanArchiveIndex,
+            BuildProducer<ValidationErrorBuildItem> errors,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+        // A parameter type must be registered by exactly one provider
+        Map<DotName, List<FeatureArgumentProviderBuildItem>> byType = providers.stream()
+                .collect(Collectors.groupingBy(FeatureArgumentProviderBuildItem::getParameterType));
+        for (Map.Entry<DotName, List<FeatureArgumentProviderBuildItem>> e : byType.entrySet()) {
+            if (e.getValue().size() > 1) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "Multiple custom argument providers registered for the parameter type %s: %s".formatted(
+                                e.getKey(),
+                                e.getValue().stream().map(FeatureArgumentProviderBuildItem::getProviderClassName).toList()))));
+            }
+        }
+        Set<DotName> providerImplementations = beanArchiveIndex.getIndex()
+                .getAllKnownImplementations(DotName.createSimple(FeatureArgumentProvider.class)).stream()
+                .map(ClassInfo::name)
+                .collect(Collectors.toSet());
+        for (FeatureArgumentProviderBuildItem provider : providers) {
+            DotName providerClass = DotName.createSimple(provider.getProviderClassName());
+            if (!providerImplementations.contains(providerClass)) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "Custom argument provider %s for argument type %s must implement FeatureArgumentProvider".formatted(
+                                providerClass, provider.getParameterType()))));
+                continue;
+            }
+            validateBeanOrPublicNoArgsConstructor("FeatureArgumentProvider",
+                    providerClass,
+                    "argument type " + provider.getParameterType(),
+                    beanArchiveIndex.getIndex(), validationPhase.getContext(), errors, reflectiveClasses);
+        }
+    }
+
+    private static Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders(
+            List<FeatureArgumentProviderBuildItem> customArguments) {
+        if (customArguments.isEmpty()) {
+            return Map.of();
+        }
+        Map<DotName, FeatureArgumentProviderBuildItem> ret = new HashMap<>();
+        for (FeatureArgumentProviderBuildItem item : customArguments) {
+            ret.put(item.getParameterType(), item);
+        }
+        return ret;
+    }
+
     private boolean useEncoder(org.jboss.jandex.Type type, Set<org.jboss.jandex.Type> types) {
         if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
@@ -1599,7 +1681,8 @@ class McpServerProcessor {
     }
 
     private MethodDesc processFeatureMethod(AtomicInteger counter, ClassCreator cc,
-            FeatureMethodBuildItem featureMethod, DotName argAnnotationName, String argNameSentinel, IndexView index) {
+            FeatureMethodBuildItem featureMethod, DotName argAnnotationName, String argNameSentinel, IndexView index,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         return cc.method("meta$" + counter.incrementAndGet(), mc -> {
             mc.returning(FeatureMetadata.class);
 
@@ -1665,7 +1748,7 @@ class McpServerProcessor {
                                                 explicitAnnotation));
                     }
 
-                    FeatureArgument.Provider provider = FeatureArguments.providerFrom(param.type());
+                    FeatureArgument.Provider provider = FeatureArguments.providerFrom(param.type(), customArgumentProviders);
                     if (provider == FeatureArgument.Provider.PARAMS
                             && !argNames.add(name)) {
                         throw new IllegalStateException(
@@ -1676,8 +1759,11 @@ class McpServerProcessor {
                     }
 
                     LocalVar type = RuntimeTypeCreator.of(bc).withIndex(index).create(param.type());
+                    Const providerClass = provider == FeatureArgument.Provider.CUSTOM
+                            ? Const.of(ClassDesc.of(customArgumentProviders.get(param.type().name()).getProviderClassName()))
+                            : Const.ofNull(Class.class);
                     // new FeatureArgument(String name, String title, String description, boolean
-                    // required, Type type, String defaultValue, Provider provider)
+                    // required, Type type, String defaultValue, Provider provider, Class<?> providerClass)
                     LocalVar arg = bc.localVar("arg", bc.new_(FeatureArgument.class,
                             Const.of(name),
                             title != null ? Const.of(title) : Const.ofNull(String.class),
@@ -1685,7 +1771,8 @@ class McpServerProcessor {
                             Const.of(required),
                             type,
                             defaultValue != null ? Const.of(defaultValue) : Const.ofNull(String.class),
-                            Const.of(provider)));
+                            Const.of(provider),
+                            providerClass));
                     bc.withList(args).add(arg);
                 }
 

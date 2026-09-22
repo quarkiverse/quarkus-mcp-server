@@ -27,6 +27,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.invoke.Invoker;
 
@@ -39,6 +40,7 @@ import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.FilterContext;
@@ -67,6 +69,7 @@ import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaCancellationAdapter;
 import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaMcpRequestAdapter;
 import io.quarkiverse.mcp.server.runtime.mcpjava.McpJavaProgressAdapter;
 import io.quarkus.arc.Arc;
+import io.quarkus.arc.InstanceHandle;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
@@ -106,6 +109,9 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
     final CancellationRequests cancellationRequests;
 
     final McpTracing mcpTracing;
+
+    // cache of resolved custom argument providers, keyed by the FeatureArgumentProvider implementation class
+    private final ConcurrentMap<Class<?>, FeatureArgumentProvider<?>> argumentProviders = new ConcurrentHashMap<>();
 
     protected FeatureManagerBase(Vertx vertx, ObjectMapper mapper, ConnectionManager connectionManager,
             Instance<CurrentIdentityAssociation> currentIdentityAssociation, ServerRequests serverRequests,
@@ -286,12 +292,38 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
                 case MCPJAVA_CANCELLATION -> McpJavaCancellationAdapter.from(argProviders);
                 case MCPJAVA_MCP_REQUEST -> McpJavaMcpRequestAdapter.from(argProviders);
                 case MCPJAVA_COMPLETION_CONTEXT -> CompleteContextImpl.from(argProviders);
+                case CUSTOM -> resolveCustomArgument(metadata, arg, argProviders);
                 case PARAMS -> handleParam(metadata, argProviders.serverName(), arg, argProviders.getArg(arg.name()));
                 default -> throw new IllegalArgumentException("Unexpected argument provider: " + arg.provider());
             };
             idx++;
         }
         return ret;
+    }
+
+    private Object resolveCustomArgument(FeatureMetadata<?> metadata, FeatureArgument arg, ArgumentProviders argProviders) {
+        FeatureArgumentProvider<?> provider = argumentProvider(arg.providerClass());
+        FeatureManager.RequestFeatureArguments context = new AbstractRequestFeatureArguments(argProviders) {
+            @Override
+            public McpLog log() {
+                return FeatureManagerBase.this.log(logKey(metadata), metadata.info().declaringClassName(), argProviders);
+            }
+        };
+        return provider.provide(context);
+    }
+
+    private FeatureArgumentProvider<?> argumentProvider(Class<?> providerClass) {
+        return argumentProviders.computeIfAbsent(providerClass, clazz -> {
+            InstanceHandle<?> handle = Arc.container().instance(clazz, Any.Literal.INSTANCE);
+            if (handle.isAvailable()) {
+                return (FeatureArgumentProvider<?>) handle.get();
+            }
+            try {
+                return (FeatureArgumentProvider<?>) clazz.getConstructor().newInstance();
+            } catch (Exception e) {
+                throw new IllegalStateException("Unable to instantiate feature argument provider: " + clazz, e);
+            }
+        });
     }
 
     protected RuntimeException invalidArgument(FeatureMetadata<?> metadata, String serverName, String message) {
