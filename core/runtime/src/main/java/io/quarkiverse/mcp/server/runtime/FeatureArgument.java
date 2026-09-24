@@ -15,6 +15,7 @@ public record FeatureArgument(String name,
         java.lang.reflect.Type type,
         String defaultValue,
         Provider provider,
+        Class<?> providerClass,
         OptionalKind optionalKind) {
 
     // this constructor is used for McpMetadata
@@ -24,8 +25,9 @@ public record FeatureArgument(String name,
             boolean required,
             java.lang.reflect.Type type,
             String defaultValue,
-            Provider provider) {
-        this(name, title, description, required, type, defaultValue, provider, OptionalKind.NONE);
+            Provider provider,
+            Class<?> providerClass) {
+        this(name, title, description, required, type, defaultValue, provider, providerClass, OptionalKind.NONE);
     }
 
     public FeatureArgument {
@@ -55,6 +57,11 @@ public record FeatureArgument(String name,
 
     public enum Provider {
         PARAMS,
+        /**
+         * A custom argument type contributed by an MCP extension. The value is supplied by the
+         * {@link io.quarkiverse.mcp.server.FeatureArgumentProvider} identified by {@link FeatureArgument#providerClass()}.
+         */
+        CUSTOM,
         REQUEST_ID,
         REQUEST_URI,
         MCP_CONNECTION,

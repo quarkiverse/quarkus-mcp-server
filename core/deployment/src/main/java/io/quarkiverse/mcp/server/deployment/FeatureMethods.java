@@ -75,7 +75,8 @@ final class FeatureMethods {
             ClassType.create(DotNames.BLOB_RESOURCE_CONTENTS));
 
     static void validateFeatureMethod(MethodInfo method, Feature feature, AnnotationInstance featureAnnotation,
-            List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index) {
+            List<DefaultValueConverterBuildItem> defaultValueConverters, IndexView index,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         if (Modifier.isStatic(method.flags())) {
             throw new IllegalStateException(feature + " method must not be static: " + methodDesc(method));
         }
@@ -106,20 +107,21 @@ final class FeatureMethods {
             }
         }
         switch (feature) {
-            case PROMPT -> validatePromptMethod(method);
-            case PROMPT_COMPLETE -> validatePromptCompleteMethod(method);
-            case TOOL -> validateToolMethod(method, defaultValueConverters, index);
-            case RESOURCE -> validateResourceMethod(method);
-            case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation);
-            case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method);
-            case NOTIFICATION -> validateNotificationMethod(method);
-            case EXTENSION_METHOD -> parameters(method, EXTENSION_METHOD);
+            case PROMPT -> validatePromptMethod(method, customArgumentProviders);
+            case PROMPT_COMPLETE -> validatePromptCompleteMethod(method, customArgumentProviders);
+            case TOOL -> validateToolMethod(method, defaultValueConverters, index, customArgumentProviders);
+            case RESOURCE -> validateResourceMethod(method, customArgumentProviders);
+            case RESOURCE_TEMPLATE -> validateResourceTemplateMethod(method, featureAnnotation, customArgumentProviders);
+            case RESOURCE_TEMPLATE_COMPLETE -> validateResourceTemplateCompleteMethod(method, customArgumentProviders);
+            case NOTIFICATION -> validateNotificationMethod(method, customArgumentProviders);
+            case EXTENSION_METHOD -> parameters(method, EXTENSION_METHOD, customArgumentProviders);
             default -> throw new IllegalArgumentException("Unsupported feature: " + feature);
         }
     }
 
-    private static void validatePromptMethod(MethodInfo method) {
-        List<MethodParameterInfo> parameters = parameters(method, PROMPT);
+    private static void validatePromptMethod(MethodInfo method,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT, customArgumentProviders);
         for (MethodParameterInfo param : parameters) {
             if (!param.type().name().equals(DotNames.STRING)) {
                 throw new IllegalStateException(
@@ -128,7 +130,8 @@ final class FeatureMethods {
         }
     }
 
-    private static void validatePromptCompleteMethod(MethodInfo method) {
+    private static void validatePromptCompleteMethod(MethodInfo method,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         org.jboss.jandex.Type type = method.returnType();
         if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
@@ -140,14 +143,15 @@ final class FeatureMethods {
             throw new IllegalStateException("Unsupported Prompt complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method, PROMPT_COMPLETE);
+        List<MethodParameterInfo> parameters = parameters(method, PROMPT_COMPLETE, customArgumentProviders);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Prompt complete must consume exactly one String argument: " + methodDesc(method));
         }
     }
 
-    private static void validateResourceTemplateCompleteMethod(MethodInfo method) {
+    private static void validateResourceTemplateCompleteMethod(MethodInfo method,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         org.jboss.jandex.Type type = method.returnType();
         if (DotNames.isAsyncType(type.name()) && type.kind() == Kind.PARAMETERIZED_TYPE) {
             type = type.asParameterizedType().arguments().get(0);
@@ -160,7 +164,7 @@ final class FeatureMethods {
                     "Unsupported Resource template complete method return type: " + methodDesc(method));
         }
 
-        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE_COMPLETE);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE_COMPLETE, customArgumentProviders);
         if (parameters.size() != 1 || !parameters.get(0).type().name().equals(DotNames.STRING)) {
             throw new IllegalStateException(
                     "Resource template complete must consume exactly one String argument: " + methodDesc(method));
@@ -168,8 +172,8 @@ final class FeatureMethods {
     }
 
     private static void validateToolMethod(MethodInfo method, List<DefaultValueConverterBuildItem> defaultValueConverters,
-            IndexView index) {
-        parameters(method, TOOL);
+            IndexView index, Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
+        parameters(method, TOOL, customArgumentProviders);
         for (MethodParameterInfo p : method.parameters()) {
             AnnotationInstance toolArg = p.annotation(DotNames.TOOL_ARG);
             if (toolArg == null) {
@@ -206,15 +210,17 @@ final class FeatureMethods {
         }
     }
 
-    private static void validateResourceMethod(MethodInfo method) {
-        List<MethodParameterInfo> parameters = parameters(method, RESOURCE);
+    private static void validateResourceMethod(MethodInfo method,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE, customArgumentProviders);
         if (!parameters.isEmpty()) {
             throw new IllegalStateException(
                     "Resource method may only accept built-in parameter types" + methodDesc(method));
         }
     }
 
-    private static void validateResourceTemplateMethod(MethodInfo method, AnnotationInstance featureAnnotation) {
+    private static void validateResourceTemplateMethod(MethodInfo method, AnnotationInstance featureAnnotation,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         AnnotationValue uriTemplateValue = featureAnnotation.value("uriTemplate");
         if (uriTemplateValue == null) {
             throw new IllegalStateException("URI template not found");
@@ -222,7 +228,7 @@ final class FeatureMethods {
         VariableMatcher variableMatcher = io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl
                 .createMatcherFromUriTemplate(uriTemplateValue.asString());
 
-        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE);
+        List<MethodParameterInfo> parameters = parameters(method, RESOURCE_TEMPLATE, customArgumentProviders);
         for (MethodParameterInfo param : parameters) {
             String paramName = param.name();
             AnnotationInstance resourceTemplateArg = param.annotation(DotNames.RESOURCE_TEMPLATE_ARG);
@@ -244,7 +250,8 @@ final class FeatureMethods {
         }
     }
 
-    private static void validateNotificationMethod(MethodInfo method) {
+    private static void validateNotificationMethod(MethodInfo method,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         if (method.returnType().kind() != Kind.VOID
                 && (!DotNames.isAsyncType(method.returnType().name())
                         || !method.returnType().asParameterizedType().arguments().get(0).name()
@@ -252,7 +259,7 @@ final class FeatureMethods {
             throw new IllegalStateException(
                     "Notification method must return void, Uni<Void> or CompletionStage<Void>");
         }
-        List<MethodParameterInfo> params = parameters(method, NOTIFICATION);
+        List<MethodParameterInfo> params = parameters(method, NOTIFICATION, customArgumentProviders);
         if (!params.isEmpty()) {
             throw new IllegalStateException(
                     "Notification method %s may not consume the following parameter types: %s".formatted(
@@ -261,11 +268,13 @@ final class FeatureMethods {
         }
     }
 
-    static List<MethodParameterInfo> parameters(MethodInfo method, Feature feature) {
+    static List<MethodParameterInfo> parameters(MethodInfo method, Feature feature,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         List<MethodParameterInfo> ret = new ArrayList<>();
         for (MethodParameterInfo param : method.parameters()) {
-            Provider provider = FeatureArguments.providerFrom(param.type());
-            if (!provider.isValidFor(feature)) {
+            Provider provider = FeatureArguments.providerFrom(param.type(), customArgumentProviders);
+            if (!provider.isValidFor(feature)
+                    || (provider == Provider.CUSTOM && !customArgumentProviders.get(param.type().name()).appliesTo(feature))) {
                 throw new IllegalStateException(
                         "%s feature method %s may not accept parameter of type %s".formatted(feature,
                                 methodDesc(method), param.type()));
@@ -474,8 +483,10 @@ final class FeatureMethods {
         return ret.isEmpty() ? Set.of(McpServer.DEFAULT) : Set.copyOf(ret);
     }
 
-    static boolean isParamTypeReflectionNeeded(org.jboss.jandex.Type paramType) {
+    static boolean isParamTypeReflectionNeeded(org.jboss.jandex.Type paramType,
+            Map<DotName, FeatureArgumentProviderBuildItem> customArgumentProviders) {
         return paramType.kind() != Kind.PRIMITIVE
+                && !customArgumentProviders.containsKey(paramType.name())
                 && !paramType.name().equals(DotNames.STRING)
                 && !paramType.name().equals(DotNames.MCP_CONNECTION)
                 && !paramType.name().equals(DotNames.MCP_LOG)

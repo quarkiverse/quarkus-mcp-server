@@ -32,7 +32,22 @@ final class FeatureArguments {
             Map.entry(DotNames.MCPJAVA_MCP_REQUEST, Provider.MCPJAVA_MCP_REQUEST),
             Map.entry(DotNames.MCPJAVA_COMPLETION_CONTEXT, Provider.MCPJAVA_COMPLETION_CONTEXT));
 
+    /**
+     * @param type
+     * @return {@code true} if the given type is a built-in injectable type, i.e. it maps to a specific {@link Provider}
+     */
+    static boolean isBuiltinType(DotName type) {
+        return PROVIDERS.containsKey(type);
+    }
+
     static Provider providerFrom(org.jboss.jandex.Type type) {
+        return providerFrom(type, Map.of());
+    }
+
+    static Provider providerFrom(org.jboss.jandex.Type type, Map<DotName, FeatureArgumentProviderBuildItem> customArguments) {
+        if (customArguments.containsKey(type.name())) {
+            return Provider.CUSTOM;
+        }
         return PROVIDERS.getOrDefault(type.name(), Provider.PARAMS);
     }
 
