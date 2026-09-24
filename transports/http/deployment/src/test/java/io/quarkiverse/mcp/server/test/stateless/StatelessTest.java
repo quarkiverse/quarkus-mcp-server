@@ -74,6 +74,27 @@ public class StatelessTest extends McpServerTest {
     }
 
     @Test
+    public void testToolsListWithoutOptionalClientInfo() {
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless()
+                .build()
+                .connect();
+
+        JsonObject message = client.newRequest("tools/list");
+        message.put("params", new JsonObject()
+                .put("_meta", new JsonObject()
+                        .put(MetaKey.PROTOCOL_VERSION.toString(), McpProtocolVersion.FIRST_STATELESS.version())
+                        .put(MetaKey.CLIENT_CAPABILITIES.toString(), new JsonObject())));
+
+        client.when()
+                .message(message)
+                .withAssert(result -> assertEquals(3, result.getJsonObject("result").getJsonArray("tools").size()))
+                .send()
+                .thenAssertResults();
+        client.disconnect();
+    }
+
+    @Test
     public void testToolsCall() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
                 .setStateless()
@@ -154,7 +175,7 @@ public class StatelessTest extends McpServerTest {
                 .build()
                 .connect();
 
-        // Send a request with only protocolVersion in _meta, missing clientInfo and clientCapabilities
+        // Send a request with only protocolVersion in _meta, missing clientCapabilities
         JsonObject message = client.newRequest("tools/list");
         message.put("params", new JsonObject()
                 .put("_meta", new JsonObject()
@@ -164,7 +185,6 @@ public class StatelessTest extends McpServerTest {
                 .message(message)
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
-                    assertTrue(error.message().contains(MetaKey.CLIENT_INFO.toString()));
                     assertTrue(error.message().contains(MetaKey.CLIENT_CAPABILITIES.toString()));
                 })
                 .send()

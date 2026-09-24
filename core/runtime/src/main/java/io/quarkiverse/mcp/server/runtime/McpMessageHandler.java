@@ -767,7 +767,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (protocolVersion == null) {
             protocolVersion = McpProtocolVersion.FIRST_STATELESS;
         }
-        Implementation implementation = Messages.decodeImplementation(meta.getJsonObject(MetaKey.CLIENT_INFO.toString()));
+        JsonObject clientInfo = meta.getJsonObject(MetaKey.CLIENT_INFO.toString());
+        // InitialRequest always has an implementation, even when the optional wire field is absent.
+        Implementation implementation = clientInfo == null
+                ? new Implementation("unknown", "unknown", null)
+                : Messages.decodeImplementation(clientInfo);
         JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
         List<ClientCapability> clientCapabilities = decodeClientCapabilities(capabilities);
         return new InitialRequest(implementation, protocolVersion, List.copyOf(clientCapabilities), transport, true);
@@ -808,7 +812,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     static void validateStatelessMeta(JsonObject meta) {
         if (meta == null) {
             throw new McpException("Stateless request must include _meta with required fields: "
-                    + MetaKey.PROTOCOL_VERSION + ", " + MetaKey.CLIENT_INFO + ", " + MetaKey.CLIENT_CAPABILITIES,
+                    + MetaKey.PROTOCOL_VERSION + ", " + MetaKey.CLIENT_CAPABILITIES,
                     JsonRpcErrorCodes.INVALID_PARAMS);
         }
         List<String> missing = null;
@@ -816,11 +820,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             missing = new ArrayList<>();
             missing.add(MetaKey.PROTOCOL_VERSION.toString());
         }
-        if (meta.getJsonObject(MetaKey.CLIENT_INFO.toString()) == null) {
-            if (missing == null) {
-                missing = new ArrayList<>();
-            }
-            missing.add(MetaKey.CLIENT_INFO.toString());
+        if (meta.containsKey(MetaKey.CLIENT_INFO.toString())
+                && !(meta.getValue(MetaKey.CLIENT_INFO.toString()) instanceof JsonObject)) {
+            throw new McpException("Stateless request _meta field " + MetaKey.CLIENT_INFO + " must be an object",
+                    JsonRpcErrorCodes.INVALID_PARAMS);
         }
         if (meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString()) == null) {
             if (missing == null) {
