@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.MetaKey;
@@ -38,19 +39,27 @@ public class McpMessageHandlerTest {
                 () -> McpMessageHandler.validateStatelessMeta(new JsonObject()));
         assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.getJsonRpcErrorCode());
         assertTrue(e.getMessage().contains(MetaKey.PROTOCOL_VERSION.toString()));
-        assertTrue(e.getMessage().contains(MetaKey.CLIENT_INFO.toString()));
         assertTrue(e.getMessage().contains(MetaKey.CLIENT_CAPABILITIES.toString()));
     }
 
     @Test
-    public void testValidateStatelessMetaMissingClientInfo() {
+    public void testValidateStatelessMetaWithoutOptionalClientInfo() {
         JsonObject meta = new JsonObject()
                 .put(MetaKey.PROTOCOL_VERSION.toString(), "2026-07-28")
                 .put(MetaKey.CLIENT_CAPABILITIES.toString(), new JsonObject());
+        McpMessageHandler.validateStatelessMeta(meta);
+        var request = McpMessageHandler.buildStatelessInitialRequest(meta, null, InitialRequest.Transport.STREAMABLE_HTTP);
+        assertEquals("unknown", request.implementation().name());
+    }
+
+    @Test
+    public void testValidateStatelessMetaMalformedClientInfo() {
+        JsonObject meta = new JsonObject()
+                .put(MetaKey.PROTOCOL_VERSION.toString(), "2026-07-28")
+                .put(MetaKey.CLIENT_INFO.toString(), "not-an-object")
+                .put(MetaKey.CLIENT_CAPABILITIES.toString(), new JsonObject());
         McpException e = assertThrows(McpException.class, () -> McpMessageHandler.validateStatelessMeta(meta));
         assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.getJsonRpcErrorCode());
-        assertTrue(e.getMessage().contains(MetaKey.CLIENT_INFO.toString()));
-        assertFalse(e.getMessage().contains(MetaKey.PROTOCOL_VERSION.toString()));
     }
 
     @Test
