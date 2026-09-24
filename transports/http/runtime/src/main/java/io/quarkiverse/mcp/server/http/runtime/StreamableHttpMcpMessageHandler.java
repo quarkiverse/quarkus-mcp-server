@@ -86,6 +86,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
@@ -518,6 +519,43 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             if (!ctx.response().ended()) {
                 ctx.response().setStatusCode(500).end();
             }
+        }
+    }
+
+    /**
+     * Handles a Streamable HTTP request for the given server.
+     * <p>
+     * A {@code POST} carries JSON-RPC messages, a {@code GET} opens the subsidiary SSE stream of a stateful session (the
+     * channel used for server messages sent outside of a request, such as {@code notifications/tools/list_changed}) and a
+     * {@code DELETE} terminates a session. Any other method is rejected with {@code 405} and
+     * {@code Allow: GET, POST, DELETE}.
+     * <p>
+     * This is the dispatch used by the endpoints the extension registers for the configured servers. Applications that
+     * create server names at runtime (e.g. one server per tenant, with
+     * {@code quarkus.mcp.server.invalid-server-name-strategy=ignore}) can serve them from their own route by delegating to
+     * this method. The request body of a {@code POST} must be buffered before (e.g. with a {@code BodyHandler}), and
+     * anything the built-in endpoints do in front of the dispatch, such as the DNS rebinding check of localhost servers,
+     * is up to the calling route.
+     *
+     * @param ctx the routing context
+     * @param serverName the name of the MCP server the request is addressed to
+     */
+    public void handle(RoutingContext ctx, String serverName) {
+        if (serverName == null) {
+            throw serverNameNotDefined();
+        }
+        ctx.put(HttpMcpServerRecorder.CONTEXT_KEY, serverName);
+        HttpMethod method = ctx.request().method();
+        if (HttpMethod.GET.equals(method)) {
+            openSseStream(ctx, connectionManager, serverName);
+        } else if (HttpMethod.POST.equals(method)) {
+            handle(ctx);
+        } else if (HttpMethod.DELETE.equals(method)) {
+            terminateSession(ctx);
+        } else {
+            LOG.debugf("Invalid HTTP method %s [server: %s]", method, serverName);
+            ctx.response().putHeader(HttpHeaders.ALLOW, "GET, POST, DELETE");
+            ctx.fail(405);
         }
     }
 
