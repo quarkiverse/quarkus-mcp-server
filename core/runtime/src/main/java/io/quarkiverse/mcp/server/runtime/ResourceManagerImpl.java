@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;

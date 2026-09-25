@@ -3,9 +3,9 @@ package io.quarkiverse.mcp.server.hibernate.validator;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolCallException;
-import io.quarkiverse.mcp.server.runtime.Feature;
 
 /**
  * Converts a {@link ConstraintViolationException} into another exception. The converted exception is re-thrown.
@@ -24,7 +24,7 @@ public interface ConstraintViolationConverter {
     /**
      * @param exception (must not be {@code null})
      * @return the resulting exception
-     * @deprecated Use {@link #convert(ConstraintViolationException, Feature)} instead
+     * @deprecated Use {@link #convert(ConstraintViolationException, FeatureContext)} instead
      */
     @Deprecated(since = "1.9.0", forRemoval = true)
     default Exception convert(ConstraintViolationException exception) {
@@ -33,22 +33,32 @@ public interface ConstraintViolationConverter {
 
     /**
      * @param exception (must not be {@code null})
-     * @param feature (must not be {@code null})
+     * @param context (must not be {@code null})
      * @return the resulting exception
      */
     default Exception convert(ConstraintViolationException exception, FeatureContext context) {
         return convert(exception);
     }
 
-    record FeatureContext(Feature feature, String serverName) {
+    record FeatureContext(Feature feat, String serverName) {
 
         public FeatureContext {
-            if (feature == null) {
+            if (feat == null) {
                 throw new IllegalArgumentException("feature must not be null");
             }
             if (serverName == null) {
                 throw new IllegalArgumentException("serverName must not be null");
             }
+        }
+
+        /**
+         * @return the feature
+         * @deprecated use {@link #feat()} instead; this accessor returns the deprecated
+         *             {@link io.quarkiverse.mcp.server.runtime.Feature} and is kept only for backward compatibility
+         */
+        @Deprecated(since = "2.1.0", forRemoval = true)
+        public io.quarkiverse.mcp.server.runtime.Feature feature() {
+            return io.quarkiverse.mcp.server.runtime.Feature.valueOf(feat.name());
         }
 
     }

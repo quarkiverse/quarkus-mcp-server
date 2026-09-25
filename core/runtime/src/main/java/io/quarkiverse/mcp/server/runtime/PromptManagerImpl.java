@@ -23,6 +23,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.Icon;
 import io.quarkiverse.mcp.server.IconsProvider;

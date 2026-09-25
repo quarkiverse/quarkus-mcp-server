@@ -15,6 +15,7 @@ import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpLog;

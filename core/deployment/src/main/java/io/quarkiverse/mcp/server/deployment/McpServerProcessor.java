@@ -1,13 +1,13 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.runtime.Feature.EXTENSION_METHOD;
-import static io.quarkiverse.mcp.server.runtime.Feature.NOTIFICATION;
-import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
-import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.Feature.TOOL;
+import static io.quarkiverse.mcp.server.Feature.EXTENSION_METHOD;
+import static io.quarkiverse.mcp.server.Feature.NOTIFICATION;
+import static io.quarkiverse.mcp.server.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.Feature.PROMPT_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE_TEMPLATE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE_TEMPLATE_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.TOOL;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.annotation.Annotation;
@@ -60,6 +60,7 @@ import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
@@ -100,7 +101,6 @@ import io.quarkiverse.mcp.server.runtime.DefaultResourceContentsEncoder;
 import io.quarkiverse.mcp.server.runtime.DefaultSchemaGenerator;
 import io.quarkiverse.mcp.server.runtime.ExtensionMetadata;
 import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;

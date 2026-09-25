@@ -249,6 +249,8 @@ As with any request handler, `Sampling`, `Elicitation` and `Roots` involve serve
 
 TIP: The whole raw request message (including the top-level `params`) is available through a `RawMessage` parameter. `RequestUri` and completion-context providers are not applicable to extension methods. See xref:reference-parameter-types.adoc[Parameter Types] for the full list of supported provider types.
 
+NOTE: An extension can also register its own custom injectable parameter type (in addition to the built-in providers listed above) by implementing `FeatureArgumentProvider`. See xref:reference-parameter-types.adoc#custom-injectable-parameters[Custom Injectable Parameters] for details.
+
 === Error handling
 
 Throwing an `McpException` propagates a JSON-RPC error with the given code and message:

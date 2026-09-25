@@ -563,6 +563,8 @@ A Quarkus extension can register a custom parameter type for feature methods by 
 The provider receives the current `FeatureManager.RequestFeatureArguments` and supplies the parameter value.
 These parameters are injected instead of being read from client arguments and are excluded from tool input schemas.
 
+TIP: This is one of the building blocks for authoring a Quarkus extension on top of the MCP server. See xref:guides-mcp-extensions.adoc[MCP Extensions] for the bigger picture.
+
 [source,java]
 ----
 import jakarta.inject.Singleton;
@@ -616,7 +618,7 @@ The bean's context must be active during invocation, and dependent-scoped provid
 
 By default, a registration applies to all features.
 The three-argument `FeatureArgumentProviderBuildItem` constructor accepts a nonempty set of
-`io.quarkiverse.mcp.server.runtime.Feature` values to restrict its use.
+`io.quarkiverse.mcp.server.Feature` values to restrict its use.
 A feature method outside that set cannot declare the registered parameter type.
 Built-in injectable types cannot be overridden, and each custom parameter type can have only one registration.
 

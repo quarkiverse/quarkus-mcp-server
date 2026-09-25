@@ -10,7 +10,7 @@ import java.util.Set;
 import org.jboss.jandex.DotName;
 import org.junit.jupiter.api.Test;
 
-import io.quarkiverse.mcp.server.runtime.Feature;
+import io.quarkiverse.mcp.server.Feature;
 
 public class FeatureArgumentProviderBuildItemTest {
 

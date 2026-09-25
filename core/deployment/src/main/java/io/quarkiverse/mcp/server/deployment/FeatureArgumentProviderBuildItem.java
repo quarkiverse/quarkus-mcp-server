@@ -6,8 +6,8 @@ import java.util.Set;
 
 import org.jboss.jandex.DotName;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FeatureArgumentProvider;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.builder.item.MultiBuildItem;
 
 /**

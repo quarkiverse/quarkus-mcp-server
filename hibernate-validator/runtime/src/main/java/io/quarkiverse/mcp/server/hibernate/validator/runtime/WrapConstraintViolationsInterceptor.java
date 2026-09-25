@@ -10,13 +10,13 @@ import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
 import jakarta.validation.ConstraintViolationException;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter.FeatureContext;
-import io.quarkiverse.mcp.server.runtime.Feature;
 
 /**
  * Wraps a business method and transforms {@link ConstraintViolationException} to another exception.

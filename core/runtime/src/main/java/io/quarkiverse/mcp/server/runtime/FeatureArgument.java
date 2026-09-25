@@ -6,6 +6,7 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.vertx.core.json.JsonObject;
 
 public record FeatureArgument(String name,

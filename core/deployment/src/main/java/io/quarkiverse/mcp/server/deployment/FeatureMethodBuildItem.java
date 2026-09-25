@@ -15,8 +15,8 @@ import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.ToolManager;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;
@@ -88,7 +88,7 @@ public final class FeatureMethodBuildItem extends MultiBuildItem {
         this.name = Objects.requireNonNull(name);
         this.title = title;
         this.description = description;
-        this.uri = feature.requiresUri() ? Objects.requireNonNull(uri) : null;
+        this.uri = (feature == Feature.RESOURCE || feature == Feature.RESOURCE_TEMPLATE) ? Objects.requireNonNull(uri) : null;
         this.mimeType = mimeType;
         this.size = size;
         this.toolAnnotations = toolAnnotations;
