@@ -20,12 +20,11 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.quarkiverse.mcp.server.tasks.TaskStatus;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
@@ -136,19 +135,24 @@ public class TaskCancelTest extends McpServerTest {
             REASON.set(null);
         }
 
-        @Task
         @Tool(description = "A cancellable tool")
-        String cancellable(TaskContext task, Cancellation cancellation) throws InterruptedException {
-            cancellation.onCancelled(reason -> {
-                REASON.set(reason);
-                CANCELLED.countDown();
-            });
-            long deadline = System.currentTimeMillis() + 10_000;
-            while (!cancellation.check().isRequested() && System.currentTimeMillis() < deadline) {
-                Thread.sleep(20);
-            }
-            FINISHED.countDown();
-            return "finished";
+        String cancellable(Tasks tasks) {
+            throw tasks.newTask().setHandler(task -> {
+                task.cancellation().onCancelled(reason -> {
+                    REASON.set(reason);
+                    CANCELLED.countDown();
+                });
+                long deadline = System.currentTimeMillis() + 10_000;
+                while (!task.cancellation().check().isRequested() && System.currentTimeMillis() < deadline) {
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+                FINISHED.countDown();
+                return ToolResponse.success("finished");
+            }, false).create();
         }
 
     }

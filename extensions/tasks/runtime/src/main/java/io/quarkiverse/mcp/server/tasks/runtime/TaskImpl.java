@@ -54,7 +54,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
     // null means unlimited
     private final Duration ttl;
     private final Duration pollInterval;
-    private final TaskManagerImpl manager;
     private final Cancellation cancellation;
 
     // The Vert.x context the tool is executed on
@@ -74,16 +73,16 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
     private Optional<String> cancellationReason;
     private final List<Consumer<Optional<String>>> cancellationActions;
 
-    TaskImpl(String id, String serverName, String toolName, Duration ttl, Duration pollInterval, TaskManagerImpl manager) {
+    TaskImpl(String id, String serverName, String toolName, Duration ttl, Duration pollInterval, String statusMessage) {
         this.id = Objects.requireNonNull(id);
         this.serverName = Objects.requireNonNull(serverName);
         this.toolName = Objects.requireNonNull(toolName);
         this.createdAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         this.ttl = ttl;
         this.pollInterval = Objects.requireNonNull(pollInterval);
-        this.manager = manager;
         this.cancellation = new TaskCancellation();
         this.status = TaskStatus.WORKING;
+        this.statusMessage = statusMessage;
         this.lastUpdatedAt = createdAt;
         this.outstandingInputRequests = new LinkedHashMap<>();
         this.usedInputRequestKeys = new HashSet<>();
@@ -140,17 +139,9 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
     // TaskContext
 
     @Override
-    public boolean isTaskAugmented() {
-        return true;
-    }
-
-    @Override
-    public void setStatusMessage(String statusMessage) {
-        synchronized (this) {
-            this.statusMessage = statusMessage;
-            touch();
-        }
-        manager.taskChanged(this);
+    public synchronized void setStatusMessage(String statusMessage) {
+        this.statusMessage = statusMessage;
+        touch();
     }
 
     @Override
@@ -158,14 +149,15 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
         return new InputRequestBuilder();
     }
 
+    @Override
+    public Cancellation cancellation() {
+        return cancellation;
+    }
+
     // Internal API
 
     void setContext(Context context) {
         this.context = context;
-    }
-
-    Cancellation cancellation() {
-        return cancellation;
     }
 
     boolean isExpired() {
@@ -185,7 +177,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             this.result = result;
             touch();
         }
-        manager.taskChanged(this);
         return true;
     }
 
@@ -209,7 +200,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             }
             touch();
         }
-        manager.taskChanged(this);
         return true;
     }
 
@@ -252,7 +242,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
                 }
             }
         });
-        manager.taskChanged(this);
         return true;
     }
 
@@ -283,7 +272,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             status = TaskStatus.INPUT_REQUIRED;
             touch();
         }
-        manager.taskChanged(this);
         return Uni.createFrom().completionStage(future);
     }
 
@@ -319,7 +307,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             CompletableFuture<InputResponses> future = toComplete;
             InputResponses value = responses;
             runOnContext(() -> future.complete(value));
-            manager.taskChanged(this);
         }
     }
 
@@ -467,49 +454,6 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
         @Override
         public Uni<InputResponses> send() {
             return requestInput(ordered);
-        }
-
-    }
-
-    /**
-     * The context of a task-augmented tool that is executed synchronously, i.e. not as a task.
-     */
-    public static final class NoTaskContext implements TaskContext {
-
-        public static final NoTaskContext INSTANCE = new NoTaskContext();
-
-        private NoTaskContext() {
-        }
-
-        @Override
-        public boolean isTaskAugmented() {
-            return false;
-        }
-
-        @Override
-        public String id() {
-            return null;
-        }
-
-        @Override
-        public TaskStatus status() {
-            return null;
-        }
-
-        @Override
-        public String statusMessage() {
-            return null;
-        }
-
-        @Override
-        public void setStatusMessage(String statusMessage) {
-            // no-op
-        }
-
-        @Override
-        public TaskInputRequest.Builder inputRequestBuilder() {
-            throw new IllegalStateException(
-                    "The tool is not executed as a task; the client did not declare the tasks extension capability");
         }
 
     }

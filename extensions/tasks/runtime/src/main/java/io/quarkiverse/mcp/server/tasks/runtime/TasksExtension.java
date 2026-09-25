@@ -6,6 +6,7 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.mcp.server.ClientCapability;
 import io.quarkiverse.mcp.server.InitialRequest;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
@@ -14,7 +15,6 @@ import io.quarkiverse.mcp.server.McpExtension;
 import io.quarkiverse.mcp.server.McpExtensionMethod;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.RawMessage;
-import io.quarkiverse.mcp.server.runtime.McpRequest;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.vertx.core.json.JsonObject;
@@ -90,13 +90,14 @@ public class TasksExtension {
         }
     }
 
-    static boolean supportsTasks(McpRequest mcpRequest) {
-        return supportsTasks(mcpRequest.connection());
-    }
-
     static boolean supportsTasks(McpConnection connection) {
         InitialRequest initialRequest = connection.initialRequest();
-        return initialRequest != null && initialRequest.supportsExtension(TaskManager.EXTENSION_ID);
+        if (initialRequest == null) {
+            return false;
+        }
+        // The extensions declared by the client are the properties of the "extensions" capability, keyed by id
+        ClientCapability extensions = initialRequest.getCapability("extensions");
+        return extensions != null && extensions.properties().containsKey(TaskManager.EXTENSION_ID);
     }
 
     /**

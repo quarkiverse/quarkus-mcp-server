@@ -91,16 +91,6 @@ public record InitialRequest(Implementation implementation, McpProtocolVersion p
     }
 
     /**
-     * @param extensionId the extension identifier, e.g. {@code io.modelcontextprotocol/tasks}
-     * @return {@code true} if the client declared the specified MCP extension under the {@code extensions} capability
-     * @see ClientCapability#EXTENSIONS
-     */
-    public boolean supportsExtension(String extensionId) {
-        ClientCapability extensions = getCapability(ClientCapability.EXTENSIONS);
-        return extensions != null && extensions.properties().containsKey(extensionId);
-    }
-
-    /**
      * @return the capability with the given name, or {@code null}
      */
     public ClientCapability getCapability(String name) {

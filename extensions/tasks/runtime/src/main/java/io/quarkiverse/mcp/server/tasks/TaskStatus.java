@@ -4,7 +4,7 @@ package io.quarkiverse.mcp.server.tasks;
  * The status of a task as defined by the <a href="https://modelcontextprotocol.io/extensions/tasks/overview">MCP Tasks</a>
  * extension.
  *
- * @see Task
+ * @see Tasks
  * @see TaskContext
  * @see TaskManager.TaskInfo
  */

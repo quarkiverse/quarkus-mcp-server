@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
+
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
@@ -16,8 +18,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.tasks.Task;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkus.test.QuarkusUnitTest;
 import io.vertx.core.json.JsonObject;
@@ -66,16 +69,21 @@ public class TaskExpiredTest extends McpServerTest {
 
     public static class MyTools {
 
-        @Task(ttl = "200ms", pollInterval = "50ms")
         @Tool(description = "A short-lived task")
-        String shortLived() {
-            return "ok";
+        String shortLived(Tasks tasks) {
+            throw tasks.newTask()
+                    .setTtl(Duration.ofMillis(200))
+                    .setPollInterval(Duration.ofMillis(50))
+                    .setHandler(task -> ToolResponse.success("ok"), false)
+                    .create();
         }
 
-        @Task(ttl = "0")
         @Tool(description = "A task with unlimited TTL")
-        String unlimited() {
-            return "ok";
+        String unlimited(Tasks tasks) {
+            throw tasks.newTask()
+                    .setTtl(Duration.ZERO)
+                    .setHandler(task -> ToolResponse.success("ok"), false)
+                    .create();
         }
 
     }

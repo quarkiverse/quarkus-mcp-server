@@ -17,10 +17,10 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.quarkiverse.mcp.server.tasks.TaskStatus;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpError;
@@ -66,7 +66,7 @@ public class TaskErrorsTest extends McpServerTest {
     }
 
     <A extends McpAssert<A>> void assertTaskErrors(McpTestClient<A, ?> client, boolean stateless) {
-        // A JSON-RPC error thrown by the tool -> failed
+        // A JSON-RPC error thrown by the handler -> failed
         String taskId = callToolAsTask(client, "failing");
         JsonObject failed = awaitStatus(client, taskId, stateless, TaskStatus.FAILED);
         JsonObject error = failed.getJsonObject("error");
@@ -115,12 +115,7 @@ public class TaskErrorsTest extends McpServerTest {
     }
 
     <A extends McpAssert<A>> void assertNoCapability(McpTestClient<A, ?> client, boolean stateless) {
-        // A task-augmented tool is executed synchronously if the client did not declare the capability
-        client.when()
-                .toolsCall("failing")
-                .withErrorAssert(e -> assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, e.code()))
-                .send()
-                .thenAssertResults();
+        // The tool decides to run synchronously if the client did not declare the capability
         client.when()
                 .toolsCall("toolError")
                 .withAssert(r -> {
@@ -138,9 +133,9 @@ public class TaskErrorsTest extends McpServerTest {
                 .send()
                 .thenAssertResults();
 
-        // ...unless the tool requires the capability
+        // ...but creating a task without the capability fails with -32021
         client.when()
-                .toolsCall("requiresTask")
+                .toolsCall("failing")
                 .withErrorAssert(TaskErrorsTest::assertMissingCapability)
                 .send()
                 .thenAssertResults();
@@ -169,44 +164,41 @@ public class TaskErrorsTest extends McpServerTest {
 
     public static class MyTools {
 
-        @Task
         @Tool(description = "Fails with a JSON-RPC error")
-        String failing() {
-            throw new McpException("Invalid input", JsonRpcErrorCodes.INVALID_PARAMS);
+        String failing(Tasks tasks) {
+            // Does not check isSupported() on purpose
+            throw tasks.newTask().setHandler(task -> {
+                throw new McpException("Invalid input", JsonRpcErrorCodes.INVALID_PARAMS);
+            }, false).create();
         }
 
-        @Task
         @Tool(description = "Fails unexpectedly")
-        String broken() {
-            throw new IllegalStateException("Boom");
+        String broken(Tasks tasks) {
+            throw tasks.newTask().setHandler(task -> {
+                throw new IllegalStateException("Boom");
+            }, false).create();
         }
 
-        @Task
         @Tool(description = "Fails with a tool error")
-        String toolError() {
-            throw new ToolCallException("Business error");
-        }
-
-        @Task
-        @Tool(description = "Falls back to the synchronous execution")
-        String sync(TaskContext task) {
-            assertFalse(task.isTaskAugmented());
-            assertNull(task.id());
-            assertNull(task.status());
-            // no-op
-            task.setStatusMessage("ignored");
-            try {
-                task.inputRequestBuilder();
-                throw new AssertionError("Not expected");
-            } catch (IllegalStateException expected) {
+        String toolError(Tasks tasks) {
+            if (!tasks.isSupported()) {
+                throw new ToolCallException("Business error");
             }
-            return "not a task";
+            throw tasks.newTask().setHandler(task -> {
+                throw new ToolCallException("Business error");
+            }, false).create();
         }
 
-        @Task(required = true)
-        @Tool(description = "Requires the tasks capability")
-        String requiresTask() {
-            return "task";
+        @Tool(description = "Falls back to the synchronous execution")
+        ToolResponse sync(Tasks tasks) {
+            assertFalse(tasks.isSupported());
+            try {
+                tasks.newTask();
+                throw new AssertionError("Not expected");
+            } catch (McpException expected) {
+                assertEquals(JsonRpcErrorCodes.MISSING_REQUIRED_CLIENT_CAPABILITY, expected.getJsonRpcErrorCode());
+            }
+            return ToolResponse.success("not a task");
         }
 
     }

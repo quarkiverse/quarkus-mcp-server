@@ -14,7 +14,7 @@ import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
 /**
- * A request for input from the client, sent while a {@linkplain Task task-augmented} tool is executed as a task.
+ * A request for input from the client, sent while a task handler is running.
  * <p>
  * When the request is {@linkplain #send() sent}, the task moves to the {@link TaskStatus#INPUT_REQUIRED} status and the
  * outstanding {@code inputRequests} are included in the {@code tasks/get} responses. The client provides the responses via

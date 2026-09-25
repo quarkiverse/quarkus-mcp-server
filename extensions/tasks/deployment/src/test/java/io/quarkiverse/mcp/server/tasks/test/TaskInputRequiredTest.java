@@ -22,9 +22,9 @@ import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.TaskStatus;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
@@ -134,20 +134,21 @@ public class TaskInputRequiredTest extends McpServerTest {
 
     public static class MyTools {
 
-        @Task
         @Tool(description = "Greets the user")
-        String greet(TaskContext task, Elicitation elicitation) {
-            InputResponses responses = task.inputRequestBuilder()
-                    .addElicitationRequest("name", elicitation.requestBuilder()
-                            .setMessage("Please enter your name.")
-                            .addSchemaProperty("name", new StringSchema(true))
-                            .build())
-                    .addRootsRequest("roots")
-                    .build()
-                    .sendAndAwait();
-            ElicitationResponse name = responses.getElicitationResponse("name");
-            String root = responses.getRootsResponse("roots").get(0).uri();
-            return "Hello, " + name.content().getString("name") + "! [" + root + "]";
+        String greet(Tasks tasks, Elicitation elicitation) {
+            throw tasks.newTask().setHandler(task -> {
+                InputResponses responses = task.inputRequestBuilder()
+                        .addElicitationRequest("name", elicitation.requestBuilder()
+                                .setMessage("Please enter your name.")
+                                .addSchemaProperty("name", new StringSchema(true))
+                                .build())
+                        .addRootsRequest("roots")
+                        .build()
+                        .sendAndAwait();
+                ElicitationResponse name = responses.getElicitationResponse("name");
+                String root = responses.getRootsResponse("roots").get(0).uri();
+                return ToolResponse.success("Hello, " + name.content().getString("name") + "! [" + root + "]");
+            }, false).create();
         }
 
     }

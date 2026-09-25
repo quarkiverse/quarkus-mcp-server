@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.runtime;
 
 import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.jboss.logging.Logger;
@@ -10,17 +9,11 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolManager;
-import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureManagerBase.FeatureExecutionContext;
-import io.quarkiverse.mcp.server.runtime.ToolCallInterceptor.ToolCall;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
-import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
-import io.smallrye.common.vertx.VertxContext;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -43,6 +36,7 @@ class ToolMessageHandler extends MessageHandler {
         if (cursor == null) {
             return Future.succeededFuture();
         }
+
         LOG.debugf("List tools [id: %s, cursor: %s]", id, cursor);
 
         McpServerRuntimeConfig serverConfig = config.servers().get(mcpRequest.serverName());
@@ -82,29 +76,9 @@ class ToolMessageHandler extends MessageHandler {
         }
         String toolName = params.getString("name");
         LOG.debugf("Call tool %s [id: %s]", toolName, id);
-
-        if (toolName != null && !manager.interceptors.isEmpty()) {
-            // Interceptors are only consulted for tools that exist and pass the filters
-            ToolInfo tool = manager.getTool(toolName, mcpRequest.serverName());
-            if (tool != null && manager.isAvailable(tool, mcpRequest, message)) {
-                ToolCall toolCall = new ToolCallImpl(tool, message, mcpRequest, responseMeta);
-                for (ToolCallInterceptor interceptor : manager.interceptors) {
-                    Future<Void> ret = interceptor.intercept(toolCall);
-                    if (ret != null) {
-                        return ret;
-                    }
-                }
-            }
-        }
-        return toolsCall(message, mcpRequest, responseMeta, toolName, null);
-    }
-
-    private Future<Void> toolsCall(JsonObject message, McpRequest mcpRequest, JsonObject responseMeta, String toolName,
-            Map<Class<?>, Object> customProviders) {
-        Object id = Messages.getId(message);
         try {
             Future<ToolResponse> fu = manager.execute(toolName,
-                    new FeatureExecutionContext(message, mcpRequest, null, customProviders));
+                    new FeatureExecutionContext(message, mcpRequest));
             return fu.compose(toolResponse -> {
                 if (toolResponse.isError()) {
                     mcpRequest.setTracingErrorResponse(true, null, null);
@@ -116,88 +90,6 @@ class ToolMessageHandler extends MessageHandler {
         } catch (McpException e) {
             return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
         }
-    }
-
-    private final class ToolCallImpl implements ToolCall {
-
-        private final ToolInfo tool;
-        private final JsonObject message;
-        private final McpRequest mcpRequest;
-        private final JsonObject responseMeta;
-
-        ToolCallImpl(ToolInfo tool, JsonObject message, McpRequest mcpRequest, JsonObject responseMeta) {
-            this.tool = tool;
-            this.message = message;
-            this.mcpRequest = mcpRequest;
-            this.responseMeta = responseMeta;
-        }
-
-        @Override
-        public ToolInfo tool() {
-            return tool;
-        }
-
-        @Override
-        public McpRequest mcpRequest() {
-            return mcpRequest;
-        }
-
-        @Override
-        public JsonObject message() {
-            return message;
-        }
-
-        @Override
-        public Object requestId() {
-            return Messages.getId(message);
-        }
-
-        @Override
-        public JsonObject responseMeta() {
-            return responseMeta;
-        }
-
-        @Override
-        public Future<Void> proceed(Map<Class<?>, Object> customProviders) {
-            return toolsCall(message, mcpRequest, responseMeta, tool.name(), customProviders);
-        }
-
-        @Override
-        public Future<ToolResponse> executeDetached(Map<Class<?>, Object> customProviders) {
-            Promise<ToolResponse> ret = Promise.promise();
-            // Create a new duplicated context and execute the tool on this context
-            Context context = VertxContext.createNewDuplicatedContext(manager.vertx.getOrCreateContext());
-            VertxContextSafetyToggle.setContextSafe(context, true);
-            context.runOnContext(v -> {
-                mcpRequest.contextStart();
-                Future<ToolResponse> fu;
-                try {
-                    fu = manager.execute(tool.name(),
-                            new FeatureExecutionContext(message, mcpRequest, null, customProviders));
-                } catch (Throwable e) {
-                    fu = Future.failedFuture(e);
-                }
-                fu.onComplete(r -> {
-                    try {
-                        mcpRequest.contextEnd(r.cause());
-                    } finally {
-                        if (r.succeeded()) {
-                            ret.complete(r.result());
-                        } else {
-                            ret.fail(r.cause());
-                        }
-                    }
-                });
-            });
-            return ret.future();
-        }
-
-        @Override
-        public JsonObject failureResponse(Throwable cause) {
-            return MessageHandler.failureResponse(requestId(), mcpRequest, cause, LOG, "Unable to call tool %s",
-                    tool.name());
-        }
-
     }
 
 }

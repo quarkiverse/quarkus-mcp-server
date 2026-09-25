@@ -215,18 +215,6 @@ public interface FeatureManager<INFO extends FeatureInfo> extends Iterable<INFO>
 
         McpConnection connection();
 
-        /**
-         * Returns an object supplied by an MCP extension for the current request, e.g. the task context of a tool executed
-         * as a task.
-         *
-         * @param <T> the type
-         * @param type the type of the object
-         * @return the object, or {@code null} if not available
-         */
-        default <T> T custom(Class<T> type) {
-            return null;
-        }
-
         McpLog log();
 
         Roots roots();

@@ -3,7 +3,7 @@
 include::includes/attributes.adoc[]
 :diataxis-type: howto
 
-This guide covers the built-in support for the https://modelcontextprotocol.io/extensions/tasks/overview[MCP Tasks] extension (`io.modelcontextprotocol/tasks`): how to make a tool _task-augmented_, how a task is executed and polled, how to report progress and request input while a task is running, and how cancellation works.
+This guide covers the support for the https://modelcontextprotocol.io/extensions/tasks/overview[MCP Tasks] extension (`io.modelcontextprotocol/tasks`): how a tool creates a task, how a task is executed and polled, how to report progress and request input while a task is running, and how cancellation works.
 
 == What are MCP Tasks?
 
@@ -51,39 +51,49 @@ The Tasks extension is provided by a separate module. Add the following dependen
 The API lives in the `io.quarkiverse.mcp.server.tasks` package.
 As soon as the dependency is present, the `io.modelcontextprotocol/tasks` extension is advertised under `capabilities.extensions` of every server configuration, and the `tasks/get`, `tasks/update` and `tasks/cancel` methods are served.
 
-== Making a tool task-augmented
+== Creating a task
 
-Annotate a `@Tool` method with `@Task`:
+Declare a `Tasks` parameter in a `@Tool` method and create a task with a handler that performs the work:
 
 [source,java]
 ----
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 
 public class LspTools {
 
-    @Task(ttl = "1h", pollInterval = "5s") // <1>
     @Tool(description = "Finds the references of a symbol")
-    String references(String file, TaskContext task) { // <2>
-        task.setStatusMessage("Installing the runtime..."); // <3>
-        installRuntime();
-        task.setStatusMessage("Starting the language server...");
-        startLanguageServer();
-        return findReferences(file);
+    ToolResponse references(String file, Tasks tasks) { // <1>
+        if (!tasks.isSupported()) { // <2>
+            return findReferences(file);
+        }
+        throw tasks.newTask()
+                .setTtl(Duration.ofHours(1)) // <3>
+                .setPollInterval(Duration.ofSeconds(5))
+                .setHandler(task -> { // <4>
+                    task.setStatusMessage("Installing the runtime..."); // <5>
+                    installRuntime();
+                    task.setStatusMessage("Starting the language server...");
+                    startLanguageServer();
+                    return findReferences(file);
+                }, false)
+                .create(); // <6>
     }
 }
 ----
-<1> The tool is _task-augmented_. The `ttl` and `pollInterval` are optional; see <<task-options>>.
-<2> A `TaskContext` parameter gives access to the task the tool is executed as.
-<3> The status message is included in the `tasks/get` responses and pushed to subscribed clients.
+<1> `Tasks` is injected by the extension; it is bound to the current request.
+<2> The client may not support tasks; in that case the tool simply does the work synchronously.
+<3> The `ttl` and `pollInterval` are optional; see <<task-options>>.
+<4> A blocking handler, executed on a worker thread; the `TaskContext` gives access to the task.
+<5> The status message is included in the `tasks/get` responses.
+<6> `create()` durably creates the task, starts the handler asynchronously and returns a `CreateTaskException`. The exception is thrown from the tool method so that the server responds with the `CreateTaskResult`.
 
-When a client that declared the tasks extension calls the tool, the server:
+When the tool throws the `CreateTaskException`, the server:
 
-. durably creates a task in the `working` status,
-. immediately responds with a `CreateTaskResult`,
-. executes the tool asynchronously, and
-. stores the `CallToolResult` in the task once the tool completes.
+. responds immediately with a `CreateTaskResult` - the exception is an `McpResultException`, see xref:guides-error-handling.adoc[Error Handling],
+. executes the handler asynchronously, and
+. stores the `ToolResponse` returned by the handler in the task once it completes.
 
 [source,json]
 ----
@@ -102,7 +112,40 @@ When a client that declared the tasks extension calls the tool, the server:
 }
 ----
 
-Everything else stays the same: the tool is a regular `@Tool` method that can declare arguments, `McpLog`, `Progress`, `Cancellation` and the other xref:guides-implementing-tools.adoc#_method_parameters[provider parameters], return any xref:reference-return-types.adoc[supported type], and use guardrails, filters and `@McpServer` bindings.
+=== Execution model of the handler
+
+The handler determines the xref:concepts-architecture.adoc#_execution_model[execution model], following the same pattern as the programmatic feature definitions such as `ToolManager.ToolDefinition`:
+
+[cols="1,1"]
+|===
+|Handler |Execution model
+
+|`setHandler(handler, false)`
+|Blocking; executed on a worker thread (`ExecutionModel.WORKER_THREAD`).
+
+|`setHandler(handler, true)`
+|Blocking; executed on a virtual thread (`ExecutionModel.VIRTUAL_THREAD`).
+
+|`setAsyncHandler(handler)`
+|Non-blocking; executed on the event loop (`ExecutionModel.EVENT_LOOP`), returns a `Uni<ToolResponse>`.
+|===
+
+A non-blocking tool may return the task with `createAsync()`, a convenience equivalent to `Uni.createFrom().failure(create())`:
+
+[source,java]
+----
+@Tool(description = "Runs a pipeline")
+Uni<ToolResponse> runPipeline(String repo, Tasks tasks) {
+    if (!tasks.isSupported()) {
+        return run(repo);
+    }
+    return tasks.newTask()
+            .setAsyncHandler(task -> run(repo))
+            .createAsync();
+}
+----
+
+The handler is executed with its own CDI request context and, if security is enabled, with the `SecurityIdentity` of the request that created the task.
 
 [[capability]]
 === Capability negotiation
@@ -120,7 +163,7 @@ The tasks extension is advertised under `capabilities.extensions` of every serve
 }
 ----
 
-A task is only created for a client that declared the extension in its own capabilities - in the `initialize` request, or in the per-request `io.modelcontextprotocol/clientCapabilities` metadata for stateless clients:
+`Tasks#isSupported()` returns `true` only if the client declared the extension in its own capabilities - in the `initialize` request, or in the per-request `io.modelcontextprotocol/clientCapabilities` metadata for stateless clients:
 
 [source,json]
 ----
@@ -142,10 +185,8 @@ A task is only created for a client that declared the extension in its own capab
 }
 ----
 
-If the client did **not** declare the extension, the tool is executed synchronously by default, i.e. the standard `CallToolResult` is returned once the tool completes.
-In that case `TaskContext#isTaskAugmented()` returns `false`, `setStatusMessage()` is a no-op and `inputRequestBuilder()` throws an `IllegalStateException`.
-
-Set `@Task(required = true)` if the tool must not be executed synchronously; the call then fails with the error code `-32021` (Missing Required Client Capability) as mandated by the specification:
+The tool decides what to do for a client that did **not** declare the extension: typically it does the work synchronously and returns the standard `CallToolResult`.
+If the tool cannot do so, it calls `newTask()` anyway; the call then fails with the error code `-32021` (Missing Required Client Capability) as mandated by the specification:
 
 [source,json]
 ----
@@ -169,19 +210,20 @@ Set `@Task(required = true)` if the tool must not be executed synchronously; the
 
 [cols="1,1,3"]
 |===
-|Attribute |Default |Description
+|Method |Default |Description
 
-|`ttl`
+|`setTtl(Duration)`
 |`quarkus.mcp.server.tasks.default-ttl` (`1h`)
 |The time-to-live of the task, measured from its creation and advertised as `ttlMs`. Once elapsed, the task is discarded - including its result - regardless of its status. A zero or negative duration means _unlimited_ (`ttlMs: null`).
 
-|`pollInterval`
+|`setPollInterval(Duration)`
 |`quarkus.mcp.server.tasks.default-poll-interval` (`5s`)
 |The polling interval suggested to the client, advertised as `pollIntervalMs`. It must be positive.
-|===
 
-Both values are parsed with the same rules as `java.time.Duration` configuration properties, e.g. `30s`, `10m`, `2h` or `PT1H30M`.
-An invalid duration results in a *build failure*.
+|`setStatusMessage(String)`
+|none
+|The initial status message of the task.
+|===
 
 NOTE: Tasks are kept in memory. Expired tasks are removed periodically and when they are accessed; a task with an unlimited TTL is never removed.
 
@@ -195,16 +237,16 @@ The response carries the current status and, for terminal statuses, the final re
 |Status |Meaning
 
 |`working`
-|The tool is being executed.
+|The handler is being executed.
 
 |`input_required`
 |The tool is waiting for input from the client; see <<input>>.
 
 |`completed`
-|The tool completed; the `result` field contains the `CallToolResult`. This includes tool calls that returned `isError: true` (e.g. a `ToolCallException`).
+|The handler completed; the `result` field contains the `CallToolResult`. This includes handlers that returned a `ToolResponse` with `isError: true` or threw a `ToolCallException`.
 
 |`failed`
-|The tool failed with a JSON-RPC error (e.g. an `McpException`, or an unexpected exception which is reported as an internal error); the `error` field contains the JSON-RPC error.
+|The handler failed with a JSON-RPC error (e.g. an `McpException`, or an unexpected exception which is reported as an internal error); the `error` field contains the JSON-RPC error.
 
 |`cancelled`
 |The task was cancelled; see <<cancellation>>.
@@ -243,7 +285,7 @@ NOTE: A task is bound to the xref:guides-multiple-servers.adoc[server configurat
 == Requesting input while a task is running
 
 A running task may need input from the client - a confirmation, a form, an LLM completion or the list of roots.
-Rather than sending a server-initiated request over the connection, a task-augmented tool uses `TaskContext#inputRequestBuilder()`:
+Rather than sending a server-initiated request over the connection, the handler uses `TaskContext#inputRequestBuilder()`:
 
 [source,java]
 ----
@@ -251,29 +293,30 @@ import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
+import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 
 public class GreetingTools {
 
-    @Task
     @Tool(description = "Greets the user")
-    String greet(TaskContext task, Elicitation elicitation) {
-        InputResponses responses = task.inputRequestBuilder()
-                .addElicitationRequest("name", elicitation.requestBuilder() // <1>
-                        .setMessage("Please enter your name.")
-                        .addSchemaProperty("name", new StringSchema(true))
-                        .build())
-                .addRootsRequest("roots")
-                .build()
-                .sendAndAwait(); // <2>
-        String name = responses.getElicitationResponse("name").content().getString("name"); // <3>
-        return "Hello, " + name + "!";
+    ToolResponse greet(Tasks tasks, Elicitation elicitation) {
+        throw tasks.newTask().setHandler(task -> {
+            InputResponses responses = task.inputRequestBuilder()
+                    .addElicitationRequest("name", elicitation.requestBuilder() // <1>
+                            .setMessage("Please enter your name.")
+                            .addSchemaProperty("name", new StringSchema(true))
+                            .build())
+                    .addRootsRequest("roots")
+                    .build()
+                    .sendAndAwait(); // <2>
+            String name = responses.getElicitationResponse("name").content().getString("name"); // <3>
+            return ToolResponse.success("Hello, " + name + "!");
+        }, false).create();
     }
 }
 ----
 <1> The elicitation request is built as usual but it is **not** sent directly; it is added to the input request under a server-assigned key.
-<2> The task moves to the `input_required` status. `sendAndAwait()` blocks until all the requests are fulfilled; use `send()` to obtain a `Uni<InputResponses>` in a non-blocking tool.
+<2> The task moves to the `input_required` status. `sendAndAwait()` blocks until all the requests are fulfilled; use `send()` to obtain a `Uni<InputResponses>` in a non-blocking handler.
 <3> The responses are keyed by the same identifiers.
 
 While the task is in the `input_required` status, the outstanding requests are included in the `tasks/get` responses, in the same shape as the `inputRequests` of a xref:concepts-mcp-protocol.adoc#_multi_round_trip_request_mrtr[Multi Round-Trip Request]:
@@ -333,7 +376,7 @@ Each request key must be unique over the lifetime of the task.
 
 [IMPORTANT]
 ====
-Within a task, always use `TaskContext#inputRequestBuilder()` to interact with the client.
+Within a handler, always use `TaskContext#inputRequestBuilder()` to interact with the client.
 Sending an `ElicitationRequest` or `SamplingRequest` directly only works over stateful connections that support server-initiated requests, and the Multi Round-Trip Request pattern (`InputRequiredException`) is not applicable once a task has been created.
 ====
 
@@ -342,25 +385,24 @@ Sending an `ElicitationRequest` or `SamplingRequest` directly only works over st
 
 A client cancels a task with `tasks/cancel`.
 The request is acknowledged immediately and the task moves to the `cancelled` status.
-Cancellation is _cooperative_: the tool is not forced to stop, but it is notified through the standard `Cancellation` API:
+Cancellation is _cooperative_: the handler is not forced to stop, but it is notified through the standard `Cancellation` API available from `TaskContext#cancellation()`:
 
 [source,java]
 ----
-import io.quarkiverse.mcp.server.Cancellation;
-
-@Task
 @Tool(description = "Indexes the workspace")
-String index(Cancellation cancellation) {
-    for (Path file : files()) {
-        cancellation.skipProcessingIfCancelled(); // <1>
-        index(file);
-    }
-    return "Indexed";
+ToolResponse index(Tasks tasks) {
+    throw tasks.newTask().setHandler(task -> {
+        for (Path file : files()) {
+            task.cancellation().skipProcessingIfCancelled(); // <1>
+            index(file);
+        }
+        return ToolResponse.success("Indexed");
+    }, false).create();
 }
 ----
 <1> Throws an `OperationCancellationException` if the task was cancelled; the exception is ignored by the server.
 
-A result produced by the tool after the cancellation is discarded.
+A result produced by the handler after the cancellation is discarded.
 A task waiting for input is cancelled as well: the pending `TaskInputRequest#send()` fails with an `OperationCancellationException`.
 
 NOTE: The `notifications/cancelled` notification is not used for task cancellation, as mandated by the specification.
@@ -383,65 +425,10 @@ void cancelAll() {
 }
 ----
 
-== Status notifications
+== Limitations
 
-Instead of polling, a stateless client (protocol version `2026-07-28` and later) may subscribe to the status notifications of specific tasks with `subscriptions/listen`:
-
-[source,json]
-----
-{
-  "jsonrpc": "2.0",
-  "id": 6,
-  "method": "subscriptions/listen",
-  "params": {
-    "notifications": {
-      "taskIds": ["786512e2-9e0d-44bd-8f29-789f320fe840"]
-    }
-  }
-}
-----
-
-The server acknowledges the task ids it agreed to notify about (unknown ids are omitted) and then pushes a `notifications/tasks` notification on every status change, including status message updates.
-Each notification carries the complete task state, identical to what `tasks/get` would return at that moment.
-Requesting task notifications without declaring the tasks extension capability results in a `-32021` error.
-
-See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscription Notifications] for details on `subscriptions/listen`.
-
-== Programmatic registration
-
-A tool registered with the `ToolManager` is made task-augmented with `TaskManager#setTaskOptions()`:
-
-[source,java]
-----
-import java.time.Duration;
-
-import io.quarkiverse.mcp.server.McpServer;
-import io.quarkiverse.mcp.server.ToolManager;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
-import io.quarkiverse.mcp.server.tasks.TaskManager;
-import io.quarkiverse.mcp.server.tasks.TaskOptions;
-
-@Inject
-ToolManager toolManager;
-
-@Inject
-TaskManager taskManager;
-
-void register() {
-    taskManager.setTaskOptions("index", McpServer.DEFAULT,
-            new TaskOptions(false, Duration.ofHours(1), Duration.ofSeconds(5))); // <1>
-    toolManager.newTool("index")
-            .setDescription("Indexes the workspace")
-            .setHandler(args -> {
-                TaskContext task = args.custom(TaskContext.class); // <2>
-                task.setStatusMessage("Indexing...");
-                return ToolResponse.success("Indexed");
-            }, false)
-            .register();
-}
-----
-<1> `required`, `ttl` and `pollInterval`; `null` durations use the configured defaults. `TaskOptions.defaults()` is a convenient shortcut. Pass `null` to make the tool synchronous again.
-<2> `ToolArguments#custom(TaskContext.class)` gives access to the task.
+* Task status notifications (`notifications/tasks` via `subscriptions/listen`) are not supported yet; clients poll the task with `tasks/get`.
+* `Tasks` can only be injected into `@Tool` methods; tools registered programmatically via `ToolManager` cannot create tasks yet.
 
 == Streamable HTTP routing headers
 
