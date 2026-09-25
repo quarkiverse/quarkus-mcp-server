@@ -10,12 +10,12 @@ import org.jboss.jandex.DotName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.FeatureManager.RequestFeatureArguments;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**

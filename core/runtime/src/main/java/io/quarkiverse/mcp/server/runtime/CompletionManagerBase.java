@@ -17,6 +17,7 @@ import io.quarkiverse.mcp.server.CompleteContext;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
 import io.quarkiverse.mcp.server.CompletionResponse;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.TransportHint;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;

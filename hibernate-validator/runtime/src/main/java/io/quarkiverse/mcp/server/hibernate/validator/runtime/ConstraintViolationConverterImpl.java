@@ -7,11 +7,11 @@ import jakarta.inject.Singleton;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.DefaultBean;
@@ -29,7 +29,7 @@ class ConstraintViolationConverterImpl implements ConstraintViolationConverter {
                 .stream()
                 .map(ConstraintViolationConverterImpl::constraintViolationToString)
                 .collect(Collectors.joining(", "));
-        if (context.feature() == Feature.TOOL) {
+        if (context.feat() == Feature.TOOL) {
             // Special handling for tools
             McpServerRuntimeConfig serverConfig = config.servers().get(context.serverName());
             return switch (serverConfig.tools().inputValidationError()) {

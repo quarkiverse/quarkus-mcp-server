@@ -113,15 +113,17 @@ However, it is possible to implement a custom CDI bean that implements the `io.q
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
 import io.quarkiverse.mcp.server.ToolCallException;
 import jakarta.inject.Singleton;
+import jakarta.validation.ConstraintViolationException;
 
-@Singleton <1>
-public MyConstraintViolationConverter implements ConstraintViolationConverter {
+@Singleton // <1>
+public class MyConstraintViolationConverter implements ConstraintViolationConverter {
 
    @Override
-   public Exception convert(ConstraintViolationException exception) {
-      return new ToolCallException("Something went wrong!"); <2>
+   public Exception convert(ConstraintViolationException exception, FeatureContext context) { // <2>
+      return new ToolCallException("Something went wrong!"); // <3>
    }
 }
 ----
 <1> Use the `@Singleton` scope to define a bean.
-<2> Turn the `ConstraintViolationException` into a business error with the specified message.
+<2> The `FeatureContext` provides the `Feature` the validated method represents (`context.feat()`) and the server name (`context.serverName()`).
+<3> Turn the `ConstraintViolationException` into a business error with the specified message.

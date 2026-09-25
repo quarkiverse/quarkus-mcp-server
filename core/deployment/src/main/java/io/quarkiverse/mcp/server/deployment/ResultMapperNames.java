@@ -1,13 +1,13 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.PROMPT_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE_TEMPLATE_COMPLETE;
 
 import java.util.function.Function;
 
 import org.jboss.jandex.DotName;
 
-import io.quarkiverse.mcp.server.runtime.Feature;
+import io.quarkiverse.mcp.server.Feature;
 
 final class ResultMapperNames {
 

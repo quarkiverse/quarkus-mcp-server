@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FilterContext;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;

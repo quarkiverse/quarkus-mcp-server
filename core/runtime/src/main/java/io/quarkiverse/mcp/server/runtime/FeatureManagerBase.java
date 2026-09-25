@@ -40,6 +40,7 @@ import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.FeatureManager;
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;

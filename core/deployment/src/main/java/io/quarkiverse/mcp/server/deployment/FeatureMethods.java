@@ -1,13 +1,13 @@
 package io.quarkiverse.mcp.server.deployment;
 
-import static io.quarkiverse.mcp.server.runtime.Feature.EXTENSION_METHOD;
-import static io.quarkiverse.mcp.server.runtime.Feature.NOTIFICATION;
-import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT;
-import static io.quarkiverse.mcp.server.runtime.Feature.PROMPT_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE;
-import static io.quarkiverse.mcp.server.runtime.Feature.RESOURCE_TEMPLATE_COMPLETE;
-import static io.quarkiverse.mcp.server.runtime.Feature.TOOL;
+import static io.quarkiverse.mcp.server.Feature.EXTENSION_METHOD;
+import static io.quarkiverse.mcp.server.Feature.NOTIFICATION;
+import static io.quarkiverse.mcp.server.Feature.PROMPT;
+import static io.quarkiverse.mcp.server.Feature.PROMPT_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE_TEMPLATE;
+import static io.quarkiverse.mcp.server.Feature.RESOURCE_TEMPLATE_COMPLETE;
+import static io.quarkiverse.mcp.server.Feature.TOOL;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -32,9 +32,9 @@ import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type.Kind;
 
 import io.quarkiverse.mcp.server.ExecutionModel;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.ResourceTemplateArg;
-import io.quarkiverse.mcp.server.runtime.Feature;
 import io.quarkiverse.mcp.server.runtime.FeatureArgument.Provider;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.VariableMatcher;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;

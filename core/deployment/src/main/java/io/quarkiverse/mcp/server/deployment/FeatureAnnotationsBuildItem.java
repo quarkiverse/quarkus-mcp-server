@@ -8,7 +8,7 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 
-import io.quarkiverse.mcp.server.runtime.Feature;
+import io.quarkiverse.mcp.server.Feature;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.builder.item.SimpleBuildItem;
 
