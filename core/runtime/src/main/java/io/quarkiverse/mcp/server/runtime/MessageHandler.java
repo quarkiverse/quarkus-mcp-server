@@ -18,26 +18,6 @@ public abstract class MessageHandler {
 
     protected Future<Void> handleFailure(Object requestId, Sender sender, McpRequest mcpRequest, Throwable cause,
             Logger logger, String errorMessage, String featureId, JsonObject responseMeta) {
-        JsonObject response = failureResponse(requestId, mcpRequest, cause, logger, errorMessage, featureId);
-        if (response == null) {
-            // The operation was cancelled - skip processing
-            return Future.succeededFuture();
-        }
-        JsonObject result = response.getJsonObject("result");
-        if (result != null) {
-            return sender.sendResult(requestId, result, responseMeta);
-        }
-        return sender.send(response);
-    }
-
-    /**
-     * Converts an execution failure into a JSON-RPC response message.
-     *
-     * @return the JSON-RPC response message with either the {@code result} (for an {@link McpResultException}) or the
-     *         {@code error}, or {@code null} if the operation was cancelled
-     */
-    static JsonObject failureResponse(Object requestId, McpRequest mcpRequest, Throwable cause,
-            Logger logger, String errorMessage, String featureId) {
         if (cause instanceof McpResultException resultException) {
             JsonObject result;
             try {
@@ -45,29 +25,36 @@ public abstract class MessageHandler {
                 if (result == null) {
                     throw new IllegalStateException(resultException.getClass().getName() + "#result() must not return null");
                 }
-                // The result is owned by the (possibly external) exception and the payload may be enriched in place later,
-                // so defensively copy it
-                result = result.copy();
+                // The result is owned by the (possibly external) exception; sendResult() enriches the payload in place, so
+                // defensively copy it only when it would actually be mutated (resultType added or response meta merged)
+                if (responseMeta != null || !result.containsKey("resultType")) {
+                    result = result.copy();
+                }
             } catch (RuntimeException e) {
                 logger.errorf(e, "Unable to obtain the result from %s [%s]", resultException.getClass().getName(), featureId);
                 mcpRequest.setTracingErrorResponse(false, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
-                return Messages.newError(requestId, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
+                return sender.sendInternalError(requestId);
             }
-            return Messages.newResult(requestId, result);
+            return sender.sendResult(requestId, result, responseMeta);
         } else if (cause instanceof McpException mcp) {
             mcpRequest.setTracingErrorResponse(false, mcp.getJsonRpcErrorCode(), mcp.getMessage());
-            return Messages.newError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage(), mcp.getData());
+            if (mcp.getData() != null) {
+                return sender.send(
+                        Messages.newError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage(), mcp.getData()));
+            }
+            return sender.sendError(requestId, mcp.getJsonRpcErrorCode(), mcp.getMessage());
         } else if (cause instanceof Cancellation.OperationCancellationException
                 || cause instanceof org.mcpjava.server.Cancellation.OperationCancelledException) {
             LOG.debugf("Operation for request %s was cancelled", requestId);
-            return null;
+            // Skip processing
+            return Future.succeededFuture();
         } else if (Failures.isSecurityFailure(cause)) {
             mcpRequest.setTracingErrorResponse(false, JsonRpcErrorCodes.SECURITY_ERROR, cause.toString());
-            return Messages.newError(requestId, JsonRpcErrorCodes.SECURITY_ERROR, cause.toString());
+            return sender.sendError(requestId, JsonRpcErrorCodes.SECURITY_ERROR, cause.toString());
         } else {
             logger.errorf(cause, errorMessage, featureId);
             mcpRequest.setTracingErrorResponse(false, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
-            return Messages.newError(requestId, JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
+            return sender.sendInternalError(requestId);
         }
     }
 

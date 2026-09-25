@@ -25,14 +25,14 @@ final class TaskTestSupport {
     /**
      * The client capability declaring the tasks extension.
      */
-    static final ClientCapability TASKS_CAPABILITY = new ClientCapability(ClientCapability.EXTENSIONS,
+    static final ClientCapability TASKS_CAPABILITY = new ClientCapability("extensions",
             Map.of(TaskManager.EXTENSION_ID, Map.of()));
 
     /**
      * @return the {@code io.modelcontextprotocol/clientCapabilities} object declaring the tasks extension
      */
     static JsonObject tasksClientCapabilities() {
-        return new JsonObject().put(ClientCapability.EXTENSIONS,
+        return new JsonObject().put("extensions",
                 new JsonObject().put(TaskManager.EXTENSION_ID, new JsonObject()));
     }
 

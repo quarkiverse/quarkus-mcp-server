@@ -20,23 +20,20 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
-import io.quarkiverse.mcp.server.ToolManager;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.tasks.Task;
-import io.quarkiverse.mcp.server.tasks.TaskContext;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
-import io.quarkiverse.mcp.server.tasks.TaskOptions;
 import io.quarkiverse.mcp.server.tasks.TaskStatus;
+import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
 import io.quarkus.test.QuarkusUnitTest;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 public class TaskToolTest extends McpServerTest {
@@ -45,9 +42,6 @@ public class TaskToolTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .overrideConfigKey("quarkus.mcp.server.tasks.default-poll-interval", "100ms")
             .withApplicationRoot(root -> root.addClasses(MyTools.class, TaskTestSupport.class));
-
-    @Inject
-    ToolManager toolManager;
 
     @Inject
     TaskManager taskManager;
@@ -84,48 +78,28 @@ public class TaskToolTest extends McpServerTest {
     }
 
     @Test
-    public void testProgrammaticTool() {
-        // The task options are registered before the tool so that the tool is task-augmented as soon as it is available
-        taskManager.setTaskOptions("dynamicTask", McpServer.DEFAULT,
-                new TaskOptions(false, Duration.ofMinutes(5), Duration.ofMillis(200)));
-        assertTrue(taskManager.getTaskOptions("dynamicTask", McpServer.DEFAULT).isPresent());
-        toolManager.newTool("dynamicTask")
-                .setDescription("A programmatically registered task-augmented tool")
-                .setHandler(args -> {
-                    TaskContext task = args.custom(TaskContext.class);
-                    task.setStatusMessage("Working hard");
-                    return ToolResponse.success(new TextContent("dynamic:" + task.id()));
-                }, false)
-                .register();
-        try {
-            try (var client = McpAssured.newStreamableClient()
-                    .setStateless()
-                    .setClientCapabilities(TASKS_CAPABILITY)
-                    .build()
-                    .connect()) {
-                String taskId = callToolAsTask(client, "dynamicTask");
-                JsonObject task = awaitStatus(client, taskId, true, TaskStatus.COMPLETED);
-                assertEquals(300_000L, task.getLong("ttlMs"));
-                assertEquals(200L, task.getLong("pollIntervalMs"));
-                assertEquals("Working hard", task.getString("statusMessage"));
-                assertEquals("dynamic:" + taskId,
-                        task.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text"));
-            }
-            // The tool is executed synchronously for a client without the capability
-            try (var client = McpAssured.newConnectedStreamableClient()) {
-                client.when()
-                        .toolsCall("dynamicTask")
-                        .withAssert(r -> {
-                            assertFalse(r.isError());
-                            assertEquals("dynamic:null", r.firstContent().asText().text());
-                        })
-                        .send()
-                        .thenAssertResults();
-            }
-        } finally {
-            toolManager.removeTool("dynamicTask");
-            taskManager.setTaskOptions("dynamicTask", McpServer.DEFAULT, null);
-            assertTrue(taskManager.getTaskOptions("dynamicTask", McpServer.DEFAULT).isEmpty());
+    public void testAsyncAndVirtualThreadHandlers() {
+        try (var client = McpAssured.newStreamableClient()
+                .setStateless()
+                .setClientCapabilities(TASKS_CAPABILITY)
+                .build()
+                .connect()) {
+            // A non-blocking handler executed on the event loop
+            String taskId = callToolAsTask(client, "asyncTask");
+            JsonObject completed = awaitStatus(client, taskId, true, TaskStatus.COMPLETED);
+            assertEquals("async:" + taskId,
+                    completed.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text"));
+            assertEquals(300_000L, completed.getLong("ttlMs"));
+            assertEquals(200L, completed.getLong("pollIntervalMs"));
+            assertEquals("Initial", completed.getString("statusMessage"));
+
+            // A blocking handler executed on a virtual thread; on JDKs without virtual threads (< 21) Quarkus falls back
+            // to a regular worker thread
+            boolean virtualThreadsSupported = Runtime.version().feature() >= 21;
+            taskId = callToolAsTask(client, "virtualThreadTask");
+            completed = awaitStatus(client, taskId, true, TaskStatus.COMPLETED);
+            assertEquals("virtual:" + virtualThreadsSupported,
+                    completed.getJsonObject("result").getJsonArray("content").getJsonObject(0).getString("text"));
         }
     }
 
@@ -140,7 +114,6 @@ public class TaskToolTest extends McpServerTest {
 
     <A extends McpAssert<A>> void assertTaskTool(McpTestClient<A, ?> client, boolean stateless) {
         MyTools.LATCH = new CountDownLatch(1);
-        MyTools.OBSERVED_STATUS_MESSAGE = null;
 
         // A regular tool is executed synchronously
         client.when()
@@ -150,7 +123,7 @@ public class TaskToolTest extends McpServerTest {
                 .send()
                 .thenAssertResults();
 
-        // A task-augmented tool returns a CreateTaskResult
+        // A tool that creates a task returns a CreateTaskResult
         String taskId = callToolAsTask(client, "longRunning", Map.of("value", 42));
 
         TaskManager.TaskInfo info = taskManager.getTask(taskId);
@@ -168,7 +141,7 @@ public class TaskToolTest extends McpServerTest {
         assertEquals(100L, working.getLong("pollIntervalMs"));
         assertNull(working.getJsonObject("result"));
 
-        // Release the tool
+        // Release the handler
         MyTools.LATCH.countDown();
 
         JsonObject completed = awaitStatus(client, taskId, stateless, TaskStatus.COMPLETED);
@@ -186,34 +159,55 @@ public class TaskToolTest extends McpServerTest {
         JsonObject again = getTask(client, taskId, stateless);
         assertEquals(TaskStatus.COMPLETED.jsonValue(), again.getString("status"));
         assertEquals(result, again.getJsonObject("result"));
-
-        // The statusMessage may be set for a working task
-        assertEquals("Working: 42", MyTools.OBSERVED_STATUS_MESSAGE);
     }
 
     public static class MyTools {
 
         static volatile CountDownLatch LATCH = new CountDownLatch(1);
 
-        static volatile String OBSERVED_STATUS_MESSAGE;
-
         @Tool(description = "Echo")
         String echo(String message) {
             return message;
         }
 
-        @Task(ttl = "10m")
         @Tool(description = "A long-running tool")
-        String longRunning(@ToolArg(description = "Value") int value, TaskContext task) throws InterruptedException {
-            assertTrue(task.isTaskAugmented());
-            assertEquals(TaskStatus.WORKING, task.status());
-            task.setStatusMessage("Working: " + value);
-            OBSERVED_STATUS_MESSAGE = task.statusMessage();
-            if (!LATCH.await(10, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("Latch not released");
-            }
-            task.setStatusMessage("Finished");
-            return "done:" + value + ":" + task.id();
+        String longRunning(@ToolArg(description = "Value") int value, Tasks tasks) {
+            assertTrue(tasks.isSupported());
+            throw tasks.newTask()
+                    .setTtl(Duration.ofMinutes(10))
+                    .setHandler(task -> {
+                        assertEquals(TaskStatus.WORKING, task.status());
+                        task.setStatusMessage("Working: " + value);
+                        try {
+                            if (!LATCH.await(10, TimeUnit.SECONDS)) {
+                                throw new IllegalStateException("Latch not released");
+                            }
+                        } catch (InterruptedException e) {
+                            throw new IllegalStateException(e);
+                        }
+                        task.setStatusMessage("Finished");
+                        return ToolResponse.success("done:" + value + ":" + task.id());
+                    }, false)
+                    .create();
+        }
+
+        @Tool(description = "A non-blocking task")
+        Uni<ToolResponse> asyncTask(Tasks tasks) {
+            return tasks.newTask()
+                    .setTtl(Duration.ofMinutes(5))
+                    .setPollInterval(Duration.ofMillis(200))
+                    .setStatusMessage("Initial")
+                    .setAsyncHandler(task -> Uni.createFrom().item(ToolResponse.success("async:" + task.id())))
+                    .createAsync();
+        }
+
+        @Tool(description = "A task executed on a virtual thread")
+        ToolResponse virtualThreadTask(Tasks tasks) {
+            throw tasks.newTask()
+                    .setHandler(task -> ToolResponse.success(
+                            new TextContent("virtual:" + Thread.currentThread().getClass().getName().contains("Virtual"))),
+                            true)
+                    .create();
         }
 
     }

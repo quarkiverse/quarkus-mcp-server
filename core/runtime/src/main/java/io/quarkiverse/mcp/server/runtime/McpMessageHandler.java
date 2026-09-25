@@ -38,8 +38,6 @@ import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.Icon;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig.ServerInfo;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig.InvalidServerNameStrategy;
-import io.quarkus.arc.Arc;
-import io.quarkus.arc.InstanceHandle;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
@@ -99,8 +97,6 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final ConcurrentHashMap<String, JsonObject> responseServerInfoCache = new ConcurrentHashMap<>();
 
-    private final List<SubscriptionFilterExtension> subscriptionFilterExtensions;
-
     protected McpMessageHandler(McpServersRuntimeConfig config, ConnectionManager connectionManager,
             PromptManagerImpl promptManager,
             ToolManagerImpl toolManager, ResourceManagerImpl resourceManager,
@@ -144,8 +140,6 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.mcpRequestValidator = mcpRequestValidator;
         this.cancellationRequests = cancellationRequests;
         this.ongoingRequests = ConcurrentHashMap.newKeySet();
-        this.subscriptionFilterExtensions = Arc.container().listAll(SubscriptionFilterExtension.class).stream()
-                .map(InstanceHandle::get).toList();
 
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
             validateServerConfigs();
@@ -541,12 +535,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INVALID_PARAMS,
                     "Missing notifications in params");
         }
-        SubscriptionFilter filter;
-        try {
-            filter = SubscriptionFilter.parse(notifications, subscriptionFilterExtensions, mcpRequest);
-        } catch (McpException e) {
-            return mcpRequest.sender().send(Messages.newError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData()));
-        }
+        SubscriptionFilter filter = SubscriptionFilter.parse(notifications);
         Subscription subscription = new Subscription(id, filter);
         mcpRequest.connection().addSubscription(subscription);
         LOG.debugf("Subscription %s opened [%s]", id, mcpRequest.connection().id());
@@ -790,7 +779,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
      * @param capabilities the {@code capabilities} JSON object, may be {@code null}
      * @return the list of client capabilities, never {@code null}
      */
-    protected static List<ClientCapability> decodeClientCapabilities(JsonObject capabilities) {
+    private static List<ClientCapability> decodeClientCapabilities(JsonObject capabilities) {
         List<ClientCapability> clientCapabilities = new ArrayList<>();
         if (capabilities != null) {
             for (String name : capabilities.fieldNames()) {

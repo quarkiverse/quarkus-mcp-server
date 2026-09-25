@@ -468,7 +468,7 @@ See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on
 
 === Task-augmented Tool Call
 
-A tool annotated with `@Task` is executed asynchronously for clients that declared the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`io.modelcontextprotocol/tasks`).
+With the `quarkus-mcp-server-tasks` extension, a tool can execute its work asynchronously as a task for clients that declared the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`io.modelcontextprotocol/tasks`).
 The server responds immediately with a task handle and the client polls the task until it reaches a terminal status.
 
 [mermaid,mcp-tasks-tool-call-flow,svg]
