@@ -11,27 +11,6 @@ import org.junit.jupiter.api.Test;
 public class HttpMcpServerProcessorTest {
 
     @Test
-    public void testIsValidHttpToken() {
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("Region"));
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("Content-Type"));
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("X-Custom"));
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("abc123"));
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("a"));
-        // tchar specials
-        assertTrue(HttpMcpServerProcessor.isValidHttpToken("!#$%&'*+-.^_`|~"));
-        // invalid chars
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("has space"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("has\ttab"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with/slash"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with(paren"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with@at"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with=equals"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with\"quote"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with[bracket"));
-        assertFalse(HttpMcpServerProcessor.isValidHttpToken("with{brace"));
-    }
-
-    @Test
     public void testIsAllowedHeaderTypePrimitives() {
         assertTrue(HttpMcpServerProcessor.isAllowedHeaderType(PrimitiveType.INT));
         assertTrue(HttpMcpServerProcessor.isAllowedHeaderType(PrimitiveType.LONG));

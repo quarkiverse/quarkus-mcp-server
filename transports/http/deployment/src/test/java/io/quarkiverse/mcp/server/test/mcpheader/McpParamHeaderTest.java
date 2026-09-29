@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.test.mcpheader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -381,6 +382,59 @@ public class McpParamHeaderTest extends McpServerTest {
         } finally {
             toolManager.removeTool("programmaticQuery3");
         }
+    }
+
+    @Test
+    public void testProgrammaticToolInvalidHeaderToken() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registerHeaderTool("programmaticInvalidToken", "string", "Bad Header!").register());
+        assertTrue(e.getMessage().contains("not a valid HTTP field-name token"), e.getMessage());
+    }
+
+    @Test
+    public void testProgrammaticToolEmptyHeader() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registerHeaderTool("programmaticEmptyHeader", "string", "").register());
+        assertTrue(e.getMessage().contains("must not be empty"), e.getMessage());
+    }
+
+    @Test
+    public void testProgrammaticToolUnsupportedType() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registerHeaderTool("programmaticNumberType", "number", "Region").register());
+        assertTrue(e.getMessage().contains("string, integer, or boolean"), e.getMessage());
+    }
+
+    @Test
+    public void testProgrammaticToolDuplicateHeader() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> toolManager.newTool("programmaticDuplicateHeader")
+                        .setDescription("A programmatic tool with duplicate x-mcp-header")
+                        .setInputSchema(new JsonObject()
+                                .put("type", "object")
+                                .put("properties", new JsonObject()
+                                        .put("region", new JsonObject()
+                                                .put("type", "string")
+                                                .put("x-mcp-header", "Region"))
+                                        .put("area", new JsonObject()
+                                                .put("type", "string")
+                                                // same header name, different case -> case-insensitive clash
+                                                .put("x-mcp-header", "region"))))
+                        .setHandler(args -> ToolResponse.success("unreachable"))
+                        .register());
+        assertTrue(e.getMessage().contains("Duplicate x-mcp-header"), e.getMessage());
+    }
+
+    private ToolManager.ToolDefinition registerHeaderTool(String name, String type, String header) {
+        return toolManager.newTool(name)
+                .setDescription("A programmatic tool with x-mcp-header")
+                .setInputSchema(new JsonObject()
+                        .put("type", "object")
+                        .put("properties", new JsonObject()
+                                .put("region", new JsonObject()
+                                        .put("type", type)
+                                        .put("x-mcp-header", header))))
+                .setHandler(args -> ToolResponse.success("unreachable"));
     }
 
     private static JsonObject newStatelessToolsCallMessage(String toolName, JsonObject arguments) {
