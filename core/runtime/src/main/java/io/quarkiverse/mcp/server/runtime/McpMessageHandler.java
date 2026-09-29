@@ -832,7 +832,12 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             Map<String, Object> ret = new HashMap<>();
             ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
             ret.put("capabilities", buildCapabilities(filterContext));
-            ret.put("serverInfo", buildServerInfo(mcpRequest));
+            // The 2026-07-28 schema defines the server identity of a discover result solely as
+            // _meta["io.modelcontextprotocol/serverInfo"] (there is no top-level serverInfo member).
+            // As server/discover is the discovery-mode equivalent of initialize, always include the
+            // full server info - consistent with the initialize response and independent of
+            // response-server-info (which only governs the per-response stamp of the other results).
+            ret.put("_meta", new JsonObject().put(MetaKey.SERVER_INFO.toString(), buildServerInfo(mcpRequest)));
             Optional<String> instructions = buildInstructions(mcpRequest);
             if (instructions.isPresent()) {
                 ret.put("instructions", instructions.get());
