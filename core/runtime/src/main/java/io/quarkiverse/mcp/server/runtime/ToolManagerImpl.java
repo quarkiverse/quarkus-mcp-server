@@ -686,6 +686,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();
             try {
+                // Notify the ToolAdded observers before the tool is stored. A synchronous observer may veto the
+                // registration by throwing (e.g. an invalid x-mcp-header); the exception then propagates without the
+                // tool ever being added, keeping registration atomic.
+                toolAddedEvent.fire(new ToolAdded(ret));
                 for (FeatureKey key : keys) {
                     if (tools.containsKey(key)) {
                         throw toolAlreadyExists(name, key.serverName());
@@ -694,11 +698,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
                 for (FeatureKey key : keys) {
                     tools.put(key, ret);
                 }
+                notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, ret.serverNames());
             } finally {
                 registrationLock.unlock();
             }
-            notifyConnections(McpMethod.NOTIFICATIONS_TOOLS_LIST_CHANGED, ret.serverNames());
-            toolAddedEvent.fire(new ToolAdded(ret));
             return ret;
         }
 
@@ -865,6 +868,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         return (T) obj;
     }
 
+    /**
+     * Internal CDI event fired synchronously while a tool is being registered, before it is stored in the manager.
+     * <p>
+     * A synchronous observer of this event MAY veto the registration by throwing a runtime exception: the exception
+     * propagates to the caller of {@link ToolDefinition#register()} and the tool is not registered. This is used, for
+     * example, by the HTTP transport to reject a programmatically registered tool with an invalid {@code x-mcp-header}.
+     */
     public record ToolAdded(ToolInfo tool) {
     }
 
