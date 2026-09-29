@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.Implementation;
+import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.test.McpAssured.InitResult;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStdioAssert;
@@ -154,7 +155,11 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         JsonObject discoverResult = assertResultResponse(discoverMessage, discoverResponse);
         assertNotNull(discoverResult);
 
-        JsonObject serverInfo = discoverResult.getJsonObject("serverInfo");
+        // In the 2026-07-28 schema the discover result carries the server identity in
+        // _meta["io.modelcontextprotocol/serverInfo"], not in a top-level serverInfo member
+        JsonObject discoverMeta = discoverResult.getJsonObject("_meta");
+        JsonObject serverInfo = discoverMeta == null ? null
+                : discoverMeta.getJsonObject(MetaKey.SERVER_INFO.toString());
         JsonObject discoverCapabilities = discoverResult.getJsonObject("capabilities");
         List<ServerCapability> capabilities = new ArrayList<>();
         if (discoverCapabilities != null) {

@@ -29,9 +29,14 @@ import io.vertx.core.json.JsonObject;
 
 public class StatelessTest extends McpServerTest {
 
+    private static final String SERVER_NAME = "StatelessServer";
+    private static final String SERVER_VERSION = "3.0";
+
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class))
+            .overrideConfigKey("quarkus.mcp.server.server-info.name", SERVER_NAME)
+            .overrideConfigKey("quarkus.mcp.server.server-info.version", SERVER_VERSION)
             .overrideConfigKey("quarkus.mcp.server.discover.ttl-ms", "45000")
             .overrideConfigKey("quarkus.mcp.server.discover.cache-scope", "public");
 
@@ -47,12 +52,38 @@ public class StatelessTest extends McpServerTest {
                     assertNotNull(initResult);
                     assertNotNull(initResult.capabilities());
                     assertNotNull(initResult.implementation());
+                    // In the 2026-07-28 schema the server identity is decoded from
+                    // _meta["io.modelcontextprotocol/serverInfo"]
+                    assertEquals(SERVER_NAME, initResult.implementation().name());
+                    assertEquals(SERVER_VERSION, initResult.implementation().version());
                     assertNotNull(initResult.cacheControl());
                     assertEquals(45000, initResult.cacheControl().ttlMs());
                     assertEquals(CacheScope.PUBLIC, initResult.cacheControl().cacheScope());
                 });
         assertTrue(client.isConnected());
         assertNull(client.mcpSessionId());
+
+        // Verify the raw wire format: the 2026-07-28 DiscoverResult carries the server identity
+        // solely in _meta["io.modelcontextprotocol/serverInfo"] and has no top-level serverInfo member
+        JsonObject discover = client.newRequest(McpAssured.SERVER_DISCOVER);
+        McpAssured.injectStatelessMeta(discover);
+        client.when()
+                .message(discover)
+                .withAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertNotNull(result);
+                    assertNull(result.getJsonObject("serverInfo"),
+                            "discover result must not carry a top-level serverInfo");
+                    JsonObject meta = result.getJsonObject("_meta");
+                    assertNotNull(meta, "discover result must carry _meta");
+                    JsonObject serverInfo = meta.getJsonObject(MetaKey.SERVER_INFO.toString());
+                    assertNotNull(serverInfo, "discover result must carry serverInfo in _meta");
+                    assertEquals(SERVER_NAME, serverInfo.getString("name"));
+                    assertEquals(SERVER_VERSION, serverInfo.getString("version"));
+                })
+                .send()
+                .thenAssertResults();
+
         client.disconnect();
     }
 
