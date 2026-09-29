@@ -30,6 +30,7 @@ include::./includes/attributes.adoc[]
 === Important Bug Fixes
 
 * [2.1.0] The automatic `notifications/*_list_changed` notification sent when a feature is registered or removed programmatically is now scoped to the server(s) the feature is bound to, instead of being broadcast to every open connection. Set `quarkus.mcp.server.auto-list-changed-strategy=all` to restore the previous behavior. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/983[#983])
+* [2.1.0] The `server/discover` result now carries the server identity in `_meta` under the `io.modelcontextprotocol/serverInfo` key, as required by the `2026-07-28` schema, instead of a top-level `serverInfo` member (a leftover from the draft schema). Schema-driven clients dropped the unknown top-level field and saw a server that did not identify itself. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1030[#1030])
 
 [[version-2-0]]
 == 2.0.x
