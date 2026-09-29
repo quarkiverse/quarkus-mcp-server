@@ -197,6 +197,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "erichare",
+      "name": "Eric Hare",
+      "avatar_url": "https://avatars.githubusercontent.com/u/700235?v=4",
+      "profile": "https://erichare.me",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
