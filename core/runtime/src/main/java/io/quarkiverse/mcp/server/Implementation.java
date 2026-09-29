@@ -15,6 +15,8 @@ import java.util.List;
 public record Implementation(String name, String version, String title, List<Icon> icons, String description,
         String websiteUrl) {
 
+    public static final Implementation UNKNOWN = new Implementation("unknown", "unknown", null);
+
     public Implementation(String name, String version, String title) {
         this(name, version, title, List.of(), null, null);
     }

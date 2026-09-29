@@ -768,9 +768,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
             protocolVersion = McpProtocolVersion.FIRST_STATELESS;
         }
         JsonObject clientInfo = meta.getJsonObject(MetaKey.CLIENT_INFO.toString());
-        // InitialRequest always has an implementation, even when the optional wire field is absent.
+        // InitialRequest always has an implementation, even when the optional wire field is absent
         Implementation implementation = clientInfo == null
-                ? new Implementation("unknown", "unknown", null)
+                ? Implementation.UNKNOWN
                 : Messages.decodeImplementation(clientInfo);
         JsonObject capabilities = meta.getJsonObject(MetaKey.CLIENT_CAPABILITIES.toString());
         List<ClientCapability> clientCapabilities = decodeClientCapabilities(capabilities);
