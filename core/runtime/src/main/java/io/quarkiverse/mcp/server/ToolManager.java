@@ -186,6 +186,8 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
         ToolDefinition setOutputGuardrails(List<Class<? extends ToolOutputGuardrail>> outputGuardrails);
 
         /**
+         * Registration may also fail if a transport or extension rejects the tool during registration.
+         *
          * @return the tool info
          * @throws IllegalArgumentException if a tool with the given name already exists for the same server configuration
          */

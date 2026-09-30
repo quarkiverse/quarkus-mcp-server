@@ -23,6 +23,7 @@ import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
 import io.quarkiverse.mcp.server.http.McpParamHeader;
 import io.quarkiverse.mcp.server.http.runtime.HttpInputSchemaGenerator;
 import io.quarkiverse.mcp.server.http.runtime.HttpMcpServerRecorder;
+import io.quarkiverse.mcp.server.http.runtime.HttpParamHeaders;
 import io.quarkiverse.mcp.server.http.runtime.McpParamHeaderMetadata;
 import io.quarkiverse.mcp.server.http.runtime.McpParamHeaderObserver;
 import io.quarkiverse.mcp.server.http.runtime.McpServerEndpoints;
@@ -151,7 +152,7 @@ public class HttpMcpServerProcessor {
                                     .formatted(fm.getMethod().declaringClass().name(), fm.getMethod().name(), param.name()));
                 }
                 // Validate header name is a valid HTTP token
-                if (!isValidHttpToken(headerName)) {
+                if (!HttpParamHeaders.isValidHttpToken(headerName)) {
                     throw new IllegalStateException(
                             "@McpParamHeader value '%s' is not a valid HTTP field-name token [method: %s#%s(), parameter: %s]"
                                     .formatted(headerName, fm.getMethod().declaringClass().name(), fm.getMethod().name(),
@@ -212,24 +213,6 @@ public class HttpMcpServerProcessor {
                     || primitive == PrimitiveType.Primitive.BOOLEAN;
         }
         return ALLOWED_HEADER_TYPES.contains(type.name());
-    }
-
-    static boolean isValidHttpToken(String value) {
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (!isTchar(c)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // RFC 9110 Section 5.6.2: tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
-    // "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
-    private static boolean isTchar(char c) {
-        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                || c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*'
-                || c == '+' || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
     }
 
     @BuildStep

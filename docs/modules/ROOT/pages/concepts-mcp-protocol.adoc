@@ -203,15 +203,19 @@ The server responds with its supported versions, capabilities, and server info:
       "resources": {},
       "prompts": {}
     },
-    "serverInfo": {
-      "name": "acme-quarkus-server",
-      "version": "1.0.0"
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "acme-quarkus-server",
+        "version": "1.0.0"
+      }
     },
     "ttlMs": 0,
     "cacheScope": "public"
   }
 }
 ----
+
+In the `2026-07-28` schema the `DiscoverResult` has no top-level `serverInfo` member; the server identity is carried in `_meta` under the `io.modelcontextprotocol/serverInfo` key.
 
 No `initialized` notification is sent. Each subsequent request is self-contained.
 See xref:concepts-transports.adoc#_stateless_mode[Stateless Mode] for details on required headers and `_meta` fields.
