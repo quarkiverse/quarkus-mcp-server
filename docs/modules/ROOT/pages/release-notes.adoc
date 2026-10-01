@@ -31,6 +31,9 @@ include::./includes/attributes.adoc[]
 
 * [2.1.0] The automatic `notifications/*_list_changed` notification sent when a feature is registered or removed programmatically is now scoped to the server(s) the feature is bound to, instead of being broadcast to every open connection. Set `quarkus.mcp.server.auto-list-changed-strategy=all` to restore the previous behavior. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/983[#983])
 * [2.1.0] The `server/discover` result now carries the server identity in `_meta` under the `io.modelcontextprotocol/serverInfo` key, as required by the `2026-07-28` schema, instead of a top-level `serverInfo` member (a leftover from the draft schema). Schema-driven clients dropped the unknown top-level field and saw a server that did not identify itself. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1030[#1030])
+* [2.1.0] The stateless request path now preserves nested client capability properties. Previously, capabilities expressed through a sub-property were discarded and treated as unsupported, which broke URL-mode elicitation via the Multi Round-Trip Request flow. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1006[#1006])
+* [2.1.0] Stateless MCP requests with an omitted `clientInfo` are now accepted instead of being rejected. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1026[#1026])
+* [2.1.0] The `@McpParamHeader` constraint checks are now also applied to programmatically registered tools, which previously bypassed the validation that method-backed tools receive at build time. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1033[#1033])
 
 [[version-2-0]]
 == 2.0.x
@@ -38,6 +41,9 @@ include::./includes/attributes.adoc[]
 [cols="1,1"]
 |===
 |Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.2[2.0.2]
+|September 30, 2026
 
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.1[2.0.1]
 |September 11, 2026
@@ -56,7 +62,7 @@ include::./includes/attributes.adoc[]
 * [2.0.0] `McpRequest.protocolVersion()` now returns `McpProtocolVersion` instead of `String`.
 * [2.0.0] The `quarkus.mcp-server.metrics.enabled` config property is now read at runtime. Since it defaults to `false`, applications that rely on MCP metrics without explicitly setting `quarkus.mcp-server.metrics.enabled=true` will stop collecting them. (https://github.com/quarkiverse/quarkus-mcp-server/issues/844[#844])
 * [2.0.0] Tracing spans are no longer started when `quarkus.mcp.server.tracing.enabled=false` for the relevant MCP server configuration. Previously, the tracing enablement check only considered the default server's setting. (https://github.com/quarkiverse/quarkus-mcp-server/issues/845[#845])
-* [2.0.0] JSON-RPC error codes have been renumbered per the draft MCP specification. `RESOURCE_NOT_FOUND` is now version-dependent: stateless protocol clients receive `INVALID_PARAMS` (`-32602`), while older protocol versions retain `RESOURCE_NOT_FOUND` (`-32002`).
+* [2.0.0] JSON-RPC error codes have been renumbered to align with the MCP specification. `RESOURCE_NOT_FOUND` is now version-dependent: stateless protocol clients receive `INVALID_PARAMS` (`-32602`), while older protocol versions retain `RESOURCE_NOT_FOUND` (`-32002`). (https://github.com/quarkiverse/quarkus-mcp-server/pull/888[#888])
 
 [[version-2-0-features]]
 === New Features
@@ -102,6 +108,10 @@ include::./includes/attributes.adoc[]
 * [2.0.1] The automatic `notifications/*_list_changed` notification sent when a feature is registered or removed programmatically is now scoped to the server(s) the feature is bound to, instead of being broadcast to every open connection. Set `quarkus.mcp.server.auto-list-changed-strategy=all` to restore the previous behavior. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/983[#983])
 * [2.0.1] `completion/complete` and `logging/setLevel` requests sent without a `params` object now return a JSON-RPC error instead of throwing an uncaught exception and dropping the connection. (https://github.com/quarkiverse/quarkus-mcp-server/issues/993[#993])
 * [2.0.1] `server/discover` now evaluates feature filters with an active CDI request context and associated `SecurityIdentity`, consistent with the regular operation lifecycle. Previously, filters injecting request-scoped beans (e.g. `SecurityIdentity`) threw `ContextNotActiveException` and the affected features were treated as visible. (https://github.com/quarkiverse/quarkus-mcp-server/issues/997[#997])
+* [2.0.2] The `server/discover` result now carries the server identity in `_meta` under the `io.modelcontextprotocol/serverInfo` key, as required by the `2026-07-28` schema, instead of a top-level `serverInfo` member (a leftover from the draft schema). Schema-driven clients dropped the unknown top-level field and saw a server that did not identify itself. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1030[#1030])
+* [2.0.2] The stateless request path now preserves nested client capability properties. Previously, capabilities expressed through a sub-property were discarded and treated as unsupported, which broke URL-mode elicitation via the Multi Round-Trip Request flow. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1006[#1006])
+* [2.0.2] Stateless MCP requests with an omitted `clientInfo` are now accepted instead of being rejected. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1026[#1026])
+* [2.0.2] The `@McpParamHeader` constraint checks are now also applied to programmatically registered tools, which previously bypassed the validation that method-backed tools receive at build time. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1033[#1033])
 
 [[version-1-13]]
 == 1.13.x
