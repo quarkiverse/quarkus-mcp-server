@@ -70,6 +70,7 @@ public class TaskToolTest extends McpServerTest {
     public void testStreamableStateless() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect(TaskToolTest::assertTasksAdvertised)) {
@@ -81,6 +82,7 @@ public class TaskToolTest extends McpServerTest {
     public void testAsyncAndVirtualThreadHandlers() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect()) {

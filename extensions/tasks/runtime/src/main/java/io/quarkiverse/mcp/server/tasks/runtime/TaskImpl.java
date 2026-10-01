@@ -19,6 +19,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
+import io.quarkiverse.mcp.server.InputRequiredException;
 import io.quarkiverse.mcp.server.InputRequiredException.ElicitationInputRequest;
 import io.quarkiverse.mcp.server.InputRequiredException.InputRequestEntry;
 import io.quarkiverse.mcp.server.InputRequiredException.RootsInputRequest;
@@ -27,8 +28,6 @@ import io.quarkiverse.mcp.server.InputRequiredException.UrlElicitationInputReque
 import io.quarkiverse.mcp.server.InputResponses;
 import io.quarkiverse.mcp.server.SamplingRequest;
 import io.quarkiverse.mcp.server.UrlElicitationRequest;
-import io.quarkiverse.mcp.server.runtime.InputRequestSupport;
-import io.quarkiverse.mcp.server.runtime.InputResponsesImpl;
 import io.quarkiverse.mcp.server.tasks.TaskContext;
 import io.quarkiverse.mcp.server.tasks.TaskInputRequest;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
@@ -67,6 +66,8 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
     private JsonObject error;
     private final Map<String, InputRequestEntry> outstandingInputRequests;
     private final Set<String> usedInputRequestKeys;
+    // The JSON representation of all the input requests sent so far, keyed by the request key
+    private final JsonObject inputRequestsJson;
     private JsonObject collectedInputResponses;
     private CompletableFuture<InputResponses> pendingInput;
     // null if cancellation was not requested
@@ -85,6 +86,7 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
         this.statusMessage = statusMessage;
         this.lastUpdatedAt = createdAt;
         this.outstandingInputRequests = new LinkedHashMap<>();
+        this.inputRequestsJson = new JsonObject();
         this.usedInputRequestKeys = new HashSet<>();
         this.cancellationActions = new ArrayList<>();
     }
@@ -267,6 +269,7 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             }
             usedInputRequestKeys.addAll(inputRequests.keySet());
             outstandingInputRequests.putAll(inputRequests);
+            inputRequestsJson.mergeIn(toInputRequestsJson(inputRequests));
             collectedInputResponses = new JsonObject();
             pendingInput = future;
             status = TaskStatus.INPUT_REQUIRED;
@@ -296,7 +299,7 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             }
             if (outstandingInputRequests.isEmpty()) {
                 toComplete = pendingInput;
-                responses = InputResponsesImpl.of(collectedInputResponses);
+                responses = new TaskInputResponses(collectedInputResponses);
                 pendingInput = null;
                 collectedInputResponses = null;
                 status = TaskStatus.WORKING;
@@ -334,8 +337,8 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             switch (status) {
                 case INPUT_REQUIRED -> {
                     JsonObject inputRequests = new JsonObject();
-                    for (Map.Entry<String, InputRequestEntry> e : outstandingInputRequests.entrySet()) {
-                        inputRequests.put(e.getKey(), InputRequestSupport.toInputRequestJson(e.getValue()));
+                    for (String key : outstandingInputRequests.keySet()) {
+                        inputRequests.put(key, inputRequestsJson.getJsonObject(key).copy());
                     }
                     json.put("inputRequests", inputRequests);
                 }
@@ -347,6 +350,27 @@ public final class TaskImpl implements TaskContext, TaskManager.TaskInfo {
             }
         }
         return json;
+    }
+
+    /**
+     * Serializes the input requests with the public {@link InputRequiredException} API, i.e. in the same shape as the
+     * {@code inputRequests} of a Multi Round-Trip Request.
+     */
+    private static JsonObject toInputRequestsJson(Map<String, InputRequestEntry> inputRequests) {
+        InputRequiredException.Builder builder = InputRequiredException.builder();
+        for (Map.Entry<String, InputRequestEntry> e : inputRequests.entrySet()) {
+            InputRequestEntry entry = e.getValue();
+            if (entry instanceof ElicitationInputRequest elicitation) {
+                builder.addElicitationRequest(e.getKey(), elicitation.request());
+            } else if (entry instanceof UrlElicitationInputRequest urlElicitation) {
+                builder.addUrlElicitationRequest(e.getKey(), urlElicitation.request());
+            } else if (entry instanceof SamplingInputRequest sampling) {
+                builder.addSamplingRequest(e.getKey(), sampling.request());
+            } else {
+                builder.addRootsRequest(e.getKey());
+            }
+        }
+        return builder.build().result().getJsonObject("inputRequests");
     }
 
     private void touch() {

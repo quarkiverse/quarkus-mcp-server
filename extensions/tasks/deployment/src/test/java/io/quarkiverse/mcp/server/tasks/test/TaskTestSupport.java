@@ -12,6 +12,7 @@ import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.quarkiverse.mcp.server.tasks.TaskStatus;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
+import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -34,6 +35,25 @@ final class TaskTestSupport {
     static JsonObject tasksClientCapabilities() {
         return new JsonObject().put("extensions",
                 new JsonObject().put(TaskManager.EXTENSION_ID, new JsonObject()));
+    }
+
+    /**
+     * Produces the additional HTTP headers of a stateless Streamable HTTP client: the Tasks extension requires the
+     * {@code Mcp-Name} header of the {@code tasks/*} requests to be set to the task id.
+     *
+     * @param message the message, may be {@code null}
+     * @see io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient.Builder#setAdditionalHeaders(java.util.function.Function)
+     */
+    static MultiMap taskHeaders(JsonObject message) {
+        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+        if (message != null) {
+            String method = message.getString("method");
+            JsonObject params = message.getJsonObject("params");
+            if (method != null && method.startsWith("tasks/") && params != null && params.getString("taskId") != null) {
+                headers.add("Mcp-Name", params.getString("taskId"));
+            }
+        }
+        return headers;
     }
 
     static JsonObject newRequest(McpTestClient<?, ?> client, String method, JsonObject params, boolean stateless) {

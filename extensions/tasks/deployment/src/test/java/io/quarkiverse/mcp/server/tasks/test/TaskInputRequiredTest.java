@@ -44,6 +44,7 @@ public class TaskInputRequiredTest extends McpServerTest {
     public void testStreamableStateless() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY, ELICITATION_CAPABILITY)
                 .build()
                 .connect()) {

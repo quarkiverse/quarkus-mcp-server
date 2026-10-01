@@ -15,7 +15,6 @@ import io.quarkiverse.mcp.server.McpExtension;
 import io.quarkiverse.mcp.server.McpExtensionMethod;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.RawMessage;
-import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.vertx.core.json.JsonObject;
 
@@ -50,7 +49,7 @@ public class TasksExtension {
     public JsonObject update(String taskId, McpConnection connection, RawMessage rawMessage) {
         checkCapability(connection);
         TaskImpl task = findTask(taskId, connection, "Failed to update task");
-        JsonObject params = Messages.getParams(rawMessage.asJsonObject());
+        JsonObject params = rawMessage.asJsonObject().getJsonObject("params");
         JsonObject inputResponses = params != null ? params.getJsonObject("inputResponses") : null;
         if (inputResponses == null) {
             throw new McpException("Failed to update task: Missing required param: inputResponses",

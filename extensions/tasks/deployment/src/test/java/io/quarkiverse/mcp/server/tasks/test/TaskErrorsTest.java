@@ -39,6 +39,7 @@ public class TaskErrorsTest extends McpServerTest {
     public void testStreamableStateless() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect()) {
@@ -46,6 +47,7 @@ public class TaskErrorsTest extends McpServerTest {
         }
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .build()
                 .connect()) {
             assertNoCapability(client, true);

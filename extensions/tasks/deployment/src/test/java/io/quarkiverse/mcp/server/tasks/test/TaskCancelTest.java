@@ -45,6 +45,7 @@ public class TaskCancelTest extends McpServerTest {
     public void testStreamableStateless() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect()) {
@@ -109,6 +110,7 @@ public class TaskCancelTest extends McpServerTest {
     public void testCancelViaTaskManager() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect()) {

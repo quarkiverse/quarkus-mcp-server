@@ -14,7 +14,6 @@ import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpResultException;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolResponse;
-import io.quarkiverse.mcp.server.runtime.Messages;
 import io.quarkiverse.mcp.server.tasks.CreateTaskException;
 import io.quarkiverse.mcp.server.tasks.TaskContext;
 import io.quarkiverse.mcp.server.tasks.Tasks;
@@ -71,7 +70,7 @@ final class TasksImpl implements Tasks {
     }
 
     private String toolName() {
-        JsonObject params = Messages.getParams(arguments.rawMessage().asJsonObject());
+        JsonObject params = arguments.rawMessage().asJsonObject().getJsonObject("params");
         String name = params != null ? params.getString("name") : null;
         return name != null ? name : "<unknown>";
     }

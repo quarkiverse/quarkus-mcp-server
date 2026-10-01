@@ -38,6 +38,7 @@ public class TaskExpiredTest extends McpServerTest {
     public void testExpiredTask() {
         try (var client = McpAssured.newStreamableClient()
                 .setStateless()
+                .setAdditionalHeaders(TaskTestSupport::taskHeaders)
                 .setClientCapabilities(TASKS_CAPABILITY)
                 .build()
                 .connect()) {
