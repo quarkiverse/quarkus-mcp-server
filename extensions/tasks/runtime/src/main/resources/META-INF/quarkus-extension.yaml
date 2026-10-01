@@ -1,0 +1,9 @@
+name: MCP Server - Tasks
+description: Support for the MCP Tasks extension (io.modelcontextprotocol/tasks) - asynchronous execution of long-running tools.
+metadata:
+  keywords:
+    - mcp, tasks
+  guide: https://docs.quarkiverse.io/quarkus-mcp-server/dev/guides-mcp-tasks.html
+  categories:
+    - "ai"
+  status: "experimental"
