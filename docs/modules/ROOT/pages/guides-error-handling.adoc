@@ -137,7 +137,7 @@ The extension provides standard JSON-RPC error codes via the `io.quarkiverse.mcp
 
 |`-32005`
 |`SECURITY_ERROR`
-|MCP-specific: security/authorization error
+|Security/authorization error
 
 |`-32020`
 |`HEADER_MISMATCH`
@@ -157,6 +157,8 @@ The extension provides standard JSON-RPC error codes via the `io.quarkiverse.mcp
 |===
 
 NOTE: When the negotiated protocol version is `2026-07-28` or later, the server reports a resource it cannot find with `INVALID_PARAMS` (`-32602`) instead of `RESOURCE_NOT_FOUND`.
+
+NOTE: The `URL_ELICITATION_REQUIRED` code (`-32042`) remains reserved, but implementations of `2026-07-28` must not emit it.
 
 **When to use McpException**:
 
