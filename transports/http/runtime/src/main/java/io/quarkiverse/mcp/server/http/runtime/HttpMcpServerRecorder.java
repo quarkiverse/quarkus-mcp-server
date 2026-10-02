@@ -69,7 +69,6 @@ public class HttpMcpServerRecorder {
 
     public Handler<RoutingContext> createMcpEndpointHandler(String serverName) {
         ArcContainer container = Arc.container();
-        ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
         StreamableHttpMcpMessageHandler handler = container.instance(StreamableHttpMcpMessageHandler.class).get();
 
         // Enable DNS rebinding protection for localhost servers
@@ -96,19 +95,7 @@ public class HttpMcpServerRecorder {
                         return;
                     }
                 }
-                ctx.put(CONTEXT_KEY, serverName);
-                HttpMethod method = request.method();
-                if (HttpMethod.GET.equals(method)) {
-                    handler.openSseStream(ctx, connectionManager, serverName);
-                } else if (HttpMethod.POST.equals(method)) {
-                    handler.handle(ctx);
-                } else if (HttpMethod.DELETE.equals(method)) {
-                    handler.terminateSession(ctx);
-                } else {
-                    LOG.debugf("Invalid HTTP method %s [server: %s]", method, serverName);
-                    ctx.response().putHeader(HttpHeaders.ALLOW, "GET, POST, DELETE");
-                    ctx.fail(405);
-                }
+                handler.handle(ctx, serverName);
             }
         };
     }
