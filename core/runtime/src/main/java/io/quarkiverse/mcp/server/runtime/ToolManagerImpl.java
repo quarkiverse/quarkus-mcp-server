@@ -462,7 +462,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public void setArguments(JsonObject arguments) {
-            JsonObject newArgs = new JsonObject(Map.copyOf(Objects.requireNonNull(arguments).getMap()));
+            JsonObject newArgs = new JsonObject(Maps.copyOfAllowingNullValues(Objects.requireNonNull(arguments).getMap()));
             this.arguments.set(newArgs);
         }
 
@@ -847,7 +847,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         ToolArgumentsImpl(ArgumentProviders argProviders, Map<String, Object> args, McpLog log) {
             super(argProviders);
-            this.args = Map.copyOf(args);
+            this.args = Maps.copyOfAllowingNullValues(args);
             this.log = log;
         }
 
