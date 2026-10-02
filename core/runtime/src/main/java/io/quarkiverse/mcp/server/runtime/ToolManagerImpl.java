@@ -4,9 +4,7 @@ import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -469,9 +467,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         @Override
         public void setArguments(JsonObject arguments) {
-            // Not Map.copyOf(): a JSON null is a valid argument value
-            JsonObject newArgs = new JsonObject(
-                    Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(arguments).getMap())));
+            JsonObject newArgs = new JsonObject(Maps.copyOfAllowingNullValues(Objects.requireNonNull(arguments).getMap()));
             this.arguments.set(newArgs);
         }
 
@@ -860,8 +856,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         ToolArgumentsImpl(ArgumentProviders argProviders, Map<String, Object> args, McpLog log) {
             super(argProviders);
-            // Not Map.copyOf(): a JSON null is a valid argument value
-            this.args = Collections.unmodifiableMap(new LinkedHashMap<>(args));
+            this.args = Maps.copyOfAllowingNullValues(args);
             this.log = log;
         }
 
