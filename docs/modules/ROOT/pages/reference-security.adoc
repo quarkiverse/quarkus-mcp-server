@@ -23,7 +23,7 @@ quarkus.http.auth.permission.mcp-endpoints.policy=authenticated <2>
 Alternatively, you can also secure the annotated server feature methods with security annotations such as `io.quarkus.security.Authenticated`,
 `jakarta.annotation.security.RolesAllowed` and other annotations supported by Quarkus.
 However, in this case an MCP client will not receive an appropriate HTTP status code if authentication fails.
-Instead, an MCP error message with code `-32001` is sent back to the client.
+Instead, an MCP error message with code `-32005` is sent back to the client.
 
 .Annotation-based Security Example
 [source,java]

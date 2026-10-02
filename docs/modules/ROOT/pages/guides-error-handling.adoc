@@ -135,10 +135,30 @@ The extension provides standard JSON-RPC error codes via the `io.quarkiverse.mcp
 |`RESOURCE_NOT_FOUND`
 |MCP-specific: requested resource not found
 
-|`-32001`
+|`-32005`
 |`SECURITY_ERROR`
-|MCP-specific: security/authorization error
+|Security/authorization error
+
+|`-32020`
+|`HEADER_MISMATCH`
+|MCP-specific: a required HTTP header is missing or does not match the request body
+
+|`-32021`
+|`MISSING_REQUIRED_CLIENT_CAPABILITY`
+|MCP-specific: the client does not declare a capability the request requires
+
+|`-32022`
+|`UNSUPPORTED_PROTOCOL_VERSION`
+|MCP-specific: the requested protocol version is not supported by the server
+
+|`-32042`
+|`URL_ELICITATION_REQUIRED`
+|MCP-specific: the request cannot proceed until the user completes a URL mode elicitation
 |===
+
+NOTE: When the negotiated protocol version is `2026-07-28` or later, the server reports a resource it cannot find with `INVALID_PARAMS` (`-32602`) instead of `RESOURCE_NOT_FOUND`.
+
+NOTE: The `URL_ELICITATION_REQUIRED` code (`-32042`) remains reserved, but implementations of `2026-07-28` must not emit it.
 
 **When to use McpException**:
 
