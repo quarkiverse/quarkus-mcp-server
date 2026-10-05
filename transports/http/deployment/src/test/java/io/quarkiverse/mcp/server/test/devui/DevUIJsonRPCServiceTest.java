@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -21,7 +22,10 @@ public class DevUIJsonRPCServiceTest extends DevUIJsonRPCTest {
 
     @RegisterExtension
     static final QuarkusDevModeTest config = new QuarkusDevModeTest()
-            .withApplicationRoot(root -> root.addClass(DevUIAppFeatures.class));
+            .withApplicationRoot(root -> root
+                    .addClass(DevUIAppFeatures.class)
+                    // Explicitly disable DevServices - workaround CI failures with Quarkus 3.40.1
+                    .addAsResource(new StringAsset("quarkus.observability.enabled=false"), "application.properties"));
 
     public DevUIJsonRPCServiceTest() {
         super("quarkus-mcp-server-http");

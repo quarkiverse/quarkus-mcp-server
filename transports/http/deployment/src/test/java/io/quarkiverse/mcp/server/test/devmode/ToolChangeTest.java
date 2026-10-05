@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -19,7 +20,9 @@ public class ToolChangeTest extends McpServerTest {
 
     @RegisterExtension
     final static QuarkusDevModeTest test = new QuarkusDevModeTest()
-            .withApplicationRoot(root -> root.addClass(MyTools.class));
+            .withApplicationRoot(root -> root.addClass(MyTools.class)
+                    // Explicitly disable DevServices - workaround CI failures with Quarkus 3.40.1
+                    .addAsResource(new StringAsset("quarkus.observability.enabled=false"), "application.properties"));
 
     @Test
     public void testChange() {
