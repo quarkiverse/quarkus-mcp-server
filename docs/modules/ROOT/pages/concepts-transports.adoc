@@ -89,8 +89,9 @@ In the stateless mode, there is no handshake and no session.
 Instead, each request is self-contained — the client provides its identity, protocol version, and capabilities via `_meta` fields and required HTTP headers.
 
 **How it works**::
-* A stateless client sends `server/discover` (instead of `initialize`) to learn the server's capabilities, supported protocol versions, and server info.
-* Every subsequent request includes:
+* A stateless client can send `server/discover` before its other requests to learn the server's capabilities, supported protocol versions, and server info.
+This call is optional: a client can send any request directly and handle the `-32022` unsupported protocol version error if the server does not support its protocol version.
+* Every request, including `server/discover`, includes:
 ** `MCP-Protocol-Version` header with the protocol version
 ** `Mcp-Method` header matching the JSON-RPC method in the body
 ** `Mcp-Name` header for `tools/call`, `prompts/get`, and `resources/read` (the tool name, prompt name, or resource URI)

@@ -173,7 +173,8 @@ MCP uses capability negotiation to establish what features are available between
 
 === Stateless Discovery
 
-Starting with protocol version `2026-07-28`, stateless clients use `server/discover` instead of the `initialize`/`initialized` handshake:
+Starting with protocol version `2026-07-28`, stateless clients skip the `initialize`/`initialized` handshake.
+A stateless client can optionally call `server/discover` first to learn the server's supported versions and capabilities:
 
 [source,json]
 ----
