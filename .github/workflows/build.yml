@@ -47,8 +47,10 @@ jobs:
             test-containers: "false"
           - os: ubuntu-latest
             test-containers: "true"
-    runs-on: ${{ matrix.os }}
+    runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
+      - uses: runs-on/action@v2
+
       - name: Prepare git
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
@@ -62,7 +64,7 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: mvn -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }}
+        run: ./mvnw -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }}
 
   build-native:
     name: Native / ${{ matrix.module }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
@@ -88,8 +90,10 @@ jobs:
             pl: cli-adapter/integration-tests
           - module: hibernate-validator
             pl: hibernate-validator/integration-tests
-    runs-on: ${{ matrix.os }}
+    runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
+      - uses: runs-on/action@v2
+
       - name: Prepare git
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
@@ -103,10 +107,10 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: mvn -B clean install -Dno-format -DskipTests
+        run: ./mvnw -B clean install -Dno-format -DskipTests
 
       - name: Build with Maven (Native)
-        run: mvn -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip -pl ${{ matrix.pl }}
+        run: ./mvnw -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip -pl ${{ matrix.pl }}
 
   build-samples:
     name: Samples / ${{ matrix.sample }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
@@ -119,8 +123,10 @@ jobs:
           - multiple-secure-mcp-http-servers
           - secure-mcp-sse-server
           - weather
-    runs-on: ${{ matrix.os }}
+    runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
+      - uses: runs-on/action@v2
+
       - name: Prepare git
         run: git config --global core.autocrlf false
         if: startsWith(matrix.os, 'windows')
@@ -135,7 +141,7 @@ jobs:
 
       - name: Build sample - ${{ matrix.sample }}
         working-directory: './samples/${{ matrix.sample }}'
-        run: mvn -B clean install
+        run: ./mvnw -B clean install
 
   mcp-conformance-tests:
     name: MCP Conformance Tests / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
@@ -144,8 +150,10 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         java-version: [ 17 ]
-    runs-on: ${{ matrix.os }}
+    runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
+      - uses: runs-on/action@v2
+
       - uses: actions/checkout@v7
       # MCP conformance tests require 24
       - uses: actions/setup-node@v7
@@ -160,11 +168,11 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: mvn -B clean install -Dno-format -DskipTests
+        run: ./mvnw -B clean install -Dno-format -DskipTests
              
       - name: Build test server
         working-directory: './conformance'
-        run: mvn -B clean install
+        run: ../mvnw -B clean install
         
       - name: Start test server
         working-directory: './conformance'
