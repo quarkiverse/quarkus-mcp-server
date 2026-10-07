@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.quarkiverse</groupId>
         <artifactId>quarkiverse-parent</artifactId>
-        <version>25</version>
+        <version>26</version>
     </parent>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-parent</artifactId>
@@ -35,6 +35,7 @@
   </scm>
 
     <properties>
+        <maven.compiler.release>17</maven.compiler.release>
         <quarkus.version>3.40.1</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.400.1</sundrio.version>
