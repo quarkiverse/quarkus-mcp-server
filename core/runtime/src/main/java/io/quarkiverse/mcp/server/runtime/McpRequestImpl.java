@@ -6,6 +6,7 @@ import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.tracing.McpRequestInfo;
 import io.quarkiverse.mcp.server.runtime.tracing.McpResponseInfo;
 import io.quarkus.arc.Arc;
+import io.quarkus.arc.InjectableContext.ContextState;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.json.JsonObject;
@@ -21,6 +22,11 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
 
     private final ManagedContext requestContext;
     private final CurrentIdentityAssociation currentIdentityAssociation;
+
+    // The request context state activated by contextStart(); kept so that contextEnd() can destroy
+    // it explicitly - the completion callback that triggers contextEnd() may run on a different
+    // Vert.x duplicated context where this state is not current, so terminate() would be a no-op
+    private volatile ContextState requestContextState;
 
     // Tracing span - started by prepareTracing(), ended by contextEnd()
     private volatile McpTracingSpan tracingSpan;
@@ -95,7 +101,9 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
                 securitySupport.setCurrentIdentity(currentIdentityAssociation);
             }
         } else {
-            requestContext.activate();
+            // Capture the state we just activated so that it can be destroyed in contextEnd()
+            // regardless of which Vert.x duplicated context is current at that time
+            requestContextState = requestContext.activate();
             if (contextSupport != null) {
                 contextSupport.requestContextActivated();
             }
@@ -116,7 +124,15 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     @Override
     public void contextEnd(Throwable error) {
         endTracing(error);
-        requestContext.terminate();
+        ContextState state = requestContextState;
+        if (state != null) {
+            // contextStart() activated the request context; destroy that exact state explicitly.
+            // This callback may run on a different duplicated context (e.g. the one where the
+            // response write completes), so terminate() - which only destroys the currently active
+            // state - would not destroy the beans created during the call.
+            requestContextState = null;
+            requestContext.destroy(state);
+        }
     }
 
     @Override
