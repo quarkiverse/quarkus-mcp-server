@@ -22,7 +22,7 @@ public class ServerFeaturesIT {
         try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) {
             client.when()
                     .promptsList(page -> {
-                        assertEquals(1, page.size());
+                        assertEquals(2, page.size());
                         var prompt = page.findByName("code_assist");
                         assertNotNull(prompt);
                         assertEquals(1, prompt.arguments().size());
@@ -47,7 +47,7 @@ public class ServerFeaturesIT {
         try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) {
             client.when()
                     .toolsList(page -> {
-                        assertEquals(4, page.size());
+                        assertEquals(9, page.size());
                         var tool = page.findByName("toLowerCase");
                         assertNotNull(tool);
                         assertNotNull(tool.inputSchema());
@@ -77,7 +77,7 @@ public class ServerFeaturesIT {
         try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) {
             client.when()
                     .resourcesList(page -> {
-                        assertEquals(1, page.size());
+                        assertEquals(2, page.size());
                         var resource = page.findByUri("file:///project/alpha");
                         assertNotNull(resource);
                         assertEquals("alpha", resource.name());
