@@ -2,4 +2,4 @@
 
 :examples-dir: ./../examples/
 :spec-version: 2026-07-28
-:quarkus-version: 3.33.3.2
+:quarkus-version: 3.40.1
