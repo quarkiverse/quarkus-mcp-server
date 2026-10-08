@@ -43,7 +43,7 @@ public class RequestContextDestroyedTest extends McpServerTest {
         McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
         // --- tools: three execution models, CALL_COUNT times each ---
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < CALL_COUNT; i++) {
             client.when()
                     .toolsCall("ping_worker", r -> assertEquals("pong", r.firstContent().asText().text()))
                     .toolsCall("ping_virtual", r -> assertEquals("pong", r.firstContent().asText().text()))
