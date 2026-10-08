@@ -60,6 +60,11 @@ public class FilterContextImplTest {
             }
 
             @Override
+            public McpRequestContext activateRequestContext() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public void contextStart() {
                 throw new UnsupportedOperationException();
             }

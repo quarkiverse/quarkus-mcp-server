@@ -269,6 +269,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         InitialRequest initialRequest = decodeInitializeRequest(params);
         // Start the context first
         mcpRequest.contextStart();
+        Context context = Vertx.currentContext();
         // Then apply init checks
         return UniHelper.toFuture(checkInit(initialRequest, initialChecks, 0)).compose(res -> {
             if (res.error()) {
@@ -287,7 +288,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 return mcpRequest.sender().sendError(id, JsonRpcErrorCodes.INTERNAL_ERROR, msg);
             }
         }).onComplete(r -> {
-            mcpRequest.contextEnd(r.cause());
+            context.runOnContext(v -> {
+                mcpRequest.contextEnd(r.cause());
+            });
         });
     }
 
@@ -363,23 +366,39 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         VertxContextSafetyToggle.setContextSafe(context, true);
         Promise<Void> ret = Promise.promise();
 
-        context.runOnContext(v -> {
-            mcpRequest.contextStart();
+        context.runOnContext(v1 -> {
+            McpRequestContext requestContext;
+            try {
+                requestContext = mcpRequest.activateRequestContext();
+            } catch (RuntimeException e) {
+                ret.fail(e);
+                return;
+            }
             try {
                 Future<Void> fu = notificationManager.execute(notificationManager.key(notification),
                         featureExecutionContext);
                 fu.onComplete(r -> {
-                    mcpRequest.contextEnd(r.cause());
-                    if (r.failed()) {
-                        LOG.errorf(r.cause(), "Unable to call notification method: %s", notification);
-                        ret.fail(r.cause());
-                    } else {
-                        ret.complete();
-                    }
+                    // Make sure the cleanup is executed on the right Vertx context
+                    context.runOnContext(v2 -> {
+                        try {
+                            requestContext.close();
+                        } finally {
+                            if (r.failed()) {
+                                LOG.errorf(r.cause(), "Unable to call notification method: %s", notification);
+                                ret.fail(r.cause());
+                            } else {
+                                ret.complete();
+                            }
+                        }
+                    });
                 });
-            } catch (McpException e) {
-                LOG.errorf(e, "Unable to call notification method: %s", notification);
-                throw e;
+            } catch (RuntimeException e) {
+                try {
+                    requestContext.close();
+                } finally {
+                    LOG.errorf(e, "Unable to call notification method: %s", notification);
+                    ret.fail(e);
+                }
             }
 
         });
@@ -413,7 +432,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (ongoingId != null) {
             ongoingRequests.add(ongoingId);
         }
-        context.runOnContext(v -> {
+        context.runOnContext(v1 -> {
             mcpRequest.contextStart();
             JsonObject responseMeta = getResponseServerInfo(mcpRequest);
             Future<?> future = switch (method) {
@@ -434,16 +453,22 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 default -> unsupportedMethod(message, mcpRequest);
             };
             future.onComplete(r -> {
-                mcpRequest.contextEnd(r.cause());
-                if (ongoingId != null) {
-                    ongoingRequests.remove(ongoingId);
-                    cancellationRequests.remove(mcpRequest.connection(), message);
-                }
-                if (r.failed()) {
-                    ret.fail(r.cause());
-                } else {
-                    ret.complete();
-                }
+                // Make sure the cleanup is executed on the right Vertx context
+                context.runOnContext(v2 -> {
+                    try {
+                        mcpRequest.contextEnd(r.cause());
+                    } finally {
+                        if (ongoingId != null) {
+                            ongoingRequests.remove(ongoingId);
+                            cancellationRequests.remove(mcpRequest.connection(), message);
+                        }
+                        if (r.failed()) {
+                            ret.fail(r.cause());
+                        } else {
+                            ret.complete();
+                        }
+                    }
+                });
             });
         });
         return ret.future();
