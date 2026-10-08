@@ -42,6 +42,12 @@ public interface McpRequest {
      */
     void endTracing(Throwable error);
 
+    /**
+     * Activate a context owned by the caller, without storing it on this request or ending tracing.
+     * Close it on the context where it was activated.
+     */
+    McpRequestContext activateRequestContext();
+
     void contextStart();
 
     void contextEnd(Throwable error);
