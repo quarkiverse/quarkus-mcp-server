@@ -35,7 +35,48 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: runs-on=${{ github.run_id }}-changes/runner=ubuntu-latest
+    outputs:
+      docs-only: ${{ steps.filter.outputs.docs-only }}
+    steps:
+      - uses: runs-on/action@v2
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check whether only docs changed
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          else
+            base="$PUSH_BEFORE_SHA"
+            head="$PUSH_HEAD_SHA"
+          fi
+          files=$(git diff --name-only "$base" "$head")
+          echo "Changed files:"
+          echo "$files"
+          # Any changed file that is NOT documentation
+          code=$(echo "$files" | grep -vE '(^docs/|\.md$|\.adoc$|\.txt$|^CODEOWNERS$|^LICENSE$|^\.gitignore$|^\.all-contributorsrc$)' || true)
+          if [ -n "$files" ] && [ -z "$code" ]; then
+            echo "Only documentation changed - tests will be skipped"
+            echo "docs-only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: changes
     name: JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -64,9 +105,11 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: ./mvnw -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }}
+        run: ./mvnw -B clean install -Dno-format -Dtest-containers=${{ matrix.test-containers }} ${{ needs.changes.outputs.docs-only == 'true' && '-DskipTests -DskipITs' || '' }}
 
   build-native:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     name: Native / ${{ matrix.module }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -113,6 +156,8 @@ jobs:
         run: ./mvnw -B install -Dnative -Dquarkus.native.container-build -Dnative.surefire.skip -pl ${{ matrix.pl }}
 
   build-samples:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     name: Samples / ${{ matrix.sample }} / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -144,6 +189,8 @@ jobs:
         run: ./mvnw -B clean install
 
   mcp-conformance-tests:
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     name: MCP Conformance Tests / JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
