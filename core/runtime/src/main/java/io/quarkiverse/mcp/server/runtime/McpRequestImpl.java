@@ -6,7 +6,6 @@ import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.runtime.tracing.McpRequestInfo;
 import io.quarkiverse.mcp.server.runtime.tracing.McpResponseInfo;
 import io.quarkus.arc.Arc;
-import io.quarkus.arc.InjectableContext.ContextState;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.json.JsonObject;
@@ -23,10 +22,8 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     private final ManagedContext requestContext;
     private final CurrentIdentityAssociation currentIdentityAssociation;
 
-    // The request context state activated by contextStart(); kept so that contextEnd() can destroy
-    // it explicitly - the completion callback that triggers contextEnd() may run on a different
-    // Vert.x duplicated context where this state is not current, so terminate() would be a no-op
-    private volatile ContextState requestContextState;
+    // Ordinary requests own one context; initialized notifications keep their contexts locally
+    private volatile McpRequestContext ownedRequestContext;
 
     // Tracing span - started by prepareTracing(), ended by contextEnd()
     private volatile McpTracingSpan tracingSpan;
@@ -94,22 +91,29 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
 
     @Override
     public void contextStart() {
-        final SecuritySupport securitySupport = securitySupport();
-        final ContextSupport contextSupport = contextSupport();
-        if (requestContext.isActive()) {
-            if (securitySupport != null && currentIdentityAssociation != null) {
-                securitySupport.setCurrentIdentity(currentIdentityAssociation);
+        ownedRequestContext = activateRequestContext();
+    }
+
+    @Override
+    public McpRequestContext activateRequestContext() {
+        boolean activate = !requestContext.isActive();
+        McpRequestContext context = new McpRequestContext(requestContext,
+                activate ? requestContext.activate() : null);
+        try {
+            if (activate && contextSupport() != null) {
+                contextSupport().requestContextActivated();
             }
-        } else {
-            // Capture the state we just activated so that it can be destroyed in contextEnd()
-            // regardless of which Vert.x duplicated context is current at that time
-            requestContextState = requestContext.activate();
-            if (contextSupport != null) {
-                contextSupport.requestContextActivated();
+            if (securitySupport() != null && currentIdentityAssociation != null) {
+                securitySupport().setCurrentIdentity(currentIdentityAssociation);
             }
-            if (securitySupport != null && currentIdentityAssociation != null) {
-                securitySupport.setCurrentIdentity(currentIdentityAssociation);
+            return context;
+        } catch (RuntimeException e) {
+            try {
+                context.close();
+            } catch (RuntimeException e2) {
+                e.addSuppressed(e2);
             }
+            throw e;
         }
     }
 
@@ -124,14 +128,10 @@ public abstract class McpRequestImpl<CONNECTION extends McpConnectionBase> imple
     @Override
     public void contextEnd(Throwable error) {
         endTracing(error);
-        ContextState state = requestContextState;
-        if (state != null) {
-            // contextStart() activated the request context; destroy that exact state explicitly.
-            // This callback may run on a different duplicated context (e.g. the one where the
-            // response write completes), so terminate() - which only destroys the currently active
-            // state - would not destroy the beans created during the call.
-            requestContextState = null;
-            requestContext.destroy(state);
+        McpRequestContext context = ownedRequestContext;
+        ownedRequestContext = null;
+        if (context != null) {
+            context.close();
         }
     }
 
