@@ -34,6 +34,10 @@ include::./includes/attributes.adoc[]
 * [2.1.0] The stateless request path now preserves nested client capability properties. Previously, capabilities expressed through a sub-property were discarded and treated as unsupported, which broke URL-mode elicitation via the Multi Round-Trip Request flow. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1006[#1006])
 * [2.1.0] Stateless MCP requests with an omitted `clientInfo` are now accepted instead of being rejected. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1026[#1026])
 * [2.1.0] The `@McpParamHeader` constraint checks are now also applied to programmatically registered tools, which previously bypassed the validation that method-backed tools receive at build time. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1033[#1033])
+* [2.1.0] `tools/call` requests with explicit `null` argument values are now accepted instead of failing. A JSON `null` is a valid argument value that LLM clients often send for optional parameters; previously the internal map copy rejected it with a `NullPointerException`. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1047[#1047])
+* [2.1.0] The CDI request context activated for a feature method (tool, prompt, resource, etc.) is now properly destroyed after the response is written, so `@PreDestroy` runs for request-scoped beans. Previously the context was activated on a duplicated context while cleanup ran on a different one, so nothing was destroyed. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1057[#1057])
+* [2.1.0] The request context cleanup fix is now also applied to the notification and initialization handling, ensuring the context is destroyed on the correct Vert.x context. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
+* [2.1.0] The `@BeforeDestroyed(RequestScoped.class)` observer now fires with the correct request context active. (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
 
 [[version-2-0]]
 == 2.0.x
@@ -41,6 +45,9 @@ include::./includes/attributes.adoc[]
 [cols="1,1"]
 |===
 |Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.3[2.0.3]
+|October 8, 2026
 
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.2[2.0.2]
 |September 30, 2026
@@ -112,6 +119,10 @@ include::./includes/attributes.adoc[]
 * [2.0.2] The stateless request path now preserves nested client capability properties. Previously, capabilities expressed through a sub-property were discarded and treated as unsupported, which broke URL-mode elicitation via the Multi Round-Trip Request flow. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1006[#1006])
 * [2.0.2] Stateless MCP requests with an omitted `clientInfo` are now accepted instead of being rejected. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1026[#1026])
 * [2.0.2] The `@McpParamHeader` constraint checks are now also applied to programmatically registered tools, which previously bypassed the validation that method-backed tools receive at build time. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1033[#1033])
+* [2.0.3] `tools/call` requests with explicit `null` argument values are now accepted instead of failing. A JSON `null` is a valid argument value that LLM clients often send for optional parameters; previously the internal map copy rejected it with a `NullPointerException`. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1047[#1047])
+* [2.0.3] The CDI request context activated for a feature method (tool, prompt, resource, etc.) is now properly destroyed after the response is written, so `@PreDestroy` runs for request-scoped beans. Previously the context was activated on a duplicated context while cleanup ran on a different one, so nothing was destroyed. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1057[#1057])
+* [2.0.3] The request context cleanup fix is now also applied to the notification and initialization handling, ensuring the context is destroyed on the correct Vert.x context. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
+* [2.0.3] The `@BeforeDestroyed(RequestScoped.class)` observer now fires with the correct request context active. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
 
 [[version-1-13]]
 == 1.13.x
