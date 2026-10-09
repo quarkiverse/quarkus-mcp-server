@@ -19,3 +19,7 @@ include::includes/quarkus-mcp-server-http.adoc[leveloffset=+1, opts=optional]
 == WebSocket Transport
 
 include::includes/quarkus-mcp-server-websocket.adoc[leveloffset=+1, opts=optional]
+
+== MCP Tasks
+
+include::includes/quarkus-mcp-server-tasks.adoc[leveloffset=+1, opts=optional]
