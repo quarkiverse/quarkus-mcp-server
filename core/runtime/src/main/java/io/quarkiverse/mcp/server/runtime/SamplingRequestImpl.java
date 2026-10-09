@@ -148,7 +148,7 @@ public final class SamplingRequestImpl implements SamplingRequest, InputRequestS
                 SamplingResponse samplingResponse = new SamplingResponse(content, model, role, result.getString("stopReason"),
                         MetaImpl.from(result));
                 future.complete(samplingResponse);
-            });
+            }, future::completeExceptionally);
             id.set(requestId);
             if (mcpTracing != null) {
                 if (meta == null) {
