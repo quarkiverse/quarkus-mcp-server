@@ -11,6 +11,7 @@ import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.ElicitationCompletion;
+import io.quarkiverse.mcp.server.McpException;
 import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.vertx.core.Future;
@@ -54,9 +55,9 @@ public class ServerRequests implements ElicitationCompletion {
         return responseHandlers.containsKey(id);
     }
 
-    Long newRequest(Consumer<JsonObject> responseConsumer) {
+    Long newRequest(Consumer<JsonObject> responseConsumer, Consumer<Throwable> failureConsumer) {
         Long nextId = idGenerator.nextId();
-        responseHandlers.put(nextId, new ResponseHandler(Instant.now(), responseConsumer));
+        responseHandlers.put(nextId, new ResponseHandler(Instant.now(), responseConsumer, failureConsumer));
         return nextId;
     }
 
@@ -79,8 +80,15 @@ public class ServerRequests implements ElicitationCompletion {
                 LOG.debugf("Handler not found - discard client response with id %s", id);
             } else {
                 try {
-                    handler.operation().accept(message);
+                    JsonObject error = message.getJsonObject("error");
+                    if (error != null) {
+                        handler.failure().accept(new McpException(error.getString("message"), error.getInteger("code"),
+                                error.getValue("data")));
+                    } else {
+                        handler.operation().accept(message);
+                    }
                 } catch (Throwable e) {
+                    handler.failure().accept(e);
                     LOG.errorf(e, "Unable to process the response with id %s", id);
                     return Future.failedFuture(e);
                 }
@@ -163,7 +171,7 @@ public class ServerRequests implements ElicitationCompletion {
         }
     }
 
-    private record ResponseHandler(Instant creationTime, Consumer<JsonObject> operation) {
+    private record ResponseHandler(Instant creationTime, Consumer<JsonObject> operation, Consumer<Throwable> failure) {
 
         public ResponseHandler {
             if (creationTime == null) {
@@ -171,6 +179,9 @@ public class ServerRequests implements ElicitationCompletion {
             }
             if (operation == null) {
                 throw new IllegalArgumentException("operation must not be null");
+            }
+            if (failure == null) {
+                throw new IllegalArgumentException("failure must not be null");
             }
         }
 
