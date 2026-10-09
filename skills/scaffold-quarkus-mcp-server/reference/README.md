@@ -42,50 +42,31 @@ The server starts and listens for MCP connections on stdio (default HTTP transpo
 
 You can exercise the tools using `curl` against the Streamable HTTP endpoint (`/mcp`).
 
-Note: Requests require both `Content-Type: application/json` and `Accept: application/json, text/event-stream` headers.
+The examples below use the **stateless** protocol (`2026-07-28`). Each request is self-contained — no
+`initialize` handshake or session header is needed. The server detects the protocol version automatically.
 
-### Step 1: Initialize the session
-
-Send the `initialize` handshake and inspect the response headers to capture the `Mcp-Session-Id`:
-
-```bash
-curl -i -X POST http://localhost:8080/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {
-      "protocolVersion": "2024-11-05",
-      "capabilities": {},
-      "clientInfo": {
-        "name": "curl-client",
-        "version": "1.0.0"
-      }
-    }
-  }'
-```
-
-The response headers include a session ID, e.g.:
-```http
-Mcp-Session-Id: <session-id>
-```
-
-### Step 2: Call an MCP tool
-
-Pass the captured session ID in the `Mcp-Session-Id` header:
+### Call an MCP tool (stateless)
 
 ```bash
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
-  -H "Mcp-Session-Id: <session-id>" \
+  -H "MCP-Protocol-Version: 2026-07-28" \
+  -H "Mcp-Method: tools/call" \
+  -H "Mcp-Name: greetHello" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 2,
+    "id": 1,
     "method": "tools/call",
     "params": {
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientInfo": {
+          "name": "curl-client",
+          "version": "1.0.0"
+        },
+        "io.modelcontextprotocol/clientCapabilities": {}
+      },
       "name": "greetHello",
       "arguments": {
         "name": "World"
@@ -98,7 +79,7 @@ Expected response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 2,
+  "id": 1,
   "result": {
     "content": [
       {
@@ -111,7 +92,9 @@ Expected response:
 }
 ```
 
-> **Tip (Stateless mode):** If you configure `quarkus.mcp.server.http.stateless=true` in `application.properties`, you can call tools directly without the `initialize` step or session header.
+> **Tip (Stateful mode):** You can also use the older stateful protocol (`2025-03-26` or earlier) by sending
+> an `initialize` request first, then passing the `Mcp-Session-Id` header on subsequent calls. See the
+> [transport docs](https://docs.quarkiverse.io/quarkus-mcp-server/dev/concepts-transports.html) for details.
 
 ---
 
