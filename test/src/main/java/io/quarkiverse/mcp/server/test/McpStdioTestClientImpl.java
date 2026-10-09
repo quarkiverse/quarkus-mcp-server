@@ -3,14 +3,18 @@ package io.quarkiverse.mcp.server.test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,7 +60,7 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         this.stderrHandler = builder.stderrHandler;
         this.state = new McpClientState();
         this.stderrLines = new CopyOnWriteArrayList<>();
-        LOG.debugf("McpStdioTestClient created with command: %s", command);
+        LOG.infof("McpStdioTestClient created with command: %s", command);
     }
 
     @Override
@@ -156,7 +160,8 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         assertNotNull(discoverResult);
 
         // In the 2026-07-28 schema the discover result carries the server identity in
-        // _meta["io.modelcontextprotocol/serverInfo"], not in a top-level serverInfo member
+        // _meta["io.modelcontextprotocol/serverInfo"], not in a top-level serverInfo
+        // member
         JsonObject discoverMeta = discoverResult.getJsonObject("_meta");
         JsonObject serverInfo = discoverMeta == null ? null
                 : discoverMeta.getJsonObject(MetaKey.SERVER_INFO.toString());
@@ -164,7 +169,8 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         List<ServerCapability> capabilities = new ArrayList<>();
         if (discoverCapabilities != null) {
             for (String capability : discoverCapabilities.fieldNames()) {
-                capabilities.add(new ServerCapability(capability, discoverCapabilities.getJsonObject(capability).getMap()));
+                capabilities
+                        .add(new ServerCapability(capability, discoverCapabilities.getJsonObject(capability).getMap()));
             }
         }
         Implementation implementation = Messages.decodeImplementation(serverInfo);
@@ -299,10 +305,55 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
         private Consumer<String> stderrHandler = System.err::println;
 
         BuilderImpl() {
-            Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
-            this.workingDirectory = userDir;
-            this.command = List.of("java", "-jar",
-                    userDir.resolve("target/quarkus-app/quarkus-run.jar").toString());
+            String buildOutputDirectoryStr = System.getProperty("build.output.directory");
+            Path buildOutputDirectory;
+            if (buildOutputDirectoryStr != null) {
+                buildOutputDirectory = Paths.get(buildOutputDirectoryStr).toAbsolutePath();
+                this.workingDirectory = buildOutputDirectory.getParent();
+            } else {
+                this.workingDirectory = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+                buildOutputDirectory = this.workingDirectory.resolve("target");
+            }
+            ArtifactInfo artifactInfo = detectArtifactInfo(buildOutputDirectory);
+            if (artifactInfo != null) {
+                switch (artifactInfo.type()) {
+                    case JAR -> this.command = List.of("java", "-jar", artifactInfo.path.toString());
+                    case NATIVE -> this.command = List.of(artifactInfo.path.toString());
+                    default -> throw new IllegalStateException("Unsupported artifact type");
+                }
+            }
+        }
+
+        private enum ArtifactType {
+            JAR,
+            NATIVE
+        }
+
+        private record ArtifactInfo(ArtifactType type, Path path) {
+        }
+
+        private ArtifactInfo detectArtifactInfo(Path buildOutputDirectory) {
+            // Try read quarkus-artifact.properties first (written by quarkus-maven-plugin)
+            Path artifactProperties = buildOutputDirectory.resolve("quarkus-artifact.properties");
+            LOG.debugf("Try read quarkus-artifact.properties from: %s", artifactProperties);
+            if (Files.exists(artifactProperties)) {
+                Properties properties = new Properties();
+                try (var fis = new FileInputStream(artifactProperties.toFile())) {
+                    properties.load(fis);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(
+                            "Unable to read Quarkus artifact metadata file",
+                            e);
+                }
+                String path = properties.getProperty("path");
+                String type = properties.getProperty("type");
+                ArtifactType artifactType = type == null ? ArtifactType.JAR : ArtifactType.valueOf(type.strip().toUpperCase());
+                if (path != null && !path.isBlank()) {
+                    return new ArtifactInfo(artifactType, buildOutputDirectory.resolve(path));
+                }
+            }
+            // Expect quarkus.package.jar.type=fast-jar
+            return new ArtifactInfo(ArtifactType.JAR, buildOutputDirectory.resolve("quarkus-app/quarkus-run.jar"));
         }
 
         @Override
@@ -352,6 +403,12 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
 
         @Override
         public McpStdioTestClient build() {
+            if (command == null) {
+                throw mustNotBeNull("command");
+            }
+            if (workingDirectory == null) {
+                throw mustNotBeNull("workingDirectory");
+            }
             return new McpStdioTestClientImpl(this);
         }
 
