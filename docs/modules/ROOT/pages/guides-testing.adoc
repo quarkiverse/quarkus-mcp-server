@@ -106,8 +106,45 @@ public void testStdioTransport() {
     } // <2>
 }
 ----
-<1> By default, launches `java -jar target/quarkus-app/quarkus-run.jar` in the current working directory
+<1> Automatically detects the built artifact and launches it; see below for details
 <2> `close()` terminates the subprocess
+
+==== Default command detection
+
+The client determines the working directory and the artifact to launch as follows:
+
+1. If the `build.output.directory` system property is set (Quarkus sets it when running `@QuarkusIntegrationTest`), it is used as the build output directory (`target/`) and its parent becomes the working directory.
+2. Otherwise, `user.dir` (always set by the JVM) is used as the working directory and `target/` is resolved from it.
+3. `quarkus-artifact.properties` is looked up in the build output directory. This file is written by `quarkus-maven-plugin:build` and contains the artifact `type` and the packaging-type-correct relative `path` to the built artifact.
+4. The launch command is derived from the artifact `type`:
++
+* `jar` (e.g. `fast-jar`, `uber-jar`, `legacy-jar`) is launched with `java -jar <path>`.
+* `native` is launched by executing the native binary (`<path>`) directly, without `java -jar`.
+5. If the file is not found, `target/quarkus-app/quarkus-run.jar` is used as the default (fast-jar layout).
+
+For `maven-failsafe-plugin` integration tests, pass `build.output.directory` explicitly so the client finds the correct `target/` regardless of the Maven invocation directory:
+
+[source,xml]
+----
+<plugin>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <executions>
+        <execution>
+            <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <systemPropertyVariables>
+            <build.output.directory>${project.build.directory}</build.output.directory>
+        </systemPropertyVariables>
+    </configuration>
+</plugin>
+----
+
+==== Customizing the client
 
 The client builder allows customization of the server command, working directory, environment variables, and stderr handling:
 

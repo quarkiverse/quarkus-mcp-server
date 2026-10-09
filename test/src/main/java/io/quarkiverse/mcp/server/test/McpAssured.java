@@ -642,7 +642,12 @@ public class McpAssured {
             /**
              * Set the command to launch the MCP server process.
              * <p>
-             * By default, {@code java -jar target/quarkus-app/quarkus-run.jar} is used.
+             * By default, the command is derived automatically: if {@code build.output.directory} is set it is used as
+             * the build output directory, otherwise {@code target/} under {@code user.dir} is used. The
+             * {@code quarkus-artifact.properties} file written by {@code quarkus-maven-plugin:build} is then read to
+             * determine the artifact type and path: a {@code jar} is launched with {@code java -jar <path>}, while a
+             * {@code native} executable is launched directly. If that file is absent,
+             * {@code target/quarkus-app/quarkus-run.jar} (fast-jar layout) is used as the fallback.
              *
              * @param command
              * @return self
@@ -652,7 +657,12 @@ public class McpAssured {
             /**
              * Set the command to launch the MCP server process.
              * <p>
-             * By default, {@code java -jar target/quarkus-app/quarkus-run.jar} is used.
+             * By default, the command is derived automatically: if {@code build.output.directory} is set it is used as
+             * the build output directory, otherwise {@code target/} under {@code user.dir} is used. The
+             * {@code quarkus-artifact.properties} file written by {@code quarkus-maven-plugin:build} is then read to
+             * determine the artifact type and path: a {@code jar} is launched with {@code java -jar <path>}, while a
+             * {@code native} executable is launched directly. If that file is absent,
+             * {@code target/quarkus-app/quarkus-run.jar} (fast-jar layout) is used as the fallback.
              *
              * @param command
              * @return self
@@ -662,7 +672,8 @@ public class McpAssured {
             /**
              * Set the working directory for the server process.
              * <p>
-             * By default, the current working directory is used.
+             * By default, if {@code build.output.directory} is set its parent directory is used; otherwise {@code user.dir} is
+             * used.
              *
              * @param dir
              * @return self
