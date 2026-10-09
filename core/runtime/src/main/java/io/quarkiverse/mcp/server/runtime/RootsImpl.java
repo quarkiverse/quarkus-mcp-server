@@ -114,7 +114,7 @@ class RootsImpl implements Roots {
                     }
                 }
                 future.complete(list);
-            });
+            }, future::completeExceptionally);
             id.set(requestId);
             JsonObject requestMessage = Messages.newRequest(requestId, McpMethod.ROOTS_LIST.jsonRpcName());
             if (mcpTracing != null) {
