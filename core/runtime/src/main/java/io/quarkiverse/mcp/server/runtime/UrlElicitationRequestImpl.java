@@ -88,7 +88,7 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
                 Action action = Action.valueOf(result.getString("action").toUpperCase());
                 future.complete(new ElicitationResponse(action, new ElicitationRequestImpl.ContentImpl(new JsonObject()),
                         MetaImpl.from(result)));
-            });
+            }, future::completeExceptionally);
             id.set(requestId);
             serverRequests.registerElicitation(elicitationId, connectionId, completionTimeout);
             JsonObject params = new JsonObject()
@@ -115,10 +115,9 @@ public class UrlElicitationRequestImpl implements UrlElicitationRequest {
                         if (requestId != 0 && serverRequests.removeResponseHandler(requestId)) {
                             LOG.debugf("Response handler for %s removed due to timeout", requestId);
                         }
-                        serverRequests.removeElicitation(elicitationId);
                     });
         }
-        return ret;
+        return ret.onFailure().invoke(t -> serverRequests.removeElicitation(elicitationId));
     }
 
 }

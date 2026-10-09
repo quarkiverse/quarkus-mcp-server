@@ -73,7 +73,7 @@ public class ElicitationRequestImpl implements ElicitationRequest {
                 Action action = Action.valueOf(result.getString("action").toUpperCase());
                 JsonObject content = result.getJsonObject("content");
                 future.complete(new ElicitationResponse(action, new ContentImpl(content), MetaImpl.from(result)));
-            });
+            }, future::completeExceptionally);
             id.set(requestId);
             JsonObject properties = new JsonObject();
             JsonObject schema = new JsonObject().put("type", "object").put("properties", properties);
