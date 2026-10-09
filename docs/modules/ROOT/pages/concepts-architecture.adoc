@@ -342,8 +342,9 @@ public class CachingGlobalSchemaGeneratorDecorator implements GlobalInputSchemaG
    }
 }
 ----
-1. @Priority enables the decorator. Decorators with smaller priority values are called first.
-2. @Decorator marks a decorator component.
+1. `@Priority` enables the decorator.
+Decorators with smaller priority values are called first.
+2. `@Decorator` marks a decorator component.
 3. Each decorator must declare exactly one delegate injection point. The decorator applies to beans that are assignable to this delegate injection point.
 4. The decorator may invoke any method of the delegate object. And the container invokes either the next decorator in the chain or the business method of the intercepted instance.
 
