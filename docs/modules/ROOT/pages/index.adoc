@@ -69,6 +69,7 @@ Full support for:
 * **Progress** - Send progress notifications during long-running operations
 * **Cancellation** - Handle client-requested cancellations gracefully
 * **Roots** - Discover client working directories
+* **Tasks** - Execute long-running tools asynchronously (xref:guides-mcp-tasks.adoc[MCP Tasks extension])
 
 == Getting Started
 

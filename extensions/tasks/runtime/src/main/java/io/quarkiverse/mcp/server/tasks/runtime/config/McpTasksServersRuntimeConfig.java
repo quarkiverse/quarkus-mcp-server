@@ -1,0 +1,27 @@
+package io.quarkiverse.mcp.server.tasks.runtime.config;
+
+import java.util.Map;
+
+import io.quarkiverse.mcp.server.McpServer;
+import io.quarkus.runtime.annotations.ConfigDocMapKey;
+import io.quarkus.runtime.annotations.ConfigPhase;
+import io.quarkus.runtime.annotations.ConfigRoot;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefaults;
+import io.smallrye.config.WithParentName;
+import io.smallrye.config.WithUnnamedKey;
+
+@ConfigRoot(phase = ConfigPhase.RUN_TIME)
+@ConfigMapping(prefix = "quarkus.mcp.server")
+public interface McpTasksServersRuntimeConfig {
+
+    /**
+     * Tasks server configurations.
+     */
+    @ConfigDocMapKey("server-name")
+    @WithParentName
+    @WithDefaults
+    @WithUnnamedKey(McpServer.DEFAULT)
+    Map<String, McpTasksServerRuntimeConfig> servers();
+
+}

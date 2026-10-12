@@ -33,6 +33,7 @@
 
 .MCP Extensions
 ** xref:guides-mcp-extensions.adoc[Implementing MCP Extensions]
+** xref:guides-mcp-tasks.adoc[MCP Tasks]
 
 .Reference
 ** xref:reference-content-types.adoc[Content Types]
