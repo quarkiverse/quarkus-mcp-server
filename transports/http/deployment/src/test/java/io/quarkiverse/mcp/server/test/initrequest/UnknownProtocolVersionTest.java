@@ -1,19 +1,20 @@
 package io.quarkiverse.mcp.server.test.initrequest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.mcp.server.InitialRequest;
-import io.quarkiverse.mcp.server.McpConnection;
-import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.json.JsonObject;
 
 public class UnknownProtocolVersionTest extends McpServerTest {
 
@@ -25,36 +26,42 @@ public class UnknownProtocolVersionTest extends McpServerTest {
 
     @Test
     public void testUnknownProtocolVersion() {
-        McpSseTestClient client = McpAssured.newSseClient()
-                .setProtocolVersion(McpProtocolVersion.from(UNKNOWN_VERSION))
-                .build()
-                .connect();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().build();
+        // With supported-protocol-versions unset, only the versions implemented by the extension are admitted
+        request().body(initialize(UNKNOWN_VERSION).encode()).post(client.mcpEndpoint()).then()
+                .statusCode(400).header("Mcp-Session-Id", nullValue())
+                .body("error.code", equalTo(-32022))
+                .body("error.data.requested", equalTo(UNKNOWN_VERSION))
+                .body("error.data.supported",
+                        contains("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"));
+    }
 
-        client.when()
-                .toolsCall("verifyProtocolVersion", r -> {
-                    assertFalse(r.isError());
-                    assertEquals("ok", r.firstContent().asText().text());
-                })
-                .thenAssertResults();
+    @Test
+    public void testUnknownProtocolVersionHeader() {
+        McpStreamableTestClient client = McpAssured.newStreamableClient().build();
+        request().header("MCP-Protocol-Version", UNKNOWN_VERSION)
+                .body(initialize(UNKNOWN_VERSION).encode()).post(client.mcpEndpoint()).then()
+                .statusCode(400).header("Mcp-Session-Id", nullValue())
+                .body("error.code", equalTo(-32022))
+                .body("error.data.requested", equalTo(UNKNOWN_VERSION));
+    }
+
+    private static RequestSpecification request() {
+        return given().contentType("application/json").accept("application/json, text/event-stream")
+                .header("Mcp-Method", "initialize");
+    }
+
+    private static JsonObject initialize(String version) {
+        return new JsonObject().put("jsonrpc", "2.0").put("id", 1).put("method", "initialize")
+                .put("params", new JsonObject().put("protocolVersion", version)
+                        .put("capabilities", new JsonObject())
+                        .put("clientInfo", new JsonObject().put("name", "test").put("version", "1")));
     }
 
     public static class MyTools {
-
         @Tool
-        String verifyProtocolVersion(McpConnection connection) {
-            InitialRequest initRequest = connection.initialRequest();
-            McpProtocolVersion protocolVersion = initRequest.protocolVersion();
-            if (!UNKNOWN_VERSION.equals(protocolVersion.version())) {
-                throw new IllegalStateException(
-                        "Expected version " + UNKNOWN_VERSION + " but got " + protocolVersion.version());
-            }
-            if (protocolVersion.isKnown()) {
-                throw new IllegalStateException("Expected unknown protocol version");
-            }
-            if (protocolVersion.isStateless()) {
-                throw new IllegalStateException("Expected stateful protocol version");
-            }
-            return "ok";
+        String echo(String message) {
+            return message;
         }
     }
 

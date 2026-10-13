@@ -72,6 +72,7 @@ import io.quarkiverse.mcp.server.runtime.SecuritySupport;
 import io.quarkiverse.mcp.server.runtime.Sender;
 import io.quarkiverse.mcp.server.runtime.ServerRequests;
 import io.quarkiverse.mcp.server.runtime.Subscription;
+import io.quarkiverse.mcp.server.runtime.SupportedProtocolVersions;
 import io.quarkiverse.mcp.server.runtime.ToolManagerImpl;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
@@ -215,6 +216,38 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
 
         String mcpProtocolVersion = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+        SupportedProtocolVersions versions = protocolVersions(serverName);
+        boolean initialize = McpMethod.INITIALIZE == McpMethod.from(message.getString("method"));
+
+        // Stateless-only servers always require the version header
+        // Stateful initialization can supply the version in params, but subsequent headerless requests assume 2025-03-26, which must be allowed
+        if (mcpProtocolVersion == null
+                && (!versions.supportsStateful()
+                        || (!initialize && !versions.supports(McpProtocolVersion.DEFAULT_ASSUMED)))) {
+            ctx.response().setStatusCode(400)
+                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .end(newError(Messages.getId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
+                            "Missing required header: " + MCP_PROTOCOL_VERSION_HEADER).toBuffer());
+            return;
+        }
+
+        String requested = mcpProtocolVersion;
+        // Check the initialization body only after accepting the header, so an allowed body version
+        // cannot hide a disallowed header
+        // Stateless-only servers reject the handshake later
+        if (initialize && versions.supportsStateful()
+                && (requested == null || versions.supports(requested))) {
+            JsonObject params = Messages.getParams(message);
+            if (params != null && params.getValue("protocolVersion") instanceof String version) {
+                requested = version;
+            }
+        }
+        if (requested != null && !versions.supports(requested)) {
+            ctx.response().setStatusCode(400)
+                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .end(unsupportedVersion(message, serverName, requested).toBuffer());
+            return;
+        }
         JsonObject meta = findMeta(message);
         if (isStatelessRequest(mcpProtocolVersion, message, meta)) {
             handleStateless(ctx, serverName, request, message, mcpProtocolVersion, meta);
@@ -235,18 +268,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
         // Validate required headers for stateless clients
         if (!validateStatelessHeaders(ctx, serverName, message, mcpProtocolVersion, meta)) {
-            return;
-        }
-
-        // Validate protocol version is supported
-        if (mcpProtocolVersion != null && !McpProtocolVersion.SUPPORTED_VERSIONS.contains(mcpProtocolVersion)) {
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-            ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.UNSUPPORTED_PROTOCOL_VERSION,
-                    "Unsupported protocol version",
-                    new JsonObject().put("supported", McpProtocolVersion.SUPPORTED_VERSIONS).put("requested",
-                            mcpProtocolVersion))
-                    .toBuffer());
             return;
         }
 
@@ -458,13 +479,6 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             } else {
                 throw new IllegalStateException("Invalid connection type: " + existing.getClass().getName());
             }
-        }
-
-        if (mcpProtocolVersion != null
-                && !McpProtocolVersion.SUPPORTED_VERSIONS.contains(mcpProtocolVersion)) {
-            LOG.warnf("Invalid MCP protocol header: %s", mcpProtocolVersion);
-            ctx.fail(400);
-            return;
         }
 
         QuarkusHttpUser user = (QuarkusHttpUser) ctx.user();
@@ -734,6 +748,9 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     @Override
     protected Future<Void> unsupportedMethod(JsonObject message, HttpMcpRequest mcpRequest) {
+        if (!protocolVersions(mcpRequest.serverName()).supportsStateful()) {
+            mcpRequest.response.setStatusCode(404);
+        }
         if (mcpRequest.newSession) {
             connectionManager.remove(mcpRequest.connection().id());
         }

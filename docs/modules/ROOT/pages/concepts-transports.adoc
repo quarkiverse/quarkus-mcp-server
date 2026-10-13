@@ -111,6 +111,29 @@ The `McpConnection.logLevel()` method returns this per-request value for transie
 
 See xref:getting-started-http.adoc[Getting Started with HTTP] for a complete tutorial.
 
+=== Restricting Protocol Versions
+
+By default, all protocol versions implemented by this extension are enabled, and stateful clients can initialize a session.
+Within a stateful session, subsequent Streamable HTTP requests without an `MCP-Protocol-Version` header assume version `2025-03-26` (stateless requests always require the header).
+
+IMPORTANT: A client requesting a protocol version that is not implemented by this extension is rejected with an unsupported-version error. In previous versions such unknown versions were accepted during the `initialize` handshake. If you need to admit a version that this extension does not implement, list it explicitly via `quarkus.mcp.server.supported-protocol-versions` (see below).
+
+Set `quarkus.mcp.server.supported-protocol-versions` to define an explicit, non-empty set of versions the server admits and advertises:
+
+[source,properties]
+----
+quarkus.mcp.server.supported-protocol-versions=2026-07-28
+----
+
+The configured list is the ultimate set of accepted versions and is used by `server/discover` and unsupported-version errors.
+A configured version does not have to be one of the versions implemented by this extension.
+For a named server, use `quarkus.mcp.server.<server-name>.supported-protocol-versions`.
+
+When the list contains only stateless versions, HTTP requests must include `MCP-Protocol-Version`.
+Legacy HTTP/SSE endpoints return `404`, and GET and DELETE requests to the Streamable HTTP endpoint return `405` with `Allow: POST`.
+The legacy `initialize` handshake cannot create a session, even when automatic initialization is enabled.
+Normal authentication, origin validation, request validation and capability filtering still apply.
+
 === Sessions, Horizontal Scaling, and Load Balancing
 
 In the stateful mode, the `initialize`/`initialized` handshake establishes a session identified by the `Mcp-Session-Id` header.
