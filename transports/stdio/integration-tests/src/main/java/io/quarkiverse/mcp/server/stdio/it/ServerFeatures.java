@@ -4,6 +4,7 @@ import jakarta.inject.Inject;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
@@ -58,7 +59,13 @@ public class ServerFeatures {
 
     @Tool
     String logLevelInfo(McpConnection connection) {
-        return connection.logLevel().name();
+        return connection.logLevel() == null ? "none" : connection.logLevel().name();
+    }
+
+    @Tool
+    String logMessage(McpLog log) {
+        log.info("Hello from logMessage");
+        return "ok";
     }
 
     @Tool

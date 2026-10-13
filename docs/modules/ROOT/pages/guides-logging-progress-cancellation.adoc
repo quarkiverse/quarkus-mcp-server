@@ -120,7 +120,8 @@ public class MyTools {
 
     @Tool(description = "Efficient logging")
     String efficientLogging(McpLog log) {
-        if (log.level().compareTo(LogLevel.DEBUG) <= 0) { // <1>
+        LogLevel level = log.level();
+        if (level != null && level.compareTo(LogLevel.DEBUG) <= 0) { // <1>
             // Only compute expensive debug info if debug is enabled
             String expensiveDebugInfo = computeExpensiveDebugInfo();
             log.debug("Debug info: %s", expensiveDebugInfo);
@@ -135,7 +136,19 @@ public class MyTools {
     }
 }
 ----
-<1> Check the log level to avoid expensive operations when debug is disabled.
+<1> Check the log level to avoid expensive operations when debug is disabled. `McpLog#level()` returns `null` when the client did not opt in to log notifications (see <<per-request-log-level>>); in that case no notification would be sent anyway.
+
+[#per-request-log-level]
+=== Per-request Log Level and Opt-in
+
+The log level that determines whether a notification is sent to the client depends on the protocol in use:
+
+* *Stateful connections* use the level set by the client via a `logging/setLevel` request, or the configured default `quarkus.mcp.server.client-logging.default-level` (defaults to `INFO`) until the client changes it.
+* *Stateless requests* (protocol version `2026-07-28` and later) use a per-request opt-in: the client must include the `io.modelcontextprotocol/logLevel` field in the request `_meta`.
+If the field is absent, the server *must not* send any log message notification for that request, so `McpLog#level()` returns `null`.
+
+In both cases the logging methods, such as `McpLog#info(String, Object...)`, always log the message server-side (via JBoss Logging); only the client-facing notification is suppressed when the client did not opt in.
+The `quarkus.mcp.server.client-logging.default-level` setting does not apply to stateless requests.
 
 == Progress Tracking
 

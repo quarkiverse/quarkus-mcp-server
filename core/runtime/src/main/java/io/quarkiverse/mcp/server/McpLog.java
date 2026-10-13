@@ -19,13 +19,23 @@ import org.jboss.logging.Logger;
 public interface McpLog {
 
     /**
+     * Returns the current log level, i.e. the threshold used to decide whether a log message notification is sent to the
+     * client.
+     * <p>
+     * For a stateless request (protocol version {@code 2026-07-28} and later) the level is opt-in per-request via the
+     * {@code io.modelcontextprotocol/logLevel} {@code _meta} field. If the client did not include this field then this
+     * method returns {@code null} and no log message notification is ever sent to the client; the logging methods, such
+     * as {@link #info(String, Object...)}, still log the message server-side but do not notify the client.
      *
-     * @return the current log level
+     * @return the current log level, or {@code null} if the client did not opt in to log message notifications
      */
     LogLevel level();
 
     /**
      * Sends a log message notification to the client if the specified level is higher or equal to the current level.
+     * <p>
+     * If {@link #level()} returns {@code null}, i.e. the client did not opt in to log message notifications, then no
+     * notification is sent.
      *
      * @param level
      * @param data
@@ -34,6 +44,9 @@ public interface McpLog {
 
     /**
      * Sends a log message notification to the client if the specified level is higher or equal to the current level.
+     * <p>
+     * If {@link #level()} returns {@code null}, i.e. the client did not opt in to log message notifications, then no
+     * notification is sent.
      *
      * @param level
      * @param format a format string in {@link java.util.Formatter} syntax
