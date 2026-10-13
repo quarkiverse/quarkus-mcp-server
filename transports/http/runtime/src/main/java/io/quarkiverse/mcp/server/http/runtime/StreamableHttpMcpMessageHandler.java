@@ -554,7 +554,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         streamableConnection.addSse(sse);
 
         // Send log notification to the client if the log level allows it
-        if (McpLog.LogLevel.DEBUG.isAtLeast(connection.logLevel())) {
+        if (connection.logLevel() != null && McpLog.LogLevel.DEBUG.isAtLeast(connection.logLevel())) {
             JsonObject log = Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                     Messages.newLog(McpLog.LogLevel.DEBUG, "SseStream",
                             "Subsidiary SSE opened [%s]".formatted(connection.id())));

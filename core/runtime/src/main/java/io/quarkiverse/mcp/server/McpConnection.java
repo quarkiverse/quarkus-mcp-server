@@ -30,9 +30,13 @@ public interface McpConnection {
 
     /**
      * For {@linkplain #isTransient() transient} connections, returns the per-request log level from
-     * {@code _meta} ({@code io.modelcontextprotocol/logLevel}), or the default level if not specified.
+     * {@code _meta} ({@code io.modelcontextprotocol/logLevel}), or {@code null} if the field is not specified; a
+     * {@code null} level means no log message notifications are sent to the client for this request.
+     * <p>
+     * For stateful connections, returns the level set via {@code logging/setLevel}, or the configured default level
+     * ({@code quarkus.mcp.server.client-logging.default-level}) if the client did not change it.
      *
-     * @return the current log level
+     * @return the current log level, or {@code null} for a transient connection with no per-request log level
      */
     LogLevel logLevel();
 

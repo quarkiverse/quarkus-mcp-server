@@ -30,7 +30,8 @@ class McpLogImpl implements McpLog {
 
     @Override
     public void send(LogLevel level, Object data) {
-        if (Objects.requireNonNull(level).isAtLeast(level())) {
+        LogLevel current = level();
+        if (current != null && Objects.requireNonNull(level).isAtLeast(current)) {
             sender.send(Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                     Messages.newLog(level, mcpLoggerName, encode(data))));
         }
@@ -38,7 +39,8 @@ class McpLogImpl implements McpLog {
 
     @Override
     public void send(LogLevel level, String format, Object... params) {
-        if (Objects.requireNonNull(level).isAtLeast(level())) {
+        LogLevel current = level();
+        if (current != null && Objects.requireNonNull(level).isAtLeast(current)) {
             sender.send(Messages.newNotification(McpMethod.NOTIFICATIONS_MESSAGE.jsonRpcName(),
                     Messages.newLog(level, mcpLoggerName, format.formatted(params))));
         }
