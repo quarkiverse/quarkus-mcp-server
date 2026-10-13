@@ -1,0 +1,82 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a| [[quarkus-mcp-server-tasks_quarkus-mcp-server-tasks-default-ttl]] [.property-path]##link:#quarkus-mcp-server-tasks_quarkus-mcp-server-tasks-default-ttl[`+++quarkus.mcp.server.tasks.default-ttl+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tasks.default-ttl+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tasks.default-ttl+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tasks.default-ttl+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default time-to-live of a task created for a task-augmented tool, measured from its creation. Once elapsed, the task may be discarded, including its result. Negative and zero durations imply an unlimited time-to-live. It can be overridden per tool with `@Task++#++ttl()`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TASKS_DEFAULT_TTL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TASKS_DEFAULT_TTL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-tasks_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
+|`+++1H+++`
+
+a| [[quarkus-mcp-server-tasks_quarkus-mcp-server-tasks-default-poll-interval]] [.property-path]##link:#quarkus-mcp-server-tasks_quarkus-mcp-server-tasks-default-poll-interval[`+++quarkus.mcp.server.tasks.default-poll-interval+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tasks.default-poll-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tasks.default-poll-interval+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tasks.default-poll-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+The default polling interval suggested to clients polling a task. It must be positive. It can be overridden per tool with `@Task++#++pollInterval()`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TASKS_DEFAULT_POLL_INTERVAL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TASKS_DEFAULT_POLL_INTERVAL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-mcp-server-tasks_quarkus-mcp[icon:question-circle[title=More information about the Duration format]]
+|`+++5S+++`
+
+|===
+
+ifndef::no-duration-note[]
+[NOTE]
+[id=duration-note-anchor-quarkus-mcp-server-tasks_quarkus-mcp]
+.About the Duration format
+====
+To write duration values, use the standard `java.time.Duration` format.
+See the link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html#parse(java.lang.CharSequence)[Duration#parse() Java API documentation] for more information.
+
+You can also use a simplified format, starting with a number:
+
+* If the value is only a number, it represents time in seconds.
+* If the value is a number followed by `ms`, it represents time in milliseconds.
+
+In other cases, the simplified format is translated to the `java.time.Duration` format for parsing:
+
+* If the value is a number followed by `h`, `m`, or `s`, it is prefixed with `PT`.
+* If the value is a number followed by `d`, it is prefixed with `P`.
+====
+endif::no-duration-note[]

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 
 import jakarta.inject.Inject;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpConnection;
+import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.McpLog.LogLevel;
 import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.MetaKey;
@@ -97,7 +99,7 @@ public class StatelessTest extends McpServerTest {
         client.when()
                 .toolsList(tools -> {
                     assertNotNull(tools);
-                    assertEquals(3, tools.size());
+                    assertEquals(4, tools.size());
                     assertNotNull(tools.findByName("echo"));
                 })
                 .thenAssertResults();
@@ -119,7 +121,7 @@ public class StatelessTest extends McpServerTest {
 
         client.when()
                 .message(message)
-                .withAssert(result -> assertEquals(3, result.getJsonObject("result").getJsonArray("tools").size()))
+                .withAssert(result -> assertEquals(4, result.getJsonObject("result").getJsonArray("tools").size()))
                 .send()
                 .thenAssertResults();
         client.disconnect();
@@ -171,14 +173,62 @@ public class StatelessTest extends McpServerTest {
                 .connect();
 
         client.when()
+                // The client opts in to log notifications for this request => the level is honored
                 .toolsCall("logLevelInfo")
-                .withMetadata(Map.of("io.modelcontextprotocol/logLevel", "warning"))
+                .withMetadata(Map.of(MetaKey.LOG_LEVEL.toString(), LogLevel.WARNING.name().toLowerCase()))
                 .withAssert(r -> {
                     assertFalse(r.isError());
                     assertEquals(LogLevel.WARNING.name(), r.firstContent().asText().text());
                 })
                 .send()
+                // The client did not include the io.modelcontextprotocol/logLevel field => no log notifications are sent
+                // and McpLog#level() returns null, see the MCP 2026-07-28 logging spec
+                .toolsCall("logLevelInfo")
+                .withAssert(r -> {
+                    assertFalse(r.isError());
+                    assertEquals("none", r.firstContent().asText().text());
+                })
+                .send()
                 .thenAssertResults();
+        client.disconnect();
+    }
+
+    @Test
+    public void testLogNotificationOptIn() {
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless()
+                .build()
+                .connect();
+
+        // The client did not opt in => the tool logs server-side but no notifications/message is delivered
+        client.when()
+                .toolsCall("logMessage")
+                .withAssert(r -> {
+                    assertFalse(r.isError());
+                    assertEquals("ok", r.firstContent().asText().text());
+                })
+                .send()
+                .thenAssertResults();
+        assertTrue(client.snapshot().notifications().isEmpty(),
+                "No log notification must be sent for a request that does not include the logLevel _meta field");
+
+        // The client opts in at INFO => a single notifications/message is delivered on the response stream
+        client.when()
+                .toolsCall("logMessage")
+                .withMetadata(Map.of(MetaKey.LOG_LEVEL.toString(), LogLevel.INFO.name().toLowerCase()))
+                .withAssert(r -> {
+                    assertFalse(r.isError());
+                    assertEquals("ok", r.firstContent().asText().text());
+                })
+                .send()
+                .thenAssertResults();
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
+        assertEquals(1, notifications.size());
+        JsonObject params = notifications.get(0).getJsonObject("params");
+        assertEquals(LogLevel.INFO.toString().toLowerCase(), params.getString("level"));
+        assertEquals("tool:logMessage", params.getString("logger"));
+        assertEquals("Hello from logMessage", params.getString("data"));
+
         client.disconnect();
     }
 
@@ -238,7 +288,13 @@ public class StatelessTest extends McpServerTest {
 
         @Tool
         String logLevelInfo(McpConnection connection) {
-            return connection.logLevel().name();
+            return connection.logLevel() == null ? "none" : connection.logLevel().name();
+        }
+
+        @Tool
+        String logMessage(McpLog log) {
+            log.info("Hello from logMessage");
+            return "ok";
         }
     }
 
