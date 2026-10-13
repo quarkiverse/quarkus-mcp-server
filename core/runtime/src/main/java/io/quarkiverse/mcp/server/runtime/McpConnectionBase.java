@@ -46,7 +46,10 @@ public abstract class McpConnectionBase implements McpConnection, Sender {
             TrafficListeners trafficListeners, boolean transientConnection) {
         this.id = id;
         this.status = new AtomicReference<>(Status.NEW);
-        this.logLevel = serverConfig.clientLogging().defaultLevel();
+        // For transient (stateless) connections the log level is opt-in per-request via the
+        // io.modelcontextprotocol/logLevel _meta field; if the field is absent no log notifications are sent.
+        // Stateful connections use the configured default level until changed via logging/setLevel.
+        this.logLevel = transientConnection ? null : serverConfig.clientLogging().defaultLevel();
         this.trafficListeners = trafficListeners;
         this.autoPingInterval = transientConnection ? Optional.empty() : serverConfig.autoPingInterval();
         this.lastUsed = System.currentTimeMillis();

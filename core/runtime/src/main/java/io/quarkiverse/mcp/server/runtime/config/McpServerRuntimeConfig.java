@@ -210,7 +210,12 @@ public interface McpServerRuntimeConfig {
     public interface ClientLogging {
 
         /**
-         * The default log level.
+         * The default log level used for stateful connections until the client changes it via a `logging/setLevel`
+         * request.
+         *
+         * This setting does not apply to stateless requests (protocol version `2026-07-28` and later). There, log
+         * message notifications are opt-in per-request via the `io.modelcontextprotocol/logLevel` `_meta` field; if a
+         * request does not include this field then no log message notifications are sent for that request.
          *
          * @asciidoclet
          */
