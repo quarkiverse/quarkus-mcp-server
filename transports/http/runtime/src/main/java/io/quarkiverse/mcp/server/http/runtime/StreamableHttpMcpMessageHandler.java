@@ -952,6 +952,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                     // "write" is async and synchronized over http connection, and should be thread-safe
                     return response.write("event: message\ndata: " + message.encode() + "\n\n");
                 } else {
+                    applyStatelessErrorStatus(message);
                     response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
                     return response.end(message.toBuffer());
                 }
@@ -975,6 +976,18 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         public McpProtocolVersion protocolVersion() {
             McpProtocolVersion ret = super.protocolVersion();
             return ret != null ? ret : McpProtocolVersion.from(mcpProtocolVersion);
+        }
+
+        private void applyStatelessErrorStatus(JsonObject message) {
+            if (response.ended() || response.headWritten() || !isStateless(connection())) {
+                return;
+            }
+            JsonObject error = message.getJsonObject("error");
+            if (error != null && error.getInteger("code", 0) == JsonRpcErrorCodes.METHOD_NOT_FOUND) {
+                // The stateless Streamable HTTP transport maps a "method not found" JSON-RPC error
+                // to the HTTP status 404 Not Found, in addition to the -32601 error body (MCP spec 2026-07-28)
+                response.setStatusCode(404);
+            }
         }
 
     }
