@@ -7,7 +7,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -19,6 +21,8 @@ class McpStreamableClient extends SseClient {
 
     final URI mcpEndpoint;
     final McpClientState state;
+    private final Set<CompletableFuture<?>> pendingRequests = ConcurrentHashMap.newKeySet();
+
     final AtomicReference<Consumer<JsonObject>> requestConsumer = new AtomicReference<>();
 
     McpStreamableClient(URI mcpEndpoint) {
@@ -69,11 +73,28 @@ class McpStreamableClient extends SseClient {
         McpStremableRequest request = new McpStremableRequest(HttpClients.getDefault(), mcpEndpoint, headers,
                 state::addResponse,
                 state.notifications::add, state.requests::add);
-        request.send(body);
+        track(request.send(body));
     }
 
     CompletableFuture<HttpResponse<Void>> connectSubsidiarySse(MultiMap headers) {
-        return connect(HttpClients.getDefault(), headers);
+        // Track the original HTTP future so cancellation also closes the response stream.
+        CompletableFuture<HttpResponse<Void>> response = HttpClients.getDefault().sendAsync(buildConnectRequest(headers),
+                BodyHandlers.fromLineSubscriber(new SseEventSubscriber(this::process)));
+        track(response);
+        return response;
+    }
+
+    private void track(CompletableFuture<?> response) {
+        pendingRequests.add(response);
+        response.whenComplete((r, t) -> pendingRequests.remove(response));
+    }
+
+    void disconnect() {
+        // Cancellation callbacks remove completed requests from the set.
+        for (CompletableFuture<?> response : pendingRequests) {
+            response.cancel(true);
+        }
+        pendingRequests.clear();
     }
 
     @Override
