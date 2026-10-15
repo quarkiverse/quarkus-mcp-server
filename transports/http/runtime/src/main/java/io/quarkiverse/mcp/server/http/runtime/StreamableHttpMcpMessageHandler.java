@@ -286,6 +286,18 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
 
     private boolean validateStatelessHeaders(RoutingContext ctx, String serverName, JsonObject message,
             String mcpProtocolVersion, JsonObject meta) {
+        // The MCP-Protocol-Version header is the authoritative source of the protocol version for stateless (2026-07-28+) requests
+        // The body's _meta protocol version is only a mirror that must match it
+        // A missing header is therefore a validation failure (MCP spec 2026-07-28, Server Validation)
+        // The legacy exception that permits assuming 2025-03-26 for a headerless request does not apply here because the request body explicitly declares a stateless version
+        if (mcpProtocolVersion == null) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            ctx.response().setStatusCode(400);
+            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    "Missing required header: " + MCP_PROTOCOL_VERSION_HEADER).toBuffer());
+            return false;
+        }
+
         // Validate Mcp-Method header
         String mcpMethodHeader = ctx.request().getHeader(MCP_METHOD_HEADER);
         String bodyMethod = message.getString("method");
@@ -328,7 +340,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         }
 
         // Validate MCP-Protocol-Version header matches _meta version
-        if (meta != null && mcpProtocolVersion != null) {
+        if (meta != null) {
             String metaVersion = meta.getString(MetaKey.PROTOCOL_VERSION.toString());
             if (metaVersion != null && !mcpProtocolVersion.equals(metaVersion)) {
                 ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
