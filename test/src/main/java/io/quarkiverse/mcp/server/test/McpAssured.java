@@ -1711,12 +1711,15 @@ public class McpAssured {
 
     /**
      * An immutable snapshot of assertable messages sent from the server.
+     * The received-messages list combines all three categories in the order McpAssured recorded them.
      *
      * @param requests The requests sent from the server
      * @param responses The responses sent from the server
      * @param notifications The notifications sent from the server
+     * @param receivedMessages All messages in the order observed by the client
      */
-    public record Snapshot(List<JsonObject> requests, List<JsonObject> responses, List<JsonObject> notifications) {
+    public record Snapshot(List<JsonObject> requests, List<JsonObject> responses, List<JsonObject> notifications,
+            List<JsonObject> receivedMessages) {
     }
 
     public record HttpResponse(int statusCode, MultiMap headers, String body) {
