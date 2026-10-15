@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.test.McpAssured;
@@ -37,7 +38,8 @@ public class MetricsDisabledTest extends McpServerTest {
 
     @Test
     void testMetricsDisabledByDefault() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals("20", toolResponse.firstContent().asText().text());

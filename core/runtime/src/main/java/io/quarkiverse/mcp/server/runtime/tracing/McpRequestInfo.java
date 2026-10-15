@@ -52,7 +52,9 @@ public class McpRequestInfo {
     }
 
     public String getSessionId() {
-        return mcpRequest.connection().id();
+        // Stateless requests use a transient connection ID, which is not a protocol session.
+        McpProtocolVersion version = mcpRequest.protocolVersion();
+        return version != null && version.isStateless() ? null : mcpRequest.connection().id();
     }
 
     public String getProtocolVersion() {
