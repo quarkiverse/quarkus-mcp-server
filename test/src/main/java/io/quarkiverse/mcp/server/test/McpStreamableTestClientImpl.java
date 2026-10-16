@@ -231,6 +231,10 @@ class McpStreamableTestClientImpl extends McpTestClientBase<McpStreamableAssert,
 
     @Override
     public void disconnect() {
+        McpStreamableClient current = client;
+        if (current != null) {
+            current.disconnect();
+        }
         mcpSessionId = null;
         connected.set(false);
         client = null;
