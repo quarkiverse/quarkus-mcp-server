@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.websocket.tracing.it;
 import static io.restassured.RestAssured.given;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.PromptInfo;
@@ -35,7 +37,8 @@ class TracingTest {
 
     @Test
     void testPrompt() {
-        McpWebSocketTestClient client = McpAssured.newConnectedWebSocketClient();
+        McpWebSocketTestClient client = McpAssured.newWebSocketClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .promptsList(p -> {
                     assertEquals(1, p.size());
@@ -49,7 +52,7 @@ class TracingTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(6);
+        final JsonArray spans = awaitSpans(5);
 
         // Parent. From http server
         final JsonObject httpMcpWs = findSpan(spans, "GET /mcp/ws");
@@ -61,35 +64,26 @@ class TracingTest {
         assertNotNull(websocketMcpWs);
         assertEquals(httpMcpWs.getString("spanId"), websocketMcpWs.getString("parent_spanId"));
 
-        // Initialize
-        final JsonObject initialize = findSpan(spans, "initialize");
-        assertNotNull(initialize);
-        assertEquals("0000000000000000", initialize.getString("parent_spanId"));
-        assertNotNull(initialize.getJsonObject("attributes").getString("mcp.session.id"));
-        final String mcpSessionId = initialize.getJsonObject("attributes").getString("mcp.session.id");
-        assertEquals("websocket", initialize.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", initialize.getJsonObject("attributes").getString("network.transport"));
-
-        // All spans have their own trace but have the same mcp.session.id.
-        // span are in chronological order but that order is not asserted.
-
-        // Notification initialized
-        final JsonObject notifInitialized = findSpan(spans, "notifications/initialized");
-        assertNotNull(notifInitialized);
-        assertEquals("0000000000000000", notifInitialized.getString("parent_spanId"));
-        assertEquals(mcpSessionId, notifInitialized.getJsonObject("attributes").getString("mcp.session.id"));
-        assertEquals("websocket", notifInitialized.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", notifInitialized.getJsonObject("attributes").getString("network.transport"));
+        // Server discovery
+        final JsonObject discover = findSpan(spans, "server/discover");
+        assertNotNull(discover);
+        assertEquals("0000000000000000", discover.getString("parent_spanId"));
+        assertEquals("SERVER", discover.getString("kind"));
+        assertEquals("server/discover", discover.getJsonObject("attributes").getString("mcp.method.name"));
+        assertNull(discover.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals("2026-07-28", discover.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("websocket", discover.getJsonObject("attributes").getString("network.protocol.name"));
+        assertEquals("tcp", discover.getJsonObject("attributes").getString("network.transport"));
 
         // Verify prompts/list span
         JsonObject listSpan = findSpan(spans, "prompts/list");
         assertNotNull(listSpan);
         assertEquals("0000000000000000", listSpan.getString("parent_spanId"));
         assertEquals("SERVER", listSpan.getString("kind"));
-        assertEquals(mcpSessionId, listSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(listSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("prompts/list", listSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertNotNull(listSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", listSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", listSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(listSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -99,11 +93,11 @@ class TracingTest {
         assertNotNull(getSpan);
         assertEquals("0000000000000000", getSpan.getString("parent_spanId"));
         assertEquals("SERVER", getSpan.getString("kind"));
-        assertEquals(mcpSessionId, getSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(getSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("prompts/get", getSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("code_assist", getSpan.getJsonObject("attributes").getString("gen_ai.prompt.name"));
         assertNotNull(getSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(getSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", getSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", getSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", getSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(getSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -111,7 +105,8 @@ class TracingTest {
 
     @Test
     void testTool() {
-        McpWebSocketTestClient client = McpAssured.newConnectedWebSocketClient();
+        McpWebSocketTestClient client = McpAssured.newWebSocketClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .toolsList(p -> {
                     assertEquals(1, p.size());
@@ -127,7 +122,7 @@ class TracingTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(6);
+        final JsonArray spans = awaitSpans(5);
 
         // Parent. From http server
         final JsonObject httpMcpWs = findSpan(spans, "GET /mcp/ws");
@@ -139,34 +134,26 @@ class TracingTest {
         assertNotNull(websocketMcpWs);
         assertEquals(httpMcpWs.getString("spanId"), websocketMcpWs.getString("parent_spanId"));
 
-        // Initialize
-        final JsonObject initialize = findSpan(spans, "initialize");
-        assertNotNull(initialize);
-        assertEquals("0000000000000000", initialize.getString("parent_spanId"));
-        assertNotNull(initialize.getJsonObject("attributes").getString("mcp.session.id"));
-        final String mcpSessionId = initialize.getJsonObject("attributes").getString("mcp.session.id");
-        assertEquals("websocket", initialize.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", initialize.getJsonObject("attributes").getString("network.transport"));
-
-        // All spans have their own trace but have the same mcp.session.id.
-
-        // Notification initialized
-        final JsonObject notifInitialized = findSpan(spans, "notifications/initialized");
-        assertNotNull(notifInitialized);
-        assertEquals("0000000000000000", notifInitialized.getString("parent_spanId"));
-        assertEquals(mcpSessionId, notifInitialized.getJsonObject("attributes").getString("mcp.session.id"));
-        assertEquals("websocket", notifInitialized.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", notifInitialized.getJsonObject("attributes").getString("network.transport"));
+        // Server discovery
+        final JsonObject discover = findSpan(spans, "server/discover");
+        assertNotNull(discover);
+        assertEquals("0000000000000000", discover.getString("parent_spanId"));
+        assertEquals("SERVER", discover.getString("kind"));
+        assertEquals("server/discover", discover.getJsonObject("attributes").getString("mcp.method.name"));
+        assertNull(discover.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals("2026-07-28", discover.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("websocket", discover.getJsonObject("attributes").getString("network.protocol.name"));
+        assertEquals("tcp", discover.getJsonObject("attributes").getString("network.transport"));
 
         // Verify tools/list span
         JsonObject listSpan = findSpan(spans, "tools/list");
         assertNotNull(listSpan);
         assertEquals("0000000000000000", listSpan.getString("parent_spanId"));
         assertEquals("SERVER", listSpan.getString("kind"));
-        assertEquals(mcpSessionId, listSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(listSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/list", listSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertNotNull(listSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", listSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", listSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(listSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -176,12 +163,12 @@ class TracingTest {
         assertNotNull(callSpan);
         assertEquals("0000000000000000", callSpan.getString("parent_spanId"));
         assertEquals("SERVER", callSpan.getString("kind"));
-        assertEquals(mcpSessionId, callSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(callSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/call", callSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("toLowerCase", callSpan.getJsonObject("attributes").getString("gen_ai.tool.name"));
         assertEquals("execute_tool", callSpan.getJsonObject("attributes").getString("gen_ai.operation.name"));
         assertNotNull(callSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(callSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", callSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", callSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", callSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(callSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -190,7 +177,8 @@ class TracingTest {
 
     @Test
     void testResource() {
-        McpWebSocketTestClient client = McpAssured.newConnectedWebSocketClient();
+        McpWebSocketTestClient client = McpAssured.newWebSocketClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .resourcesList(p -> {
                     assertEquals(1, p.size());
@@ -202,7 +190,7 @@ class TracingTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(6);
+        final JsonArray spans = awaitSpans(5);
 
         // Parent. From http server
         final JsonObject httpMcpWs = findSpan(spans, "GET /mcp/ws");
@@ -214,34 +202,26 @@ class TracingTest {
         assertNotNull(websocketMcpWs);
         assertEquals(httpMcpWs.getString("spanId"), websocketMcpWs.getString("parent_spanId"));
 
-        // Initialize
-        final JsonObject initialize = findSpan(spans, "initialize");
-        assertNotNull(initialize);
-        assertEquals("0000000000000000", initialize.getString("parent_spanId"));
-        assertNotNull(initialize.getJsonObject("attributes").getString("mcp.session.id"));
-        final String mcpSessionId = initialize.getJsonObject("attributes").getString("mcp.session.id");
-        assertEquals("websocket", initialize.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", initialize.getJsonObject("attributes").getString("network.transport"));
-
-        // All spans have their own trace but have the same mcp.session.id.
-
-        // Notification initialized
-        final JsonObject notifInitialized = findSpan(spans, "notifications/initialized");
-        assertNotNull(notifInitialized);
-        assertEquals("0000000000000000", notifInitialized.getString("parent_spanId"));
-        assertEquals(mcpSessionId, notifInitialized.getJsonObject("attributes").getString("mcp.session.id"));
-        assertEquals("websocket", notifInitialized.getJsonObject("attributes").getString("network.protocol.name"));
-        assertEquals("tcp", notifInitialized.getJsonObject("attributes").getString("network.transport"));
+        // Server discovery
+        final JsonObject discover = findSpan(spans, "server/discover");
+        assertNotNull(discover);
+        assertEquals("0000000000000000", discover.getString("parent_spanId"));
+        assertEquals("SERVER", discover.getString("kind"));
+        assertEquals("server/discover", discover.getJsonObject("attributes").getString("mcp.method.name"));
+        assertNull(discover.getJsonObject("attributes").getString("mcp.session.id"));
+        assertEquals("2026-07-28", discover.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("websocket", discover.getJsonObject("attributes").getString("network.protocol.name"));
+        assertEquals("tcp", discover.getJsonObject("attributes").getString("network.transport"));
 
         // Verify resources/list span
         JsonObject listSpan = findSpan(spans, "resources/list");
         assertNotNull(listSpan);
         assertEquals("0000000000000000", listSpan.getString("parent_spanId"));
         assertEquals("SERVER", listSpan.getString("kind"));
-        assertEquals(mcpSessionId, listSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(listSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("resources/list", listSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertNotNull(listSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", listSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", listSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", listSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(listSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -251,11 +231,11 @@ class TracingTest {
         assertNotNull(readSpan);
         assertEquals("0000000000000000", readSpan.getString("parent_spanId"));
         assertEquals("SERVER", readSpan.getString("kind"));
-        assertEquals(mcpSessionId, readSpan.getJsonObject("attributes").getString("mcp.session.id"));
+        assertNull(readSpan.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("resources/read", readSpan.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("file:///project/alpha", readSpan.getJsonObject("attributes").getString("mcp.resource.uri"));
         assertNotNull(readSpan.getJsonObject("attributes").getString("rpc.jsonrpc.request_id"));
-        assertNotNull(readSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertEquals("2026-07-28", readSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
         assertEquals("tcp", readSpan.getJsonObject("attributes").getString("network.transport"));
         assertEquals("websocket", readSpan.getJsonObject("attributes").getString("network.protocol.name"));
         assertNull(readSpan.getJsonObject("attributes").getString("network.protocol.version"));
@@ -277,7 +257,12 @@ class TracingTest {
                     }
                     return false;
                 });
-        return holder.get();
+        JsonArray spans = holder.get();
+        for (int i = 0; i < spans.size(); i++) {
+            String name = spans.getJsonObject(i).getString("name");
+            assertFalse("initialize".equals(name) || "notifications/initialized".equals(name));
+        }
+        return spans;
     }
 
     private JsonObject findSpan(JsonArray spans, String spanName) {

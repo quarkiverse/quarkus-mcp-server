@@ -5,6 +5,7 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Base64;
 import java.util.Map;
@@ -18,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.quarkiverse.mcp.server.ClientCapability;
-import io.quarkiverse.mcp.server.ElicitationResponse;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.test.junit.QuarkusTest;
@@ -47,6 +48,7 @@ class TracingContextPropagationTest {
     @Test
     void testTool() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28)
                 .setTracing(openTelemetry)
                 .build()
                 .connect();
@@ -59,35 +61,25 @@ class TracingContextPropagationTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(8);
+        final JsonArray spans = awaitSpans(6);
 
-        // Initialize
-        assertNotNull(findSpan(spans, "initialize", "CLIENT"));
-        assertParentedBy(spans, "initialize");
-        JsonObject initServer = findSpan(spans, "initialize", "SERVER");
-        final String mcpSessionId = initServer.getJsonObject("attributes").getString("mcp.session.id");
-        assertNotNull(mcpSessionId);
-        assertEquals(client.mcpSessionId(), mcpSessionId);
-
-        // Notification initialized
-        assertNotNull(findSpan(spans, "notifications/initialized", "CLIENT"));
-        assertParentedBy(spans, "notifications/initialized");
-        assertEquals(mcpSessionId,
-                findSpan(spans, "notifications/initialized", "SERVER").getJsonObject("attributes")
-                        .getString("mcp.session.id"));
+        // Server discovery
+        assertNotNull(findSpan(spans, "server/discover", "CLIENT"));
+        assertParentedBy(spans, "server/discover");
+        JsonObject discoverServer = findSpan(spans, "server/discover", "SERVER");
+        assertEquals("2026-07-28", discoverServer.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertNull(client.mcpSessionId());
 
         // tools/list
         assertNotNull(findSpan(spans, "tools/list", "CLIENT"));
         assertParentedBy(spans, "tools/list");
         JsonObject listServer = findSpan(spans, "tools/list", "SERVER");
-        assertEquals(mcpSessionId, listServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/list", listServer.getJsonObject("attributes").getString("mcp.method.name"));
 
         // tools/call — SERVER span name includes tool name; CLIENT span is just "tools/call"
         assertNotNull(findSpan(spans, "tools/call", "CLIENT"));
         assertParentedBy(spans, "tools/call", "tools/call toLowerCase");
         JsonObject callServer = findSpan(spans, "tools/call toLowerCase");
-        assertEquals(mcpSessionId, callServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/call", callServer.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("toLowerCase", callServer.getJsonObject("attributes").getString("gen_ai.tool.name"));
     }
@@ -95,6 +87,7 @@ class TracingContextPropagationTest {
     @Test
     void testPrompt() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28)
                 .setTracing(openTelemetry)
                 .build()
                 .connect();
@@ -107,35 +100,25 @@ class TracingContextPropagationTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(8);
+        final JsonArray spans = awaitSpans(6);
 
-        // Initialize
-        assertNotNull(findSpan(spans, "initialize", "CLIENT"));
-        assertParentedBy(spans, "initialize");
-        JsonObject initServer = findSpan(spans, "initialize", "SERVER");
-        final String mcpSessionId = initServer.getJsonObject("attributes").getString("mcp.session.id");
-        assertNotNull(mcpSessionId);
-        assertEquals(client.mcpSessionId(), mcpSessionId);
-
-        // Notification initialized
-        assertNotNull(findSpan(spans, "notifications/initialized", "CLIENT"));
-        assertParentedBy(spans, "notifications/initialized");
-        assertEquals(mcpSessionId,
-                findSpan(spans, "notifications/initialized", "SERVER").getJsonObject("attributes")
-                        .getString("mcp.session.id"));
+        // Server discovery
+        assertNotNull(findSpan(spans, "server/discover", "CLIENT"));
+        assertParentedBy(spans, "server/discover");
+        JsonObject discoverServer = findSpan(spans, "server/discover", "SERVER");
+        assertEquals("2026-07-28", discoverServer.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertNull(client.mcpSessionId());
 
         // prompts/list
         assertNotNull(findSpan(spans, "prompts/list", "CLIENT"));
         assertParentedBy(spans, "prompts/list");
         JsonObject listServer = findSpan(spans, "prompts/list", "SERVER");
-        assertEquals(mcpSessionId, listServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("prompts/list", listServer.getJsonObject("attributes").getString("mcp.method.name"));
 
         // prompts/get — SERVER span name includes prompt name; CLIENT span is just "prompts/get"
         assertNotNull(findSpan(spans, "prompts/get", "CLIENT"));
         assertParentedBy(spans, "prompts/get", "prompts/get code_assist");
         JsonObject getServer = findSpan(spans, "prompts/get code_assist");
-        assertEquals(mcpSessionId, getServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("prompts/get", getServer.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("code_assist", getServer.getJsonObject("attributes").getString("gen_ai.prompt.name"));
     }
@@ -143,6 +126,7 @@ class TracingContextPropagationTest {
     @Test
     void testResource() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28)
                 .setTracing(openTelemetry)
                 .build()
                 .connect();
@@ -157,35 +141,25 @@ class TracingContextPropagationTest {
                 })
                 .thenAssertResults();
 
-        final JsonArray spans = awaitSpans(8);
+        final JsonArray spans = awaitSpans(6);
 
-        // Initialize
-        assertNotNull(findSpan(spans, "initialize", "CLIENT"));
-        assertParentedBy(spans, "initialize");
-        JsonObject initServer = findSpan(spans, "initialize", "SERVER");
-        final String mcpSessionId = initServer.getJsonObject("attributes").getString("mcp.session.id");
-        assertNotNull(mcpSessionId);
-        assertEquals(client.mcpSessionId(), mcpSessionId);
-
-        // Notification initialized
-        assertNotNull(findSpan(spans, "notifications/initialized", "CLIENT"));
-        assertParentedBy(spans, "notifications/initialized");
-        assertEquals(mcpSessionId,
-                findSpan(spans, "notifications/initialized", "SERVER").getJsonObject("attributes")
-                        .getString("mcp.session.id"));
+        // Server discovery
+        assertNotNull(findSpan(spans, "server/discover", "CLIENT"));
+        assertParentedBy(spans, "server/discover");
+        JsonObject discoverServer = findSpan(spans, "server/discover", "SERVER");
+        assertEquals("2026-07-28", discoverServer.getJsonObject("attributes").getString("mcp.protocol.version"));
+        assertNull(client.mcpSessionId());
 
         // resources/list
         assertNotNull(findSpan(spans, "resources/list", "CLIENT"));
         assertParentedBy(spans, "resources/list");
         JsonObject listServer = findSpan(spans, "resources/list", "SERVER");
-        assertEquals(mcpSessionId, listServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("resources/list", listServer.getJsonObject("attributes").getString("mcp.method.name"));
 
         // resources/read — both CLIENT and SERVER span names are "resources/read" (no URI in span name)
         assertNotNull(findSpan(spans, "resources/read", "CLIENT"));
         assertParentedBy(spans, "resources/read");
         JsonObject readServer = findSpan(spans, "resources/read", "SERVER");
-        assertEquals(mcpSessionId, readServer.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("resources/read", readServer.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("file:///project/alpha", readServer.getJsonObject("attributes").getString("mcp.resource.uri"));
     }
@@ -193,61 +167,49 @@ class TracingContextPropagationTest {
     @Test
     void testSampling() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28)
                 .setTracing(openTelemetry)
                 .setClientCapabilities(new ClientCapability(ClientCapability.SAMPLING, Map.of()))
                 .build()
                 .connect();
 
-        JsonObject request = client.newRequest("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "samplingTool"));
-        client.sendAndForget(request);
+        // Stateless servers request client input in the result, then consume it on retry.
+        client.when()
+                .toolsCall("samplingTool")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertEquals("input_required", result.getString("resultType"));
+                    JsonObject inputRequest = result.getJsonObject("inputRequests").getJsonObject("llmInput");
+                    assertEquals("sampling/createMessage", inputRequest.getString("method"));
+                    JsonObject params = inputRequest.getJsonObject("params");
+                    assertEquals(100, params.getInteger("maxTokens"));
+                    assertEquals("What's happening?", params.getJsonArray("messages").getJsonObject(0)
+                            .getJsonObject("content").getString("text"));
+                })
+                .send()
+                .thenAssertResults();
+        client.when()
+                .toolsCall("samplingTool")
+                .withInputResponses(new JsonObject().put("llmInput",
+                        new JsonObject().put("role", "assistant").put("model", "test-model")
+                                .put("content", new JsonObject().put("type", "text").put("text", "Hello from sampling."))))
+                .withAssert(result -> {
+                    assertFalse(result.isError());
+                    assertEquals("Hello from sampling.", result.firstContent().asText().text());
+                })
+                .send()
+                .thenAssertResults();
 
-        // The server should send a sampling request
-        JsonObject sr = client.waitForRequests(1).requests().get(0);
-        assertEquals("sampling/createMessage", sr.getString("method"));
-        Long id = sr.getLong("id");
-        JsonObject response = new JsonObject()
-                .put("jsonrpc", "2.0")
-                .put("result", new JsonObject()
-                        .put("role", "assistant")
-                        .put("model", "test-model")
-                        .put("content", new JsonObject()
-                                .put("type", "text")
-                                .put("text", "Hello from sampling.")))
-                .put("id", id);
-        client.sendAndForget(response);
-
-        JsonObject toolCallResponse = client.waitForResponse(request);
-        JsonObject toolCallResult = toolCallResponse.getJsonObject("result");
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        assertEquals("Hello from sampling.", content.getJsonObject(0).getString("text"));
-
-        // 3 SERVER spans + 3 CLIENT spans = 6 minimum
         final JsonArray spans = awaitSpans(6);
 
-        // Initialize
-        assertNotNull(findSpan(spans, "initialize", "CLIENT"));
-        assertParentedBy(spans, "initialize");
-        final String mcpSessionId = findSpan(spans, "initialize", "SERVER")
-                .getJsonObject("attributes").getString("mcp.session.id");
-        assertNotNull(mcpSessionId);
-
-        // Notification initialized
-        assertNotNull(findSpan(spans, "notifications/initialized", "CLIENT"));
-        assertParentedBy(spans, "notifications/initialized");
-        assertEquals(mcpSessionId,
-                findSpan(spans, "notifications/initialized", "SERVER").getJsonObject("attributes")
-                        .getString("mcp.session.id"));
+        // Server discovery
+        assertNotNull(findSpan(spans, "server/discover", "CLIENT"));
+        assertParentedBy(spans, "server/discover");
 
         // tools/call samplingTool
         assertNotNull(findSpan(spans, "tools/call", "CLIENT"));
         assertParentedBy(spans, "tools/call", "tools/call samplingTool");
         JsonObject span = findSpan(spans, "tools/call samplingTool");
-        assertEquals(mcpSessionId, span.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/call", span.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("samplingTool", span.getJsonObject("attributes").getString("gen_ai.tool.name"));
     }
@@ -255,62 +217,48 @@ class TracingContextPropagationTest {
     @Test
     void testElicitation() {
         McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28)
                 .setTracing(openTelemetry)
                 .setClientCapabilities(new ClientCapability(ClientCapability.ELICITATION, Map.of()))
                 .build()
                 .connect();
 
-        JsonObject request = client.newRequest("tools/call")
-                .put("params", new JsonObject()
-                        .put("name", "elicitationTool"));
-        client.sendAndForget(request);
+        // Stateless servers request client input in the result, then consume it on retry.
+        client.when()
+                .toolsCall("elicitationTool")
+                .withRawAssert(response -> {
+                    JsonObject result = response.getJsonObject("result");
+                    assertEquals("input_required", result.getString("resultType"));
+                    JsonObject inputRequest = result.getJsonObject("inputRequests").getJsonObject("userInput");
+                    assertEquals("elicitation/create", inputRequest.getString("method"));
+                    JsonObject params = inputRequest.getJsonObject("params");
+                    assertEquals("What's your name?", params.getString("message"));
+                    assertEquals("string", params.getJsonObject("requestedSchema").getJsonObject("properties")
+                            .getJsonObject("name").getString("type"));
+                })
+                .send()
+                .thenAssertResults();
+        client.when()
+                .toolsCall("elicitationTool")
+                .withInputResponses(new JsonObject().put("userInput", new JsonObject().put("action", "accept")
+                        .put("content", new JsonObject().put("name", "Quarkus"))))
+                .withAssert(result -> {
+                    assertFalse(result.isError());
+                    assertEquals("Hello Quarkus!", result.firstContent().asText().text());
+                })
+                .send()
+                .thenAssertResults();
 
-        // The server should send an elicitation request
-        JsonObject er = client.waitForRequests(1).requests().get(0);
-        assertEquals("elicitation/create", er.getString("method"));
-        JsonObject params = er.getJsonObject("params");
-        assertEquals("What's your name?", params.getString("message"));
-
-        Long id = er.getLong("id");
-        JsonObject response = new JsonObject()
-                .put("jsonrpc", "2.0")
-                .put("result", new JsonObject()
-                        .put("action", ElicitationResponse.Action.ACCEPT.toString().toLowerCase())
-                        .put("content", new JsonObject()
-                                .put("name", "Quarkus")))
-                .put("id", id);
-        client.sendAndForget(response);
-
-        JsonObject toolCallResponse = client.waitForResponse(request);
-        JsonObject toolCallResult = toolCallResponse.getJsonObject("result");
-        assertNotNull(toolCallResult);
-        assertFalse(toolCallResult.getBoolean("isError"));
-        JsonArray content = toolCallResult.getJsonArray("content");
-        assertEquals(1, content.size());
-        assertEquals("Hello Quarkus!", content.getJsonObject(0).getString("text"));
-
-        // 3 SERVER spans + 3 CLIENT spans = 6 minimum
         final JsonArray spans = awaitSpans(6);
 
-        // Initialize
-        assertNotNull(findSpan(spans, "initialize", "CLIENT"));
-        assertParentedBy(spans, "initialize");
-        final String mcpSessionId = findSpan(spans, "initialize", "SERVER")
-                .getJsonObject("attributes").getString("mcp.session.id");
-        assertNotNull(mcpSessionId);
-
-        // Notification initialized
-        assertNotNull(findSpan(spans, "notifications/initialized", "CLIENT"));
-        assertParentedBy(spans, "notifications/initialized");
-        assertEquals(mcpSessionId,
-                findSpan(spans, "notifications/initialized", "SERVER").getJsonObject("attributes")
-                        .getString("mcp.session.id"));
+        // Server discovery
+        assertNotNull(findSpan(spans, "server/discover", "CLIENT"));
+        assertParentedBy(spans, "server/discover");
 
         // tools/call elicitationTool
         assertNotNull(findSpan(spans, "tools/call", "CLIENT"));
         assertParentedBy(spans, "tools/call", "tools/call elicitationTool");
         JsonObject span = findSpan(spans, "tools/call elicitationTool");
-        assertEquals(mcpSessionId, span.getJsonObject("attributes").getString("mcp.session.id"));
         assertEquals("tools/call", span.getJsonObject("attributes").getString("mcp.method.name"));
         assertEquals("elicitationTool", span.getJsonObject("attributes").getString("gen_ai.tool.name"));
     }
@@ -328,17 +276,29 @@ class TracingContextPropagationTest {
      * named {@code clientSpanName}, and that they share the same traceId.
      */
     private void assertParentedBy(JsonArray spans, String clientSpanName, String serverSpanName) {
-        JsonObject clientSpan = findSpan(spans, clientSpanName, "CLIENT");
-        JsonObject serverSpan;
-        if (clientSpanName.equals(serverSpanName)) {
-            serverSpan = findSpan(spans, serverSpanName, "SERVER");
-        } else {
-            serverSpan = findSpan(spans, serverSpanName);
+        int matched = 0;
+        for (int i = 0; i < spans.size(); i++) {
+            JsonObject serverSpan = spans.getJsonObject(i);
+            if (!serverSpanName.equals(serverSpan.getString("name")) || !"SERVER".equals(serverSpan.getString("kind"))) {
+                continue;
+            }
+            JsonObject clientSpan = null;
+            for (int j = 0; j < spans.size(); j++) {
+                JsonObject candidate = spans.getJsonObject(j);
+                if (clientSpanName.equals(candidate.getString("name")) && "CLIENT".equals(candidate.getString("kind"))
+                        && candidate.getString("spanId").equals(serverSpan.getString("parent_spanId"))) {
+                    clientSpan = candidate;
+                    break;
+                }
+            }
+            assertNotNull(clientSpan, serverSpanName + " SERVER span should be parented to a CLIENT span");
+            assertEquals(clientSpan.getString("traceId"), serverSpan.getString("traceId"));
+            assertEquals("2026-07-28", serverSpan.getJsonObject("attributes").getString("mcp.protocol.version"));
+            matched++;
         }
-        assertEquals(clientSpan.getString("spanId"), serverSpan.getString("parent_spanId"),
-                serverSpanName + " SERVER span should be parented to " + clientSpanName + " CLIENT span");
-        assertEquals(clientSpan.getString("traceId"), serverSpan.getString("traceId"),
-                serverSpanName + " should share traceId with client span");
+        assertEquals("tools/call samplingTool".equals(serverSpanName) || "tools/call elicitationTool".equals(serverSpanName)
+                ? 2
+                : 1, matched);
     }
 
     private JsonArray awaitSpans(int minExpectedCount) {
@@ -357,7 +317,16 @@ class TracingContextPropagationTest {
                     }
                     return false;
                 });
-        return holder.get();
+        JsonArray spans = holder.get();
+        for (int i = 0; i < spans.size(); i++) {
+            JsonObject span = spans.getJsonObject(i);
+            String name = span.getString("name");
+            if ("SERVER".equals(span.getString("kind"))) {
+                assertNull(span.getJsonObject("attributes").getString("mcp.session.id"));
+            }
+            assertFalse("initialize".equals(name) || "notifications/initialized".equals(name));
+        }
+        return spans;
     }
 
     private JsonObject findSpan(JsonArray spans, String spanName) {

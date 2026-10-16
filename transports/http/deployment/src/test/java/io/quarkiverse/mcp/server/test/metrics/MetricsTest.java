@@ -1,9 +1,12 @@
 package io.quarkiverse.mcp.server.test.metrics;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -14,11 +17,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.Search;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
@@ -32,6 +37,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonObject;
 
 public class MetricsTest extends McpServerTest {
 
@@ -52,7 +58,10 @@ public class MetricsTest extends McpServerTest {
 
     @Test
     void testMetrics() throws InterruptedException {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        Timer discoveryTimer = registry.find("mcp.server.requests.server.discover").timer();
+        long discoveries = discoveryTimer == null ? 0 : discoveryTimer.count();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals("20", toolResponse.firstContent().asText().text());
@@ -77,7 +86,11 @@ public class MetricsTest extends McpServerTest {
                 })
                 .thenAssertResults();
 
-        assertEquals(1, registry.find("mcp.server.connections.active").gauge().value());
+        assertNull(client.mcpSessionId());
+        // Ordinary stateless requests are not registered in ConnectionManager, which backs this gauge.
+        assertEquals(0, registry.find("mcp.server.connections.active").gauge().value());
+
+        assertTimer("mcp.server.requests.server.discover", timer -> assertEquals(discoveries + 1, timer.count()));
 
         assertTimer("mcp.server.requests.tools.call", timer -> {
             assertNotNull(timer);
@@ -105,6 +118,27 @@ public class MetricsTest extends McpServerTest {
         assertTimer("mcp.server.requests.resources.templates.list", timer -> {
             assertEquals(1, timer.count());
         });
+    }
+
+    @Test
+    void testSubscriptionConnectionGauge() {
+        Gauge connections = registry.find("mcp.server.connections.active").gauge();
+        assertNotNull(connections);
+        assertEquals(0, connections.value());
+
+        try (McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setProtocolVersion(McpProtocolVersion.V_2026_07_28).build().connect()) {
+            JsonObject listen = client.newRequest("subscriptions/listen")
+                    .put("params", new JsonObject()
+                            .put("notifications", new JsonObject().put("toolsListChanged", true)));
+            McpAssured.injectStatelessMeta(listen);
+            client.sendAndForget(listen);
+            assertEquals("notifications/subscriptions/acknowledged",
+                    client.waitForNotifications(1).notifications().get(0).getString("method"));
+            // A subscription is registered for as long as its notification stream remains open.
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(1, connections.value()));
+        }
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(0, connections.value()));
     }
 
     private void assertTimer(String name, Consumer<Timer> assertion, String... tags) throws InterruptedException {

@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.test.junit.QuarkusTest;
@@ -21,7 +22,8 @@ class TracingMcpServerDisabledTest {
 
     @Test
     void testNoSpanWhenMcpTracingDisabled() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().setProtocolVersion(McpProtocolVersion.V_2026_07_28)
+                .build().connect();
         client.when()
                 .toolsCall("toLowerCase", Map.of("value", "HELLO"), r -> {
                     assertEquals("hello", r.content().get(0).asText().text());
