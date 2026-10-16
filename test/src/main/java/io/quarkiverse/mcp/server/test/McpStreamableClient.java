@@ -68,7 +68,7 @@ class McpStreamableClient extends SseClient {
     void send(String body, MultiMap headers) {
         McpStremableRequest request = new McpStremableRequest(HttpClients.getDefault(), mcpEndpoint, headers,
                 state::addResponse,
-                state.notifications::add, state.requests::add);
+                state::addNotification, state::addRequest);
         request.send(body);
     }
 
@@ -84,10 +84,10 @@ class McpStreamableClient extends SseClient {
                 if (json.containsKey("result") || json.containsKey("error")) {
                     state.addResponse(json);
                 } else {
-                    state.requests.add(json);
+                    state.addRequest(json);
                 }
             } else {
-                state.notifications.add(json);
+                state.addNotification(json);
             }
         }
     }
