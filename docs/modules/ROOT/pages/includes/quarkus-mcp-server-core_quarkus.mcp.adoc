@@ -822,6 +822,32 @@ endif::add-copy-button-to-env-var[]
 |string
 |
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-supported-protocol-versions]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-supported-protocol-versions[`+++quarkus.mcp.server.supported-protocol-versions+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.supported-protocol-versions+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".supported-protocol-versions+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".supported-protocol-versions+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+Restricts the server to an explicit, non-empty set of supported protocol versions. This is the ultimate set of versions the server accepts; a configured version does not have to be one of the versions implemented by this extension. The same set is advertised by `server/discover` and included in unsupported-version errors. If all configured versions are stateless, legacy HTTP/SSE endpoints and session operations are disabled. When unset, all protocol versions implemented by this extension are enabled, and stateful clients can initialize a session. Within a stateful session, subsequent Streamable HTTP requests without an `MCP-Protocol-Version` header assume version `2025-03-26` (stateless requests always require the header).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SUPPORTED_PROTOCOL_VERSIONS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SUPPORTED_PROTOCOL_VERSIONS+++`
+endif::add-copy-button-to-env-var[]
+--
+|list of string
+|
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-traffic-logging-enabled[`+++quarkus.mcp.server.traffic-logging.enabled+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.traffic-logging.enabled+++[]

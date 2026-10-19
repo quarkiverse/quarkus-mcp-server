@@ -21,6 +21,19 @@ public interface McpServerRuntimeConfig {
     ServerInfo serverInfo();
 
     /**
+     * Restricts the server to an explicit, non-empty set of supported protocol versions.
+     * This is the ultimate set of versions the server accepts; a configured version does not have to be one of the
+     * versions implemented by this extension.
+     * The same set is advertised by {@code server/discover} and included in unsupported-version errors.
+     * If all configured versions are stateless, legacy HTTP/SSE endpoints and session operations are disabled.
+     * When unset, all protocol versions implemented by this extension are enabled, and stateful clients can initialize
+     * a session. Within a stateful session, subsequent Streamable HTTP requests without an
+     * {@code MCP-Protocol-Version} header assume version {@code 2025-03-26} (stateless requests always require the
+     * header).
+     */
+    Optional<List<String>> supportedProtocolVersions();
+
+    /**
      * Traffic logging config.
      */
     TrafficLogging trafficLogging();

@@ -1,5 +1,7 @@
 package io.quarkiverse.mcp.server.http.runtime;
 
+import static io.quarkiverse.mcp.server.http.runtime.StreamableHttpMcpMessageHandler.MCP_PROTOCOL_VERSION_HEADER;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.URI;
@@ -19,10 +21,12 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.http.runtime.config.McpHttpServersRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;
+import io.quarkiverse.mcp.server.runtime.SupportedProtocolVersions;
 import io.quarkiverse.mcp.server.runtime.TrafficListeners;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
@@ -71,6 +75,9 @@ public class HttpMcpServerRecorder {
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
         StreamableHttpMcpMessageHandler handler = container.instance(StreamableHttpMcpMessageHandler.class).get();
+        SupportedProtocolVersions versions = SupportedProtocolVersions
+                .from(mcpRuntimeConfig.getValue().servers().get(serverName));
+        boolean stateful = versions.supportsStateful();
 
         // Enable DNS rebinding protection for localhost servers
         SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
@@ -98,6 +105,18 @@ public class HttpMcpServerRecorder {
                 }
                 ctx.put(CONTEXT_KEY, serverName);
                 HttpMethod method = request.method();
+                if (!stateful && !HttpMethod.POST.equals(method)) {
+                    ctx.response().putHeader(HttpHeaders.ALLOW, "POST").setStatusCode(405).end();
+                    return;
+                }
+                if (HttpMethod.GET.equals(method) || HttpMethod.DELETE.equals(method)) {
+                    // Session operations use the same headerless fallback as subsequent POST requests.
+                    String version = request.getHeader(MCP_PROTOCOL_VERSION_HEADER);
+                    if (!versions.supports(version != null ? version : McpProtocolVersion.DEFAULT_ASSUMED.version())) {
+                        ctx.fail(400);
+                        return;
+                    }
+                }
                 if (HttpMethod.GET.equals(method)) {
                     handler.openSseStream(ctx, connectionManager, serverName);
                 } else if (HttpMethod.POST.equals(method)) {
@@ -152,6 +171,9 @@ public class HttpMcpServerRecorder {
     public Handler<RoutingContext> createSseEndpointHandler(String mcpPath, String serverName) {
 
         McpServerRuntimeConfig serverConfig = mcpRuntimeConfig.getValue().servers().get(serverName);
+        if (!SupportedProtocolVersions.from(serverConfig).supportsStateful()) {
+            return ctx -> ctx.response().setStatusCode(404).end();
+        }
 
         ArcContainer container = Arc.container();
         ConnectionManager connectionManager = container.instance(ConnectionManager.class).get();
@@ -268,6 +290,9 @@ public class HttpMcpServerRecorder {
     }
 
     public Handler<RoutingContext> createMessagesEndpointHandler(String serverName) {
+        if (!SupportedProtocolVersions.from(mcpRuntimeConfig.getValue().servers().get(serverName)).supportsStateful()) {
+            return ctx -> ctx.response().setStatusCode(404).end();
+        }
         SseMcpMessageHandler handler = Arc.container().instance(SseMcpMessageHandler.class).get();
         return new Handler<RoutingContext>() {
 

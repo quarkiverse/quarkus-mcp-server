@@ -93,6 +93,8 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
 
     private final McpRequestValidator mcpRequestValidator;
 
+    private final Map<String, SupportedProtocolVersions> protocolVersions;
+
     private final CancellationRequests cancellationRequests;
 
     private final ConcurrentHashMap<String, JsonObject> responseServerInfoCache = new ConcurrentHashMap<>();
@@ -133,6 +135,11 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         this.initialChecks = initialChecks;
         this.initialResponseInfos = initialResponseInfos;
         this.config = config;
+        Map<String, SupportedProtocolVersions> versions = new HashMap<>();
+        for (String serverName : metadata.serverNames()) {
+            versions.put(serverName, SupportedProtocolVersions.from(config.servers().get(serverName)));
+        }
+        this.protocolVersions = Map.copyOf(versions);
         this.metadata = metadata;
         this.vertx = vertx;
         this.mcpMetrics = mcpMetrics;
@@ -144,6 +151,25 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         if (config.invalidServerNameStrategy() == InvalidServerNameStrategy.FAIL) {
             validateServerConfigs();
         }
+    }
+
+    protected SupportedProtocolVersions protocolVersions(String serverName) {
+        SupportedProtocolVersions versions = protocolVersions.get(serverName);
+        if (versions == null) {
+            throw new IllegalStateException("Supported protocol versions not found for server: " + serverName);
+        }
+        return versions;
+    }
+
+    private Future<Void> unsupportedVersion(JsonObject message, MCP_REQUEST request, String requested) {
+        initializeFailed(request);
+        return request.sender().send(unsupportedVersion(message, request.serverName(), requested));
+    }
+
+    protected JsonObject unsupportedVersion(JsonObject message, String serverName, String requested) {
+        return Messages.newError(Messages.getId(message), JsonRpcErrorCodes.UNSUPPORTED_PROTOCOL_VERSION,
+                "Unsupported protocol version", new JsonObject()
+                        .put("supported", protocolVersions(serverName).versionStrings()).put("requested", requested));
     }
 
     public Future<?> handle(MCP_REQUEST mcpRequest) {
@@ -207,6 +233,15 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     private Future<Void> handleRequest(JsonObject message, MCP_REQUEST mcpRequest, McpMethod method) {
+        SupportedProtocolVersions versions = protocolVersions(mcpRequest.serverName());
+        if (method == McpMethod.INITIALIZE && !versions.supportsStateful()) {
+            return unsupportedMethod(message, mcpRequest);
+        }
+        McpProtocolVersion requested = mcpRequest.protocolVersion();
+        if (method != McpMethod.INITIALIZE && requested != null
+                && !versions.supports(requested)) {
+            return unsupportedVersion(message, mcpRequest, requested.version());
+        }
         if (mcpRequestValidator != null) {
             return mcpRequestValidator.validate(message, mcpRequest, method)
                     .compose(valid -> {
@@ -245,6 +280,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     private Future<Void> initializeNew(McpMethod method, JsonObject message, MCP_REQUEST mcpRequest) {
         Object id = Messages.getId(message);
         JsonObject params = Messages.getParams(message);
+        SupportedProtocolVersions versions = protocolVersions(mcpRequest.serverName());
 
         if (McpMethod.INITIALIZE != method) {
             // Normally the first message must be "initialize"
@@ -261,6 +297,10 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
                 autoInit = autoInitialRequest(mcpRequest);
             }
 
+            if (autoInit != null
+                    && !versions.supports(autoInit.protocolVersion())) {
+                return unsupportedVersion(message, mcpRequest, autoInit.protocolVersion().version());
+            }
             if (autoInit != null
                     && mcpRequest.connection().initialize(autoInit)
                     && mcpRequest.connection().setInitialized()) {
@@ -281,6 +321,9 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         }
 
         InitialRequest initialRequest = decodeInitializeRequest(params);
+        if (!versions.supports(initialRequest.protocolVersion())) {
+            return unsupportedVersion(message, mcpRequest, initialRequest.protocolVersion().version());
+        }
         // Start the context first
         mcpRequest.contextStart();
         Context context = Vertx.currentContext();
@@ -870,7 +913,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         try {
             FilterContextImpl filterContext = FilterContextImpl.of(McpMethod.SERVER_DISCOVER, message, mcpRequest);
             Map<String, Object> ret = new HashMap<>();
-            ret.put("supportedVersions", McpProtocolVersion.SUPPORTED_VERSIONS);
+            ret.put("supportedVersions", protocolVersions(mcpRequest.serverName()).versionStrings());
             ret.put("capabilities", buildCapabilities(filterContext));
             // The 2026-07-28 schema defines the server identity of a discover result solely as
             // _meta["io.modelcontextprotocol/serverInfo"] (there is no top-level serverInfo member).
