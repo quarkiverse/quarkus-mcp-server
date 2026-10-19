@@ -346,7 +346,10 @@ public class PromptManagerImpl extends FeatureManagerBase<PromptResponse, Prompt
         protected PromptArguments createArguments(ArgumentProviders argumentProviders) {
             Map<String, String> args = new HashMap<>();
             for (Entry<String, Object> e : argumentProviders.args().entrySet()) {
-                args.put(e.getKey(), e.getValue().toString());
+                // A JSON null is treated like a missing argument
+                if (e.getValue() != null) {
+                    args.put(e.getKey(), e.getValue().toString());
+                }
             }
             for (PromptArgument a : arguments) {
                 if (a.defaultValue() != null && !args.containsKey(a.name())) {
