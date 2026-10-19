@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,10 +18,11 @@ final class McpClientState {
     static final Duration POLL_INTERVAL = Duration.ofMillis(50);
 
     final AtomicInteger requestIdGenerator;
-    final List<JsonObject> requests;
-    final List<JsonObject> responses;
+    private final List<JsonObject> requests;
+    private final List<JsonObject> responses;
     final ConcurrentMap<Integer, JsonObject> responseMap;
-    final List<JsonObject> notifications;
+    private final List<JsonObject> notifications;
+    private final List<JsonObject> receivedMessages;
 
     McpClientState() {
         this.requestIdGenerator = new AtomicInteger();
@@ -28,9 +30,21 @@ final class McpClientState {
         this.responses = new CopyOnWriteArrayList<>();
         this.responseMap = new ConcurrentHashMap<>();
         this.notifications = new CopyOnWriteArrayList<>();
+        this.receivedMessages = new ArrayList<>();
     }
 
-    void addResponse(JsonObject response) {
+    synchronized void addRequest(JsonObject request) {
+        receivedMessages.add(request);
+        requests.add(request);
+    }
+
+    synchronized void addNotification(JsonObject notification) {
+        receivedMessages.add(notification);
+        notifications.add(notification);
+    }
+
+    synchronized void addResponse(JsonObject response) {
+        receivedMessages.add(response);
         responses.add(response);
         Integer id = response.getInteger("id");
         if (id != null) {
@@ -88,12 +102,17 @@ final class McpClientState {
         return List.copyOf(notifications);
     }
 
-    public void clearRequests() {
+    public synchronized List<JsonObject> getReceivedMessages() {
+        return List.copyOf(receivedMessages);
+    }
+
+    public synchronized void clearRequests() {
+        receivedMessages.removeAll(requests);
         requests.clear();
     }
 
-    public Snapshot toSnapshot() {
-        return new Snapshot(getRequests(), getResponses(), getNotifications());
+    public synchronized Snapshot toSnapshot() {
+        return new Snapshot(getRequests(), getResponses(), getNotifications(), getReceivedMessages());
     }
 
 }

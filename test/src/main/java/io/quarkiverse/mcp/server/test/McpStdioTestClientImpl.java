@@ -110,14 +110,14 @@ class McpStdioTestClientImpl extends McpTestClientBase<McpStdioAssert, McpStdioT
                             state.addResponse(json);
                         } else {
                             // Request from the server
-                            state.requests.add(json);
+                            state.addRequest(json);
                             Consumer<JsonObject> c = requestConsumer.get();
                             if (c != null) {
                                 c.accept(json);
                             }
                         }
                     } else {
-                        state.notifications.add(json);
+                        state.addNotification(json);
                     }
                 }
             } catch (IOException e) {
