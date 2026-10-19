@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-22-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-23-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -118,6 +118,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mumuzi6"><img src="https://avatars.githubusercontent.com/u/151131799?v=4?s=100" width="100px;" alt="Nagi KaTou"/><br /><sub><b>Nagi KaTou</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Amumuzi6" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=mumuzi6" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/manovotn"><img src="https://avatars.githubusercontent.com/u/4181235?v=4?s=100" width="100px;" alt="Matej Novotny"/><br /><sub><b>Matej Novotny</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Amanovotn" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=manovotn" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=manovotn" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
