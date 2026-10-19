@@ -60,7 +60,7 @@ class McpStremableRequest {
         }
     }
 
-    void send(String body) {
+    CompletableFuture<HttpResponse<Object>> send(String body) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(mcpEndpoint)
                 .version(Version.HTTP_1_1)
@@ -83,7 +83,9 @@ class McpStremableRequest {
         });
 
         // For SSE the CF never completes but for JSON it does
-        cf.whenComplete((r, t) -> {
+        // The default HttpClient preserves HTTP exchange cancellation in dependent futures,
+        // so cancel(true) on this whenComplete() future still attempts to cancel the exchange.
+        return cf.whenComplete((r, t) -> {
             if (t == null) {
                 JsonObject json = new JsonObject(r.body().toString());
                 acceptMessage(json);
