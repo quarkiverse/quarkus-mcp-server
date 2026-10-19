@@ -217,6 +217,17 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "manovotn",
+      "name": "Matej Novotny",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4181235?v=4",
+      "profile": "https://github.com/manovotn",
+      "contributions": [
+        "bug",
+        "test",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
