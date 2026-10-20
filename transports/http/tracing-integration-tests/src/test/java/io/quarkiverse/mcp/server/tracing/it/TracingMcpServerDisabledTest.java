@@ -21,7 +21,8 @@ class TracingMcpServerDisabledTest {
 
     @Test
     void testNoSpanWhenMcpTracingDisabled() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().setStateless()
+                .build().connect();
         client.when()
                 .toolsCall("toLowerCase", Map.of("value", "HELLO"), r -> {
                     assertEquals("hello", r.content().get(0).asText().text());

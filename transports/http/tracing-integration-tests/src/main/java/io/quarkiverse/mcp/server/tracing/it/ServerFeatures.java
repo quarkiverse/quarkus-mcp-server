@@ -6,6 +6,7 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Elicitation;
 import io.quarkiverse.mcp.server.ElicitationRequest;
 import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
+import io.quarkiverse.mcp.server.ElicitationResponse;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -49,11 +50,15 @@ public class ServerFeatures {
     @Tool
     Uni<String> samplingTool(Sampling sampling) {
         if (sampling.isSupported()) {
+            if (sampling.inputResponses().has("llmInput")) {
+                return Uni.createFrom()
+                        .item(sampling.inputResponses().getSamplingResponse("llmInput").content().asText().text());
+            }
             SamplingRequest samplingRequest = sampling.requestBuilder()
                     .setMaxTokens(100)
                     .addMessage(SamplingMessage.withUserRole("What's happening?"))
                     .build();
-            return samplingRequest.send().map(sr -> sr.content().asText().text());
+            throw sampling.inputRequired().addSamplingRequest("llmInput", samplingRequest).build();
         } else {
             return Uni.createFrom().item("Sampling not supported");
         }
@@ -66,18 +71,17 @@ public class ServerFeatures {
 
     @Tool
     Uni<String> elicitationTool(Elicitation elicitation) {
-        if (elicitation.isSupported()) {
+        if (elicitation.isFormModeSupported()) {
+            if (elicitation.inputResponses().has("userInput")) {
+                ElicitationResponse response = elicitation.inputResponses().getElicitationResponse("userInput");
+                return Uni.createFrom().item(response.actionAccepted() ? "Hello " + response.content().getString("name") + "!"
+                        : "Not accepted");
+            }
             ElicitationRequest request = elicitation.requestBuilder()
                     .setMessage("What's your name?")
                     .addSchemaProperty("name", new StringSchema(true))
                     .build();
-            return request.send().map(response -> {
-                if (response.actionAccepted()) {
-                    return "Hello " + response.content().getString("name") + "!";
-                } else {
-                    return "Not accepted";
-                }
-            });
+            throw elicitation.inputRequired().addElicitationRequest("userInput", request).build();
         } else {
             return Uni.createFrom().item("Elicitation not supported");
         }

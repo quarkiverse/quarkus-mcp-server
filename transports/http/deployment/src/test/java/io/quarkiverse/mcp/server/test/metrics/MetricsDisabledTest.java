@@ -37,7 +37,8 @@ public class MetricsDisabledTest extends McpServerTest {
 
     @Test
     void testMetricsDisabledByDefault() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient().setStateless()
+                .build().connect();
         client.when()
                 .toolsCall("alpha", toolResponse -> {
                     assertEquals("20", toolResponse.firstContent().asText().text());

@@ -3,6 +3,7 @@ package io.quarkiverse.mcp.server.schema.validator.test.tools;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -26,11 +27,13 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.semconv.ErrorAttributes;
 import io.opentelemetry.semconv.incubating.RpcIncubatingAttributes;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
+import io.quarkiverse.mcp.server.McpProtocolVersion;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.schema.validator.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.test.QuarkusUnitTest;
+import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaValidationTracingTest extends McpServerTest {
 
@@ -53,7 +56,8 @@ public class ToolsSchemaValidationTracingTest extends McpServerTest {
 
     @Test
     public void testValidCallProducesSuccessSpan() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless().build().connect();
         client.when()
                 .toolsCall("bravo", Map.of("price", 42), toolResponse -> {
                     assertEquals("foo42", toolResponse.content().get(0).asText().text());
@@ -61,17 +65,23 @@ public class ToolsSchemaValidationTracingTest extends McpServerTest {
                 .thenAssertResults();
 
         SpanData span = awaitSpan("tools/call bravo");
+        assertTrue(McpProtocolVersion.isStateless(span.getAttributes().get(AttributeKey.stringKey("mcp.protocol.version"))));
+        assertNull(span.getAttributes().get(AttributeKey.stringKey("mcp.session.id")));
         assertEquals(SpanKind.SERVER, span.getKind());
         assertEquals(StatusCode.UNSET, span.getStatus().getStatusCode());
     }
 
     @Test
     public void testValidationRejectedRequestProducesErrorSpan() {
-        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        McpStreamableTestClient client = McpAssured.newStreamableClient()
+                .setStateless().build().connect();
 
-        // Send a tools/call request without the required "params" field -> schema validation fails
+        // Send arguments with an invalid type so protocol schema validation fails.
+        JsonObject request = client.newRequest("tools/call").put("params", new JsonObject()
+                .put("name", "bravo").put("arguments", "invalid"));
+        McpAssured.injectStatelessMeta(request);
         client.when()
-                .message(client.newRequest("tools/call"))
+                .message(request)
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_REQUEST, error.code());
                     assertTrue(error.message().startsWith("Schema validation failed"));
@@ -79,7 +89,10 @@ public class ToolsSchemaValidationTracingTest extends McpServerTest {
                 .send()
                 .thenAssertResults();
 
-        SpanData errorSpan = awaitSpan("tools/call", StatusCode.ERROR);
+        SpanData errorSpan = awaitSpan("tools/call bravo", StatusCode.ERROR);
+        assertTrue(
+                McpProtocolVersion.isStateless(errorSpan.getAttributes().get(AttributeKey.stringKey("mcp.protocol.version"))));
+        assertNull(errorSpan.getAttributes().get(AttributeKey.stringKey("mcp.session.id")));
         assertEquals(SpanKind.SERVER, errorSpan.getKind());
         assertEquals("tools/call", errorSpan.getAttributes().get(MCP_METHOD_NAME));
         assertEquals(StatusCode.ERROR, errorSpan.getStatus().getStatusCode());
