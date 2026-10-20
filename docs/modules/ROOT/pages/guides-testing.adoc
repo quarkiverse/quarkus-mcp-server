@@ -10,10 +10,27 @@ This guide covers testing MCP servers using the _McpAssured_ testing utility, wh
 `McpAssured` is a testing library designed specifically for MCP servers. It provides:
 
 * Fluent API: Readable, chainable test methods
-* Transport Support: Test SSE, Streamable HTTP, WebSocket, and STDIO transports
+* Transport Support: Test Streamable HTTP, WebSocket, STDIO, and (legacy) SSE transports
 * Type-Safe Assertions: Strongly-typed response validation
 * Batch Testing: Send multiple requests and validate results together
 * Request/Response Inspection: Access raw JSON-RPC messages for advanced scenarios
+
+[TIP]
+====
+Prefer the `McpStreamableTestClient` (Streamable HTTP transport) for new tests.
+The `McpSseTestClient` (HTTP/SSE transport) is *legacy* and kept only for backwards compatibility.
+
+If you target the latest version of the MCP specification (`2026-07-28`, the stateless protocol), use a streamable client switched to stateless mode:
+
+[source,java]
+----
+McpStreamableTestClient client = McpAssured.newStreamableClient()
+    .setStateless() // <1>
+    .build()
+    .connect();
+----
+<1> Uses the first stateless protocol version (`2026-07-28`); in this mode `connect()` performs a `server/discover` instead of the `initialize`/`notifications/initialized` handshake.
+====
 
 == Adding the Dependency
 
@@ -32,29 +49,13 @@ Add the test dependency to your project:
 
 `McpAssured` provides four transport-specific client types.
 
-=== SSE Transport Client
+=== Streamable HTTP Transport Client
+
+This is the recommended client for new tests.
 
 [source,java]
 ----
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
-
-@Test
-public void testSseTransport() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient(); // <1>
-
-    // Test operations...
-
-    client.disconnect(); // <2>
-}
-----
-<1> Creates and connects a new SSE client with default configuration
-<2> Clean up the connection after testing
-
-=== Streamable HTTP Transport Client
-
-[source,java]
-----
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 
 @Test
@@ -64,10 +65,45 @@ public void testStreamableTransport() {
 
     // Test operations...
 
-    client.disconnect();
+    client.disconnect(); // <2>
 }
 ----
 <1> Creates and connects a new Streamable HTTP client
+<2> Clean up the connection after testing
+
+To test the stateless protocol (`2026-07-28`), switch the client to stateless mode:
+
+[source,java]
+----
+McpStreamableTestClient client = McpAssured.newStreamableClient()
+    .setStateless() // <1>
+    .build()
+    .connect(); // <2>
+----
+<1> Uses the first stateless protocol version (`2026-07-28`)
+<2> In stateless mode `connect()` performs a `server/discover` operation instead of the `initialize`/`notifications/initialized` handshake
+
+=== SSE Transport Client
+
+[NOTE]
+====
+The HTTP/SSE transport is *legacy*. Prefer the <<_streamable_http_transport_client,Streamable HTTP client>> for new tests.
+====
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
+
+@Test
+public void testSseTransport() {
+    McpSseTestClient client = McpAssured.newConnectedSseClient(); // <1>
+
+    // Test operations...
+
+    client.disconnect();
+}
+----
+<1> Creates and connects a new SSE client with default configuration
 
 === WebSocket Transport Client
 
@@ -141,7 +177,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Test
 public void testToolsList() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsList(page -> {
@@ -167,7 +203,7 @@ Test tool execution and response validation:
 ----
 @Test
 public void testToolCall() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsCall("greet",
@@ -192,7 +228,7 @@ Verify error handling in your tools:
 ----
 @Test
 public void testToolError() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsCall("divide",
@@ -219,7 +255,7 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 
 @Test
 public void testProtocolError() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsCall("secureOperation")
@@ -242,7 +278,7 @@ public void testProtocolError() {
 ----
 @Test
 public void testResourcesList() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .resourcesList(page -> {
@@ -262,7 +298,7 @@ public void testResourcesList() {
 ----
 @Test
 public void testResourceRead() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .resourcesRead("file:///config.json", response -> {
@@ -281,7 +317,7 @@ public void testResourceRead() {
 ----
 @Test
 public void testResourceTemplates() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .resourcesTemplatesList(page -> {
@@ -305,7 +341,7 @@ public void testResourceTemplates() {
 ----
 @Test
 public void testPromptsList() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .promptsList(page -> {
@@ -328,7 +364,7 @@ public void testPromptsList() {
 ----
 @Test
 public void testPromptGet() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .promptsGet("code_review",
@@ -352,7 +388,7 @@ Send multiple requests and validate them together:
 ----
 @Test
 public void testBatchOperations() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsCall("add", Map.of("a", 5, "b", 3),
@@ -374,7 +410,7 @@ public void testBatchOperations() {
 ----
 @Test
 public void testCustomUri() {
-    McpSseTestClient client = McpAssured.newSseClient()
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
         .setBaseUri(URI.create("http://localhost:8081")) // <1>
         .build()
         .connect();
@@ -392,7 +428,7 @@ import io.quarkiverse.mcp.server.ClientCapability;
 
 @Test
 public void testClientCapabilities() {
-    McpSseTestClient client = McpAssured.newSseClient()
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
         .setClientCapabilities(
             ClientCapability.SAMPLING, // <1>
             ClientCapability.ROOTS)
@@ -410,7 +446,7 @@ public void testClientCapabilities() {
 ----
 @Test
 public void testCustomHeaders() {
-    McpSseTestClient client = McpAssured.newSseClient()
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
         .setAdditionalHeaders(msg -> {
             MultiMap headers = MultiMap.caseInsensitiveMultiMap();
             headers.add("X-API-Key", "secret123"); // <1>
@@ -429,7 +465,7 @@ public void testCustomHeaders() {
 ----
 @Test
 public void testBasicAuth() {
-    McpSseTestClient client = McpAssured.newSseClient()
+    McpStreamableTestClient client = McpAssured.newStreamableClient()
         .setBasicAuth("username", "password") // <1>
         .build()
         .connect();
@@ -445,7 +481,7 @@ Access raw JSON-RPC messages for advanced testing:
 ----
 @Test
 public void testRawMessages() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsCall("echo", Map.of("message", "test"))
@@ -475,7 +511,7 @@ Wait for and validate server-initiated notifications:
 ----
 @Test
 public void testProgressNotifications() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     // Trigger an operation that sends progress notifications
     client.sendAndForget(
@@ -501,7 +537,7 @@ Validate metadata in tools, resources, and responses:
 ----
 @Test
 public void testMetadata() {
-    McpSseTestClient client = McpAssured.newConnectedSseClient();
+    McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
         .toolsList(page -> {
