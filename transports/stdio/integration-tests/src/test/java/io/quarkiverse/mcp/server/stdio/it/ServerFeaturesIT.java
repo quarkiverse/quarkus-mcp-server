@@ -1,10 +1,13 @@
 package io.quarkiverse.mcp.server.stdio.it;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Base64;
 import java.util.Map;
 
@@ -89,6 +92,22 @@ public class ServerFeaturesIT {
                         assertEquals(Base64.getMimeEncoder().encodeToString("data".getBytes()),
                                 blob.blob());
                     })
+                    .thenAssertResults();
+        }
+    }
+
+    @Test
+    public void testMalformedJsonDoesNotStopServer() throws IOException {
+        try (McpStdioTestClient client = McpAssured.newConnectedStdioClient()) {
+            // Feed a line that is not valid JSON; the server must report a parse error but
+            // keep processing subsequent input instead of killing its IO loop (see #1101)
+            OutputStream serverStdin = client.process().getOutputStream();
+            serverStdin.write("SYNTAX_ERROR\n".getBytes(UTF_8));
+            serverStdin.flush();
+
+            // The server should still answer requests received after the malformed line
+            client.when()
+                    .toolsList(page -> assertEquals(10, page.size()))
                     .thenAssertResults();
         }
     }
