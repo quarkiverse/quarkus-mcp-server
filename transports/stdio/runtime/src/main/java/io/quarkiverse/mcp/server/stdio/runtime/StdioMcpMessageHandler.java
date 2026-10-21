@@ -130,7 +130,9 @@ public class StdioMcpMessageHandler extends McpMessageHandler<StdioMcpRequest> {
                                 String msg = "Unable to parse the JSON message";
                                 LOG.warnf(e, msg);
                                 connection.sendError(null, JsonRpcErrorCodes.PARSE_ERROR, msg);
-                                return;
+                                // Skip this message and keep processing subsequent input; a parse
+                                // failure does not put the server in an invalid state
+                                continue;
                             }
                             Context context = VertxContext.getOrCreateDuplicatedContext(vertx);
                             VertxContextSafetyToggle.setContextSafe(context, true);
