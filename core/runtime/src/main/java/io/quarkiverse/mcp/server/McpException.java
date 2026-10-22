@@ -53,6 +53,20 @@ public non-sealed class McpException extends McpResponseException {
     }
 
     /**
+     * Allows control-flow subtypes to skip the (costly) native stack walk - the exception is converted to a JSON-RPC
+     * error and its stack trace is never consulted.
+     *
+     * @param message
+     * @param jsonRpcErrorCode
+     * @param writableStackTrace whether the stack trace should be filled in and writable
+     */
+    protected McpException(String message, int jsonRpcErrorCode, boolean writableStackTrace) {
+        super(message, null, writableStackTrace);
+        this.jsonRpcErrorCode = jsonRpcErrorCode;
+        this.data = null;
+    }
+
+    /**
      *
      * @return the JSON-RPC error code
      * @see JsonRpcErrorCodes

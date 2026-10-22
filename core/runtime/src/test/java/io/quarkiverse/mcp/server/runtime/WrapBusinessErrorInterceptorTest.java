@@ -62,12 +62,37 @@ class WrapBusinessErrorInterceptorTest {
     }
 
     @Test
+    void testInputRequiredExceptionHasNoStackTrace() {
+        // InputRequiredException is a control-flow signal on the expected MRTR path; it should skip the costly
+        // native stack walk and therefore carry an empty stack trace
+        InputRequiredException e = createInputRequiredException();
+
+        assertEquals(0, e.getStackTrace().length, "InputRequiredException should not fill in a stack trace");
+    }
+
+    @Test
     void testUrlElicitationRequiredExceptionNotWrapped() throws Exception {
         UrlElicitationRequiredException original = createUrlElicitationRequiredException();
 
         Throwable result = invokeWrapIfNecessary(original, TestTools.class.getMethod("toolWithWrapBusinessError"));
 
         assertSame(original, result, "UrlElicitationRequiredException should not be wrapped");
+    }
+
+    @Test
+    void testUrlElicitationRequiredExceptionHasNoStackTrace() {
+        // Control-flow signal on the expected MRTR path; it should skip the costly native stack walk
+        UrlElicitationRequiredException e = createUrlElicitationRequiredException();
+
+        assertEquals(0, e.getStackTrace().length, "UrlElicitationRequiredException should not fill in a stack trace");
+    }
+
+    @Test
+    void testOperationCancellationExceptionHasNoStackTrace() {
+        // Control-flow signal; it should skip the costly native stack walk
+        Cancellation.OperationCancellationException e = new Cancellation.OperationCancellationException();
+
+        assertEquals(0, e.getStackTrace().length, "OperationCancellationException should not fill in a stack trace");
     }
 
     @Test

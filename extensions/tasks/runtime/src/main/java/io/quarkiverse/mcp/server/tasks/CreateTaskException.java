@@ -26,7 +26,9 @@ public final class CreateTaskException extends McpResultException {
      * @param result the {@code CreateTaskResult} payload
      */
     public CreateTaskException(TaskManager.TaskInfo task, JsonObject result) {
-        super("Task created: " + Objects.requireNonNull(task).id());
+        // This exception is a control-flow signal (the task is already created and running); its stack trace is never
+        // consulted, so skip the costly native stack walk
+        super("Task created: " + Objects.requireNonNull(task).id(), false);
         this.task = task;
         this.result = Objects.requireNonNull(result);
     }
