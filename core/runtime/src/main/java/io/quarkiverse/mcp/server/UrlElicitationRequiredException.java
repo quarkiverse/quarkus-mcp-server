@@ -24,7 +24,9 @@ public class UrlElicitationRequiredException extends McpException {
     private final List<ElicitationEntry> elicitations;
 
     UrlElicitationRequiredException(String message, List<ElicitationEntry> elicitations) {
-        super(message, JsonRpcErrorCodes.URL_ELICITATION_REQUIRED);
+        // This exception is a control-flow signal on the expected MRTR path; its stack trace is never consulted, so skip
+        // the costly native stack walk
+        super(message, JsonRpcErrorCodes.URL_ELICITATION_REQUIRED, false);
         this.elicitations = List.copyOf(elicitations);
     }
 

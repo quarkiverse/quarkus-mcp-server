@@ -25,6 +25,14 @@ public abstract non-sealed class McpResultException extends McpResponseException
     }
 
     /**
+     * @param writableStackTrace whether the stack trace should be filled in and writable
+     * @see McpResponseException#McpResponseException(String, Throwable, boolean)
+     */
+    protected McpResultException(String message, boolean writableStackTrace) {
+        super(message, null, writableStackTrace);
+    }
+
+    /**
      * Returns the payload serialized into the {@code result} field of the JSON-RPC response.
      * <p>
      * The returned object must contain only JSON-serializable values. The framework may enrich the response (e.g. add the

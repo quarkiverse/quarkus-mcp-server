@@ -28,4 +28,14 @@ public abstract sealed class McpResponseException extends RuntimeException permi
         super(message, cause);
     }
 
+    /**
+     * Allows subtypes used purely as a control-flow signal to skip the (costly) native stack walk. These exceptions are
+     * converted to a JSON-RPC response and their stack trace is never consulted, so filling it in is wasted work.
+     *
+     * @param writableStackTrace whether the stack trace should be filled in and writable
+     */
+    protected McpResponseException(String message, Throwable cause, boolean writableStackTrace) {
+        super(message, cause, true, writableStackTrace);
+    }
+
 }

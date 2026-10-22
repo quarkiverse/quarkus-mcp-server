@@ -68,6 +68,12 @@ public interface Cancellation {
 
         private static final long serialVersionUID = 1L;
 
+        public OperationCancellationException() {
+            // This exception is a control-flow signal; its stack trace is never consulted, so skip the costly native
+            // stack walk
+            super(null, null, false, false);
+        }
+
     }
 
 }
