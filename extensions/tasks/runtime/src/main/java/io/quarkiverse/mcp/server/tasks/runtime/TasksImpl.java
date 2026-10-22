@@ -139,8 +139,11 @@ final class TasksImpl implements Tasks {
             // The task must be durably created before the CreateTaskResult is sent
             TaskImpl task = manager.create(toolName(), arguments.connection().serverName(), ttl, pollInterval,
                     statusMessage);
+            // Snapshot the CreateTaskResult (always reporting the initial "working" status) before launching the handler;
+            // the handler runs on a separate context/thread and could otherwise finish the task before this snapshot is taken
+            JsonObject createResult = task.toJson(false).put("resultType", "task");
             execute(task, executionModel, action);
-            return new CreateTaskException(task, task.toJson(false).put("resultType", "task"));
+            return new CreateTaskException(task, createResult);
         }
 
     }
