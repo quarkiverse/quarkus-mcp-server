@@ -122,6 +122,7 @@ jobs:
           - websocket
           - cli-adapter
           - hibernate-validator
+          - schema-validator
         include:
           - module: http
             pl: transports/http/integration-tests,transports/http/authorization-integration-tests,transports/http/tracing-integration-tests
@@ -133,6 +134,8 @@ jobs:
             pl: cli-adapter/integration-tests
           - module: hibernate-validator
             pl: hibernate-validator/integration-tests
+          - module: schema-validator
+            pl: schema-validator/integration-tests
     runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
       - uses: runs-on/action@v2
