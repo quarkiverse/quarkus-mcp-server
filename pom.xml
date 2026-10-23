@@ -104,6 +104,12 @@
                                             <exclude>io.quarkiverse.mcp:quarkus-mcp-server-core-rag</exclude>
                                         </excludes>
                                     </modules>
+                                    <excludeOptional>false</excludeOptional>
+                                    <dependencies>
+                                        <includes>
+                                            <include>com.github.victools:*</include>
+                                        </includes>
+                                    </dependencies>
                                 </bom>
                             </boms>
                         </configuration>
