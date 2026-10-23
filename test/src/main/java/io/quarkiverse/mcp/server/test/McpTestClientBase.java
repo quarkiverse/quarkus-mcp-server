@@ -387,16 +387,15 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             }
             clientInfo.put("icons", icons);
         }
+        // "capabilities" is required by the InitializeRequest schema, so always send it (empty object if none)
+        JsonObject capabilities = new JsonObject();
+        for (ClientCapability capability : clientCapabilities) {
+            capabilities.put(capability.name(), capability.properties());
+        }
         JsonObject params = new JsonObject()
                 .put("clientInfo", clientInfo)
-                .put("protocolVersion", protocolVersion.version());
-        if (!clientCapabilities.isEmpty()) {
-            JsonObject capabilities = new JsonObject();
-            for (ClientCapability capability : clientCapabilities) {
-                capabilities.put(capability.name(), capability.properties());
-            }
-            params.put("capabilities", capabilities);
-        }
+                .put("protocolVersion", protocolVersion.version())
+                .put("capabilities", capabilities);
         initMessage.put("params", params);
         return initMessage;
     }
