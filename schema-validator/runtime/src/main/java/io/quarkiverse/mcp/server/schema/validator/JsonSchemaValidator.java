@@ -87,15 +87,21 @@ public class JsonSchemaValidator implements McpRequestValidator {
             return SUCCEEDED_FUTURE;
         }
         McpProtocolVersion protocolVersion = mcpRequest.protocolVersion();
+        if (protocolVersion == null && method == McpMethod.INITIALIZE) {
+            // The connection is not initialized yet, so the negotiated protocol version is not available;
+            // derive it from the initialize request itself (see McpMessageHandler#decodeInitializeRequest)
+            protocolVersion = initializeProtocolVersion(message);
+        }
         if (protocolVersion == null) {
             LOG.warnf("Unable to validate schema - no protocol version [server: %s, connection: %s]", mcpRequest.serverName(),
                     mcpRequest.connection().id());
             return SUCCEEDED_FUTURE;
         }
+        final McpProtocolVersion effectiveVersion = protocolVersion;
         return vertx.executeBlocking(new Callable<>() {
             @Override
             public Boolean call() throws Exception {
-                Validator validator = validators.computeIfAbsent(new ValidatorKey(method, protocolVersion.version()),
+                Validator validator = validators.computeIfAbsent(new ValidatorKey(method, effectiveVersion.version()),
                         JsonSchemaValidator.this::newValidator);
                 OutputUnit result = validator.validate(message);
                 if (!result.getValid()) {
@@ -123,6 +129,14 @@ public class JsonSchemaValidator implements McpRequestValidator {
     }
 
     private record ValidatorKey(McpMethod method, String protocolVersion) {
+    }
+
+    private McpProtocolVersion initializeProtocolVersion(JsonObject message) {
+        JsonObject params = message.getJsonObject("params");
+        McpProtocolVersion version = params == null ? null : McpProtocolVersion.from(params.getString("protocolVersion"));
+        // An unknown/unsupported or missing version would have no schema resource, so fall back to a default;
+        // this mirrors McpMessageHandler#decodeInitializeRequest() and still validates the request structure
+        return version != null && version.isKnown() ? version : McpProtocolVersion.LATEST_STATEFUL;
     }
 
     private Validator newValidator(ValidatorKey key) {
