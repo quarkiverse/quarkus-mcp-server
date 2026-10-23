@@ -83,7 +83,16 @@ class ToolMessageHandler extends MessageHandler {
                 if (toolResponse.isError()) {
                     mcpRequest.setTracingErrorResponse(true, null, null);
                 }
-                return mcpRequest.sender().sendResult(id, JsonObject.mapFrom(toolResponse), responseMeta);
+                JsonObject result;
+                try {
+                    result = JsonObject.mapFrom(toolResponse);
+                } catch (Exception e) {
+                    // The tool response could not be serialized to JSON, e.g. the structured content is not serializable;
+                    // report an internal error instead of leaving the client waiting for a response that is never sent
+                    return handleFailure(id, mcpRequest.sender(), mcpRequest, e, LOG,
+                            "Unable to serialize the response of tool %s", toolName, responseMeta);
+                }
+                return mcpRequest.sender().sendResult(id, result, responseMeta);
             },
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to call tool %s", toolName, responseMeta));
