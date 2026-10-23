@@ -28,7 +28,9 @@ public class InputRequiredException extends RuntimeException {
      * @see MrtrRequest#inputRequired()
      */
     InputRequiredException(Map<String, InputRequestEntry> inputRequests, String requestState) {
-        super("Additional input required");
+        // This exception is a control-flow signal on the expected MRTR path; its stack trace is never consulted, so skip
+        // the costly native stack walk
+        super("Additional input required", null, true, false);
         this.inputRequests = Map.copyOf(inputRequests);
         this.requestState = requestState;
     }
