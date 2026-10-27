@@ -46,6 +46,8 @@ include::./includes/attributes.adoc[]
 * [2.1.0] A stateless Streamable HTTP request without the `MCP-Protocol-Version` header is now rejected with HTTP 400 and the `-32020` (`HeaderMismatch`) JSON-RPC error, as required by the `2026-07-28` server validation rules, instead of being processed. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1083[#1083])
 * [2.1.0] `prompts/get` for a programmatically registered prompt now accepts an explicit `null` value for an optional argument instead of failing with an internal error. A JSON `null` is a shape some clients send for unset optionals. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1093[#1093])
 * [2.1.0] The stdio transport no longer terminates its IO loop when it receives invalid JSON; it logs the error and continues processing subsequent messages. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1101[#1101])
+* [2.1.0] The `quarkus-mcp-server-schema-validator` extension now works out of the box in native mode. The `mcp_schema_*.json` resources it reads at runtime are now registered automatically, so native applications no longer crash with missing schema files. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1111[#1111])
+* [2.1.0] A `tools/call` whose response cannot be serialized now returns a JSON-RPC internal error instead of leaving the client hanging until it times out. The serialization step, previously confined to the success branch of the handler, is now routed to the failure handler on error. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1115[#1115])
 
 [[version-2-0]]
 == 2.0.x
@@ -53,6 +55,9 @@ include::./includes/attributes.adoc[]
 [cols="1,1"]
 |===
 |Version |Date
+
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.4[2.0.4]
+|October 26, 2026
 
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.3[2.0.3]
 |October 8, 2026
@@ -131,6 +136,14 @@ include::./includes/attributes.adoc[]
 * [2.0.3] The CDI request context activated for a feature method (tool, prompt, resource, etc.) is now properly destroyed after the response is written, so `@PreDestroy` runs for request-scoped beans. Previously the context was activated on a duplicated context while cleanup ran on a different one, so nothing was destroyed. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1057[#1057])
 * [2.0.3] The request context cleanup fix is now also applied to the notification and initialization handling, ensuring the context is destroyed on the correct Vert.x context. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
 * [2.0.3] The `@BeforeDestroyed(RequestScoped.class)` observer now fires with the correct request context active. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/pull/1062[#1062])
+* [2.0.4] Server-initiated requests (sampling, roots, elicitation) are now completed when the client responds with a JSON-RPC error, instead of leaving the caller pending until the request timeout (or forever when timeouts are disabled). The client error is delivered as an `McpException` carrying the original code, message, and optional data. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1068[#1068])
+* [2.0.4] For protocol version `2026-07-28`+, the server no longer emits an `INFO` `notifications/message` for a request that does not opt in to a per-request log level via the `_meta` field `io.modelcontextprotocol/logLevel`, as required by the spec. Applies to Streamable HTTP, stdio, and WebSocket. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1076[#1076])
+* [2.0.4] A stateless Streamable HTTP request for an unimplemented JSON-RPC method now returns HTTP 404, in addition to the `-32601` (method not found) JSON-RPC error body, as required by the `2026-07-28` spec. Previously the `-32601` error was returned with HTTP 200. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1081[#1081])
+* [2.0.4] A stateless Streamable HTTP request without the `MCP-Protocol-Version` header is now rejected with HTTP 400 and the `-32020` (`HeaderMismatch`) JSON-RPC error, as required by the `2026-07-28` server validation rules, instead of being processed. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1083[#1083])
+* [2.0.4] `prompts/get` for a programmatically registered prompt now accepts an explicit `null` value for an optional argument instead of failing with an internal error. A JSON `null` is a shape some clients send for unset optionals. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1093[#1093])
+* [2.0.4] The stdio transport no longer terminates its IO loop when it receives invalid JSON; it logs the error and continues processing subsequent messages. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1101[#1101])
+* [2.0.4] The `quarkus-mcp-server-schema-validator` extension now works out of the box in native mode. The `mcp_schema_*.json` resources it reads at runtime are now registered automatically, so native applications no longer crash with missing schema files. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1111[#1111])
+* [2.0.4] A `tools/call` whose response cannot be serialized now returns a JSON-RPC internal error instead of leaving the client hanging until it times out. _(backported from <<version-2-1,2.1.x>>)_ (https://github.com/quarkiverse/quarkus-mcp-server/issues/1115[#1115])
 
 [[version-1-13]]
 == 1.13.x
