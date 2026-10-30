@@ -43,7 +43,7 @@
         <swagger-annotations.version>2.2.55</swagger-annotations.version>
         <langchain4j.version>1.22.0</langchain4j.version>
         <assertj.version>3.27.7</assertj.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <jacoco.dest-file>${maven.multiModuleProjectDirectory}/target/jacoco.exec</jacoco.dest-file>
         <mcp-server-api.version>1.0.0</mcp-server-api.version>
     </properties>
