@@ -258,7 +258,7 @@ image::mcp-inspector-greet-tool.png[Invoking the greet tool,align="center"]
 For WebSocket transport:
 
 * Transport: Select "WebSocket"
-* URL: `ws://localhost:8080/ws/mcp`
+* URL: `ws://localhost:8080/mcp/ws`
 
 == See Also
 
