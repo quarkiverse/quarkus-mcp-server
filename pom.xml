@@ -40,7 +40,7 @@
         <quarkus.version>3.40.1.1</quarkus.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <sundrio.version>0.400.1</sundrio.version>
-        <swagger-annotations.version>2.2.55</swagger-annotations.version>
+        <swagger-annotations.version>3.0.0</swagger-annotations.version>
         <langchain4j.version>1.23.0</langchain4j.version>
         <assertj.version>3.27.7</assertj.version>
         <jacoco.version>0.8.16</jacoco.version>
