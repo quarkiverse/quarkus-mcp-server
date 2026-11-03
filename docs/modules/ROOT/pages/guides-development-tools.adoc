@@ -7,10 +7,11 @@ This guide covers the development tools available for building, testing, and deb
 
 == Overview
 
-The Quarkus MCP Server extension provides several tools to help you develop and test your MCP server:
+The following tools and external utilities help you develop and test your MCP server:
 
 * **Traffic Logging**: Monitor JSON-RPC messages exchanged between client and server
 * **Dev UI**: Test your tools, resources, and prompts directly from the browser during development
+* **curl**: External HTTP client for MCP requests, including tools, resources, and prompts
 * **MCP Inspector**: External testing tool for comprehensive protocol testing
 
 == Traffic Logging
@@ -178,6 +179,73 @@ The Dev UI is only available for HTTP-based transports (SSE, Streamable HTTP, an
 
 NOTE: Dev UI is automatically disabled in production builds.
 It's only available when running with `quarkus:dev` or when `quarkus.dev-mode.enabled=true`.
+
+== Testing with curl
+
+`curl` is an external HTTP client that can send requests for MCP tools, resources, and prompts over Streamable HTTP.
+The examples below list and call tools.
+The following requests use the `greet` tool from xref:getting-started-http.adoc[Getting Started with HTTP Transport] and assume that the server is running at `http://localhost:8080/mcp`.
+Use curl 7.76 or later for `--fail-with-body`.
+
+These requests use the *stateless* protocol version `2026-07-28`.
+Each request carries its own metadata; no `initialize` request or session ID is needed.
+For stateful protocol versions, see xref:concepts-transports.adoc[Transports].
+
+List the available tools:
+
+[source,bash]
+----
+curl --silent --show-error --fail-with-body http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2026-07-28' \
+  -H 'Mcp-Method: tools/list' \
+  --data-binary @- <<'JSON'
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {"name": "curl-client", "version": "1.0.0"},
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+JSON
+----
+
+The response has ID `1` and lists `greet`, with a string `name` argument in its input schema.
+Use the names and argument schemas returned by your server when constructing a call:
+
+[source,bash]
+----
+curl --silent --show-error --fail-with-body http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2026-07-28' \
+  -H 'Mcp-Method: tools/call' \
+  -H 'Mcp-Name: greet' \
+  --data-binary @- <<'JSON'
+{
+  "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+  "params": {
+    "name": "greet", "arguments": {"name": "Ada"},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {"name": "curl-client", "version": "1.0.0"},
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+JSON
+----
+
+The response has ID `2` and contains the text `Hello, Ada!`.
+`Mcp-Method` must match the JSON `method`; for a tool call, `Mcp-Name` must match `params.name`.
+You can send further calls independently, using a distinct ID and different arguments.
+
+Inspect the JSON-RPC response body as well as the HTTP status: `--fail-with-body` detects HTTP errors, but a JSON-RPC error can also arrive with an HTTP-success status.
+These simple calls return ordinary JSON; they do not demonstrate tools that use progress, sampling, or other streaming features.
 
 == MCP Inspector
 
