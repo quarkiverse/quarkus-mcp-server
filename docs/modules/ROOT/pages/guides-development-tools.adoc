@@ -7,11 +7,11 @@ This guide covers the development tools available for building, testing, and deb
 
 == Overview
 
-The Quarkus MCP Server extension provides several tools to help you develop and test your MCP server:
+The following tools and external utilities help you develop and test your MCP server:
 
 * **Traffic Logging**: Monitor JSON-RPC messages exchanged between client and server
 * **Dev UI**: Test your tools, resources, and prompts directly from the browser during development
-* **curl**: Send raw HTTP requests to list and call tools
+* **curl**: External HTTP client for MCP requests, including tools, resources, and prompts
 * **MCP Inspector**: External testing tool for comprehensive protocol testing
 
 == Traffic Logging
@@ -182,7 +182,8 @@ It's only available when running with `quarkus:dev` or when `quarkus.dev-mode.en
 
 == Testing with curl
 
-You can use `curl` to list and call tools over Streamable HTTP.
+`curl` is an external HTTP client that can send requests for MCP tools, resources, and prompts over Streamable HTTP.
+The examples below list and call tools.
 The following requests use the `greet` tool from xref:getting-started-http.adoc[Getting Started with HTTP Transport] and assume that the server is running at `http://localhost:8080/mcp`.
 Use curl 7.76 or later for `--fail-with-body`.
 
