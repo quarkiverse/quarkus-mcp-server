@@ -21,8 +21,12 @@ import io.vertx.core.json.JsonObject;
  * {@link io.quarkus.runtime.BlockingOperationControl#isBlockingAllowed()} to detect if blocking is allowed on the current
  * thread. If blocking is not allowed but an implementation still needs to perform a blocking operation then it has to offload
  * the execution on a worker thread.
+ * <p>
+ * An implementation annotated with {@link GlobalGuardrail} is applied to all tools. Global input guardrails are executed
+ * before the input guardrails declared on a tool.
  *
  * @see SupportedExecutionModels
+ * @see GlobalGuardrail
  * @see ToolOutputGuardrail
  */
 public interface ToolInputGuardrail {
