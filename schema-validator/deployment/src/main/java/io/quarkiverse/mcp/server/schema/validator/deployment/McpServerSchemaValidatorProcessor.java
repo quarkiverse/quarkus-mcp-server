@@ -1,6 +1,7 @@
 package io.quarkiverse.mcp.server.schema.validator.deployment;
 
 import io.quarkiverse.mcp.server.schema.validator.JsonSchemaValidator;
+import io.quarkiverse.mcp.server.schema.validator.ToolOutputSchemaValidator;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -17,6 +18,7 @@ public class McpServerSchemaValidatorProcessor {
     @BuildStep
     void beans(BuildProducer<AdditionalBeanBuildItem> beans) {
         beans.produce(AdditionalBeanBuildItem.unremovableOf(JsonSchemaValidator.class));
+        beans.produce(AdditionalBeanBuildItem.unremovableOf(ToolOutputSchemaValidator.class));
     }
 
     @BuildStep
