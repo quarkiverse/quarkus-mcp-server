@@ -58,7 +58,7 @@ public class TaskExpiredTest extends McpServerTest {
                     .send()
                     .thenAssertResults();
             // The expired task was removed
-            assertNull(taskManager.getTask(taskId));
+            assertNull(taskManager.getTask(taskId).await().indefinitely());
 
             // An unlimited TTL is advertised as null
             taskId = callToolAsTask(client, "unlimited");
@@ -76,7 +76,7 @@ public class TaskExpiredTest extends McpServerTest {
                     .setTtl(Duration.ofMillis(200))
                     .setPollInterval(Duration.ofMillis(50))
                     .setHandler(task -> ToolResponse.success("ok"), false)
-                    .create();
+                    .createAndAwait();
         }
 
         @Tool(description = "A task with unlimited TTL")
@@ -84,7 +84,7 @@ public class TaskExpiredTest extends McpServerTest {
             throw tasks.newTask()
                     .setTtl(Duration.ZERO)
                     .setHandler(task -> ToolResponse.success("ok"), false)
-                    .create();
+                    .createAndAwait();
         }
 
     }

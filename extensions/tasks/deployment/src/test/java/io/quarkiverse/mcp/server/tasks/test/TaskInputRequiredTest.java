@@ -149,7 +149,7 @@ public class TaskInputRequiredTest extends McpServerTest {
                 ElicitationResponse name = responses.getElicitationResponse("name");
                 String root = responses.getRootsResponse("roots").get(0).uri();
                 return ToolResponse.success("Hello, " + name.content().getString("name") + "! [" + root + "]");
-            }, false).create();
+            }, false).createAndAwait();
         }
 
     }
