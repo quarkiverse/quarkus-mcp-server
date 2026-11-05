@@ -1,5 +1,6 @@
 package io.quarkiverse.mcp.server.tasks.runtime;
 
+import java.time.Instant;
 import java.util.Map;
 
 import jakarta.inject.Singleton;
@@ -16,6 +17,8 @@ import io.quarkiverse.mcp.server.McpExtensionMethod;
 import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.RawMessage;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
+import io.quarkiverse.mcp.server.tasks.spi.TaskRecord;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -38,49 +41,54 @@ public class TasksExtension {
     }
 
     @McpExtensionMethod("tasks/get")
-    public JsonObject get(String taskId, McpConnection connection) {
+    public Uni<JsonObject> get(String taskId, McpConnection connection) {
         checkCapability(connection);
-        TaskImpl task = findTask(taskId, connection, "Failed to retrieve task");
-        LOG.debugf("Get task %s", task.id());
-        return task.toJson(true);
+        return findTask(taskId, connection, "Failed to retrieve task").map(task -> {
+            LOG.debugf("Get task %s", task.id());
+            return TaskJson.toJson(task, true);
+        });
     }
 
     @McpExtensionMethod("tasks/update")
-    public JsonObject update(String taskId, McpConnection connection, RawMessage rawMessage) {
+    public Uni<JsonObject> update(String taskId, McpConnection connection, RawMessage rawMessage) {
         checkCapability(connection);
-        TaskImpl task = findTask(taskId, connection, "Failed to update task");
         JsonObject params = rawMessage.asJsonObject().getJsonObject("params");
         JsonObject inputResponses = params != null ? params.getJsonObject("inputResponses") : null;
-        if (inputResponses == null) {
-            throw new McpException("Failed to update task: Missing required param: inputResponses",
-                    JsonRpcErrorCodes.INVALID_PARAMS);
-        }
-        LOG.debugf("Update task %s", task.id());
-        task.updateInputResponses(inputResponses);
-        // Empty acknowledgement
-        return new JsonObject();
+        return findTask(taskId, connection, "Failed to update task").flatMap(task -> {
+            if (inputResponses == null) {
+                return Uni.createFrom().failure(new McpException(
+                        "Failed to update task: Missing required param: inputResponses", JsonRpcErrorCodes.INVALID_PARAMS));
+            }
+            LOG.debugf("Update task %s", task.id());
+            return manager.update(task.id(), r -> TaskManagerImpl.inputResponses(r, inputResponses))
+                    // Empty acknowledgement
+                    .map(ignored -> new JsonObject());
+        });
     }
 
     @McpExtensionMethod("tasks/cancel")
-    public JsonObject cancel(String taskId, McpConnection connection) {
+    public Uni<JsonObject> cancel(String taskId, McpConnection connection) {
         checkCapability(connection);
-        TaskImpl task = findTask(taskId, connection, "Failed to cancel task");
-        LOG.debugf("Cancel task %s", task.id());
-        task.cancel(CANCELLED_BY_CLIENT);
-        // Empty acknowledgement
-        return new JsonObject();
+        return findTask(taskId, connection, "Failed to cancel task").flatMap(task -> {
+            LOG.debugf("Cancel task %s", task.id());
+            return manager.update(task.id(), r -> TaskManagerImpl.cancelled(r, CANCELLED_BY_CLIENT))
+                    // Empty acknowledgement
+                    .map(ignored -> new JsonObject());
+        });
     }
 
-    private TaskImpl findTask(String taskId, McpConnection connection, String errorPrefix) {
-        TaskImpl task = manager.get(taskId, connection.serverName());
-        if (task == null) {
-            throw new McpException(errorPrefix + ": Task not found", JsonRpcErrorCodes.INVALID_PARAMS);
-        }
-        if (task.isExpired()) {
-            manager.remove(task);
-            throw new McpException(errorPrefix + ": Task has expired", JsonRpcErrorCodes.INVALID_PARAMS);
-        }
-        return task;
+    private Uni<TaskRecord> findTask(String taskId, McpConnection connection, String errorPrefix) {
+        return manager.get(taskId, connection.serverName()).flatMap(task -> {
+            if (task == null) {
+                return Uni.createFrom().failure(
+                        new McpException(errorPrefix + ": Task not found", JsonRpcErrorCodes.INVALID_PARAMS));
+            }
+            if (task.isExpired(Instant.now())) {
+                return manager.expire(task.id()).chain(() -> Uni.createFrom().failure(
+                        new McpException(errorPrefix + ": Task has expired", JsonRpcErrorCodes.INVALID_PARAMS)));
+            }
+            return Uni.createFrom().item(task);
+        });
     }
 
     private static void checkCapability(McpConnection connection) {

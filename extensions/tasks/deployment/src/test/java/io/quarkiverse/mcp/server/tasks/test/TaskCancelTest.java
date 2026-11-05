@@ -116,12 +116,12 @@ public class TaskCancelTest extends McpServerTest {
                 .connect()) {
             MyTools.reset();
             String taskId = callToolAsTask(client, "cancellable");
-            assertTrue(taskManager.cancelTask(taskId, "Enough"));
-            assertFalse(taskManager.cancelTask(taskId, "Enough"));
-            assertFalse(taskManager.cancelTask("unknown", null));
+            assertTrue(taskManager.cancelTask(taskId, "Enough").await().indefinitely());
+            assertFalse(taskManager.cancelTask(taskId, "Enough").await().indefinitely());
+            assertFalse(taskManager.cancelTask("unknown", null).await().indefinitely());
             JsonObject cancelled = awaitStatus(client, taskId, true, TaskStatus.CANCELLED);
             assertEquals("Enough", cancelled.getString("statusMessage"));
-            assertEquals(TaskStatus.CANCELLED, taskManager.getTask(taskId).status());
+            assertEquals(TaskStatus.CANCELLED, taskManager.getTask(taskId).await().indefinitely().status());
         }
     }
 
@@ -154,7 +154,7 @@ public class TaskCancelTest extends McpServerTest {
                 }
                 FINISHED.countDown();
                 return ToolResponse.success("finished");
-            }, false).create();
+            }, false).createAndAwait();
         }
 
     }

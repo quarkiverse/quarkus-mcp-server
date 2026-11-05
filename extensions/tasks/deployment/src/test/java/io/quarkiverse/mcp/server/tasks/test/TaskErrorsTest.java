@@ -171,14 +171,14 @@ public class TaskErrorsTest extends McpServerTest {
             // Does not check isSupported() on purpose
             throw tasks.newTask().setHandler(task -> {
                 throw new McpException("Invalid input", JsonRpcErrorCodes.INVALID_PARAMS);
-            }, false).create();
+            }, false).createAndAwait();
         }
 
         @Tool(description = "Fails unexpectedly")
         String broken(Tasks tasks) {
             throw tasks.newTask().setHandler(task -> {
                 throw new IllegalStateException("Boom");
-            }, false).create();
+            }, false).createAndAwait();
         }
 
         @Tool(description = "Fails with a tool error")
@@ -188,7 +188,7 @@ public class TaskErrorsTest extends McpServerTest {
             }
             throw tasks.newTask().setHandler(task -> {
                 throw new ToolCallException("Business error");
-            }, false).create();
+            }, false).createAndAwait();
         }
 
         @Tool(description = "Falls back to the synchronous execution")
