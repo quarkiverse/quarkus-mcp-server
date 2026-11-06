@@ -228,6 +228,17 @@
         "test",
         "code"
       ]
+    },
+    {
+      "login": "ravismash",
+      "name": "ravismash",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12935461?v=4",
+      "profile": "https://about.me/ravimeena",
+      "contributions": [
+        "bug",
+        "test",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
