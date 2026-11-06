@@ -4,6 +4,7 @@ import static io.quarkiverse.mcp.server.runtime.Messages.getParams;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FilterContext;
+import io.quarkiverse.mcp.server.GlobalGuardrail;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.Icon;
@@ -62,6 +64,8 @@ import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersBuildTimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
+import io.quarkus.arc.InjectableInstance;
+import io.quarkus.arc.InstanceHandle;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -89,9 +93,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     final McpServersBuildTimeConfig buildTimeConfig;
 
-    final Instance<ToolInputGuardrail> inputGuardrails;
-    final Instance<ToolOutputGuardrail> outputGuardrails;
+    final InjectableInstance<ToolInputGuardrail> inputGuardrails;
+    final InjectableInstance<ToolOutputGuardrail> outputGuardrails;
     final Instance<IconsProvider> iconsProviders;
+
+    // Global guardrails are shared by all tools
+    final GlobalGuardrails<ToolInputGuardrail> globalInputGuardrails;
+    final GlobalGuardrails<ToolOutputGuardrail> globalOutputGuardrails;
 
     final Event<ToolAdded> toolAddedEvent;
     final Event<ToolRemoved> toolRemovedEvent;
@@ -104,8 +112,10 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
             @All List<ToolFilter> filters,
-            @Any Instance<ToolInputGuardrail> inputGuardrails,
-            @Any Instance<ToolOutputGuardrail> outputGuardrails,
+            @Any InjectableInstance<ToolInputGuardrail> inputGuardrails,
+            @Any InjectableInstance<ToolOutputGuardrail> outputGuardrails,
+            @All @GlobalGuardrail List<InstanceHandle<ToolInputGuardrail>> globalInputGuardrails,
+            @All @GlobalGuardrail List<InstanceHandle<ToolOutputGuardrail>> globalOutputGuardrails,
             @Any Instance<IconsProvider> iconsProviders,
             GlobalInputSchemaGenerator globalInputSchemaGenerator,
             GlobalOutputSchemaGenerator globalOutputSchemaGenerator,
@@ -132,6 +142,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         this.config = config;
         this.toolAddedEvent = toolAddedEvent;
         this.toolRemovedEvent = toolRemovedEvent;
+        this.globalInputGuardrails = new GlobalGuardrails<>(globalInputGuardrails);
+        this.globalOutputGuardrails = new GlobalGuardrails<>(globalOutputGuardrails);
         for (FeatureMetadata<ToolResponse> f : metadata.tools()) {
             ToolMethod toolMethod = new ToolMethod(f, iconsProviders);
             for (String server : f.info().serverNames()) {
@@ -292,8 +304,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
         private ToolMethod(FeatureMetadata<ToolResponse> metadata, Instance<IconsProvider> iconsProviders) {
             super(metadata, iconsProviders);
-            this.input = initInputGuardrails(cast(metadata.info().inputGuardrails()));
-            this.output = initOutputGuardrails(cast(metadata.info().outputGuardrails()));
+            this.input = allInputGuardrails(cast(metadata.info().inputGuardrails()));
+            this.output = allOutputGuardrails(cast(metadata.info().outputGuardrails()));
         }
 
         @Override
@@ -495,48 +507,79 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
     }
 
-    private List<ToolInputGuardrail> initInputGuardrails(List<Class<? extends ToolInputGuardrail>> classes) {
+    /**
+     * Global input guardrails are executed before the guardrails declared on a tool. A guardrail declared on a tool that is
+     * also a global guardrail is ignored.
+     */
+    private List<ToolInputGuardrail> allInputGuardrails(List<Class<? extends ToolInputGuardrail>> classes) {
+        List<ToolInputGuardrail> declared = initGuardrails(classes, inputGuardrails, globalInputGuardrails, "input");
+        if (globalInputGuardrails.isEmpty()) {
+            return declared;
+        }
+        List<ToolInputGuardrail> ret = new ArrayList<>(globalInputGuardrails.instances);
+        ret.addAll(declared);
+        return ret;
+    }
+
+    /**
+     * Global output guardrails are executed after the guardrails declared on a tool. A guardrail declared on a tool that is
+     * also a global guardrail is ignored.
+     */
+    private List<ToolOutputGuardrail> allOutputGuardrails(List<Class<? extends ToolOutputGuardrail>> classes) {
+        List<ToolOutputGuardrail> declared = initGuardrails(classes, outputGuardrails, globalOutputGuardrails, "output");
+        if (globalOutputGuardrails.isEmpty()) {
+            return declared;
+        }
+        List<ToolOutputGuardrail> ret = new ArrayList<>(declared);
+        ret.addAll(globalOutputGuardrails.instances);
+        return ret;
+    }
+
+    private static <G> List<G> initGuardrails(List<Class<? extends G>> classes, InjectableInstance<G> guardrails,
+            GlobalGuardrails<G> global, String type) {
         if (classes == null || classes.isEmpty()) {
             return List.of();
         }
-        List<ToolInputGuardrail> ret = new ArrayList<>();
-        for (Class<? extends ToolInputGuardrail> clazz : classes) {
-            @SuppressWarnings("unchecked")
-            Instance<ToolInputGuardrail> child = (Instance<ToolInputGuardrail>) inputGuardrails
-                    .select(clazz);
+        List<G> ret = new ArrayList<>();
+        for (Class<? extends G> clazz : classes) {
+            InjectableInstance<? extends G> child = guardrails.select(clazz);
             if (child.isResolvable()) {
-                ret.add(child.get());
+                InstanceHandle<? extends G> handle = child.getHandle();
+                if (!global.beanIds.contains(handle.getBean().getIdentifier())) {
+                    ret.add(handle.get());
+                }
             } else {
                 try {
-                    ret.add((ToolInputGuardrail) clazz.getConstructor().newInstance());
+                    ret.add(clazz.getConstructor().newInstance());
                 } catch (Exception e) {
-                    LOG.errorf(e, "Unable to instantiate input guardrail: %s", clazz);
+                    LOG.errorf(e, "Unable to instantiate %s guardrail: %s", type, clazz);
                 }
             }
         }
         return ret;
     }
 
-    private List<ToolOutputGuardrail> initOutputGuardrails(List<Class<? extends ToolOutputGuardrail>> classes) {
-        if (classes == null || classes.isEmpty()) {
-            return List.of();
+    /**
+     * Global guardrails sorted by priority (higher priority goes first) and then by bean identifier.
+     */
+    static final class GlobalGuardrails<G> {
+
+        final List<G> instances;
+        final Set<String> beanIds;
+
+        GlobalGuardrails(List<InstanceHandle<G>> handles) {
+            List<InstanceHandle<G>> sorted = handles.stream()
+                    .sorted(Comparator.<InstanceHandle<G>> comparingInt(h -> h.getBean().getPriority()).reversed()
+                            .thenComparing(h -> h.getBean().getIdentifier()))
+                    .toList();
+            this.instances = sorted.stream().map(InstanceHandle::get).toList();
+            this.beanIds = sorted.stream().map(h -> h.getBean().getIdentifier()).collect(Collectors.toUnmodifiableSet());
         }
-        List<ToolOutputGuardrail> ret = new ArrayList<>();
-        for (Class<? extends ToolOutputGuardrail> clazz : classes) {
-            @SuppressWarnings("unchecked")
-            Instance<ToolOutputGuardrail> child = (Instance<ToolOutputGuardrail>) outputGuardrails
-                    .select(clazz);
-            if (child.isResolvable()) {
-                ret.add(child.get());
-            } else {
-                try {
-                    ret.add((ToolOutputGuardrail) clazz.getConstructor().newInstance());
-                } catch (Exception e) {
-                    LOG.errorf(e, "Unable to instantiate output guardrail: %s", clazz);
-                }
-            }
+
+        boolean isEmpty() {
+            return instances.isEmpty();
         }
-        return ret;
+
     }
 
     private static Uni<JsonObject> toolBeforeCall(List<ToolInputGuardrail> input, ToolInfo tool,
@@ -687,7 +730,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
 
             ToolDefinitionInfo ret = new ToolDefinitionInfo(name, title, description, serverNames, fun, asyncFun,
                     runOnVirtualThread, arguments, annotations, outputSchema, inputSchema, metadata,
-                    initInputGuardrails(inputGuardrails), initOutputGuardrails(outputGuardrails), icons, transportHints,
+                    allInputGuardrails(inputGuardrails), allOutputGuardrails(outputGuardrails), icons, transportHints,
                     notifyListChanged);
             List<FeatureKey> keys = FeatureKey.list(name, serverNames);
             registrationLock.lock();

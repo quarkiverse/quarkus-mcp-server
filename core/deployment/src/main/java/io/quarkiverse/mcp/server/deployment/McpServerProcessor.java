@@ -60,8 +60,10 @@ import io.quarkiverse.mcp.server.CompleteArg;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.EmbeddedResource;
+import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.FeatureArgumentProvider;
+import io.quarkiverse.mcp.server.GlobalGuardrail;
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.GlobalOutputSchemaGenerator;
 import io.quarkiverse.mcp.server.Icon;
@@ -248,6 +250,8 @@ class McpServerProcessor {
         // Result mappers
         unremovable.addBeanClasses(ToolEncoderResultMapper.class, ResourceContentsEncoderResultMapper.class,
                 PromptEncoderResultMapper.class, ToolStructuredContentResultMapper.class);
+        // Qualifiers must be registered so that they are always recognized by ArC
+        unremovable.addBeanClass(GlobalGuardrail.class);
         additionalBeans.produce(unremovable.build());
         additionalBeans
                 .produce(new AdditionalBeanBuildItem(WrapBusinessError.class, WrapBusinessErrorInterceptor.class));
@@ -282,6 +286,14 @@ class McpServerProcessor {
         autoScopes.produce(AutoAddScopeBuildItem.builder()
                 .implementsInterface(DotName.createSimple(InitialCheck.class))
                 .defaultScope(BuiltinScope.SINGLETON)
+                .build());
+        // Add @Singleton to global guardrail classes
+        // Note that we cannot use containsAnnotations() because it would also match a class that declares a producer
+        autoScopes.produce(AutoAddScopeBuildItem.builder()
+                .match((clazz, annotations, index) -> annotations.stream()
+                        .anyMatch(a -> a.name().equals(DotNames.GLOBAL_GUARDRAIL)))
+                .defaultScope(BuiltinScope.SINGLETON)
+                .unremovable()
                 .build());
         autoScopes.produce(AutoAddScopeBuildItem.builder()
                 .implementsInterface(DotName.createSimple(McpTrafficListener.class))
@@ -704,6 +716,56 @@ class McpServerProcessor {
                 validateBeanOrPublicNoArgsConstructor("IconsProvider", iconsProviderClazzName, declaredOn(featureMethod),
                         beanArchiveIndex.getIndex(),
                         validationPhase.getContext(), errors, reflectiveClasses);
+            }
+        }
+        validateGlobalGuardrails(beanArchiveIndex.getIndex(), validationPhase.getContext(), errors);
+    }
+
+    private void validateGlobalGuardrails(IndexView index, ValidationContext validationContext,
+            BuildProducer<ValidationErrorBuildItem> errors) {
+        Set<DotName> globalGuardrailClassBeans = new HashSet<>();
+        for (BeanInfo bean : validationContext.beans().withQualifier(DotNames.GLOBAL_GUARDRAIL)) {
+            if (bean.isClassBean()) {
+                globalGuardrailClassBeans.add(bean.getImplClazz().name());
+            }
+            if (!bean.hasType(DotNames.TOOL_INPUT_GUARDRAIL) && !bean.hasType(DotNames.TOOL_OUTPUT_GUARDRAIL)) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "Global guardrail must implement %s or %s: %s".formatted(DotNames.TOOL_INPUT_GUARDRAIL,
+                                DotNames.TOOL_OUTPUT_GUARDRAIL, bean))));
+            }
+            // @SupportedExecutionModels is declared on a class: the bean class, or the declared type of a producer
+            DotName typeName;
+            if (bean.isProducerMethod()) {
+                typeName = bean.getTarget().get().asMethod().returnType().name();
+            } else if (bean.isProducerField()) {
+                typeName = bean.getTarget().get().asField().type().name();
+            } else {
+                typeName = bean.getImplClazz() != null ? bean.getImplClazz().name() : null;
+            }
+            ClassInfo clazz = typeName != null ? index.getClassByName(typeName) : null;
+            if (clazz == null || clazz.isInterface()) {
+                // Cannot be validated
+                continue;
+            }
+            AnnotationInstance supportedExecutionModels = clazz.declaredAnnotation(DotNames.SUPPORTED_EXEC_MODELS);
+            if (supportedExecutionModels != null && supportedExecutionModels.value() != null) {
+                Set<String> supported = Set.of(supportedExecutionModels.value().asEnumArray());
+                for (ExecutionModel model : ExecutionModel.values()) {
+                    if (!supported.contains(model.toString())) {
+                        errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                                "Global guardrail %s must support all execution models but %s is not supported"
+                                        .formatted(bean, model))));
+                        break;
+                    }
+                }
+            }
+        }
+        // A class annotated with @GlobalGuardrail that is not a bean
+        for (AnnotationInstance annotation : index.getAnnotations(DotNames.GLOBAL_GUARDRAIL)) {
+            if (annotation.target().kind() == AnnotationTarget.Kind.CLASS
+                    && !globalGuardrailClassBeans.contains(annotation.target().asClass().name())) {
+                errors.produce(new ValidationErrorBuildItem(new IllegalStateException(
+                        "Global guardrail must be a CDI bean: " + annotation.target())));
             }
         }
     }

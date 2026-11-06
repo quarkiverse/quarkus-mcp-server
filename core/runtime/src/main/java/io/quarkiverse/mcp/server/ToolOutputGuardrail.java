@@ -20,8 +20,12 @@ import io.smallrye.mutiny.Uni;
  * {@link io.quarkus.runtime.BlockingOperationControl#isBlockingAllowed()} to detect if blocking is allowed on the current
  * thread. If blocking is not allowed but an implementation still needs to perform a blocking operation then it has to offload
  * the execution on a worker thread.
+ * <p>
+ * An implementation annotated with {@link GlobalGuardrail} is applied to all tools. Global output guardrails are executed
+ * after the output guardrails declared on a tool.
  *
  * @see SupportedExecutionModels
+ * @see GlobalGuardrail
  * @see ToolInputGuardrail
  */
 public interface ToolOutputGuardrail {

@@ -8,8 +8,11 @@ import java.lang.annotation.Target;
 
 /**
  * Associate guardrails with a tool call.
+ * <p>
+ * Guardrails annotated with {@link GlobalGuardrail} are applied to all tools automatically.
  *
  * @see Tool
+ * @see GlobalGuardrail
  * @see ToolInputGuardrail
  * @see ToolOutputGuardrail
  */

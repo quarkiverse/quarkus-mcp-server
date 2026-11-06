@@ -166,6 +166,8 @@ public class PrefixOutputGuardrail implements ToolOutputGuardrail {
 <2> Check if the response is not an error before transforming.
 <3> Use `context.setResponse()` to replace the response.
 
+NOTE: A guardrail referenced from `@ToolGuardrails` is looked up by its class. It can also be a CDI producer, as long as the class is one of the bean types of the produced bean, i.e. the declared type of the producer is the referenced class or its subclass. There must be exactly one bean with the referenced class in its set of bean types, so the class itself should not be a bean in that case. Qualifiers are ignored.
+
 === Applying Output Guardrails
 
 [source,java]
@@ -192,6 +194,65 @@ String processEmail(String to, String body) {
    return "Email processed";
 }
 ----
+
+[[global-guardrails]]
+== Global Guardrails
+
+A guardrail annotated with `@GlobalGuardrail` is applied to all tools, including the tools registered programmatically with the `ToolManager` API.
+There's no need to declare it with `@ToolGuardrails`.
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.GlobalGuardrail;
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import io.quarkus.logging.Log;
+import jakarta.annotation.Priority;
+
+@Priority(10) // <1>
+@GlobalGuardrail // <2>
+public class AuditLog implements ToolOutputGuardrail {
+
+   @Override
+   public void apply(ToolOutputContext context) {
+      Log.infof("Tool %s called [error: %s]", context.getTool().name(), context.getResponse().isError());
+   }
+}
+----
+<1> Optional; global guardrails with higher priority are executed first. The default priority is `0`.
+<2> The guardrail is applied to all tools. If no scope is declared, `@Singleton` is added automatically.
+
+`@GlobalGuardrail` is a CDI qualifier, so a global guardrail can also be declared with a producer method or field:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.GlobalGuardrail;
+import io.quarkiverse.mcp.server.ToolOutputGuardrail;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
+
+@Singleton
+public class GuardrailProducers {
+
+   @Priority(5)
+   @GlobalGuardrail
+   @Produces
+   @Singleton
+   ToolOutputGuardrail audit(AuditConfig config) {
+      return new AuditGuardrail(config);
+   }
+}
+----
+
+The rules for global guardrails:
+
+* A global guardrail must be a CDI bean: a class bean, a producer, or a synthetic bean registered by an extension. A single instance is shared by all tools.
+* A global guardrail bean does not have the `@Default` qualifier. If you need to inject it elsewhere, use `@GlobalGuardrail` at the injection point.
+* Global input guardrails are executed _before_ the input guardrails declared on a tool. Global output guardrails are executed _after_ the output guardrails declared on a tool. So global guardrails see the original arguments and the final response.
+* If a global guardrail is also declared on a specific tool, it's executed only once, as a global guardrail.
+* A global guardrail must support all execution models. If the bean class, or the declared type of a producer, is annotated with `@SupportedExecutionModels` that does not include all execution models, the build fails. If a producer declares an interface type, this cannot be validated and the produced guardrail is responsible for supporting all execution models.
+
+TIP: A global guardrail can use `context.getTool()` to skip the tools it should not apply to.
 
 == Async Guardrails
 
