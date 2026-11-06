@@ -167,7 +167,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
     }
 
     protected JsonObject unsupportedVersion(JsonObject message, String serverName, String requested) {
-        return Messages.newError(Messages.getId(message), JsonRpcErrorCodes.UNSUPPORTED_PROTOCOL_VERSION,
+        return Messages.newError(Messages.getValidId(message), JsonRpcErrorCodes.UNSUPPORTED_PROTOCOL_VERSION,
                 "Unsupported protocol version", new JsonObject()
                         .put("supported", protocolVersions(serverName).versionStrings()).put("requested", requested));
     }
