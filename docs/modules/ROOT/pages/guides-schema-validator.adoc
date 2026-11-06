@@ -26,4 +26,30 @@ Validations are performed automatically.
 The extension includes MCP JSON schemas for the following protocol versions: `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
 The appropriate schema is selected based on the protocol version negotiated during the client initialization.
 
+[[tool-output]]
+=== Tool output validation
+
+The MCP specification requires that a tool with an `outputSchema` returns a `structuredContent` that conforms to it.
+The extension also validates the result of every successful `tools/call` against the tool's `outputSchema` before it is sent to the client, as the official TypeScript, Python, and Java SDKs do.
+If the `structuredContent` does not conform, or is missing although the tool declares an output schema, the result is replaced with a tool error (`isError: true`) whose text describes the violations, for example `Output validation error: Invalid structured content for tool price: [/amount: ...]`, and a warning is logged.
+Results that are already tool errors are not validated, and neither are the results of tools without an output schema.
+Each tool's output schema is compiled once, on first use. If an output schema cannot be compiled or applied, for example because of an unresolvable reference, a warning is logged and that tool's results are not validated.
+The check is a xref:guides-using-guardrails.adoc#global-guardrails[global output guardrail] with the lowest priority, so it runs after all other output guardrails and validates the result that is actually sent.
+
+The behavior is controlled by the `quarkus.mcp.server.schema-validator.tool-output` configuration property:
+
+[cols="1,3"]
+|===
+|Value |Behavior
+
+|`fail` (default)
+|The non-conforming result is replaced with a tool error and a warning is logged.
+
+|`log`
+|A warning is logged and the result is sent unchanged. This can help while migrating tools that do not conform yet.
+
+|`off`
+|Tool results are not validated.
+|===
+
 NOTE: The MCP server performs some basic validation of messages by default. However, this extension ensures that message instances are valid, as defined by the JSON Schema specification.
