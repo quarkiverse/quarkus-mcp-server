@@ -226,7 +226,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                         || (!initialize && !versions.supports(McpProtocolVersion.DEFAULT_ASSUMED)))) {
             ctx.response().setStatusCode(400)
                     .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .end(newError(Messages.getId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
+                    .end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                             "Missing required header: " + MCP_PROTOCOL_VERSION_HEADER).toBuffer());
             return;
         }
@@ -283,7 +283,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         } catch (McpException e) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(Messages.getId(message), e.getJsonRpcErrorCode(), e.getMessage()).toBuffer());
+            ctx.end(newError(Messages.getValidId(message), e.getJsonRpcErrorCode(), e.getMessage()).toBuffer());
             return;
         }
         connection.initialize(initialRequest);
@@ -317,7 +317,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpProtocolVersion == null) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+            ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                     "Missing required header: " + MCP_PROTOCOL_VERSION_HEADER).toBuffer());
             return false;
         }
@@ -328,14 +328,14 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (mcpMethodHeader == null) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+            ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                     "Missing required header: " + MCP_METHOD_HEADER).toBuffer());
             return false;
         }
         if (bodyMethod != null && !mcpMethodHeader.equals(bodyMethod)) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+            ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                     "Header mismatch: " + MCP_METHOD_HEADER + " header value '" + mcpMethodHeader
                             + "' does not match body value '" + bodyMethod + "'")
                     .toBuffer());
@@ -347,18 +347,18 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         if (McpMethod.TOOLS_CALL == mcpMethod || McpMethod.PROMPTS_GET == mcpMethod) {
             JsonObject params = Messages.getParams(message);
             String bodyName = params != null ? params.getString("name") : null;
-            if (!validateMcpNameHeader(ctx, bodyName)) {
+            if (!validateMcpNameHeader(ctx, message, bodyName)) {
                 return false;
             }
             if (McpMethod.TOOLS_CALL == mcpMethod && bodyName != null) {
-                if (!validateMcpParamHeaders(ctx, serverName, bodyName, params)) {
+                if (!validateMcpParamHeaders(ctx, serverName, message, bodyName, params)) {
                     return false;
                 }
             }
         } else if (McpMethod.RESOURCES_READ == mcpMethod) {
             JsonObject params = Messages.getParams(message);
             String bodyUri = params != null ? params.getString("uri") : null;
-            if (!validateMcpNameHeader(ctx, bodyUri)) {
+            if (!validateMcpNameHeader(ctx, message, bodyUri)) {
                 return false;
             }
         }
@@ -369,7 +369,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             if (metaVersion != null && !mcpProtocolVersion.equals(metaVersion)) {
                 ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
                 ctx.response().setStatusCode(400);
-                ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                         "Header mismatch: " + MCP_PROTOCOL_VERSION_HEADER + " header value '" + mcpProtocolVersion
                                 + "' does not match _meta value '" + metaVersion + "'")
                         .toBuffer());
@@ -379,7 +379,8 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return true;
     }
 
-    private boolean validateMcpParamHeaders(RoutingContext ctx, String serverName, String toolName, JsonObject params) {
+    private boolean validateMcpParamHeaders(RoutingContext ctx, String serverName, JsonObject message, String toolName,
+            JsonObject params) {
         if (headerMetadata.isEmpty()) {
             return true;
         }
@@ -397,7 +398,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
             if (bodyValue != null && headerValue == null) {
                 ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
                 ctx.response().setStatusCode(400);
-                ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                         "Missing required header: " + headerName).toBuffer());
                 return false;
             }
@@ -407,7 +408,7 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
                 if (!decodedHeaderValue.equals(bodyValueStr)) {
                     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
                     ctx.response().setStatusCode(400);
-                    ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+                    ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                             "Header mismatch: " + headerName + " header value '" + decodedHeaderValue
                                     + "' does not match body value '" + bodyValueStr + "'")
                             .toBuffer());
@@ -429,19 +430,19 @@ public class StreamableHttpMcpMessageHandler extends McpMessageHandler<HttpMcpRe
         return value;
     }
 
-    private boolean validateMcpNameHeader(RoutingContext ctx, String expectedValue) {
+    private boolean validateMcpNameHeader(RoutingContext ctx, JsonObject message, String expectedValue) {
         String mcpNameHeader = ctx.request().getHeader(MCP_NAME_HEADER);
         if (mcpNameHeader == null) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+            ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                     "Missing required header: " + MCP_NAME_HEADER).toBuffer());
             return false;
         }
         if (expectedValue != null && !mcpNameHeader.equals(expectedValue)) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json");
             ctx.response().setStatusCode(400);
-            ctx.end(newError(null, JsonRpcErrorCodes.HEADER_MISMATCH,
+            ctx.end(newError(Messages.getValidId(message), JsonRpcErrorCodes.HEADER_MISMATCH,
                     "Header mismatch: " + MCP_NAME_HEADER + " header value '" + mcpNameHeader
                             + "' does not match body value '" + expectedValue + "'")
                     .toBuffer());

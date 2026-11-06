@@ -121,6 +121,8 @@ public class McpParamHeaderTest extends McpServerTest {
         assertNotNull(error);
         assertEquals(JsonRpcErrorCodes.HEADER_MISMATCH, error.getInteger("code"));
         assertTrue(error.getString("message").contains("Mcp-Param-Region"));
+        // Error responses must include the same id as the request they respond to
+        assertEquals(message.getValue("id"), response.getValue("id"), response.encode());
         client.disconnect();
     }
 
@@ -153,6 +155,8 @@ public class McpParamHeaderTest extends McpServerTest {
         assertNotNull(error);
         assertEquals(JsonRpcErrorCodes.HEADER_MISMATCH, error.getInteger("code"));
         assertTrue(error.getString("message").contains("mismatch"));
+        // Error responses must include the same id as the request they respond to
+        assertEquals(message.getValue("id"), response.getValue("id"), response.encode());
         client.disconnect();
     }
 
@@ -378,6 +382,8 @@ public class McpParamHeaderTest extends McpServerTest {
             assertNotNull(error);
             assertEquals(JsonRpcErrorCodes.HEADER_MISMATCH, error.getInteger("code"));
             assertTrue(error.getString("message").contains("Mcp-Param-Region"));
+            // Error responses must include the same id as the request they respond to
+            assertEquals(message.getValue("id"), response.getValue("id"), response.encode());
             client.disconnect();
         } finally {
             toolManager.removeTool("programmaticQuery3");
