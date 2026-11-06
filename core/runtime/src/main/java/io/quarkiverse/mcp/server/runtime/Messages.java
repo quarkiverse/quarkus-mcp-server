@@ -111,6 +111,19 @@ public class Messages {
         return message.getValue("id");
     }
 
+    /**
+     * Error responses must include the same id as the request they respond to, unless the id could not be read. This method
+     * should be used when building an error response for a message that was not validated yet.
+     *
+     * @param message
+     * @return the id if it's a valid JSON-RPC request id ({@link String} or {@link Number}), or {@code null} if the message
+     *         has no id or the id is malformed
+     */
+    public static Object getValidId(JsonObject message) {
+        Object id = getId(message);
+        return id instanceof String || id instanceof Number ? id : null;
+    }
+
     public static JsonObject getParams(JsonObject message) {
         return message.getJsonObject("params");
     }
