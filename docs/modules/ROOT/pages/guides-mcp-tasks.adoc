@@ -36,15 +36,15 @@ Task creation is _server-directed_: the client declares the tasks extension in i
 The extension defines three methods - `tasks/get`, `tasks/update` and `tasks/cancel` - and the `notifications/tasks` notification.
 
 [IMPORTANT]
-.Tasks are currently stateful
+.Tasks are kept in memory by default
 ====
-Even though the extension is designed for the stateless protocol (`2026-07-28`), the current implementation keeps the tasks - and the running handlers - in the memory of the server instance that created them.
+Even though the extension is designed for the stateless protocol (`2026-07-28`), by default the tasks are kept in the memory of the server instance that created them.
 As a consequence:
 
 * `tasks/get`, `tasks/update` and `tasks/cancel` must reach the server instance that created the task; stateless clients using the Streamable HTTP transport set the `Mcp-Name` header to the task id so that intermediaries can route the requests accordingly (see <<routing-headers>>),
 * a task, including its result, is lost when the server instance is restarted.
 
-A pluggable task store is planned as a follow-up.
+You can provide a custom <<task-store,task store>> to keep the tasks in a persistent storage shared by multiple server instances.
 ====
 
 == Installation
@@ -90,7 +90,7 @@ public class LspTools {
                     startLanguageServer();
                     return findReferences(file);
                 }, false)
-                .create(); // <6>
+                .createAndAwait(); // <6>
     }
 }
 ----
@@ -99,7 +99,7 @@ public class LspTools {
 <3> The `ttl` and `pollInterval` are optional; see <<task-options>>.
 <4> A blocking handler, executed on a worker thread; the `TaskContext` gives access to the task.
 <5> The status message is included in the `tasks/get` responses.
-<6> `create()` durably creates the task, starts the handler asynchronously and returns a `CreateTaskException`. The exception is thrown from the tool method so that the server responds with the `CreateTaskResult`.
+<6> `createAndAwait()` durably creates the task, starts the handler asynchronously and returns a `CreateTaskException`. The exception is thrown from the tool method so that the server responds with the `CreateTaskResult`. This method blocks until the task is stored and must not be called on an event loop thread.
 
 When the tool throws the `CreateTaskException`, the server:
 
@@ -142,7 +142,8 @@ The handler determines the xref:concepts-architecture.adoc#_execution_model[exec
 |Non-blocking; executed on the event loop (`ExecutionModel.EVENT_LOOP`), returns a `Uni<ToolResponse>`.
 |===
 
-A non-blocking tool may return the task with `createAsync()`, a convenience equivalent to `Uni.createFrom().failure(create())`:
+A non-blocking tool returns the task with `create()`, the non-blocking variant of `createAndAwait()`.
+The returned `Uni` never emits an item; it fails with the `CreateTaskException` once the task is stored:
 
 [source,java]
 ----
@@ -153,7 +154,7 @@ Uni<ToolResponse> runPipeline(String repo, Tasks tasks) {
     }
     return tasks.newTask()
             .setAsyncHandler(task -> run(repo))
-            .createAsync();
+            .create();
 }
 ----
 
@@ -239,7 +240,7 @@ If the tool cannot do so, it calls `newTask()` anyway; the call then fails with 
 |The initial status message of the task.
 |===
 
-NOTE: Tasks are kept in memory. Expired tasks are removed periodically and when they are accessed; a task with an unlimited TTL is never removed.
+NOTE: Expired tasks are removed periodically and when they are accessed; a task with an unlimited TTL is never removed.
 
 == Polling and the task lifecycle
 
@@ -325,7 +326,7 @@ public class GreetingTools {
                     .sendAndAwait(); // <2>
             String name = responses.getElicitationResponse("name").content().getString("name"); // <3>
             return ToolResponse.success("Hello, " + name + "!");
-        }, false).create();
+        }, false).createAndAwait();
     }
 }
 ----
@@ -411,7 +412,7 @@ ToolResponse index(Tasks tasks) {
             index(file);
         }
         return ToolResponse.success("Indexed");
-    }, false).create();
+    }, false).createAndAwait();
 }
 ----
 <1> Throws an `OperationCancellationException` if the task was cancelled; the exception is ignored by the server.
@@ -421,7 +422,8 @@ A task waiting for input is cancelled as well: the pending `TaskInputRequest#sen
 
 NOTE: The `notifications/cancelled` notification is not used for task cancellation, as mandated by the specification.
 
-Tasks can also be inspected and cancelled programmatically with the `TaskManager` bean:
+Tasks can also be inspected and cancelled programmatically with the `TaskManager` bean.
+Its methods are asynchronous and return a `Uni`:
 
 [source,java]
 ----
@@ -430,25 +432,137 @@ import io.quarkiverse.mcp.server.tasks.TaskManager;
 @Inject
 TaskManager taskManager;
 
-void cancelAll() {
-    for (TaskManager.TaskInfo task : taskManager) {
-        if (!task.status().isTerminal()) {
-            taskManager.cancelTask(task.id(), "Shutting down");
-        }
-    }
+Uni<Void> cancelAll() {
+    return taskManager.getTasks() // <1>
+            .chain(tasks -> {
+                List<Uni<Boolean>> cancels = new ArrayList<>();
+                for (TaskManager.TaskInfo task : tasks) {
+                    if (!task.status().isTerminal()) {
+                        cancels.add(taskManager.cancelTask(task.id(), "Shutting down"));
+                    }
+                }
+                return cancels.isEmpty() ? Uni.createFrom().voidItem()
+                        : Uni.join().all(cancels).andFailFast().replaceWithVoid();
+            });
 }
 ----
+<1> `getTasks()` returns the tasks of all server configurations; use `getTasks(String)` to obtain the tasks bound to a specific server.
+
+[[task-store]]
+== Task store
+
+The state of the tasks is kept in a `io.quarkiverse.mcp.server.tasks.spi.TaskStore`.
+By default, the tasks are kept in memory.
+An application can provide a custom implementation as a CDI bean to keep the tasks in a persistent storage, such as Redis or a database.
+If the storage is shared by multiple server instances, the tasks survive a restart and the `tasks/get`, `tasks/update` and `tasks/cancel` requests can be served by any instance.
+
+The state of a task is represented by an immutable `io.quarkiverse.mcp.server.tasks.spi.TaskRecord`.
+A store may persist it in any form.
+The following example maps the values of a record to table columns; only the payloads - MCP messages such as the tool result - are stored as JSON text:
+
+[source,java]
+----
+import io.quarkiverse.mcp.server.tasks.spi.TaskRecord;
+import io.quarkiverse.mcp.server.tasks.spi.TaskStore;
+import io.quarkus.vertx.VertxContextSupport;
+
+@Singleton
+public class JdbcTaskStore implements TaskStore {
+
+    @Inject
+    DataSource dataSource;
+
+    @Override
+    public Uni<TaskRecord> get(String taskId) {
+        return VertxContextSupport.executeBlocking(() -> { // <1>
+            try (Connection c = dataSource.getConnection();
+                    PreparedStatement ps = c.prepareStatement("SELECT * FROM tasks WHERE id = ?")) {
+                ps.setString(1, taskId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? toRecord(rs) : null;
+                }
+            }
+        });
+    }
+
+    @Override
+    public Uni<Boolean> replace(TaskRecord expected, TaskRecord updated) {
+        return VertxContextSupport.executeBlocking(() -> {
+            try (Connection c = dataSource.getConnection();
+                    PreparedStatement ps = c.prepareStatement(
+                            "UPDATE tasks SET version = ?, status = ?, status_message = ?, last_updated_at = ?, "
+                                    + "result = ?, ... WHERE id = ? AND version = ?")) { // <2>
+                ps.setLong(1, updated.version());
+                ps.setString(2, updated.status().name());
+                ps.setString(3, updated.statusMessage());
+                ps.setTimestamp(4, Timestamp.from(updated.lastUpdatedAt()));
+                ps.setString(5, updated.result() != null ? updated.result().encode() : null);
+                // ...
+                ps.setString(6, updated.id());
+                ps.setLong(7, expected.version());
+                return ps.executeUpdate() == 1;
+            }
+        });
+    }
+
+    @Override
+    public Uni<Void> removeExpired(Instant now) {
+        return VertxContextSupport.executeBlocking(() -> {
+            try (Connection c = dataSource.getConnection();
+                    PreparedStatement ps = c.prepareStatement("DELETE FROM tasks WHERE expires_at < ?")) { // <3>
+                ps.setTimestamp(1, Timestamp.from(now));
+                ps.executeUpdate();
+                return null;
+            }
+        });
+    }
+
+    private TaskRecord toRecord(ResultSet rs) throws SQLException {
+        String result = rs.getString("result");
+        return TaskRecord.builder() // <4>
+                .id(rs.getString("id"))
+                .executionNodeId(rs.getString("execution_node_id"))
+                .version(rs.getLong("version"))
+                .status(TaskStatus.valueOf(rs.getString("status")))
+                .statusMessage(rs.getString("status_message"))
+                .lastUpdatedAt(rs.getTimestamp("last_updated_at").toInstant())
+                .result(result != null ? new JsonObject(result) : null)
+                // ...
+                .build();
+    }
+
+    // create(), delete() and list() are implemented similarly
+}
+----
+<1> All methods return a `Uni` and must not block the caller thread; a blocking implementation should offload the work to a worker thread.
+<2> `replace()` is a compare-and-set operation: the task is replaced only if the stored version equals the version of the expected task.
+<3> `TaskRecord#expiresAt()` can be stored in a dedicated column so that the expired tasks can be removed with a single statement. A store that removes the expired tasks automatically, e.g. via a native TTL support, does not need to implement `removeExpired()` at all.
+<4> The record is reconstructed via `TaskRecord#builder()`. All values must be restored; `TaskRecord#build()` fails if a mandatory value, such as the id of the execution node, is missing.
+
+TIP: A document-oriented store may persist the whole record as a single JSON document instead, using the optional `TaskRecord#toJson()` and `TaskRecord#fromJson()` helpers.
+
+A `TaskRecord` is an immutable snapshot of the state of a task.
+Every state transition is a read-modify-write cycle: the current state is obtained with `get()` and the new state, with an incremented version, is stored with `replace()`.
+If the task was modified concurrently, e.g. by another server instance, the transition is retried.
+
+The handler of a task is always executed by the server instance that created the task.
+If a cancellation or input responses are received by another server instance, the executing instance observes the change when it checks the store, which happens at the polling interval of the task.
+A single periodic timer is used for all running tasks of a server instance, and the tasks that are due are fetched in a single batch via `TaskStore#getAll()`.
+The default implementation of `getAll()` calls `get()` for each task; a store should override it if it can fetch multiple tasks efficiently, e.g. via `SELECT ... WHERE id IN (...)` or Redis `MGET`.
+A store that is never modified by another server instance should return `false` from `TaskStore#isShared()`, so that the periodic checks are skipped altogether; this is the case of the default in-memory store.
+
+NOTE: If a server instance is stopped while executing a task, the task remains in the `working` (or `input_required`) status until it expires. Each task records the identifier of the executing instance (`TaskRecord#executionNodeId()`); a new identifier is generated at each start of a server instance. However, such orphaned tasks are not detected automatically yet.
 
 == Limitations
 
-* Tasks are stateful: they are kept in memory and are only available on the server instance that created them.
+* By default, the tasks are kept in memory and are only available on the server instance that created them; see <<task-store>>.
 * Task status notifications (`notifications/tasks` via `subscriptions/listen`) are not supported yet; clients poll the task with `tasks/get`.
 * `Tasks` can only be injected into `@Tool` methods; tools registered programmatically via `ToolManager` cannot create tasks yet.
 
 [[routing-headers]]
 == Streamable HTTP routing headers
 
-Stateless clients using the Streamable HTTP transport must set the `Mcp-Name` header of `tasks/get`, `tasks/update` and `tasks/cancel` requests to the task id, so that intermediaries can route the requests to the server instance holding the task state.
+Stateless clients using the Streamable HTTP transport must set the `Mcp-Name` header of `tasks/get`, `tasks/update` and `tasks/cancel` requests to the task id, so that intermediaries can route the requests to the server instance holding the task state (unless a shared <<task-store,task store>> is used).
 The `Mcp-Method` header is set to the JSON-RPC method name as usual.
 
 == Testing

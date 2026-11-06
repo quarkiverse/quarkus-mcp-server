@@ -5,17 +5,22 @@ import java.time.Instant;
 import java.util.Optional;
 
 import io.quarkiverse.mcp.server.Cancellation;
+import io.quarkiverse.mcp.server.tasks.spi.TaskStore;
+import io.smallrye.common.annotation.CheckReturnValue;
+import io.smallrye.mutiny.Uni;
 
 /**
  * This manager can be used to inspect and cancel the tasks created via {@link Tasks}, as defined by the
  * <a href="https://modelcontextprotocol.io/extensions/tasks/overview">MCP Tasks</a> extension.
  * <p>
- * Tasks are kept in memory. A task is discarded once its time-to-live elapses (unless unlimited), regardless of its status.
+ * The state of the tasks is kept in a {@link TaskStore}; by default, the tasks are kept in memory. A task is discarded once
+ * its time-to-live elapses (unless unlimited), regardless of its status.
  *
  * @see Tasks
  * @see TaskContext
+ * @see TaskStore
  */
-public interface TaskManager extends Iterable<TaskManager.TaskInfo> {
+public interface TaskManager {
 
     /**
      * The identifier of the MCP Tasks extension, used both as the key under {@code capabilities.extensions} advertised by the
@@ -25,27 +30,49 @@ public interface TaskManager extends Iterable<TaskManager.TaskInfo> {
 
     /**
      * @param taskId the task id
-     * @return the task, or {@code null} if no such task exists
+     * @return a new {@link Uni} that completes with the task, or with {@code null} if no such task exists or the task expired
      */
-    TaskInfo getTask(String taskId);
+    @CheckReturnValue
+    Uni<TaskInfo> getTask(String taskId);
+
+    /**
+     * @param serverName the name of the server configuration, or {@code null} to obtain the tasks of all servers
+     * @return a new {@link Uni} that completes with the tasks bound to the given server
+     */
+    @CheckReturnValue
+    Uni<Iterable<TaskInfo>> getTasks(String serverName);
+
+    /**
+     * @return a new {@link Uni} that completes with the tasks of all servers
+     * @see #getTasks(String)
+     */
+    @CheckReturnValue
+    default Uni<Iterable<TaskInfo>> getTasks() {
+        return getTasks(null);
+    }
 
     /**
      * Cancels the task with the given id. Cancellation is cooperative: the task moves to the {@link TaskStatus#CANCELLED}
      * status immediately and the underlying tool is notified via {@link Cancellation}, but it is not forced to stop.
+     * <p>
+     * If the task is executed by another server instance sharing the {@link TaskStore}, the tool is notified once the
+     * executing instance observes the cancellation, i.e. within the polling interval of the task.
      *
      * @param taskId the task id
      * @param reason the reason, may be {@code null}
-     * @return {@code true} if the task was cancelled, {@code false} if it does not exist or is already in a terminal status
+     * @return a new {@link Uni} that completes with {@code true} if the task was cancelled, or with {@code false} if it does
+     *         not exist or is already in a terminal status
      */
-    boolean cancelTask(String taskId, String reason);
+    @CheckReturnValue
+    Uni<Boolean> cancelTask(String taskId, String reason);
 
     /**
-     * A snapshot of the state of a task.
+     * An immutable snapshot of the state of a task.
      */
     interface TaskInfo {
 
         /**
-         * @return the unique, unguessable task id
+         * @return the unique task id
          */
         String id();
 

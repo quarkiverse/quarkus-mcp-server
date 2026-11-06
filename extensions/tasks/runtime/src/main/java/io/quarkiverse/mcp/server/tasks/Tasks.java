@@ -9,6 +9,8 @@ import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpResultException;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolResponse;
+import io.quarkiverse.mcp.server.tasks.spi.TaskStore;
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -27,13 +29,14 @@ import io.smallrye.mutiny.Uni;
  *     }
  *     throw tasks.newTask()
  *             .setHandler(task -> run(repo), false)
- *             .create();
+ *             .createAndAwait();
  * }
  * </pre>
  *
  * The server durably creates the task, executes the handler asynchronously and immediately responds with a
  * {@code CreateTaskResult} ({@code resultType: "task"}) that carries the task id - the {@link CreateTaskException} returned by
- * {@link TaskDefinition#create()} is an {@link McpResultException} converted to that result by the server. The client then
+ * {@link TaskDefinition#createAndAwait()} (or emitted by the {@link Uni} returned by {@link TaskDefinition#create()}) is an
+ * {@link McpResultException} converted to that result by the server. The client then
  * polls the task with {@code tasks/get} until it reaches a terminal status ({@code completed}, {@code failed} or
  * {@code cancelled}) and retrieves the final {@link ToolResponse} from the {@code result} field.
  * <p>
@@ -125,24 +128,40 @@ public interface Tasks {
         /**
          * Durably creates the task and starts the handler asynchronously.
          * <p>
+         * The returned {@link Uni} never emits an item; it fails with the {@link CreateTaskException} once the task is stored
+         * in the {@link TaskStore} and the handler is started. It is meant to be returned from a non-blocking tool method so
+         * that the server responds with the {@code CreateTaskResult}:
+         *
+         * <pre>
+         * &#64;Tool
+         * Uni&lt;ToolResponse&gt; runPipeline(String repo, Tasks tasks) {
+         *     return tasks.newTask()
+         *             .setAsyncHandler(task -&gt; run(repo))
+         *             .create();
+         * }
+         * </pre>
+         *
+         * @param <T> the item type, i.e. the type expected by the tool method; the {@link Uni} never emits an item
+         * @return a new {@link Uni} that fails with the {@link CreateTaskException}
+         * @throws IllegalStateException if no handler is set
+         * @see #createAndAwait()
+         */
+        @CheckReturnValue
+        <T> Uni<T> create();
+
+        /**
+         * Durably creates the task and starts the handler asynchronously, blocking the current thread until the task is
+         * stored in the {@link TaskStore}. It must not be called on an event loop thread; a non-blocking tool should use
+         * {@link #create()} instead.
+         * <p>
          * The returned exception must be thrown from the tool method so that the server responds with the
-         * {@code CreateTaskResult}; see {@link Tasks}. A non-blocking tool may use {@link #createAsync()} instead.
+         * {@code CreateTaskResult}; see {@link Tasks}.
          *
          * @return the exception that produces the {@code CreateTaskResult}
          * @throws IllegalStateException if no handler is set
-         */
-        CreateTaskException create();
-
-        /**
-         * Durably creates the task and starts the handler asynchronously. This is a convenience method for non-blocking
-         * tools; it is equivalent to {@code Uni.createFrom().failure(create())}.
-         *
-         * @return a failed {@link Uni} that produces the {@code CreateTaskResult}
          * @see #create()
          */
-        default Uni<ToolResponse> createAsync() {
-            return Uni.createFrom().failure(create());
-        }
+        CreateTaskException createAndAwait();
 
     }
 

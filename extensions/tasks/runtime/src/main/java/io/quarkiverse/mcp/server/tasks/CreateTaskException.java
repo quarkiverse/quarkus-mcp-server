@@ -9,7 +9,8 @@ import io.vertx.core.json.JsonObject;
  * Thrown from a tool method to respond with a {@code CreateTaskResult} ({@code resultType: "task"}) instead of the standard
  * {@code CallToolResult}.
  * <p>
- * Instances are obtained from {@link Tasks.TaskDefinition#create()}; the task is already created and running when the
+ * Instances are obtained from {@link Tasks.TaskDefinition#createAndAwait()} or {@link Tasks.TaskDefinition#create()}; the
+ * task is already created and running when the
  * exception is thrown.
  *
  * @see Tasks
