@@ -56,7 +56,7 @@ public abstract class CompletionMessageHandler extends MessageHandler {
             }, cause -> handleFailure(id, sender, mcpRequest, cause, LOG, "Unable to complete %s", referenceName,
                     responseMeta));
         } catch (McpException e) {
-            return sender.sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return sender.sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
     }
 

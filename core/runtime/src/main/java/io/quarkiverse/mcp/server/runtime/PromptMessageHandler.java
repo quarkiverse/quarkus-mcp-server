@@ -80,7 +80,7 @@ class PromptMessageHandler extends MessageHandler {
             }, cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                     "Unable to obtain prompt %s", promptName, responseMeta));
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
 
     }

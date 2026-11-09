@@ -30,7 +30,7 @@ class ExtensionMethodMessageHandler extends MessageHandler {
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to call extension method %s", method, responseMeta));
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
     }
 

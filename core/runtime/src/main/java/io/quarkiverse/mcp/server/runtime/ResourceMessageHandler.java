@@ -43,7 +43,7 @@ class ResourceMessageHandler extends MessageHandler {
         try {
             manager.subscribe(resourceUri, mcpRequest);
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
         // Send empty result
         return mcpRequest.sender().sendEmptyResult(id);
@@ -60,7 +60,7 @@ class ResourceMessageHandler extends MessageHandler {
         try {
             manager.unsubscribe(resourceUri, mcpRequest);
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
         // Send empty result
         return mcpRequest.sender().sendEmptyResult(id);
@@ -120,7 +120,8 @@ class ResourceMessageHandler extends MessageHandler {
                     return mcpRequest.sender().sendError(id,
                             mcpRequest.protocolVersion().isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS
                                     : JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
-                            "Resource not found: " + resourceUri);
+                            "Resource not found: " + resourceUri,
+                            new JsonObject().put("uri", resourceUri));
                 } else {
                     // The cacheControl record property is ignored; the cache control hints are emitted
                     // as flat top-level ttlMs/cacheScope fields
@@ -135,7 +136,7 @@ class ResourceMessageHandler extends MessageHandler {
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to read resource %s", resourceUri, responseMeta));
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
     }
 
