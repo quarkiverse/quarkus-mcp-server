@@ -600,9 +600,9 @@ public class McpAssured {
             Builder setBaseUri(URI baseUri);
 
             /**
-             * {@code /ws/mcp} is used by default.
+             * {@code /mcp/ws} is used by default.
              *
-             * @param ssePath
+             * @param path
              * @return self
              */
             Builder setEndpointPath(String path);

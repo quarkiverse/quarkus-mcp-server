@@ -42,7 +42,7 @@ This tool is automatically registered to the **default server**, accessible at t
 
 * Streamable HTTP: `/mcp`
 * SSE: `/mcp/sse`
-* WebSocket: `/ws/mcp`
+* WebSocket: `/mcp/ws`
 
 == Configuring Multiple Servers
 
