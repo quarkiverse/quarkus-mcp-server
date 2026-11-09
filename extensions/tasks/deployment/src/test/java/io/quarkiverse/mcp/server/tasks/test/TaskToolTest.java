@@ -128,7 +128,7 @@ public class TaskToolTest extends McpServerTest {
         // A tool that creates a task returns a CreateTaskResult
         String taskId = callToolAsTask(client, "longRunning", Map.of("value", 42));
 
-        TaskManager.TaskInfo info = taskManager.getTask(taskId);
+        TaskManager.TaskInfo info = taskManager.getTask(taskId).await().indefinitely();
         assertNotNull(info);
         assertEquals("longRunning", info.toolName());
         assertEquals("<default>", info.serverName());
@@ -155,7 +155,7 @@ public class TaskToolTest extends McpServerTest {
                 result.getJsonArray("content").getJsonObject(0).getString("text"));
         assertNotNull(completed.getString("createdAt"));
         assertNotNull(completed.getString("lastUpdatedAt"));
-        assertEquals(TaskStatus.COMPLETED, taskManager.getTask(taskId).status());
+        assertEquals(TaskStatus.COMPLETED, taskManager.getTask(taskId).await().indefinitely().status());
 
         // The result can be retrieved repeatedly
         JsonObject again = getTask(client, taskId, stateless);
@@ -179,7 +179,9 @@ public class TaskToolTest extends McpServerTest {
                     .setTtl(Duration.ofMinutes(10))
                     .setHandler(task -> {
                         assertEquals(TaskStatus.WORKING, task.status());
-                        task.setStatusMessage("Working: " + value);
+                        task.setStatusMessageAndAwait("Working: " + value);
+                        // The message is stored once the Uni completes
+                        assertEquals("Working: " + value, task.statusMessage());
                         try {
                             if (!LATCH.await(10, TimeUnit.SECONDS)) {
                                 throw new IllegalStateException("Latch not released");
@@ -187,10 +189,10 @@ public class TaskToolTest extends McpServerTest {
                         } catch (InterruptedException e) {
                             throw new IllegalStateException(e);
                         }
-                        task.setStatusMessage("Finished");
+                        task.setStatusMessageAndAwait("Finished");
                         return ToolResponse.success("done:" + value + ":" + task.id());
                     }, false)
-                    .create();
+                    .createAndAwait();
         }
 
         @Tool(description = "A non-blocking task")
@@ -200,7 +202,7 @@ public class TaskToolTest extends McpServerTest {
                     .setPollInterval(Duration.ofMillis(200))
                     .setStatusMessage("Initial")
                     .setAsyncHandler(task -> Uni.createFrom().item(ToolResponse.success("async:" + task.id())))
-                    .createAsync();
+                    .create();
         }
 
         @Tool(description = "A task executed on a virtual thread")
@@ -209,7 +211,7 @@ public class TaskToolTest extends McpServerTest {
                     .setHandler(task -> ToolResponse.success(
                             new TextContent("virtual:" + Thread.currentThread().getClass().getName().contains("Virtual"))),
                             true)
-                    .create();
+                    .createAndAwait();
         }
 
     }

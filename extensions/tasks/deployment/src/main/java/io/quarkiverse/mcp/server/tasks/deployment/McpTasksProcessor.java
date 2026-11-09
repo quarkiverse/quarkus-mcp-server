@@ -7,6 +7,7 @@ import org.jboss.jandex.DotName;
 import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
 import io.quarkiverse.mcp.server.tasks.Tasks;
+import io.quarkiverse.mcp.server.tasks.runtime.InMemoryTaskStore;
 import io.quarkiverse.mcp.server.tasks.runtime.TaskManagerImpl;
 import io.quarkiverse.mcp.server.tasks.runtime.TasksArgumentProvider;
 import io.quarkiverse.mcp.server.tasks.runtime.TasksExtension;
@@ -26,7 +27,8 @@ class McpTasksProcessor {
     void registerBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                 .setUnremovable()
-                .addBeanClasses(TaskManagerImpl.class, TasksExtension.class, TasksArgumentProvider.class)
+                .addBeanClasses(TaskManagerImpl.class, TasksExtension.class, TasksArgumentProvider.class,
+                        InMemoryTaskStore.class)
                 .build());
     }
 

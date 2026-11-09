@@ -17,6 +17,8 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.CreateTaskException;
 import io.quarkiverse.mcp.server.tasks.TaskContext;
 import io.quarkiverse.mcp.server.tasks.Tasks;
+import io.quarkiverse.mcp.server.tasks.runtime.TaskManagerImpl.Transition;
+import io.quarkiverse.mcp.server.tasks.spi.TaskRecord;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.security.AuthenticationException;
@@ -122,28 +124,44 @@ final class TasksImpl implements Tasks {
         }
 
         @Override
-        public CreateTaskException create() {
+        public <T> Uni<T> create() {
+            return createTask().onItem().transformToUni(e -> Uni.createFrom().<T> failure(e));
+        }
+
+        @Override
+        public CreateTaskException createAndAwait() {
+            return createTask().await().indefinitely();
+        }
+
+        /**
+         * @return a new {@link Uni} that completes once the task is durably created and the handler is started
+         */
+        private Uni<CreateTaskException> createTask() {
             if (handler == null && asyncHandler == null) {
                 throw new IllegalStateException("Either a blocking or an async handler must be set");
             }
             ExecutionModel executionModel;
             Function<TaskContext, Uni<ToolResponse>> action;
             if (handler != null) {
+                Function<TaskContext, ToolResponse> h = handler;
                 executionModel = runOnVirtualThread ? ExecutionModel.VIRTUAL_THREAD : ExecutionModel.WORKER_THREAD;
                 // The handler is invoked eagerly, i.e. on the thread selected by the execution model
-                action = task -> Uni.createFrom().item(handler.apply(task));
+                action = task -> Uni.createFrom().item(h.apply(task));
             } else {
                 executionModel = ExecutionModel.EVENT_LOOP;
                 action = asyncHandler;
             }
+            // The context must be obtained on the caller thread; the store may complete on a different thread
+            Context callerContext = vertx.getOrCreateContext();
             // The task must be durably created before the CreateTaskResult is sent
-            TaskImpl task = manager.create(toolName(), arguments.connection().serverName(), ttl, pollInterval,
-                    statusMessage);
-            // Snapshot the CreateTaskResult (always reporting the initial "working" status) before launching the handler;
-            // the handler runs on a separate context/thread and could otherwise finish the task before this snapshot is taken
-            JsonObject createResult = task.toJson(false).put("resultType", "task");
-            execute(task, executionModel, action);
-            return new CreateTaskException(task, createResult);
+            return manager.create(toolName(), arguments.connection().serverName(), ttl, pollInterval, statusMessage)
+                    .map(task -> {
+                        // The CreateTaskResult always reports the initial "working" status
+                        TaskRecord record = task.record();
+                        JsonObject createResult = TaskJson.toJson(record, false).put("resultType", "task");
+                        execute(task, callerContext, executionModel, action);
+                        return new CreateTaskException(record, createResult);
+                    });
         }
 
     }
@@ -152,8 +170,9 @@ final class TasksImpl implements Tasks {
      * Executes the handler on a new duplicated Vert.x context, with its own request context, according to the execution
      * model; the task is updated once the handler completes.
      */
-    private void execute(TaskImpl task, ExecutionModel executionModel, Function<TaskContext, Uni<ToolResponse>> action) {
-        Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
+    private void execute(TaskImpl task, Context callerContext, ExecutionModel executionModel,
+            Function<TaskContext, Uni<ToolResponse>> action) {
+        Context context = VertxContext.createNewDuplicatedContext(callerContext);
         VertxContextSafetyToggle.setContextSafe(context, true);
         task.setContext(context);
         LOG.debugf("Execute task %s [%s]", task.id(), executionModel);
@@ -187,22 +206,52 @@ final class TasksImpl implements Tasks {
             Throwable failure) {
         // Always finish on the task context so that the request context is terminated where it was activated
         context.runOnContext(v -> {
+            Uni<Transition> update;
             try {
-                if (failure == null) {
-                    task.complete(JsonObject.mapFrom(response));
-                } else {
-                    handleFailure(task, failure);
-                }
-            } finally {
-                requestContext.terminate();
+                update = failure == null ? complete(task, response) : handleFailure(task, failure);
+            } catch (Throwable t) {
+                update = Uni.createFrom().failure(t);
             }
+            update
+                    // The final state could not be stored (the store transitions are retried) - try to mark the task as failed
+                    .onFailure().recoverWithUni(t -> {
+                        LOG.errorf(t, "Unable to store the final state of task %s - marking the task as failed", task.id());
+                        return task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
+                    })
+                    .subscribe().with(
+                            ignored -> terminate(context, requestContext),
+                            t -> {
+                                LOG.errorf(t, "Unable to update task %s - the task is abandoned and remains in the store "
+                                        + "until it expires", task.id());
+                                task.abandon();
+                                terminate(context, requestContext);
+                            });
         });
     }
 
-    private void handleFailure(TaskImpl task, Throwable cause) {
+    private static void terminate(Context context, ManagedContext requestContext) {
+        if (Vertx.currentContext() == context) {
+            requestContext.terminate();
+        } else {
+            context.runOnContext(v -> requestContext.terminate());
+        }
+    }
+
+    private Uni<Transition> complete(TaskImpl task, ToolResponse response) {
+        JsonObject result;
+        try {
+            result = JsonObject.mapFrom(response);
+        } catch (RuntimeException e) {
+            LOG.errorf(e, "Unable to serialize the response of task %s", task.id());
+            return task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
+        }
+        return task.complete(result);
+    }
+
+    private Uni<Transition> handleFailure(TaskImpl task, Throwable cause) {
         if (cause instanceof ToolCallException) {
             // Business logic error should result in ToolResponse with isError:true
-            task.complete(JsonObject.mapFrom(ToolResponse.error(cause.getMessage())));
+            return complete(task, ToolResponse.error(cause.getMessage()));
         } else if (cause instanceof McpResultException resultException) {
             JsonObject result;
             try {
@@ -210,24 +259,23 @@ final class TasksImpl implements Tasks {
             } catch (RuntimeException e) {
                 LOG.errorf(e, "Unable to obtain the result from %s [task: %s]", resultException.getClass().getName(),
                         task.id());
-                task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
-                return;
+                return task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
             }
-            task.complete(result.copy());
+            return task.complete(result);
         } else if (cause instanceof McpException mcp) {
-            task.fail(mcp.getJsonRpcErrorCode(), mcp.getMessage(), mcp.getData());
+            return task.fail(mcp.getJsonRpcErrorCode(), mcp.getMessage(), mcp.getData());
         } else if (cause instanceof Cancellation.OperationCancellationException
                 || cause instanceof org.mcpjava.server.Cancellation.OperationCancelledException) {
             LOG.debugf("Operation of task %s was cancelled", task.id());
             // No-op if the task was already cancelled via tasks/cancel
-            task.cancel(null);
+            return task.cancel(null);
         } else if (cause instanceof UnauthorizedException
                 || cause instanceof AuthenticationException
                 || cause instanceof ForbiddenException) {
-            task.fail(JsonRpcErrorCodes.SECURITY_ERROR, cause.toString(), null);
+            return task.fail(JsonRpcErrorCodes.SECURITY_ERROR, cause.toString(), null);
         } else {
             LOG.errorf(cause, "Unable to execute task %s", task.id());
-            task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
+            return task.fail(JsonRpcErrorCodes.INTERNAL_ERROR, "Internal error", null);
         }
     }
 
