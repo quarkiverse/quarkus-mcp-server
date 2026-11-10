@@ -239,6 +239,16 @@
         "test",
         "code"
       ]
+    },
+    {
+      "login": "tauisilva",
+      "name": "Taui Silva Lima",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42608628?v=4",
+      "profile": "https://tauisilva.github.io/Portfolio-app/",
+      "contributions": [
+        "test",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
