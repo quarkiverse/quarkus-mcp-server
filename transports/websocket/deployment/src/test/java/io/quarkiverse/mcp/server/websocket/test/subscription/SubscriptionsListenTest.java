@@ -110,6 +110,53 @@ public class SubscriptionsListenTest extends McpServerTest {
         client.disconnect();
     }
 
+    @Test
+    public void testCancelSubscription() {
+        McpWebSocketTestClient client = McpAssured.newWebSocketClient()
+                .setStateless()
+                .build()
+                .connect();
+
+        JsonObject listenRequest = client.newRequest("subscriptions/listen");
+        listenRequest.put("params", new JsonObject()
+                .put("notifications", new JsonObject().put("toolsListChanged", true)));
+        McpAssured.injectStatelessMeta(listenRequest);
+        client.sendAndForget(listenRequest);
+
+        List<JsonObject> notifications = client.waitForNotifications(1).notifications();
+        JsonObject ack = notifications.get(0);
+        assertEquals("notifications/subscriptions/acknowledged", ack.getString("method"));
+
+        // Cancel the subscription via notifications/cancelled
+        JsonObject cancelNotification = client.newMessage("notifications/cancelled")
+                .put("params", new JsonObject()
+                        .put("requestId", listenRequest.getValue("id")));
+        McpAssured.injectStatelessMeta(cancelNotification);
+        client.sendAndForget(cancelNotification);
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        toolManager.newTool("canceledSubscriptionTool")
+                .setDescription("Should not trigger notification after cancellation")
+                .setHandler(args -> ToolResponse.success(new TextContent("canceled")))
+                .register();
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        assertEquals(1, client.snapshot().notifications().size(),
+                "No new notification should arrive after cancelling the subscription");
+
+        client.disconnect();
+    }
+
     public static class MyTools {
 
         @Tool
