@@ -362,6 +362,19 @@ public interface McpServerRuntimeConfig {
         @WithDefault("tool")
         InputValidationError inputValidationError();
 
+        /**
+         * If set to {@code true}, the input and output schema of a tool is generated once, on first use, and then reused, e.g.
+         * for every {@code tools/list} request. Custom {@link io.quarkiverse.mcp.server.InputSchemaGenerator},
+         * {@link io.quarkiverse.mcp.server.OutputSchemaGenerator} and
+         * {@link io.quarkiverse.mcp.server.GlobalInputSchemaGenerator} implementations are therefore called once per tool.
+         * <p>
+         * Set to {@code false} to generate the schemas on every use instead, e.g. if a schema depends on runtime conditions,
+         * or to reduce memory usage on a server with a large number of tools. A tool that belongs to several servers caches
+         * its schemas only if caching is enabled for all of them.
+         */
+        @WithDefault("true")
+        boolean cacheSchemas();
+
         enum InputValidationError {
 
             /**

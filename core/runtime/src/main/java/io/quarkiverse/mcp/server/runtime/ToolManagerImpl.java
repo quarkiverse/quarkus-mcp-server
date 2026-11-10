@@ -66,6 +66,7 @@ import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.arc.All;
 import io.quarkus.arc.InjectableInstance;
 import io.quarkus.arc.InstanceHandle;
+import io.quarkus.arc.impl.LazyValue;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
@@ -281,6 +282,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         };
     }
 
+    /**
+     * A tool that belongs to several servers caches its schemas only if caching is enabled for all of them.
+     */
+    private boolean cacheSchemas(Set<String> serverNames) {
+        for (String serverName : serverNames) {
+            McpServerRuntimeConfig serverConfig = config.servers().get(serverName);
+            if (serverConfig != null && !serverConfig.tools().cacheSchemas()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private boolean test(ToolInfo tool, FilterContext filterContext) {
         if (filters.isEmpty()) {
             return true;
@@ -302,10 +316,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolInputGuardrail> input;
         private final List<ToolOutputGuardrail> output;
 
+        // Cached schemas; null if caching is disabled (or, for the output schema, if the tool declares none)
+        private final LazyValue<Object> inputSchema;
+        private final LazyValue<Object> outputSchema;
+
         private ToolMethod(FeatureMetadata<ToolResponse> metadata, Instance<IconsProvider> iconsProviders) {
             super(metadata, iconsProviders);
             this.input = allInputGuardrails(cast(metadata.info().inputGuardrails()));
             this.output = allOutputGuardrails(cast(metadata.info().outputGuardrails()));
+            boolean cache = cacheSchemas(metadata.info().serverNames());
+            this.inputSchema = cache ? new LazyValue<>(this::generateInputSchema) : null;
+            this.outputSchema = cache && metadata.info().outputSchemaGenerator() != null
+                    ? new LazyValue<>(this::generateOutputSchema)
+                    : null;
         }
 
         @Override
@@ -369,38 +392,51 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public Object inputSchema() {
+            return inputSchema != null ? inputSchema.get() : generateInputSchema();
+        }
+
+        @Override
+        public Object outputSchema() {
+            return outputSchema != null ? outputSchema.get() : generateOutputSchema();
+        }
+
+        private Object generateInputSchema() {
+            Class<? extends InputSchemaGenerator<?>> inputSchemaGeneratorClass = metadata.info().inputSchemaGenerator();
+            if (inputSchemaGeneratorClass != null
+                    && !inputSchemaGeneratorClass.equals(GlobalInputSchemaGenerator.class)) {
+                return inputSchemaGenerator.select(inputSchemaGeneratorClass)
+                        .get()
+                        .generate(this);
+            }
+            return globalInputSchemaGenerator.generate(this).value();
+        }
+
+        private Object generateOutputSchema() {
+            Class<? extends OutputSchemaGenerator> outputSchemaGeneratorClass = metadata.info().outputSchemaGenerator();
+            if (outputSchemaGeneratorClass == null) {
+                return null;
+            }
+            Type outputSchemaFrom = metadata.info().outputSchemaFrom();
+            if (GlobalOutputSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
+                return globalOutputSchemaGenerator.generate(outputSchemaFrom);
+            }
+            return outputSchemaGenerator.select(outputSchemaGeneratorClass)
+                    .get()
+                    .generate(outputSchemaFrom);
+        }
+
+        @Override
         public JsonObject asJson() {
-            // TODO: it might make sense to cache the generated schemas
             JsonObject tool = metadata.asJson();
             ToolAnnotations toolAnnotations = metadata.info().toolAnnotations();
             if (toolAnnotations != null) {
                 tool.put("annotations", toolAnnotationsToJson(toolAnnotations));
             }
-
-            Class<? extends InputSchemaGenerator<?>> inputSchemaGeneratorClass = metadata.info().inputSchemaGenerator();
-            Object inputSchema;
-            if (inputSchemaGeneratorClass != null
-                    && !inputSchemaGeneratorClass.equals(GlobalInputSchemaGenerator.class)) {
-                inputSchema = inputSchemaGenerator.select(inputSchemaGeneratorClass)
-                        .get()
-                        .generate(this);
-            } else {
-                inputSchema = globalInputSchemaGenerator.generate(this).value();
-            }
-            tool.put("inputSchema", inputSchema);
-
-            Class<? extends OutputSchemaGenerator> outputSchemaGeneratorClass = metadata.info().outputSchemaGenerator();
-            if (outputSchemaGeneratorClass != null) {
-                Object outputSchema;
-                Type outputSchemaFrom = metadata.info().outputSchemaFrom();
-                if (GlobalOutputSchemaGenerator.class.equals(outputSchemaGeneratorClass)) {
-                    outputSchema = globalOutputSchemaGenerator.generate(outputSchemaFrom);
-                } else {
-                    outputSchema = outputSchemaGenerator.select(outputSchemaGeneratorClass)
-                            .get()
-                            .generate(outputSchemaFrom);
-                }
-                tool.put("outputSchema", outputSchema);
+            tool.put("inputSchema", inputSchema());
+            Object schema = outputSchema();
+            if (schema != null) {
+                tool.put("outputSchema", schema);
             }
 
             if (iconsProvider != null) {
@@ -782,6 +818,8 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         private final List<ToolInputGuardrail> input;
         private final List<ToolOutputGuardrail> output;
         private final Map<TransportHint, Object> transportHints;
+        // Input schema generated by the global generator; null if set explicitly or if caching is disabled
+        private final LazyValue<Object> generatedInputSchema;
 
         private ToolDefinitionInfo(String name, String title, String description, Set<String> serverNames,
                 Function<ToolArguments, ToolResponse> fun,
@@ -800,6 +838,13 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             this.input = input;
             this.output = output;
             this.transportHints = Map.copyOf(transportHints);
+            this.generatedInputSchema = inputSchema == null && cacheSchemas(serverNames)
+                    ? new LazyValue<>(this::generateInputSchema)
+                    : null;
+        }
+
+        private Object generateInputSchema() {
+            return globalInputSchemaGenerator.generate(this).value();
         }
 
         @Override
@@ -828,6 +873,19 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
         }
 
         @Override
+        public Object inputSchema() {
+            if (inputSchema != null) {
+                return inputSchema;
+            }
+            return generatedInputSchema != null ? generatedInputSchema.get() : generateInputSchema();
+        }
+
+        @Override
+        public Object outputSchema() {
+            return outputSchema;
+        }
+
+        @Override
         public JsonObject asJson() {
             JsonObject tool = new JsonObject()
                     .put("name", name())
@@ -839,11 +897,7 @@ public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> 
             if (toolAnnotations != null) {
                 tool.put("annotations", toolAnnotationsToJson(toolAnnotations));
             }
-            if (inputSchema != null) {
-                tool.put("inputSchema", inputSchema);
-            } else {
-                tool.put("inputSchema", globalInputSchemaGenerator.generate(this).value());
-            }
+            tool.put("inputSchema", inputSchema());
             if (outputSchema != null) {
                 tool.put("outputSchema", outputSchema);
             }

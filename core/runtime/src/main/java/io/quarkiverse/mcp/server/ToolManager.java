@@ -87,6 +87,19 @@ public interface ToolManager extends FeatureManager<ToolInfo> {
 
         Map<MetaKey, Object> metadata();
 
+        /**
+         *
+         * @return the input schema as included in the {@code tools/list} response
+         */
+        Object inputSchema();
+
+        /**
+         *
+         * @return the output schema as included in the {@code tools/list} response, or {@code null} if the tool does not
+         *         declare one
+         */
+        Object outputSchema();
+
     }
 
     /**

@@ -1246,6 +1246,34 @@ endif::add-copy-button-to-env-var[]
 a|`protocol`, `tool`
 |`+++tool+++`
 
+a| [[quarkus-mcp-server-core_quarkus-mcp-server-tools-cache-schemas]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-tools-cache-schemas[`+++quarkus.mcp.server.tools.cache-schemas+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.tools.cache-schemas+++[]
+endif::add-copy-button-to-config-props[]
+
+
+`+++quarkus.mcp.server."server-name".tools.cache-schemas+++`
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server."server-name".tools.cache-schemas+++[]
+endif::add-copy-button-to-config-props[]
+
+[.description]
+--
+If set to `true`, the input and output schema of a tool is generated once, on first use, and then reused, e.g. for every `tools/list` request. Custom `io.quarkiverse.mcp.server.InputSchemaGenerator`, `io.quarkiverse.mcp.server.OutputSchemaGenerator` and `io.quarkiverse.mcp.server.GlobalInputSchemaGenerator` implementations are therefore called once per tool.
+
+Set to `false` to generate the schemas on every use instead, e.g. if a schema depends on runtime conditions, or to reduce memory usage on a server with a large number of tools. A tool that belongs to several servers caches its schemas only if caching is enabled for all of them.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_TOOLS_CACHE_SCHEMAS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_TOOLS_CACHE_SCHEMAS+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 a| [[quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size]] [.property-path]##link:#quarkus-mcp-server-core_quarkus-mcp-server-prompts-page-size[`+++quarkus.mcp.server.prompts.page-size+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.mcp.server.prompts.page-size+++[]
