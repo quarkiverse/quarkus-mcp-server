@@ -253,47 +253,19 @@ This generator is then used for all `@Tool` methods instead of the built-in impl
 
 == Caching Generated JSON Schemas
 
-If your application contains many tools with complex input/output schemas, it might make sense to cache the generated schemas so that they are not regenerated for each `tools/list` request.
+The input and output schema of a tool is generated once, on first use, and then reused, so it is not regenerated for each `tools/list` request.
+Custom `InputSchemaGenerator` and `OutputSchemaGenerator` implementations are therefore called once per tool.
+The cached schemas are also available through `ToolInfo#inputSchema()` and `ToolInfo#outputSchema()`.
 
-You can leverage CDI decorators to implement a simple cache:
+To generate the schemas every time instead, for example because they depend on runtime conditions or to reduce memory usage on a server with many tools, set:
 
-[source,java]
+[source,properties]
 ----
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
-import io.quarkiverse.mcp.server.InputSchema;
-import io.quarkiverse.mcp.server.ToolInfo;
-import jakarta.annotation.Priority;
-import jakarta.decorator.Decorator;
-import jakarta.decorator.Delegate;
-import jakarta.inject.Inject;
-
-@Priority(1) // <1>
-@Decorator // <2>
-public class CachingGlobalSchemaGeneratorDecorator implements GlobalInputSchemaGenerator {
-
-   private final ConcurrentMap<String, InputSchema> cache = new ConcurrentHashMap<>();
-
-   @Inject
-   @Delegate
-   GlobalInputSchemaGenerator delegate; // <3>
-
-   @Override
-   public InputSchema generate(ToolInfo tool) {
-      return cache.computeIfAbsent(tool.name(), k -> {
-            return delegate.generate(tool); // <4>
-      });
-   }
-}
+quarkus.mcp.server.tools.cache-schemas=false
 ----
-<1> `@Priority` enables the decorator. Decorators with smaller priority values are called first.
-<2> `@Decorator` marks a decorator component.
-<3> Each decorator must declare exactly one delegate injection point. The decorator applies to beans that are assignable to this delegate injection point.
-<4> The decorator may invoke any method of the delegate object. The container invokes either the next decorator in the chain or the business method of the intercepted instance.
 
-TIP: CDI decorators are similar to CDI interceptors, but because they implement interfaces with business semantics, they are able to implement business logic.
+The option can also be set for a single server, for example `quarkus.mcp.server."my-server".tools.cache-schemas=false`.
+A tool that belongs to several servers caches its schemas only if caching is enabled for all of them.
 
 == See Also
 

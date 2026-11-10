@@ -89,7 +89,7 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
         FeatureKey key = new FeatureKey(tool.name(), serverName);
         CachedSchema cached = schemas.get(key);
         if (cached == null || cached.tool() != tool) {
-            Object outputSchema = tool.asJson().getValue("outputSchema");
+            Object outputSchema = tool.outputSchema();
             JsonObject json = outputSchema == null || outputSchema instanceof JsonObject ? (JsonObject) outputSchema
                     : JsonObject.mapFrom(outputSchema);
             cached = new CachedSchema(tool, json, new AtomicReference<>());

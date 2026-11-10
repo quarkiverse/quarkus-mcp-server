@@ -32,7 +32,9 @@ public class CachingGlobalInputSchemaGeneratorTest extends McpServerTest {
     @RegisterExtension
     static final QuarkusUnitTest config = defaultConfig(5000)
             .withApplicationRoot(
-                    root -> root.addClasses(MyTools.class, MyPojo.class, CachingGlobalSchemaGenerator.class));
+                    root -> root.addClasses(MyTools.class, MyPojo.class, CachingGlobalSchemaGenerator.class))
+            // Built-in caching would hide the decorator calls this test counts
+            .overrideConfigKey("quarkus.mcp.server.tools.cache-schemas", "false");
 
     @Test
     public void testContents() {
