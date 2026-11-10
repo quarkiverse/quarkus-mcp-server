@@ -577,7 +577,7 @@ public abstract class McpMessageHandler<MCP_REQUEST extends McpRequest> {
         // First try the current request's connection
         if (mcpRequest.connection().removeSubscription(requestId)) {
             return true;
-        } else if (transport() == InitialRequest.Transport.STDIO) {
+        } else if (transport() == InitialRequest.Transport.STDIO || mcpRequest.connection().isTransient()) {
             // For stateless protocols (modern 2026-07-28), each message may arrive on a
             // different transient connection, so we need to search all connections
             for (McpConnectionBase connection : connectionManager) {
