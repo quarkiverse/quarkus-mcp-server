@@ -52,7 +52,7 @@ class ToolMessageHandler extends MessageHandler {
             try {
                 tools.add(info.asJson());
             } catch (McpException e) {
-                return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+                return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
             } catch (Exception e) {
                 LOG.errorf(e, "Unable to encode Tool [%s] as JSON", info.name());
                 return mcpRequest.sender().sendInternalError(id);
@@ -97,7 +97,7 @@ class ToolMessageHandler extends MessageHandler {
                     cause -> handleFailure(id, mcpRequest.sender(), mcpRequest, cause, LOG,
                             "Unable to call tool %s", toolName, responseMeta));
         } catch (McpException e) {
-            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage());
+            return mcpRequest.sender().sendError(id, e.getJsonRpcErrorCode(), e.getMessage(), e.getData());
         }
     }
 

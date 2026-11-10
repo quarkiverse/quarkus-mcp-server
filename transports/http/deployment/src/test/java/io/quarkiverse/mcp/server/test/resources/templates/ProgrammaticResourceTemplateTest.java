@@ -45,6 +45,8 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
                     assertEquals("Resource not found: file:///alpha/nok", e.message());
+                    assertNotNull(e.data());
+                    assertEquals("file:///alpha/nok", e.data().getString("uri"));
                 })
                 .send()
                 .thenAssertResults();
@@ -89,6 +91,8 @@ public class ProgrammaticResourceTemplateTest extends McpServerTest {
                 .withErrorAssert(e -> {
                     assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, e.code());
                     assertEquals("Resource not found: file:///alpha/nok", e.message());
+                    assertNotNull(e.data());
+                    assertEquals("file:///alpha/nok", e.data().getString("uri"));
                 })
                 .send()
                 .resourcesRead("file:///bravo/bim", r -> assertEquals("bim", r.contents().get(0).asText().text()))

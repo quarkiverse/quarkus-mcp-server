@@ -2,7 +2,6 @@ package io.quarkiverse.mcp.server.test.stateless;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -102,7 +101,8 @@ public class StatelessErrorCodesTest extends McpServerTest {
                 .withErrorAssert(error -> {
                     assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code());
                     assertEquals("Resource not found: file:///nonexistent", error.message());
-                    assertNull(error.data());
+                    assertNotNull(error.data());
+                    assertEquals("file:///nonexistent", error.data().getString("uri"));
                 })
                 .send()
                 .thenAssertResults();

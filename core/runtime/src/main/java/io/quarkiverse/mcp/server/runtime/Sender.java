@@ -53,7 +53,11 @@ public interface Sender {
     }
 
     default Future<Void> sendError(Object id, int code, String message) {
-        return send(newError(id, code, message));
+        return sendError(id, code, message, null);
+    }
+
+    default Future<Void> sendError(Object id, int code, String message, Object data) {
+        return send(newError(id, code, message, data));
     }
 
     default Future<Void> sendInternalError(Object id) {

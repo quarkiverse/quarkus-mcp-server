@@ -269,7 +269,8 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     @Override
     protected McpException notFound(String id, McpProtocolVersion version) {
         return new McpException("Resource not found: " + id,
-                version.isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS : JsonRpcErrorCodes.RESOURCE_NOT_FOUND);
+                version.isStateless() ? JsonRpcErrorCodes.INVALID_PARAMS : JsonRpcErrorCodes.RESOURCE_NOT_FOUND,
+                new JsonObject().put("uri", id));
     }
 
     private boolean test(ResourceInfo resource, FilterContext filterContext) {
