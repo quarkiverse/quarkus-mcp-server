@@ -83,7 +83,11 @@ public class ResourceTemplatesTest extends McpServerTest {
                 .resourcesRead("file:///bar", r -> assertEquals("foo:bar", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///bravo/bar/baz", r -> assertEquals("bar:baz", r.contents().get(0).asText().text()))
                 .resourcesRead("file:///charlie/bar")
-                .withErrorAssert(error -> assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, error.code()))
+                .withErrorAssert(error -> {
+                    assertEquals(JsonRpcErrorCodes.RESOURCE_NOT_FOUND, error.code());
+                    assertNotNull(error.data());
+                    assertEquals("file:///charlie/bar", error.data().getString("uri"));
+                })
                 .send()
                 .resourcesRead("file:///delta/bar")
                 .withErrorAssert(error -> assertEquals(JsonRpcErrorCodes.INVALID_PARAMS, error.code()))
