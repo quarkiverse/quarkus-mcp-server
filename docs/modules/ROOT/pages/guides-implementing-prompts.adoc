@@ -37,6 +37,10 @@ public class MyPrompts {
 
 TIP: Default values are specified as strings and automatically converted to the argument type. For complex types, you can implement custom `DefaultValueConverter` instances. See xref:reference-parameter-types.adoc#default-value-converters[Default Value Converters] for more information.
 
+NOTE: You can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. `@org.mcpjava.server.prompts.Prompt` and `@org.mcpjava.server.prompts.PromptArg` instead of `@Prompt`/`@PromptArg`.
+Both APIs are supported; the Quarkus-specific annotations are not dropped because the standard API currently covers only a subset of the functionality.
+The semantics are the same as described in this documentation.
+
 == Prompt Arguments
 
 Prompt methods accept string parameters representing the prompt arguments. Each argument can be customized with the `@PromptArg` annotation:
