@@ -110,6 +110,8 @@ int add(
 
 JSON schema generation, parameter validation, and error handling are automatic.
 
+NOTE: In addition to the Quarkus-specific annotations, you can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - see xref:guides-implementing-tools.adoc[Implementing Tools].
+
 === Multiple Server Configurations
 
 Run multiple isolated MCP servers in a single application:

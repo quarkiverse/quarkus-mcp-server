@@ -114,6 +114,8 @@ public class MyFeatures {
 <2> Binds this tool to the "bravo" server
 <3> Binds this tool to the "charlie" server
 
+NOTE: You can also use the standard annotation from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. `@org.mcpjava.server.McpServer` instead of `@McpServer`.
+
 Now:
 
 * `defaultTool` is available only at `/mcp`

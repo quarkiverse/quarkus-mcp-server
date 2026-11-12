@@ -44,6 +44,10 @@ TIP: Default values are specified as strings and automatically converted to the 
 
 TIP: If a method annotated with `@Tool` throws a `io.quarkiverse.mcp.server.ToolCallException` then the response is a failed `ToolResponse` and the message of the exception is used as the text of the result content. It is also possible to annotate the method or declaring class with `@io.quarkiverse.mcp.server.WrapBusinessError`. In that case, an exception thrown is wrapped automatically in a `ToolCallException` if it's assignable from any of the specified exception classes.
 
+NOTE: You can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. `@org.mcpjava.server.tools.Tool` and `@org.mcpjava.server.tools.ToolArg` instead of `@Tool`/`@ToolArg`.
+Both APIs are supported; the Quarkus-specific annotations are not dropped because the standard API currently covers only a subset of the functionality.
+The semantics are the same as described in this documentation.
+
 == Return Types
 
 A result of a "tool call" operation is always represented as a `ToolResponse`.

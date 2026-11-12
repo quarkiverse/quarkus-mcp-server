@@ -155,6 +155,8 @@ The `quarkus.mcp.server.client-logging.default-level` setting does not apply to 
 Report progress for long-running operations so clients can show progress indicators to users.
 Progress tracking requires the client to include a progress token in the request.
 
+NOTE: You can also use the standard API from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. inject `org.mcpjava.server.progress.Progress` instead of `io.quarkiverse.mcp.server.Progress` and use its builder methods to send notifications and create a tracker.
+
 === Using ProgressNotification
 
 For manual progress reporting, use `ProgressNotification`:
@@ -380,6 +382,8 @@ public class MyTools {
 == Cancellation
 
 Handle request cancellation from clients, allowing users to stop long-running operations.
+
+NOTE: You can also use the standard API from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. inject `org.mcpjava.server.Cancellation` instead of `io.quarkiverse.mcp.server.Cancellation` and throw its `OperationCancelledException` to abort a cancelled operation.
 
 === Basic Cancellation Handling
 

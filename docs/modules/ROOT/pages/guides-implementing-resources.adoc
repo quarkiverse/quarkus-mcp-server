@@ -34,6 +34,10 @@ public class MyResources {
 <2> `MyResources` is an ordinary CDI bean. It can inject other beans, use interceptors, etc.
 <3> `@Resource` annotates a business method of a CDI bean that should be exposed as a resource. By default, the name of the resource is derived from the method name.
 
+NOTE: You can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. `@org.mcpjava.server.resources.Resource`, `@org.mcpjava.server.resources.ResourceTemplate` and `@org.mcpjava.server.resources.ResourceTemplateArg` instead of `@Resource`, `@ResourceTemplate` and `@ResourceTemplateArg`.
+Both APIs are supported; the Quarkus-specific annotations are not dropped because the standard API currently covers only a subset of the functionality.
+The semantics are the same as described in this documentation.
+
 === Resource Content Types
 
 Resources can return different types of content:
@@ -341,6 +345,8 @@ See xref:concepts-mcp-protocol.adoc#_subscription_notifications_stateless[Subscr
 
 Arguments of a `@ResourceTemplate` method may be auto-completed through the completion API.
 This allows clients to provide suggestions as users type template variable values.
+
+NOTE: You can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project for completions - i.e. `@org.mcpjava.server.completion.CompleteResourceTemplate` and `@org.mcpjava.server.completion.CompleteArg` instead of `@CompleteResourceTemplate`/`@CompleteArg` (and similarly `@org.mcpjava.server.completion.CompletePrompt` for prompt argument completions).
 
 [source,java]
 ----

@@ -27,6 +27,9 @@ All MCP features are CDI beans, enabling dependency injection, interceptors, and
 Built on SmallRye Mutiny and Eclipse Vert.x for non-blocking I/O, supporting both imperative and reactive programming models. Async operations don't block threads.
 The MCP server also supports virtual threads when running on Java 21+, allowing for a more traditional blocking programming style without sacrificing scalability.
 
+NOTE: Feature methods may be annotated either with the Quarkus-specific annotations (`io.quarkiverse.mcp.server`) or with the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project (`org.mcpjava`).
+Both sets are detected and processed at build time, i.e. they share the same metadata, validation and code generation.
+
 == CDI Integration
 
 All MCP features are CDI beans, providing powerful integration capabilities.
