@@ -24,7 +24,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import io.quarkus.runtime.Startup;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -32,7 +32,7 @@ import io.vertx.core.json.JsonObject;
 public class ToolStructuredContentTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(5000)
+    static final QuarkusExtensionTest config = defaultConfig(5000)
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyPojo.class, MySchemaGenerator.class));
 

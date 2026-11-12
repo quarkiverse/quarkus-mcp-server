@@ -15,14 +15,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.ProgressTracker;
 import io.quarkiverse.mcp.server.Tool;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 public class UnboundProgressTrackerTest extends ProgressTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class));
 

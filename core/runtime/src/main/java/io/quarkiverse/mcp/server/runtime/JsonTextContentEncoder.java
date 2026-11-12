@@ -4,12 +4,11 @@ import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.ContentEncoder;
 import io.quarkiverse.mcp.server.TextContent;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 @Priority(0)
@@ -27,7 +26,7 @@ public class JsonTextContentEncoder implements ContentEncoder<Object> {
     public Content encode(Object value) {
         try {
             return new TextContent(mapper.writeValueAsString(value));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException(e);
         }
     }

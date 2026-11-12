@@ -10,7 +10,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * Reproducer for <a href="https://github.com/quarkiverse/quarkus-mcp-server/issues/1115">#1115</a>.
@@ -22,7 +22,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class ToolResponseNonSerializableContentTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(MyTools.class, User.class));
 
     @Test

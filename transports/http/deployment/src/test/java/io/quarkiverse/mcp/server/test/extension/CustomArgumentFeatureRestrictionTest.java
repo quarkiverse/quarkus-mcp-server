@@ -16,7 +16,7 @@ import io.quarkiverse.mcp.server.FeatureManager.RequestFeatureArguments;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * A custom argument provider registered only for {@link Feature#TOOL} must not be injectable into a {@link Prompt} method.
@@ -24,7 +24,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class CustomArgumentFeatureRestrictionTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusExtensionTest config = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(MyPrompts.class, Greeter.class, GreeterProvider.class))
             // The provider is restricted to @Tool methods only
             .addBuildChainCustomizer(buildChainBuilder -> buildChainBuilder.addBuildStep(context -> {

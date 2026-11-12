@@ -24,13 +24,13 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaCustomizerJakartaValidationTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(2000)
+    static final QuarkusExtensionTest config = defaultConfig(2000)
             .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jakarta-validation.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithJakartaValidationAnnotatedType.class));
