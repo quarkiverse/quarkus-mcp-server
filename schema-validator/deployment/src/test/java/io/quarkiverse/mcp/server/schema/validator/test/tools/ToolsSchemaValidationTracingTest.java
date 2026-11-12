@@ -32,7 +32,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.schema.validator.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaValidationTracingTest extends McpServerTest {
@@ -40,7 +40,7 @@ public class ToolsSchemaValidationTracingTest extends McpServerTest {
     private static final AttributeKey<String> MCP_METHOD_NAME = AttributeKey.stringKey("mcp.method.name");
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .overrideConfigKey("quarkus.otel.traces.exporter", "cdi")
             .overrideConfigKey("quarkus.otel.bsp.schedule.delay", "100ms")
             .overrideConfigKey("quarkus.otel.metrics.exporter", "none")

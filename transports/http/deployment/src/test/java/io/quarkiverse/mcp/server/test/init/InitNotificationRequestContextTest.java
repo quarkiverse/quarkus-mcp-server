@@ -27,7 +27,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.InjectableContext.ContextState;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 
 public class InitNotificationRequestContextTest extends McpServerTest {
@@ -41,7 +41,7 @@ public class InitNotificationRequestContextTest extends McpServerTest {
     static final ConcurrentLinkedQueue<RuntimeException> OBSERVER_FAILURES = new ConcurrentLinkedQueue<>();
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(Notifications.class, RequestBean.class, LifecycleObserver.class));
 
     @Test

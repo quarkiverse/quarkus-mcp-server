@@ -18,12 +18,12 @@ import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.hibernate.validator.ConstraintViolationConverter;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class CustomConstraintViolationConverterTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyConstraintViolationConverter.class));
 

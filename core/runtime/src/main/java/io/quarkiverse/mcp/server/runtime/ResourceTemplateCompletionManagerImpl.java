@@ -6,8 +6,6 @@ import java.util.stream.Collectors;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.CompletionResponse;
 import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
@@ -18,6 +16,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl.ResourceTem
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.vertx.core.Vertx;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 public class ResourceTemplateCompletionManagerImpl extends CompletionManagerBase implements ResourceTemplateCompletionManager {

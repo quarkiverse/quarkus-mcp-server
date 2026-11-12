@@ -7,9 +7,6 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.TextContent;
 import io.quarkiverse.mcp.server.ToolResponse;
@@ -17,6 +14,8 @@ import io.quarkiverse.mcp.server.runtime.ResultMappers.Result;
 import io.quarkiverse.mcp.server.runtime.config.McpServerRuntimeConfig;
 import io.quarkiverse.mcp.server.runtime.config.McpServersRuntimeConfig;
 import io.smallrye.mutiny.Uni;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 public class ToolStructuredContentResultMapper implements Function<Result<Object>, Uni<ToolResponse>> {
@@ -55,7 +54,7 @@ public class ToolStructuredContentResultMapper implements Function<Result<Object
             List<Content> content = List.of();
             try {
                 content = List.of(new TextContent(mapper.writeValueAsString(r.value())));
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 LOG.errorf(e, "Unable to serialize the structured content");
             }
             toolResponse = new ToolResponse(false, content, r.value(), null);

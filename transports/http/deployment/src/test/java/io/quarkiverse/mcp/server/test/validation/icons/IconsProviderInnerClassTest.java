@@ -15,12 +15,12 @@ import io.quarkiverse.mcp.server.IconsProvider;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkus.runtime.util.ExceptionUtil;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class IconsProviderInnerClassTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(InvalidTools.class, InnerIconsProvider.class))
             .assertException(t -> {
                 Throwable rootCause = ExceptionUtil.getRootCause(t);

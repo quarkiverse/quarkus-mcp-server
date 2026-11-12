@@ -23,7 +23,7 @@ import io.quarkiverse.mcp.server.WrapBusinessError;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketTestClient;
 import io.quarkiverse.mcp.server.websocket.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import io.smallrye.mutiny.Uni;
 
@@ -32,7 +32,7 @@ public class RequestContextDestroyedTest extends McpServerTest {
     static final int CALL_COUNT = 3;
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(Features.class,
                             WorkerBean.class, VirtualBean.class, ReactiveBean.class,
