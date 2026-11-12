@@ -22,13 +22,13 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ToolNotifyListChangedTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyToolFilter.class));
 

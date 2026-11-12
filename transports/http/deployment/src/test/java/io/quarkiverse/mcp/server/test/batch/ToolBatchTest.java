@@ -13,7 +13,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
@@ -22,7 +22,7 @@ import io.vertx.core.json.JsonObject;
 public class ToolBatchTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class));
 

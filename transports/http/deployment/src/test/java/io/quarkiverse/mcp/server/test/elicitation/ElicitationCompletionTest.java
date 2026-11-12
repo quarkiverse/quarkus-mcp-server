@@ -21,14 +21,14 @@ import io.quarkiverse.mcp.server.UrlElicitationRequest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 public class ElicitationCompletionTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(2000)
+    static final QuarkusExtensionTest config = defaultConfig(2000)
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 
     @Test

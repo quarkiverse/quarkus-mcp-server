@@ -8,12 +8,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.tasks.Tasks;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class TasksOnNonToolTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(MyPrompts.class))
             // Tasks may only be injected into a tool method
             .setExpectedException(IllegalStateException.class, true);

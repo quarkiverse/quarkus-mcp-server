@@ -7,12 +7,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpExtension;
 import io.quarkiverse.mcp.server.McpExtensionSetting;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class ExtensionBlankSettingNameTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(BadExtension.class))
             // A setting name must not be blank
             .setExpectedException(IllegalStateException.class, true);

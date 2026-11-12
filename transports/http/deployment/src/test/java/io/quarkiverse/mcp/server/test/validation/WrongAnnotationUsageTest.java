@@ -14,12 +14,12 @@ import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkus.runtime.util.ExceptionUtil;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class WrongAnnotationUsageTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> {
                 root.addClasses(StaticFeatures.class, InterfaceFeatures.class);
             })

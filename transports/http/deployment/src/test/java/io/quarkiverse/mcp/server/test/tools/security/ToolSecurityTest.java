@@ -21,12 +21,12 @@ import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class ToolSecurityTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, TestIdentityProvider.class, TestIdentityController.class));
 

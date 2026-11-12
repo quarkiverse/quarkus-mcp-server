@@ -14,12 +14,12 @@ import io.quarkiverse.mcp.server.test.Checks;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class InvalidResourceUriTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(Checks.class, MyResources.class, NullResource.class));
 

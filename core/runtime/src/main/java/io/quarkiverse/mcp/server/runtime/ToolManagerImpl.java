@@ -28,8 +28,6 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.ExecutionModel;
 import io.quarkiverse.mcp.server.Feature;
@@ -72,6 +70,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 public class ToolManagerImpl extends FeatureManagerBase<ToolResponse, ToolInfo> implements ToolManager {

@@ -24,14 +24,14 @@ import org.junit.jupiter.params.provider.CsvSource;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.specification.RequestSpecification;
 import io.vertx.core.json.JsonObject;
 
 class RestrictedLegacyProtocolVersionsTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class))
             .overrideConfigKey("quarkus.mcp.server.supported-protocol-versions", "2026-07-28,2025-11-25");
 

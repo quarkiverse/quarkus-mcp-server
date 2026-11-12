@@ -11,20 +11,20 @@ import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.http.runtime.McpServerEndpoints.McpServerEndpoint;
 import io.quarkus.vertx.http.HttpServerStart;
 import io.quarkus.vertx.http.HttpsServerStart;
-import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.TcpServerConfig;
 
 @Dependent
 public class McpServerEndpointsLogger {
-
+    // TODO this class assumes, that the server is running on HTTP 1, which may not be the case
     void onHttpServerStart(@ObservesAsync HttpServerStart start, McpServerEndpoints endpoints) {
-        logEndpoints(endpoints.endpoints, start.options());
+        logEndpoints(endpoints.endpoints, start.config().getTcpConfig());
     }
 
     void onHttpsServerStart(@ObservesAsync HttpsServerStart start, McpServerEndpoints endpoints) {
-        logEndpoints(endpoints.endpoints, start.options());
+        logEndpoints(endpoints.endpoints, start.config().getTcpConfig());
     }
 
-    private void logEndpoints(List<McpServerEndpoint> endpoints, HttpServerOptions httpServerOptions) {
+    private void logEndpoints(List<McpServerEndpoint> endpoints, TcpServerConfig httpServerOptions) {
         Logger log = Logger.getLogger("io.quarkiverse.mcp.server");
         // base is scheme://host:port
         String base = new StringBuilder(httpServerOptions.isSsl() ? "https://" : "http://")

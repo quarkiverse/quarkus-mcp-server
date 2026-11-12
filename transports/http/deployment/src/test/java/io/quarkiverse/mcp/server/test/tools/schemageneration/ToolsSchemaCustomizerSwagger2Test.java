@@ -17,14 +17,14 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsSchemaCustomizerSwagger2Test extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.swagger2.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithSwagger2AnnotatedType.class));

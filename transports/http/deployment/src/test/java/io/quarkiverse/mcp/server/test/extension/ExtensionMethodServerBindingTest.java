@@ -8,12 +8,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.McpExtension;
 import io.quarkiverse.mcp.server.McpExtensionMethod;
 import io.quarkiverse.mcp.server.McpServer;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class ExtensionMethodServerBindingTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(BadExtension.class))
             // @McpServer must be declared on the @McpExtension class, not on an individual extension method
             .setExpectedException(IllegalStateException.class, true);

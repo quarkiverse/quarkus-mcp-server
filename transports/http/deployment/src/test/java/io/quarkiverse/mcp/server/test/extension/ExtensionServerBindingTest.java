@@ -21,7 +21,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
 public class ExtensionServerBindingTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(DefaultExtension.class, MultiExtension.class, AllExtension.class))
             .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "true")
             .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")

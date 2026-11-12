@@ -18,13 +18,13 @@ import io.quarkiverse.mcp.server.Notification.Type;
 import io.quarkiverse.mcp.server.Roots;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.TimeoutException;
 
 public class RootsStreamableErrorTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class))
             .overrideConfigKey("quarkus.mcp.server.roots.default-timeout", "2s");
 

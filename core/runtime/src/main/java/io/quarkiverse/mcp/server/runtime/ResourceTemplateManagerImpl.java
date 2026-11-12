@@ -24,8 +24,6 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.CacheControl;
 import io.quarkiverse.mcp.server.Content;
 import io.quarkiverse.mcp.server.Content.Annotations;
@@ -54,6 +52,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 public class ResourceTemplateManagerImpl extends FeatureManagerBase<ResourceResponse, ResourceTemplateInfo>

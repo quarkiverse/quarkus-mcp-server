@@ -13,7 +13,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.schema.validator.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -27,7 +27,7 @@ import io.vertx.core.json.JsonObject;
 public class StatelessSchemaValidationTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class));
 

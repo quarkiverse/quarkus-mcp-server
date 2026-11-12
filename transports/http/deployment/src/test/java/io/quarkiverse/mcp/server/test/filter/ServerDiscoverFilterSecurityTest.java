@@ -33,7 +33,7 @@ import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.test.utils.TestIdentityController;
 import io.quarkus.security.test.utils.TestIdentityProvider;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * Reproducer for <a href="https://github.com/quarkiverse/quarkus-mcp-server/issues/997">#997</a>:
@@ -43,7 +43,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class ServerDiscoverFilterSecurityTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class, RoleBasedFilter.class, TestIdentityProvider.class,
                             TestIdentityController.class));
