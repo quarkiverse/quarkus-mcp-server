@@ -58,7 +58,7 @@ public record ToolResponse(boolean isError,
      * @return an unsuccessful response with structured content
      */
     public static ToolResponse structuredError(Object structuredContent) {
-        return new ToolResponse(true, null, structuredContent, null);
+        return new ToolResponse(true, List.of(), structuredContent, null);
     }
 
     /**
@@ -66,7 +66,7 @@ public record ToolResponse(boolean isError,
      * @return a successful response with structured content
      */
     public static ToolResponse structuredSuccess(Object structuredContent) {
-        return new ToolResponse(false, null, structuredContent, null);
+        return new ToolResponse(false, List.of(), structuredContent, null);
     }
 
     public ToolResponse(boolean isError, List<? extends Content> content, Map<MetaKey, Object> _meta) {
