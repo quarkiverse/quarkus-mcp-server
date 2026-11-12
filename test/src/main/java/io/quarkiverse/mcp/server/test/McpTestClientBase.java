@@ -1499,14 +1499,11 @@ abstract class McpTestClientBase<ASSERT extends McpAssert<ASSERT>, CLIENT extend
             JsonObject result = assertResultResponse(request, response);
             boolean isError = result.getBoolean("isError");
             JsonArray contentArray = result.getJsonArray("content");
-            List<Content> content;
-            if (contentArray != null) {
-                content = new ArrayList<>(contentArray.size());
-                for (int i = 0; i < contentArray.size(); i++) {
-                    content.add(Contents.parseContent(contentArray.getJsonObject(i)));
-                }
-            } else {
-                content = List.of();
+            // CallToolResult requires the content member to be present in all protocol versions
+            assertNotNull(contentArray, "The content member must be present in the tools/call result: " + result);
+            List<Content> content = new ArrayList<>(contentArray.size());
+            for (int i = 0; i < contentArray.size(); i++) {
+                content.add(Contents.parseContent(contentArray.getJsonObject(i)));
             }
             assertFunction.accept(
                     new ToolResponse(isError, content, result.getValue("structuredContent"), Contents.parseMeta(result)));
