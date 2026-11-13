@@ -12,7 +12,7 @@ import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.FeatureManager.RequestFeatureArguments;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * A parameter type must be registered by exactly one custom argument provider, otherwise the build fails.
@@ -20,7 +20,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class CustomArgumentDuplicateProviderTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusExtensionTest config = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(MyTools.class, Greeter.class, GreeterProvider.class,
                     OtherGreeterProvider.class))
             // Two providers registered for the same parameter type

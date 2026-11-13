@@ -17,12 +17,12 @@ import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class MetricsDisabledTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest test = defaultConfig()
+    static final QuarkusExtensionTest test = defaultConfig()
             .withApplicationRoot(root -> root
                     .addClasses(MyFeatures.class))
             .overrideConfigKey("quarkus.micrometer.enabled", "true");

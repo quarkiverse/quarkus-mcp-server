@@ -8,8 +8,6 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.FeatureManager.FeatureInfo;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
@@ -19,6 +17,7 @@ import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Registry and dispatcher for custom JSON-RPC methods contributed by MCP extensions

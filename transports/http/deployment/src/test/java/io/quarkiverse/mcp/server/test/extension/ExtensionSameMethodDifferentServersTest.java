@@ -12,7 +12,7 @@ import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -22,7 +22,7 @@ import io.vertx.core.json.JsonObject;
 public class ExtensionSameMethodDifferentServersTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(AlphaExtension.class, BravoExtension.class))
             .overrideConfigKey("quarkus.mcp.server.http.root-path", "/alpha/mcp")
             .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp");

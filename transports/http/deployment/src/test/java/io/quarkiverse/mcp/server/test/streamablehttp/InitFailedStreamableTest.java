@@ -21,7 +21,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.Options;
 import io.quarkiverse.mcp.server.test.tools.MyTools;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
 public class InitFailedStreamableTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(FooService.class, Options.class, Checks.class, MyTools.class));
 

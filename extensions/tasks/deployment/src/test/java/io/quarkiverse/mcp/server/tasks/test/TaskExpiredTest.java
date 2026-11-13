@@ -22,13 +22,13 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.tasks.TaskManager;
 import io.quarkiverse.mcp.server.tasks.Tasks;
 import io.quarkiverse.mcp.server.test.McpAssured;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class TaskExpiredTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(MyTools.class, TaskTestSupport.class));
 
     @Inject

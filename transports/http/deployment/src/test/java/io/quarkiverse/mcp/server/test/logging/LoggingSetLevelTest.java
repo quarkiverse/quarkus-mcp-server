@@ -15,13 +15,13 @@ import io.quarkiverse.mcp.server.McpMethod;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class LoggingSetLevelTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .overrideRuntimeConfigKey("quarkus.mcp.server.client-logging.default-level", "INFO")
             .withApplicationRoot(root -> root.addClass(MyTools.class));
 

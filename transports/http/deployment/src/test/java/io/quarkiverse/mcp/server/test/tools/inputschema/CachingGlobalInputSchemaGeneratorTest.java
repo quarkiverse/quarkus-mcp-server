@@ -24,13 +24,13 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolsPage;
 import io.quarkiverse.mcp.server.test.McpServerTest;
 import io.quarkus.logging.Log;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class CachingGlobalInputSchemaGeneratorTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(5000)
+    static final QuarkusExtensionTest config = defaultConfig(5000)
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyPojo.class, CachingGlobalSchemaGenerator.class))
             // Built-in caching would hide the decorator calls this test counts

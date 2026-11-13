@@ -14,7 +14,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.MultiMap;
 
 public class ConfiguredUnknownProtocolVersionTest extends McpServerTest {
@@ -22,7 +22,7 @@ public class ConfiguredUnknownProtocolVersionTest extends McpServerTest {
     static final String UNKNOWN_VERSION = "2025-09-01";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             // A configured version does not have to be one of the versions implemented by this extension
             .overrideConfigKey("quarkus.mcp.server.supported-protocol-versions", UNKNOWN_VERSION)
             .withApplicationRoot(root -> root.addClass(MyTools.class));

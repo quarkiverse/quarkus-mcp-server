@@ -13,12 +13,12 @@ import io.quarkiverse.mcp.server.GlobalGuardrail;
 import io.quarkiverse.mcp.server.SupportedExecutionModels;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolInputGuardrail;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class GlobalGuardrailsInvalidExecModelProducerTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> {
                 root.addClasses(MyTools.class, EventLoopOnlyGuardrail.class, GuardrailProducer.class);
             })

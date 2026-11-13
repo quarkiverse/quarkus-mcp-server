@@ -10,7 +10,7 @@ import io.quarkiverse.mcp.server.FeatureArgumentProvider;
 import io.quarkiverse.mcp.server.FeatureManager.RequestFeatureArguments;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.deployment.FeatureArgumentProviderBuildItem;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * A {@link FeatureArgumentProvider} must be a CDI bean or declare a public no-args constructor, otherwise the build fails.
@@ -18,7 +18,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class CustomArgumentInvalidProviderTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = new QuarkusUnitTest()
+    static final QuarkusExtensionTest config = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(MyTools.class, Greeter.class, BadProvider.class))
             .addBuildChainCustomizer(buildChainBuilder -> buildChainBuilder.addBuildStep(context -> {
                 context.produce(new FeatureArgumentProviderBuildItem(

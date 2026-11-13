@@ -10,21 +10,21 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.http.HttpHeaders;
 
 public class DefaultServerDisabledTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = config(500)
+    static final QuarkusExtensionTest config = config(500)
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class))
             .overrideConfigKey("quarkus.mcp.server.http.enabled", "false")
             .overrideConfigKey("quarkus.mcp.server.bravo.http.root-path", "/bravo/mcp");
 
-    static QuarkusUnitTest config(int textLimit) {
-        QuarkusUnitTest ret = defaultConfig(500);
+    static QuarkusExtensionTest config(int textLimit) {
+        QuarkusExtensionTest ret = defaultConfig(500);
         if (System.getProperty("logTraffic") != null) {
             ret.overrideConfigKey("quarkus.mcp.server.bravo.traffic-logging.enabled", "true");
             ret.overrideConfigKey("quarkus.mcp.server.bravo.traffic-logging.text-limit", "" + textLimit);

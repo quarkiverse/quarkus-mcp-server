@@ -13,8 +13,6 @@ import java.util.stream.Stream;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.Feature;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
@@ -30,6 +28,7 @@ import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 @Singleton
 public class NotificationManagerImpl extends FeatureManagerBase<Void, NotificationInfo> implements NotificationManager {

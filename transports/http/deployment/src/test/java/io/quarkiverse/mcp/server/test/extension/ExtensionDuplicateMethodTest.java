@@ -7,12 +7,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.mcp.server.McpExtension;
 import io.quarkiverse.mcp.server.McpExtensionMethod;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class ExtensionDuplicateMethodTest {
 
     @RegisterExtension
-    public static final QuarkusUnitTest test = new QuarkusUnitTest()
+    public static final QuarkusExtensionTest test = new QuarkusExtensionTest()
             .withApplicationRoot(root -> root.addClasses(DuplicateMethodExtension.class))
             // Two extension methods with the same name bound to the same (default) server
             .setExpectedException(IllegalStateException.class, true);

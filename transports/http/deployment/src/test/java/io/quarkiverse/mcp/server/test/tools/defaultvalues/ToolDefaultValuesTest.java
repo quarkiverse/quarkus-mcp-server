@@ -28,13 +28,13 @@ import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.LongConverter;
 import io.quarkiverse.mcp.server.test.tools.defaultvalues.ToolDefaultValuesTest.MyTools.MyArgConverter;
 import io.quarkus.runtime.Startup;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ToolDefaultValuesTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(2000)
+    static final QuarkusExtensionTest config = defaultConfig(2000)
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyArg.class, LongConverter.class, MyArgConverter.class,
                             DurationConverter.class));
