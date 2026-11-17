@@ -28,5 +28,26 @@ endif::add-copy-button-to-env-var[]
 a|`fail`, `log`, `off`
 |`+++fail+++`
 
+a| [[quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tool-input]] [.property-path]##link:#quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tool-input[`+++quarkus.mcp.server.schema-validator.tool-input+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.schema-validator.tool-input+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+What to do when the arguments of a tool call do not conform to the tool's `inputSchema`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOL_INPUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOL_INPUT+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`fail`, `log`, `off`
+|`+++fail+++`
+
 |===
 

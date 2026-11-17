@@ -16,6 +16,28 @@ public interface McpSchemaValidatorRuntimeConfig {
     @WithDefault("fail")
     ToolOutputValidation toolOutput();
 
+    /**
+     * What to do when the arguments of a tool call do not conform to the tool's {@code inputSchema}.
+     */
+    @WithDefault("fail")
+    ToolInputValidation toolInput();
+
+    enum ToolInputValidation {
+        /**
+         * The tool is not called; a tool error ({@code isError: true}) that describes the violations is returned, so that
+         * the model can correct the arguments, and a warning is logged.
+         */
+        FAIL,
+        /**
+         * A warning is logged and the tool is called with the arguments unchanged.
+         */
+        LOG,
+        /**
+         * Tool arguments are not validated.
+         */
+        OFF
+    }
+
     enum ToolOutputValidation {
         /**
          * The result is replaced with a tool error ({@code isError: true}) that describes the violations, and a warning is
