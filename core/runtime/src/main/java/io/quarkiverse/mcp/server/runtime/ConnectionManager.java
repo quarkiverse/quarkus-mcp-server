@@ -30,13 +30,17 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
 
     private final CancellationRequests cancellationRequests;
 
+    private final ResourceSubscriptions resourceSubscriptions;
+
     private final ConcurrentMap<String, ConnectionTimerId> connections = new ConcurrentHashMap<>();
 
     public ConnectionManager(Vertx vertx, RequestIdGenerator idGenerator, McpServersRuntimeConfig servers,
-            McpMetadata metadata, Instance<McpMetrics> metrics, CancellationRequests cancellationRequests) {
+            McpMetadata metadata, Instance<McpMetrics> metrics, CancellationRequests cancellationRequests,
+            ResourceSubscriptions resourceSubscriptions) {
         this.vertx = vertx;
         this.idGenerator = idGenerator;
         this.cancellationRequests = cancellationRequests;
+        this.resourceSubscriptions = resourceSubscriptions;
         // We use the minimal timeout divided by two to specify the delay to fire the check
         // For example, if there are two server configs; the first defines the timeout 10 mins and the second 30 mins,
         // then we fire the check every 5 mins
@@ -94,6 +98,7 @@ public class ConnectionManager implements Iterable<McpConnectionBase> {
                 vertx.cancelTimer(connection.timerId());
             }
             cancellationRequests.connectionClosed(id);
+            resourceSubscriptions.connectionClosed(id);
             return true;
         }
         return false;
