@@ -16,7 +16,7 @@ import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolInputGuardrail;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;
-import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.ToolInputValidation;
+import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.Validation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -48,8 +48,8 @@ public class ToolInputSchemaValidator implements ToolInputGuardrail {
 
     @Override
     public Uni<Void> applyAsync(ToolInputContext context) {
-        ToolInputValidation mode = config.toolInput();
-        if (mode == ToolInputValidation.OFF) {
+        Validation mode = config.tools().input();
+        if (mode == Validation.OFF) {
             return Uni.createFrom().voidItem();
         }
         ToolInfo tool = context.getTool();
@@ -66,7 +66,7 @@ public class ToolInputSchemaValidator implements ToolInputGuardrail {
                         return;
                     }
                     LOG.warnf("%s [connection: %s]", violation, context.getConnection().id());
-                    if (mode == ToolInputValidation.FAIL) {
+                    if (mode == Validation.FAIL) {
                         // A tool execution error (isError: true), so that the model can correct the arguments and retry
                         throw new ToolCallException(violation);
                     }

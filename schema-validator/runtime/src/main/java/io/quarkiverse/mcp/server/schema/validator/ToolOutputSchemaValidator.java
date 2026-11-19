@@ -16,7 +16,7 @@ import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolOutputGuardrail;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;
-import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.ToolOutputValidation;
+import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.Validation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -48,9 +48,9 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
 
     @Override
     public Uni<Void> applyAsync(ToolOutputContext context) {
-        ToolOutputValidation mode = config.toolOutput();
+        Validation mode = config.tools().output();
         ToolResponse response = context.getResponse();
-        if (mode == ToolOutputValidation.OFF || response.isError()) {
+        if (mode == Validation.OFF || response.isError()) {
             return Uni.createFrom().voidItem();
         }
         ToolInfo tool = context.getTool();
@@ -67,7 +67,7 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
                         return;
                     }
                     LOG.warnf("%s [connection: %s]", violation, context.getConnection().id());
-                    if (mode == ToolOutputValidation.FAIL) {
+                    if (mode == Validation.FAIL) {
                         context.setResponse(ToolResponse.error(violation));
                     }
                 })

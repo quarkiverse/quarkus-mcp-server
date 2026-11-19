@@ -22,7 +22,7 @@ public class ToolsInputSchemaValidationLogTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class))
-            .overrideConfigKey("quarkus.mcp.server.schema-validator.tool-input", "log")
+            .overrideConfigKey("quarkus.mcp.server.schema-validator.tools.input", "log")
             .setLogRecordPredicate(r -> r.getLevel().equals(Level.WARNING)
                     && ToolInputSchemaValidator.class.getName().equals(r.getLoggerName()))
             .assertLogRecords(records -> assertEquals(1, records.size()));
