@@ -10,7 +10,6 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -64,8 +63,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     final ConcurrentMap<FeatureKey, ResourceInfo> uriToResource;
     final Set<FeatureKey> resourceNames;
 
-    // uri -> subscribers (connection ids)
-    final ConcurrentMap<String, List<String>> uriToSubscribers;
+    final ResourceSubscriptions subscriptions;
 
     final List<ResourceFilter> filters;
 
@@ -79,6 +77,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
             Instance<CurrentIdentityAssociation> currentIdentityAssociation,
             ServerRequests serverRequests,
             CancellationRequests cancellationRequests,
+            ResourceSubscriptions subscriptions,
             @All List<ResourceFilter> filters,
             @Any Instance<IconsProvider> iconsProviders,
             McpServersRuntimeConfig config) {
@@ -88,7 +87,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         this.resourceTemplateManager = resourceTemplateManager;
         this.uriToResource = new ConcurrentHashMap<>();
         this.resourceNames = Collections.synchronizedSet(new HashSet<>());
-        this.uriToSubscribers = new ConcurrentHashMap<>();
+        this.subscriptions = subscriptions;
         for (FeatureMetadata<ResourceResponse> f : metadata.resources()) {
             ResourceMethod resourceMethod = new ResourceMethod(f, iconsProviders);
             for (String server : f.info().serverNames()) {
@@ -130,10 +129,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
         if (info == null) {
             throw notFound(uri, mcpRequest.protocolVersion());
         }
-        List<String> ids = new CopyOnWriteArrayList<>();
-        ids.add(mcpRequest.connection().id());
-        uriToSubscribers.merge(uri, ids, (old, val) -> Stream.concat(old.stream(), val.stream())
-                .collect(Collectors.toCollection(CopyOnWriteArrayList::new)));
+        subscriptions.subscribe(uri, mcpRequest.connection().id());
     }
 
     void unsubscribe(String uri, McpRequest mcpRequest) {
@@ -145,10 +141,7 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
     }
 
     void unsubscribe(String uri, String connectionId) {
-        List<String> ids = uriToSubscribers.get(uri);
-        if (ids != null) {
-            ids.remove(connectionId);
-        }
+        subscriptions.unsubscribe(uri, connectionId);
     }
 
     @Override
@@ -158,16 +151,13 @@ public class ResourceManagerImpl extends FeatureManagerBase<ResourceResponse, Re
 
     private void sendUpdateNotifications(String uri) {
         JsonObject updated = Messages.newNotification("notifications/resources/updated", new JsonObject().put("uri", uri));
-        // Old protocol: existing uriToSubscribers flow
-        List<String> ids = uriToSubscribers.get(uri);
-        if (ids != null) {
-            for (String connectionId : ids) {
-                McpConnectionBase connection = connectionManager.get(connectionId);
-                if (connection != null) {
-                    connection.send(updated);
-                } else {
-                    unsubscribe(uri, connectionId);
-                }
+        // Old protocol: resources/subscribe
+        for (String connectionId : subscriptions.subscribers(uri)) {
+            McpConnectionBase connection = connectionManager.get(connectionId);
+            if (connection != null) {
+                connection.send(updated);
+            } else {
+                unsubscribe(uri, connectionId);
             }
         }
         // New protocol: route through subscription filters

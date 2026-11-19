@@ -120,6 +120,7 @@ import io.quarkiverse.mcp.server.runtime.PromptManagerImpl;
 import io.quarkiverse.mcp.server.runtime.RequestIdGenerator;
 import io.quarkiverse.mcp.server.runtime.ResourceContentsEncoderResultMapper;
 import io.quarkiverse.mcp.server.runtime.ResourceManagerImpl;
+import io.quarkiverse.mcp.server.runtime.ResourceSubscriptions;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateCompletionManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResourceTemplateManagerImpl;
 import io.quarkiverse.mcp.server.runtime.ResultMappers;
@@ -235,6 +236,7 @@ class McpServerProcessor {
         unremovable.addBeanClass(ServerRequests.class);
         unremovable.addBeanClass(RequestIdGenerator.class);
         unremovable.addBeanClass(CancellationRequests.class);
+        unremovable.addBeanClass(ResourceSubscriptions.class);
         unremovable.addBeanClass(DefaultSchemaGenerator.class);
         unremovable.addBeanClass(McpObjectMapperCustomizer.class);
         // Managers
