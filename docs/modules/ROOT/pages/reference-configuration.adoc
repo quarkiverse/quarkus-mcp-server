@@ -23,3 +23,8 @@ include::includes/quarkus-mcp-server-websocket.adoc[leveloffset=+1, opts=optiona
 == MCP Tasks
 
 include::includes/quarkus-mcp-server-tasks.adoc[leveloffset=+1, opts=optional]
+
+[[schema-validator]]
+== Schema Validator
+
+include::includes/quarkus-mcp-server-schema-validator.adoc[leveloffset=+1, opts=optional]

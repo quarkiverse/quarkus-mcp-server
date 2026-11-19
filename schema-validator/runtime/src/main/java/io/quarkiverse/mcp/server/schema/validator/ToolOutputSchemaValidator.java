@@ -1,14 +1,9 @@
 package io.quarkiverse.mcp.server.schema.validator;
 
-import static io.vertx.json.schema.OutputFormat.Basic;
-
-import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
@@ -21,15 +16,11 @@ import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.ToolOutputGuardrail;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.runtime.FeatureKey;
-import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.ToolOutputValidation;
+import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.Validation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.json.schema.Draft;
-import io.vertx.json.schema.JsonSchema;
-import io.vertx.json.schema.JsonSchemaOptions;
 import io.vertx.json.schema.OutputUnit;
-import io.vertx.json.schema.SchemaRepository;
 import io.vertx.json.schema.Validator;
 
 /**
@@ -45,8 +36,6 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
 
     private static final Logger LOG = Logger.getLogger(ToolOutputSchemaValidator.class);
 
-    private static final String BASE_URI = "https://quarkiverse.io/quarkus-mcp-server/tools/";
-
     @Inject
     Vertx vertx;
 
@@ -59,9 +48,9 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
 
     @Override
     public Uni<Void> applyAsync(ToolOutputContext context) {
-        ToolOutputValidation mode = config.toolOutput();
+        Validation mode = config.tools().output();
         ToolResponse response = context.getResponse();
-        if (mode == ToolOutputValidation.OFF || response.isError()) {
+        if (mode == Validation.OFF || response.isError()) {
             return Uni.createFrom().voidItem();
         }
         ToolInfo tool = context.getTool();
@@ -78,7 +67,7 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
                         return;
                     }
                     LOG.warnf("%s [connection: %s]", violation, context.getConnection().id());
-                    if (mode == ToolOutputValidation.FAIL) {
+                    if (mode == Validation.FAIL) {
                         context.setResponse(ToolResponse.error(violation));
                     }
                 })
@@ -89,10 +78,7 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
         FeatureKey key = new FeatureKey(tool.name(), serverName);
         CachedSchema cached = schemas.get(key);
         if (cached == null || cached.tool() != tool) {
-            Object outputSchema = tool.outputSchema();
-            JsonObject json = outputSchema == null || outputSchema instanceof JsonObject ? (JsonObject) outputSchema
-                    : JsonObject.mapFrom(outputSchema);
-            cached = new CachedSchema(tool, json, new AtomicReference<>());
+            cached = new CachedSchema(tool, ToolSchemas.toJson(tool.outputSchema()), new AtomicReference<>());
             schemas.put(key, cached);
         }
         return cached;
@@ -101,7 +87,7 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
     private String violation(ToolInfo tool, CachedSchema schema, ToolResponse response) {
         Optional<Validator> validator = schema.validator().get();
         if (validator == null) {
-            validator = newValidator(tool, schema.json());
+            validator = ToolSchemas.newValidator(tool, schema.json(), "output");
             schema.validator().set(validator);
         }
         if (validator.isEmpty()) {
@@ -124,43 +110,8 @@ public class ToolOutputSchemaValidator implements ToolOutputGuardrail {
         if (unit.getValid()) {
             return null;
         }
-        return "Output validation error: Invalid structured content for tool %s: %s".formatted(tool.name(), describe(unit));
-    }
-
-    private Optional<Validator> newValidator(ToolInfo tool, JsonObject schemaJson) {
-        try {
-            // When a schema does not include a $schema field, it defaults to JSON Schema 2020-12
-            String schemaDraft = schemaJson.getString("$schema");
-            Draft draft = schemaDraft != null ? Draft.fromIdentifier(schemaDraft) : Draft.DRAFT202012;
-            String uri = BASE_URI + tool.name();
-            // A repository per tool, so that local references such as "#/$defs/..." resolve within the tool's own schema
-            SchemaRepository repository = SchemaRepository.create(new JsonSchemaOptions().setBaseUri(BASE_URI));
-            repository.dereference(uri, JsonSchema.of(schemaJson));
-            return Optional.of(repository.validator(repository.find(uri), new JsonSchemaOptions()
-                    .setOutputFormat(Basic)
-                    .setDraft(draft)));
-        } catch (RuntimeException e) {
-            // An output schema that cannot be compiled is skipped, so that it does not break the tool
-            LOG.warnf(e, "Unable to compile the output schema of tool %s; its structured content is not validated",
-                    tool.name());
-            return Optional.empty();
-        }
-    }
-
-    private static String describe(OutputUnit unit) {
-        List<OutputUnit> errors = unit.getErrors();
-        if (errors != null && !errors.isEmpty()) {
-            return errors.stream()
-                    .filter(Objects::nonNull)
-                    .map(e -> location(e) + e.getError())
-                    .collect(Collectors.joining(", ", "[", "]"));
-        }
-        return unit.getError() != null ? location(unit) + unit.getError() : "the value does not match the output schema";
-    }
-
-    private static String location(OutputUnit unit) {
-        String location = unit.getInstanceLocation();
-        return location == null || location.isEmpty() ? "" : location + ": ";
+        return "Output validation error: Invalid structured content for tool %s: %s".formatted(tool.name(),
+                ToolSchemas.describe(unit, "the value does not match the output schema"));
     }
 
     // The validator is compiled lazily off the event loop; null means not compiled yet, empty means not compilable

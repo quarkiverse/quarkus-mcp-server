@@ -7,9 +7,32 @@ h|[.header-title]##Configuration property##
 h|Type
 h|Default
 
-a| [[quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tool-output]] [.property-path]##link:#quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tool-output[`+++quarkus.mcp.server.schema-validator.tool-output+++`]##
+a| [[quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tools-input]] [.property-path]##link:#quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tools-input[`+++quarkus.mcp.server.schema-validator.tools.input+++`]##
 ifdef::add-copy-button-to-config-props[]
-config_property_copy_button:+++quarkus.mcp.server.schema-validator.tool-output+++[]
+config_property_copy_button:+++quarkus.mcp.server.schema-validator.tools.input+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+What to do when the arguments of a tool call do not conform to the tool's `inputSchema`.
+
+If set to `fail`, the tool is not called and a tool error (`isError: true`) that describes the violations is returned, so that the model can correct the arguments.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOLS_INPUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOLS_INPUT+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`fail`, `log`, `off`
+|`+++fail+++`
+
+a| [[quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tools-output]] [.property-path]##link:#quarkus-mcp-server-schema-validator_quarkus-mcp-server-schema-validator-tools-output[`+++quarkus.mcp.server.schema-validator.tools.output+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.mcp.server.schema-validator.tools.output+++[]
 endif::add-copy-button-to-config-props[]
 
 
@@ -17,12 +40,14 @@ endif::add-copy-button-to-config-props[]
 --
 What to do when the `structuredContent` of a successful tool result does not conform to the tool's `outputSchema`, or is missing although the tool declares one.
 
+If set to `fail`, the result is replaced with a tool error (`isError: true`) that describes the violations.
+
 
 ifdef::add-copy-button-to-env-var[]
-Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOL_OUTPUT+++[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOLS_OUTPUT+++[]
 endif::add-copy-button-to-env-var[]
 ifndef::add-copy-button-to-env-var[]
-Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOL_OUTPUT+++`
+Environment variable: `+++QUARKUS_MCP_SERVER_SCHEMA_VALIDATOR_TOOLS_OUTPUT+++`
 endif::add-copy-button-to-env-var[]
 --
 a|`fail`, `log`, `off`

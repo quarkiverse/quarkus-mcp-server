@@ -10,24 +10,44 @@ import io.smallrye.config.WithDefault;
 public interface McpSchemaValidatorRuntimeConfig {
 
     /**
-     * What to do when the {@code structuredContent} of a successful tool result does not conform to the tool's
-     * {@code outputSchema}, or is missing although the tool declares one.
+     * Tool calls validation.
      */
-    @WithDefault("fail")
-    ToolOutputValidation toolOutput();
+    Tools tools();
 
-    enum ToolOutputValidation {
+    interface Tools {
+
         /**
-         * The result is replaced with a tool error ({@code isError: true}) that describes the violations, and a warning is
-         * logged.
+         * What to do when the arguments of a tool call do not conform to the tool's {@code inputSchema}.
+         * <p>
+         * If set to {@code fail}, the tool is not called and a tool error ({@code isError: true}) that describes the
+         * violations is returned, so that the model can correct the arguments.
+         */
+        @WithDefault("fail")
+        Validation input();
+
+        /**
+         * What to do when the {@code structuredContent} of a successful tool result does not conform to the tool's
+         * {@code outputSchema}, or is missing although the tool declares one.
+         * <p>
+         * If set to {@code fail}, the result is replaced with a tool error ({@code isError: true}) that describes the
+         * violations.
+         */
+        @WithDefault("fail")
+        Validation output();
+
+    }
+
+    enum Validation {
+        /**
+         * A tool error that describes the violations is returned and a warning is logged.
          */
         FAIL,
         /**
-         * A warning is logged and the result is sent unchanged.
+         * A warning is logged; the tool call proceeds unchanged.
          */
         LOG,
         /**
-         * Tool results are not validated.
+         * No validation is performed.
          */
         OFF
     }

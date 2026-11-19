@@ -25,7 +25,7 @@ public class ToolsOutputSchemaValidationOffTest extends McpServerTest {
     static final QuarkusUnitTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, Price.class))
-            .overrideConfigKey("quarkus.mcp.server.schema-validator.tool-output", "off")
+            .overrideConfigKey("quarkus.mcp.server.schema-validator.tools.output", "off")
             .setLogRecordPredicate(r -> r.getLevel().equals(Level.WARNING)
                     && ToolOutputSchemaValidator.class.getName().equals(r.getLoggerName()))
             .assertLogRecords(records -> assertEquals(0, records.size()));

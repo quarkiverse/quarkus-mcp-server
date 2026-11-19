@@ -36,20 +36,18 @@ Results that are already tool errors are not validated, and neither are the resu
 Each tool's output schema is compiled once, on first use. If an output schema cannot be compiled or applied, for example because of an unresolvable reference, a warning is logged and that tool's results are not validated.
 The check is a xref:guides-using-guardrails.adoc#global-guardrails[global output guardrail] with the lowest priority, so it runs after all other output guardrails and validates the result that is actually sent.
 
-The behavior is controlled by the `quarkus.mcp.server.schema-validator.tool-output` configuration property:
+The behavior can be configured with `quarkus.mcp.server.schema-validator.tools.output`. See the xref:reference-configuration.adoc#schema-validator[configuration reference].
 
-[cols="1,3"]
-|===
-|Value |Behavior
+[[tool-input]]
+=== Tool input validation
 
-|`fail` (default)
-|The non-conforming result is replaced with a tool error and a warning is logged.
+The MCP specification requires servers to validate all tool inputs.
+The extension validates the arguments of every `tools/call` against the tool's `inputSchema` before the tool is called, as the official TypeScript, Python, and Java SDKs do.
+Without this check, an argument that does not match the schema can still reach the tool after a lossy conversion, for example `2.7` for an `integer` parameter arrives as `2`.
+If the arguments do not conform, the tool is not called. Instead, a tool error (`isError: true`) whose text describes the violations is returned, for example `Input validation error: Invalid arguments for tool discount: [/percent: ...]`, so that the model can correct the arguments and retry, and a warning is logged.
+Each tool's input schema is compiled once, on first use. If an input schema cannot be compiled or applied, for example because of an unresolvable reference, a warning is logged and that tool's arguments are not validated.
+The check is a xref:guides-using-guardrails.adoc#global-guardrails[global input guardrail] with the highest priority, so it runs before all other input guardrails and validates the arguments sent by the client.
 
-|`log`
-|A warning is logged and the result is sent unchanged. This can help while migrating tools that do not conform yet.
-
-|`off`
-|Tool results are not validated.
-|===
+The behavior can be configured with `quarkus.mcp.server.schema-validator.tools.input`. See the xref:reference-configuration.adoc#schema-validator[configuration reference].
 
 NOTE: The MCP server performs some basic validation of messages by default. However, this extension ensures that message instances are valid, as defined by the JSON Schema specification.
