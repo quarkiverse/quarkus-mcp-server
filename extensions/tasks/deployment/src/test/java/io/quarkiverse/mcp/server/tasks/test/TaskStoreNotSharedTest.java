@@ -27,7 +27,7 @@ import io.quarkiverse.mcp.server.tasks.spi.TaskRecord;
 import io.quarkiverse.mcp.server.tasks.spi.TaskStore;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -36,7 +36,7 @@ import io.smallrye.mutiny.Uni;
 public class TaskStoreNotSharedTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .overrideConfigKey("quarkus.mcp.server.tasks.default-poll-interval", "50ms")
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, CountingInMemoryTaskStore.class, TaskTestSupport.class));

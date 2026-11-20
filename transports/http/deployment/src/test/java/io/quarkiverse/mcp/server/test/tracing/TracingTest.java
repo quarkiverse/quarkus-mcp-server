@@ -37,7 +37,7 @@ import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class TracingTest extends McpServerTest {
 
@@ -51,7 +51,7 @@ public class TracingTest extends McpServerTest {
     private static final AttributeKey<String> NETWORK_TRANSPORT = AttributeKey.stringKey("network.transport");
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             // OTel is disabled by default
             .overrideConfigKey("quarkus.otel.enabled", "true")
             .overrideConfigKey("quarkus.otel.bsp.schedule.delay", "100ms")

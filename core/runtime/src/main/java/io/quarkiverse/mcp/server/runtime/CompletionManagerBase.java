@@ -11,8 +11,6 @@ import java.util.stream.Stream;
 
 import jakarta.enterprise.inject.Instance;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.CompleteContext;
 import io.quarkiverse.mcp.server.CompletionManager;
 import io.quarkiverse.mcp.server.CompletionManager.CompletionInfo;
@@ -25,6 +23,7 @@ import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 public abstract class CompletionManagerBase extends FeatureManagerBase<CompletionResponse, CompletionInfo>
         implements CompletionManager {

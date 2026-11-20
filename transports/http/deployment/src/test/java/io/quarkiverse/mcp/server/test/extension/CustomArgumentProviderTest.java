@@ -19,7 +19,7 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpAssert;
 import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 /**
  * Verifies that an MCP extension can contribute a custom injectable parameter type of a feature method via an
@@ -28,7 +28,7 @@ import io.quarkus.test.QuarkusUnitTest;
 public class CustomArgumentProviderTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(MyTools.class, Greeter.class, GreeterProvider.class))
             // Simulate an MCP extension that registers a custom injectable parameter type
             .addBuildChainCustomizer(buildChainBuilder -> buildChainBuilder.addBuildStep(context -> {

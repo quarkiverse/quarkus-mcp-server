@@ -23,7 +23,7 @@ import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.MetaKey;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class InitialResponseInfoTest extends McpServerTest {
 
@@ -42,7 +42,7 @@ public class InitialResponseInfoTest extends McpServerTest {
     private static final String ALPHA_URL = "http://foo.com/icon.png";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(2000)
+    static final QuarkusExtensionTest config = defaultConfig(2000)
             .withApplicationRoot(root -> root.addClasses(DefaultInitResponseInfo.class, AlphaInitResponseInfo.class))
             .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
             .overrideConfigKey("quarkus.mcp.server.server-info.title", NAME.toUpperCase())

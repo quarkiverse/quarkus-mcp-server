@@ -22,7 +22,7 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -39,7 +39,7 @@ import io.vertx.core.json.JsonObject;
 public class SuppressAutoListChangedTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig().withEmptyApplication();
+    static final QuarkusExtensionTest config = defaultConfig().withEmptyApplication();
 
     @Inject
     ToolManager toolManager;

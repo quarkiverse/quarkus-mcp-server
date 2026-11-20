@@ -9,7 +9,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkiverse.mcp.server.Icon.Theme;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class CustomServerInfoTest extends McpServerTest {
 
@@ -23,7 +23,7 @@ public class CustomServerInfoTest extends McpServerTest {
     private static final String URL = "https://github.com/quarkiverse/quarkus-mcp-server";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withEmptyApplication()
             .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
             .overrideConfigKey("quarkus.mcp.server.server-info.title", NAME.toUpperCase())

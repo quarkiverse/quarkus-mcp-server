@@ -15,7 +15,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ResponseServerInfoTest extends McpServerTest {
@@ -25,7 +25,7 @@ public class ResponseServerInfoTest extends McpServerTest {
     private static final String DESCRIPTION = "A test MCP server";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyTools.class))
             .overrideConfigKey("quarkus.mcp.server.server-info.name", NAME)
             .overrideConfigKey("quarkus.mcp.server.server-info.version", VERSION)
