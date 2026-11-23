@@ -22,6 +22,8 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusExtensionTest;
+import io.smallrye.common.annotation.RunOnVirtualThread;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 public class ToolsOutputSchemaValidationTest extends McpServerTest {
@@ -69,6 +71,33 @@ public class ToolsOutputSchemaValidationTest extends McpServerTest {
                 })
                 .toolsCall("list", Map.of(), toolResponse -> {
                     assertFalse(toolResponse.isError());
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    public void testExecutionModels() {
+        // Worker thread tools are covered above; the output is validated inline on a virtual thread and offloaded from the
+        // event loop
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                .toolsCall("validVirtualThread", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertEquals(12, ((JsonObject) toolResponse.structuredContent()).getInteger("amount"));
+                })
+                .toolsCall("wrongTypeVirtualThread", toolResponse -> {
+                    assertTrue(toolResponse.isError());
+                    assertTrue(toolResponse.firstContent().asText().text()
+                            .startsWith("Output validation error: Invalid structured content for tool wrongTypeVirtualThread"));
+                })
+                .toolsCall("validNonBlocking", toolResponse -> {
+                    assertFalse(toolResponse.isError());
+                    assertEquals(12, ((JsonObject) toolResponse.structuredContent()).getInteger("amount"));
+                })
+                .toolsCall("wrongTypeNonBlocking", toolResponse -> {
+                    assertTrue(toolResponse.isError());
+                    assertTrue(toolResponse.firstContent().asText().text()
+                            .startsWith("Output validation error: Invalid structured content for tool wrongTypeNonBlocking"));
                 })
                 .thenAssertResults();
     }
@@ -128,6 +157,28 @@ public class ToolsOutputSchemaValidationTest extends McpServerTest {
         @Tool(outputSchema = @OutputSchema(from = Price.class))
         ToolResponse toolError() {
             return ToolResponse.error("out of stock");
+        }
+
+        @RunOnVirtualThread
+        @Tool(structuredContent = true)
+        Price validVirtualThread() {
+            return new Price(12, "EUR");
+        }
+
+        @RunOnVirtualThread
+        @Tool(outputSchema = @OutputSchema(from = Price.class))
+        ToolResponse wrongTypeVirtualThread() {
+            return ToolResponse.structuredSuccess(Map.of("amount", "twelve", "currency", "EUR"));
+        }
+
+        @Tool(structuredContent = true)
+        Uni<Price> validNonBlocking() {
+            return Uni.createFrom().item(new Price(12, "EUR"));
+        }
+
+        @Tool(outputSchema = @OutputSchema(from = Price.class))
+        Uni<ToolResponse> wrongTypeNonBlocking() {
+            return Uni.createFrom().item(ToolResponse.structuredSuccess(Map.of("amount", "twelve", "currency", "EUR")));
         }
 
         @Tool
