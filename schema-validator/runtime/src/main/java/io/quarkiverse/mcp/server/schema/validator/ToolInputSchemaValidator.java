@@ -1,12 +1,6 @@
 package io.quarkiverse.mcp.server.schema.validator;
 
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReference;
-
 import jakarta.annotation.Priority;
-import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
@@ -15,10 +9,8 @@ import io.quarkiverse.mcp.server.GlobalGuardrail;
 import io.quarkiverse.mcp.server.ToolCallException;
 import io.quarkiverse.mcp.server.ToolInputGuardrail;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
-import io.quarkiverse.mcp.server.runtime.FeatureKey;
 import io.quarkiverse.mcp.server.schema.validator.McpSchemaValidatorRuntimeConfig.Validation;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.OutputUnit;
 import io.vertx.json.schema.Validator;
@@ -32,19 +24,13 @@ import io.vertx.json.schema.Validator;
 @GlobalGuardrail
 @Priority(Integer.MAX_VALUE)
 @Singleton
-public class ToolInputSchemaValidator implements ToolInputGuardrail {
+public class ToolInputSchemaValidator extends ToolSchemaValidator<JsonObject> implements ToolInputGuardrail {
 
     private static final Logger LOG = Logger.getLogger(ToolInputSchemaValidator.class);
 
-    @Inject
-    Vertx vertx;
-
-    @Inject
-    McpSchemaValidatorRuntimeConfig config;
-
-    // Keyed by tool name and server name, since tools with the same name can be bound to different servers; the tool
-    // instance detects a tool that was removed and registered again
-    private final ConcurrentMap<FeatureKey, CachedSchema> schemas = new ConcurrentHashMap<>();
+    public ToolInputSchemaValidator() {
+        super("input");
+    }
 
     @Override
     public Uni<Void> applyAsync(ToolInputContext context) {
@@ -52,15 +38,8 @@ public class ToolInputSchemaValidator implements ToolInputGuardrail {
         if (mode == Validation.OFF) {
             return Uni.createFrom().voidItem();
         }
-        ToolInfo tool = context.getTool();
-        CachedSchema schema = schema(tool, context.getConnection().serverName());
-        if (schema.json() == null) {
-            return Uni.createFrom().voidItem();
-        }
         JsonObject arguments = context.getArguments() != null ? context.getArguments() : new JsonObject();
-        // Schema compilation and validation are CPU bound; run them off the event loop like the request validation
-        return Uni.createFrom().completionStage(vertx.<String> executeBlocking(() -> violation(tool, schema, arguments))
-                .toCompletionStage())
+        return validate(context.getTool(), context.getConnection().serverName(), arguments)
                 .invoke(violation -> {
                     if (violation == null) {
                         return;
@@ -74,28 +53,16 @@ public class ToolInputSchemaValidator implements ToolInputGuardrail {
                 .replaceWithVoid();
     }
 
-    private CachedSchema schema(ToolInfo tool, String serverName) {
-        FeatureKey key = new FeatureKey(tool.name(), serverName);
-        CachedSchema cached = schemas.get(key);
-        if (cached == null || cached.tool() != tool) {
-            cached = new CachedSchema(tool, ToolSchemas.toJson(tool.inputSchema()), new AtomicReference<>());
-            schemas.put(key, cached);
-        }
-        return cached;
+    @Override
+    protected Object schema(ToolInfo tool) {
+        return tool.inputSchema();
     }
 
-    private String violation(ToolInfo tool, CachedSchema schema, JsonObject arguments) {
-        Optional<Validator> validator = schema.validator().get();
-        if (validator == null) {
-            validator = ToolSchemas.newValidator(tool, schema.json(), "input");
-            schema.validator().set(validator);
-        }
-        if (validator.isEmpty()) {
-            return null;
-        }
+    @Override
+    protected String violation(ToolInfo tool, Validator validator, JsonObject arguments) {
         OutputUnit unit;
         try {
-            unit = validator.get().validate(arguments);
+            unit = validator.validate(arguments);
         } catch (RuntimeException e) {
             // A problem with the schema itself, e.g. an unresolvable reference, is not a client error
             LOG.warnf(e, "Unable to validate the arguments of tool %s against its input schema", tool.name());
@@ -106,10 +73,6 @@ public class ToolInputSchemaValidator implements ToolInputGuardrail {
         }
         return "Input validation error: Invalid arguments for tool %s: %s".formatted(tool.name(),
                 ToolSchemas.describe(unit, "the arguments do not match the input schema"));
-    }
-
-    // The validator is compiled lazily off the event loop; null means not compiled yet, empty means not compilable
-    private record CachedSchema(ToolInfo tool, JsonObject json, AtomicReference<Optional<Validator>> validator) {
     }
 
 }
