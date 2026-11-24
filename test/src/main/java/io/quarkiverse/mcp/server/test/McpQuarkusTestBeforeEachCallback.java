@@ -27,7 +27,9 @@ public class McpQuarkusTestBeforeEachCallback implements QuarkusTestBeforeEachCa
                     .or(() -> config.getOptionalValue(LOCAL_BASE_URI, String.class));
             if (url.isPresent()) {
                 McpAssured.baseUri = new URI(url.get());
-            } else {
+            } else if (McpAssured.baseUri == null) {
+                // The value may not be available if the app was not restarted for the current test;
+                // in that case the base URI set for a previous test is reused
                 LOG.warnf("Cannot set the baseUri for McpAssured: neither %s nor %s is available", TEST_URL,
                         LOCAL_BASE_URI);
             }

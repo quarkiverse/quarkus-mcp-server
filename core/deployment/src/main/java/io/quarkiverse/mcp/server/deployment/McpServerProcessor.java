@@ -83,6 +83,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceFilter;
+import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
@@ -1584,7 +1585,9 @@ class McpServerProcessor {
         // Various classes serialized by Jackson
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(
                 Content.class,
+                Content.Annotations.class,
                 TextContent.class,
+                ResourceLink.class,
                 ImageContent.class,
                 EmbeddedResource.class,
                 AudioContent.class,
