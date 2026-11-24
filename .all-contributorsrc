@@ -249,6 +249,16 @@
         "test",
         "code"
       ]
+    },
+    {
+      "login": "fedinskiy",
+      "name": "fedinskiy",
+      "avatar_url": "https://avatars.githubusercontent.com/u/20221364?v=4",
+      "profile": "https://github.com/fedinskiy",
+      "contributions": [
+        "test",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
