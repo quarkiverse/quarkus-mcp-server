@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -52,6 +53,7 @@ import io.vertx.core.json.JsonObject;
  * Tests a custom {@link TaskStore}. The store keeps the tasks as JSON documents and completes asynchronously. The
  * modifications made directly in the store simulate another server instance that shares the store.
  */
+@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskStoreTest extends McpServerTest {
 
     @RegisterExtension

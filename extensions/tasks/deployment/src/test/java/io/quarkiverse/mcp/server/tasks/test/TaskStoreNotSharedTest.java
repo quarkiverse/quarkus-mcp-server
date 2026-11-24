@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -33,6 +34,7 @@ import io.smallrye.mutiny.Uni;
 /**
  * Tests that the running tasks are not checked periodically if the {@link TaskStore} is not shared.
  */
+@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskStoreNotSharedTest extends McpServerTest {
 
     @RegisterExtension

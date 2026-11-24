@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import jakarta.inject.Inject;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -36,6 +37,7 @@ import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
+@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskToolTest extends McpServerTest {
 
     @RegisterExtension
