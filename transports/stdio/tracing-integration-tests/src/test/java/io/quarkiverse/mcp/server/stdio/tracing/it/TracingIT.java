@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -221,6 +222,8 @@ public class TracingIT {
         AtomicReference<JsonArray> holder = new AtomicReference<>();
         await().atMost(5, TimeUnit.SECONDS)
                 .pollInterval(100, TimeUnit.MILLISECONDS)
+                // The spawned app may serve MCP requests over stdio before its HTTP server is listening
+                .ignoreExceptionsInstanceOf(ConnectException.class)
                 .until(() -> {
                     HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create("http://localhost:8080/spans"))
