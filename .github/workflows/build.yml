@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        java-version: [ 17, 21, 25 ]
+        java-version: [ 21, 25 ]
         include:
           - os: windows-latest
             test-containers: "false"
@@ -115,7 +115,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        java-version: [ 17 ]
+        java-version: [ 21 ]
         module:
           - http
           - stdio
@@ -199,7 +199,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        java-version: [ 17 ]
+        java-version: [ 21 ]
     runs-on: runs-on=${{ github.run_id }}-${{ strategy.job-index }}/runner=${{ matrix.os }}
     steps:
       - uses: runs-on/action@v2

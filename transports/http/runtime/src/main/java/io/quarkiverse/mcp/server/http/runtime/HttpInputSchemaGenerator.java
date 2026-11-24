@@ -6,8 +6,6 @@ import java.util.Map;
 import jakarta.annotation.Priority;
 import jakarta.inject.Singleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.GlobalInputSchemaGenerator;
 import io.quarkiverse.mcp.server.ToolManager.ToolInfo;
 import io.quarkiverse.mcp.server.http.McpParamHeader;
@@ -18,6 +16,7 @@ import io.quarkiverse.mcp.server.runtime.SchemaGeneratorConfigCustomizer;
 import io.quarkus.arc.All;
 import io.quarkus.arc.DefaultBean;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * HTTP-transport-specific input schema generator that extends the default schema generation to add

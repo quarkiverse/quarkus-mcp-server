@@ -83,6 +83,7 @@ import io.quarkiverse.mcp.server.PromptMessage;
 import io.quarkiverse.mcp.server.PromptResponse;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceFilter;
+import io.quarkiverse.mcp.server.ResourceLink;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.ResourceTemplateArg;
 import io.quarkiverse.mcp.server.ResourceTemplateFilter;
@@ -148,7 +149,6 @@ import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
-import io.quarkus.arc.deployment.OpenTelemetrySdkBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.TransformedAnnotationsBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
@@ -169,6 +169,7 @@ import io.quarkus.deployment.builditem.AdditionalIndexedClassesBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
+import io.quarkus.deployment.builditem.OpenTelemetrySdkBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveHierarchyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
@@ -1572,7 +1573,7 @@ class McpServerProcessor {
                     reflectiveHierarchies.produce(ReflectiveHierarchyBuildItem.builder(paramType).build());
                 }
             }
-            reflectiveMethods.produce(new ReflectiveMethodBuildItem(true, m.getMethod()));
+            reflectiveMethods.produce(new ReflectiveMethodBuildItem(m.getMethod()));
         }
 
         // Register all default value converters
@@ -1584,7 +1585,9 @@ class McpServerProcessor {
         // Various classes serialized by Jackson
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(
                 Content.class,
+                Content.Annotations.class,
                 TextContent.class,
+                ResourceLink.class,
                 ImageContent.class,
                 EmbeddedResource.class,
                 AudioContent.class,

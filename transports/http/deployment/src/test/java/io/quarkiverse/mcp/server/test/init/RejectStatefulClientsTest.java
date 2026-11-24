@@ -18,7 +18,7 @@ import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
@@ -35,7 +35,7 @@ public class RejectStatefulClientsTest extends McpServerTest {
     static final String REJECTION_MESSAGE = "This server only accepts stateless clients (protocol version 2026-07-28 or later)";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClasses(RejectStatefulClients.class, MyTools.class));
 
     @Test

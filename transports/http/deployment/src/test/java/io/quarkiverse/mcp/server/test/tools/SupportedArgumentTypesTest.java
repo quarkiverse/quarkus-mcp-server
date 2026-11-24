@@ -4,7 +4,6 @@ import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -15,26 +14,25 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.jackson.ObjectMapperCustomizer;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.jackson.JsonMapperBuilderCustomizer;
+import io.quarkus.test.QuarkusExtensionTest;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 
 public class SupportedArgumentTypesTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, MyPojo.class, MyDto.class, MyDtoCustomizer.class,
                             MyStringDto.class, MyStringDtoCustomizer.class));
@@ -143,26 +141,25 @@ public class SupportedArgumentTypesTest extends McpServerTest {
     }
 
     @Singleton
-    public static class MyDtoCustomizer implements ObjectMapperCustomizer {
-
+    public static class MyDtoCustomizer implements JsonMapperBuilderCustomizer {
         @Override
-        public void customize(ObjectMapper mapper) {
+        public void customize(JsonMapper.Builder builder) {
             SimpleModule module = new SimpleModule();
-            module.addSerializer(MyDto.class, new JsonSerializer<MyDto>() {
+            module.addSerializer(MyDto.class, new ValueSerializer<MyDto>() {
                 @Override
-                public void serialize(MyDto myDto, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                public void serialize(MyDto myDto, JsonGenerator gen, SerializationContext serializers) {
                     gen.writeStartObject();
-                    gen.writeStringField("n", myDto.name());
-                    gen.writeNumberField("v", myDto.value());
+                    gen.writeStringProperty("n", myDto.name());
+                    gen.writeNumberProperty("v", myDto.value());
                     gen.writeEndObject();
                 }
             });
-            module.addDeserializer(MyDto.class, new JsonDeserializer<MyDto>() {
+            module.addDeserializer(MyDto.class, new ValueDeserializer<MyDto>() {
                 @Override
-                public MyDto deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                public MyDto deserialize(JsonParser p, DeserializationContext ctxt) {
                     String name = null;
                     int value = 0;
-                    while (p.nextToken() != com.fasterxml.jackson.core.JsonToken.END_OBJECT) {
+                    while (p.nextToken() != tools.jackson.core.JsonToken.END_OBJECT) {
                         String field = p.currentName();
                         p.nextToken();
                         if ("n".equals(field)) {
@@ -174,7 +171,7 @@ public class SupportedArgumentTypesTest extends McpServerTest {
                     return new MyDto(name, value);
                 }
             });
-            mapper.registerModule(module);
+            builder.addModule(module);
         }
     }
 
@@ -182,25 +179,25 @@ public class SupportedArgumentTypesTest extends McpServerTest {
     }
 
     @Singleton
-    public static class MyStringDtoCustomizer implements ObjectMapperCustomizer {
+    public static class MyStringDtoCustomizer implements JsonMapperBuilderCustomizer {
 
         @Override
-        public void customize(ObjectMapper mapper) {
+        public void customize(JsonMapper.Builder builder) {
             SimpleModule module = new SimpleModule();
-            module.addSerializer(MyStringDto.class, new JsonSerializer<MyStringDto>() {
+            module.addSerializer(MyStringDto.class, new ValueSerializer<MyStringDto>() {
                 @Override
-                public void serialize(MyStringDto dto, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                public void serialize(MyStringDto dto, JsonGenerator gen, SerializationContext serializers) {
                     gen.writeString(dto.name() + ":" + dto.value());
                 }
             });
-            module.addDeserializer(MyStringDto.class, new JsonDeserializer<MyStringDto>() {
+            module.addDeserializer(MyStringDto.class, new ValueDeserializer<MyStringDto>() {
                 @Override
-                public MyStringDto deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                public MyStringDto deserialize(JsonParser p, DeserializationContext ctxt) {
                     String[] parts = p.getText().split(":");
                     return new MyStringDto(parts[0], Integer.parseInt(parts[1]));
                 }
             });
-            mapper.registerModule(module);
+            builder.addModule(module);
         }
     }
 

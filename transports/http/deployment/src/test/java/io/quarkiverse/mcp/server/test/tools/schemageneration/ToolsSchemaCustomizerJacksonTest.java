@@ -3,7 +3,6 @@ package io.quarkiverse.mcp.server.test.tools.schemageneration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
@@ -16,14 +15,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import io.quarkiverse.mcp.server.InputSchemaGenerator;
 import io.quarkiverse.mcp.server.Tool;
@@ -34,14 +25,22 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.jackson.ObjectMapperCustomizer;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.jackson.JsonMapperBuilderCustomizer;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 
 public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig(2000)
+    static final QuarkusExtensionTest config = defaultConfig(2000)
             .overrideRuntimeConfigKey("quarkus.mcp.server.schema-generator.jackson.enabled", "true")
             .withApplicationRoot(
                     root -> root.addClasses(MyToolWithJacksonAnnotatedType.class, CustomItem.class,
@@ -173,26 +172,25 @@ public class ToolsSchemaCustomizerJacksonTest extends McpServerTest {
     }
 
     @Singleton
-    public static class CustomItemCustomizer implements ObjectMapperCustomizer {
+    public static class CustomItemCustomizer implements JsonMapperBuilderCustomizer {
 
         @Override
-        public void customize(ObjectMapper mapper) {
+        public void customize(JsonMapper.Builder builder) {
             SimpleModule module = new SimpleModule();
-            module.addSerializer(CustomItem.class, new JsonSerializer<CustomItem>() {
+            module.addSerializer(CustomItem.class, new ValueSerializer<CustomItem>() {
                 @Override
-                public void serialize(CustomItem item, JsonGenerator gen, SerializerProvider serializers)
-                        throws IOException {
+                public void serialize(CustomItem item, JsonGenerator gen, SerializationContext serializers) {
                     gen.writeString(item.name() + ":" + item.value());
                 }
             });
-            module.addDeserializer(CustomItem.class, new JsonDeserializer<CustomItem>() {
+            module.addDeserializer(CustomItem.class, new ValueDeserializer<CustomItem>() {
                 @Override
-                public CustomItem deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                public CustomItem deserialize(JsonParser p, DeserializationContext ctxt) {
                     String[] parts = p.getText().split(":");
                     return new CustomItem(parts[0], Integer.parseInt(parts[1]));
                 }
             });
-            mapper.registerModule(module);
+            builder.addModule(module);
         }
     }
 }

@@ -29,12 +29,12 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpWebSocketTestClient;
 import io.quarkiverse.mcp.server.websocket.test.McpServerTest;
 import io.quarkus.runtime.Startup;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class MutipleServersTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyFeatures.class, CharlieFeatures.class))
             .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "false")

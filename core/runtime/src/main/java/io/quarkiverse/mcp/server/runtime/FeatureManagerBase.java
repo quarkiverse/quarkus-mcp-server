@@ -33,9 +33,6 @@ import jakarta.enterprise.invoke.Invoker;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.quarkiverse.mcp.server.Cancellation;
 import io.quarkiverse.mcp.server.DefaultValueConverter;
 import io.quarkiverse.mcp.server.Elicitation;
@@ -78,6 +75,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ObjectMapper;
 
 public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.FeatureInfo> {
 
@@ -344,7 +344,7 @@ public abstract class FeatureManagerBase<RESULT, INFO extends FeatureManager.Fea
             JavaType javaType = mapper.getTypeFactory().constructType(arg.type());
             try {
                 val = mapper.convertValue(val, javaType);
-            } catch (IllegalArgumentException e) {
+            } catch (JacksonException | IllegalArgumentException e) {
                 throw invalidArgument(metadata, serverName,
                         "Invalid argument [%s] - unable to convert value".formatted(arg.name()));
             }

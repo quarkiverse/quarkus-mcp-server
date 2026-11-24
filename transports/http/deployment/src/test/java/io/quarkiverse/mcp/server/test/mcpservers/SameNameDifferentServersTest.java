@@ -20,7 +20,7 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
 public class SameNameDifferentServersTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(AlphaFeatures.class, BravoFeatures.class))
             .overrideConfigKey("quarkus.mcp.server.support-multi-server-bindings", "false")

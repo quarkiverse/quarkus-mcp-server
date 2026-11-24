@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -42,7 +43,7 @@ import io.quarkiverse.mcp.server.tasks.spi.TaskRecord;
 import io.quarkiverse.mcp.server.tasks.spi.TaskStore;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.vertx.core.json.JsonArray;
@@ -52,10 +53,11 @@ import io.vertx.core.json.JsonObject;
  * Tests a custom {@link TaskStore}. The store keeps the tasks as JSON documents and completes asynchronously. The
  * modifications made directly in the store simulate another server instance that shares the store.
  */
+@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskStoreTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .overrideConfigKey("quarkus.mcp.server.tasks.default-poll-interval", "100ms")
             .withApplicationRoot(root -> root.addClasses(MyTools.class, JsonTaskStore.class, TaskTestSupport.class));
 

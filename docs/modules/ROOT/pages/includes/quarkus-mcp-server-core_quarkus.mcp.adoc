@@ -545,7 +545,7 @@ All tool names must match the specified pattern.
 
 The names of tools that are defined declaratively with annotations are validated at build time. The names of tools that are added programmatically are validated at runtime.
 
-Typically, the pattern `^++[++A-Za-z0-9_.-++]{++1,128`$++}++ follows the spec recommendations.
+Typically, the pattern `^++[++A-Za-z0-9_.-++]{++1,128++}++$` follows the spec recommendations.
 
 
 ifdef::add-copy-button-to-env-var[]

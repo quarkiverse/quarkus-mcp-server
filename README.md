@@ -76,6 +76,15 @@ public class MyFeatures {
 
 Run your Quarkus app and have fun!
 
+## Compatibility
+
+| Quarkus MCP Server | Quarkus | Java |
+|--------------------|---------|------|
+| `main` (3.0.x) | 4.x | 21+ |
+| 2.1.x | 3.x (3.40+) | 17+ |
+| 2.0.x | 3.x (3.33+) | 17+ |
+| 1.x | 3.x (3.27+) | 17+ |
+
 ## Documentation
 
 The full documentation is available at https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html.

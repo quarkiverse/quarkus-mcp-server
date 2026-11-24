@@ -24,7 +24,7 @@ import io.quarkiverse.mcp.server.runtime.ResourceSubscriptions;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpSseTestClient;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
 public class ResourcesSubscribeCleanupTest extends McpServerTest {
@@ -33,7 +33,7 @@ public class ResourcesSubscribeCleanupTest extends McpServerTest {
     static final String URI_2 = "file:///cleanup2.txt";
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(root -> root.addClass(MyResources.class));
 
     @Inject

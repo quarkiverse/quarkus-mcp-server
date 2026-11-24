@@ -16,12 +16,12 @@ import io.quarkiverse.mcp.server.ToolGuardrails;
 import io.quarkiverse.mcp.server.ToolInputGuardrail;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpServerTest;
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 public class ToolInputGuardrailNullArgumentsTest extends McpServerTest {
 
     @RegisterExtension
-    static final QuarkusUnitTest config = defaultConfig()
+    static final QuarkusExtensionTest config = defaultConfig()
             .withApplicationRoot(
                     root -> root.addClasses(MyTools.class, NullArgumentsGuardrail.class, EmptyArgumentsGuardrail.class));
 
