@@ -11,27 +11,40 @@ import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.http.runtime.McpServerEndpoints.McpServerEndpoint;
 import io.quarkus.vertx.http.HttpServerStart;
 import io.quarkus.vertx.http.HttpsServerStart;
-import io.vertx.core.net.TcpServerConfig;
+import io.vertx.core.http.HttpServerConfig;
 
 @Dependent
 public class McpServerEndpointsLogger {
-    // TODO this class assumes, that the server is running on HTTP 1, which may not be the case
+
     void onHttpServerStart(@ObservesAsync HttpServerStart start, McpServerEndpoints endpoints) {
-        logEndpoints(endpoints.endpoints, start.config().getTcpConfig());
+        logEndpoints(endpoints.endpoints, baseUri(start));
     }
 
     void onHttpsServerStart(@ObservesAsync HttpsServerStart start, McpServerEndpoints endpoints) {
-        logEndpoints(endpoints.endpoints, start.config().getTcpConfig());
+        logEndpoints(endpoints.endpoints, baseUri(start));
     }
 
-    private void logEndpoints(List<McpServerEndpoint> endpoints, TcpServerConfig httpServerOptions) {
-        Logger log = Logger.getLogger("io.quarkiverse.mcp.server");
+    static String baseUri(HttpServerStart start) {
+        return baseUri(start.config(), false);
+    }
+
+    static String baseUri(HttpsServerStart start) {
+        // Note that we cannot rely on HttpServerConfig#getTcpConfig().isSsl() because in Vert.x 5
+        // the TLS is derived from the ServerSSLOptions passed when the server is created
+        return baseUri(start.config(), true);
+    }
+
+    private static String baseUri(HttpServerConfig config, boolean ssl) {
         // base is scheme://host:port
-        String base = new StringBuilder(httpServerOptions.isSsl() ? "https://" : "http://")
-                .append(httpServerOptions.getHost())
+        return new StringBuilder(ssl ? "https://" : "http://")
+                .append(config.getTcpHost())
                 .append(":")
-                .append(httpServerOptions.getPort())
+                .append(config.getTcpPort())
                 .toString();
+    }
+
+    private void logEndpoints(List<McpServerEndpoint> endpoints, String base) {
+        Logger log = Logger.getLogger("io.quarkiverse.mcp.server");
         for (McpServerEndpoints.McpServerEndpoint e : endpoints) {
             String serverInfo = "";
             if (!McpServer.DEFAULT.equals(e.serverName)) {
