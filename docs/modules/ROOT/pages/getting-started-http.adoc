@@ -15,7 +15,7 @@ You'll create a simple MCP server that:
 
 == Prerequisites
 
-* JDK 17 or later
+* JDK 21 or later
 * Maven 3.9+ or Gradle
 
 == Creating the Project
