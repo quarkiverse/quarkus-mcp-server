@@ -1,6 +1,6 @@
 # Quarkus MCP Server
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-25-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-26-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.mcp/quarkus-mcp-server-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.mcp/quarkus-mcp-server-parent)
 
@@ -121,6 +121,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/manovotn"><img src="https://avatars.githubusercontent.com/u/4181235?v=4&size=100" width="100px" height="100px" alt="Matej Novotny"/><br /><sub><b>Matej Novotny</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Amanovotn" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=manovotn" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=manovotn" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://about.me/ravimeena"><img src="https://avatars.githubusercontent.com/u/12935461?v=4&size=100" width="100px" height="100px" alt="ravismash"/><br /><sub><b>ravismash</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/issues?q=author%3Aravismash" title="Bug reports">🐛</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=ravismash" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=ravismash" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://tauisilva.github.io/Portfolio-app/"><img src="https://avatars.githubusercontent.com/u/42608628?v=4&size=100" width="100px" height="100px" alt="Taui Silva Lima"/><br /><sub><b>Taui Silva Lima</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=tauisilva" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=tauisilva" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/fedinskiy"><img src="https://avatars.githubusercontent.com/u/20221364?v=4&size=100" width="100px" height="100px" alt="fedinskiy"/><br /><sub><b>fedinskiy</b></sub></a><br /><a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=fedinskiy" title="Tests">⚠️</a> <a href="https://github.com/quarkiverse/quarkus-mcp-server/commits?author=fedinskiy" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
