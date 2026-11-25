@@ -179,6 +179,9 @@ final class FeatureMethods {
             if (toolArg == null) {
                 toolArg = p.annotation(DotNames.MCPJAVA_TOOL_ARG);
             }
+            if (toolArg == null) {
+                toolArg = p.annotation(DotNames.LANGCHAIN4J_P);
+            }
             if (toolArg != null) {
                 AnnotationValue defaultValueValue = toolArg.value(DEFAULT_VALUE);
                 if (defaultValueValue != null) {

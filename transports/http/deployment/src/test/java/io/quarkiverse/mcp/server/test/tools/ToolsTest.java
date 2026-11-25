@@ -74,6 +74,7 @@ public class ToolsTest extends McpServerTest {
                     JsonObject dayProperty = properties.getJsonObject("day");
                     assertNotNull(dayProperty);
                     assertEquals("string", dayProperty.getString("type"));
+                    assertEquals("The day of the week", dayProperty.getString("description"));
                 })
                 .toolsCall("alpha", Map.of("price", 1), r -> {
                     TextContent t = r.firstContent().asText();

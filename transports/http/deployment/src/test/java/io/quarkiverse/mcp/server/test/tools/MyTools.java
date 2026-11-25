@@ -85,7 +85,7 @@ public class MyTools {
     }
 
     @dev.langchain4j.agent.tool.Tool(name = "charlie", value = { "My description" })
-    String langchain4jCharlie(@P(value = "day") DayOfWeek d, McpConnection connection) {
+    String langchain4jCharlie(@P(name = "day", value = "The day of the week") DayOfWeek d, McpConnection connection) {
         checkExecutionModel(true);
         checkDuplicatedContext();
         checkRequestContext();

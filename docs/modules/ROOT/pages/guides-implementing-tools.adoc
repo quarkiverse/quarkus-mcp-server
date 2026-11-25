@@ -205,7 +205,7 @@ import java.time.DayOfWeek;
 public class MyTools {
 
     @Tool(name = "getDayInfo", value = { "Get information about a specific day" }) // <1>
-    String getDayInfo(@P(value = "day") DayOfWeek day, McpConnection connection) { // <2>
+    String getDayInfo(@P("The day of the week") DayOfWeek day, McpConnection connection) { // <2>
         return DayOfWeek.MONDAY.equals(day)
             ? "Start of the work week"
             : "Another day";
@@ -213,7 +213,7 @@ public class MyTools {
 }
 ----
 <1> `@dev.langchain4j.agent.tool.Tool` with `name` and `value` (description) attributes
-<2> `@dev.langchain4j.agent.tool.P` annotates method parameters to specify their description
+<2> `@dev.langchain4j.agent.tool.P` annotates method parameters to specify their description (`value` or `description`); the argument name is the parameter name, unless set with `name`; `required` and `defaultValue` work as with `@ToolArg`
 
 IMPORTANT: While LangChain4j annotations are supported, keep in mind that semantics may vary and follow the rules defined in this documentation.
 For example, `void` methods are not supported.
