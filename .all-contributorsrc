@@ -259,6 +259,16 @@
         "test",
         "code"
       ]
+    },
+    {
+      "login": "philippart-s",
+      "name": "Stéphane Philippart",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26224751?v=4",
+      "profile": "https://philippart-s.github.io/blog",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
