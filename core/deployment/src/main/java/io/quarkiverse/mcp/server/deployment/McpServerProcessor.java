@@ -1518,12 +1518,8 @@ class McpServerProcessor {
     private String resolveEffectiveArgName(MethodParameterInfo param, DotName argAnnotationName) {
         AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
         if (argAnnotation != null) {
-            AnnotationValue nameValue;
-            if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
-                nameValue = argAnnotation.value();
-            } else {
-                nameValue = argAnnotation.value("name");
-            }
+            // For LangChain4j @P, "value" is an alias of "description"; the name comes from "name"
+            AnnotationValue nameValue = argAnnotation.value("name");
             if (nameValue != null && !ToolArg.ELEMENT_NAME.equals(nameValue.asString())) {
                 return nameValue.asString();
             }
@@ -1764,12 +1760,8 @@ class McpServerProcessor {
                     if (argAnnotationName != null) {
                         AnnotationInstance argAnnotation = param.declaredAnnotation(argAnnotationName);
                         if (argAnnotation != null) {
-                            AnnotationValue nameValue;
-                            if (DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
-                                nameValue = argAnnotation.value();
-                            } else {
-                                nameValue = argAnnotation.value("name");
-                            }
+                            // For LangChain4j @P, "value" is an alias of "description"; the name comes from "name"
+                            AnnotationValue nameValue = argAnnotation.value("name");
                             if (nameValue != null
                                     && (argNameSentinel == null || !argNameSentinel.equals(nameValue.asString()))) {
                                 name = nameValue.asString();
@@ -1779,6 +1771,9 @@ class McpServerProcessor {
                                 title = titleValue.asString();
                             }
                             AnnotationValue descriptionValue = argAnnotation.value("description");
+                            if (descriptionValue == null && DotNames.LANGCHAIN4J_P.equals(argAnnotationName)) {
+                                descriptionValue = argAnnotation.value();
+                            }
                             if (descriptionValue != null) {
                                 description = descriptionValue.asString();
                             }

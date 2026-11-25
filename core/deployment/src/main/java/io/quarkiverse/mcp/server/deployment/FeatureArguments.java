@@ -72,6 +72,9 @@ final class FeatureArguments {
         if (anno == null) {
             anno = param.annotation(DotNames.MCP_EXTENSION_METHOD_ARG);
         }
+        if (anno == null) {
+            anno = param.annotation(DotNames.LANGCHAIN4J_P);
+        }
         AnnotationValue defaultValueValue = anno != null ? anno.value("defaultValue") : null;
         return defaultValueValue != null;
     }
