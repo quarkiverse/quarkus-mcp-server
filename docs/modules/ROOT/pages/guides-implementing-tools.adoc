@@ -213,7 +213,7 @@ public class MyTools {
 }
 ----
 <1> `@dev.langchain4j.agent.tool.Tool` with `name` and `value` (description) attributes
-<2> `@dev.langchain4j.agent.tool.P` annotates method parameters to specify their description (`value` or `description`); the argument name is the parameter name, unless set with `name`
+<2> `@dev.langchain4j.agent.tool.P` annotates method parameters to specify their description (`value` or `description`); the argument name is the parameter name, unless set with `name`; `required` and `defaultValue` work as with `@ToolArg`
 
 IMPORTANT: While LangChain4j annotations are supported, keep in mind that semantics may vary and follow the rules defined in this documentation.
 For example, `void` methods are not supported.
