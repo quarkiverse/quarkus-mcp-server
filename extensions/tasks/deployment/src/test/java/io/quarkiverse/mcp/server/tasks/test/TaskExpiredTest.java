@@ -13,7 +13,6 @@ import java.time.Duration;
 
 import jakarta.inject.Inject;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -26,7 +25,6 @@ import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
-@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskExpiredTest extends McpServerTest {
 
     @RegisterExtension
