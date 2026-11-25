@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -32,7 +31,6 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpTestClient;
 import io.quarkus.test.QuarkusExtensionTest;
 import io.vertx.core.json.JsonObject;
 
-@Disabled("https://github.com/quarkusio/quarkus/issues/58721")
 public class TaskInputRequiredTest extends McpServerTest {
 
     @RegisterExtension
