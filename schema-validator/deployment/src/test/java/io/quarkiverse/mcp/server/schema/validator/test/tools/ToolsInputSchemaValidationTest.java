@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import jakarta.inject.Inject;
 
@@ -18,8 +19,11 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.schema.validator.test.McpServerTest;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkus.runtime.BlockingOperationControl;
 import io.quarkus.runtime.Startup;
 import io.quarkus.test.QuarkusExtensionTest;
+import io.smallrye.common.annotation.RunOnVirtualThread;
+import io.smallrye.mutiny.Uni;
 
 public class ToolsInputSchemaValidationTest extends McpServerTest {
 
@@ -75,6 +79,35 @@ public class ToolsInputSchemaValidationTest extends McpServerTest {
         assertEquals(2, MyTools.CALLS.get());
     }
 
+    @Test
+    public void testExecutionModels() {
+        // Each tool fails if it is not invoked on a thread of its execution model
+        McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
+        client.when()
+                .toolsCall("blocking", Map.of("value", 1), valid())
+                .toolsCall("blocking", Map.of("value", "one"), invalid("blocking"))
+                .toolsCall("virtualThread", Map.of("value", 1), valid())
+                .toolsCall("virtualThread", Map.of("value", "one"), invalid("virtualThread"))
+                .toolsCall("nonBlocking", Map.of("value", 1), valid())
+                .toolsCall("nonBlocking", Map.of("value", "one"), invalid("nonBlocking"))
+                .thenAssertResults();
+    }
+
+    private static Consumer<ToolResponse> valid() {
+        return toolResponse -> {
+            assertFalse(toolResponse.isError(), () -> toolResponse.firstContent().asText().text());
+            assertEquals("value=1", toolResponse.firstContent().asText().text());
+        };
+    }
+
+    private static Consumer<ToolResponse> invalid(String tool) {
+        return toolResponse -> {
+            assertTrue(toolResponse.isError());
+            assertTrue(toolResponse.firstContent().asText().text()
+                    .startsWith("Input validation error: Invalid arguments for tool " + tool));
+        };
+    }
+
     public static class Item {
 
         private String name;
@@ -115,6 +148,32 @@ public class ToolsInputSchemaValidationTest extends McpServerTest {
         String order(Item item) {
             CALLS.incrementAndGet();
             return item.getName() + " x " + item.getQuantity();
+        }
+
+        @Tool
+        String blocking(int value) {
+            return block(value);
+        }
+
+        @RunOnVirtualThread
+        @Tool
+        String virtualThread(int value) {
+            return block(value);
+        }
+
+        @Tool
+        Uni<String> nonBlocking(int value) {
+            if (BlockingOperationControl.isBlockingAllowed()) {
+                throw new IllegalStateException("Non-blocking tool invoked on a thread that can block");
+            }
+            return Uni.createFrom().item("value=" + value);
+        }
+
+        private static String block(int value) {
+            if (!BlockingOperationControl.isBlockingAllowed()) {
+                throw new IllegalStateException("Blocking tool invoked on a thread that cannot block");
+            }
+            return Uni.createFrom().item("value=" + value).await().indefinitely();
         }
 
         @Tool
