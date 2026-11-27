@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import io.quarkiverse.mcp.server.deployment.FeatureMethodBuildItem;
 import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
+import io.quarkiverse.mcp.server.deployment.TransportBuildItem;
 import io.quarkiverse.mcp.server.http.McpParamHeader;
 import io.quarkiverse.mcp.server.http.runtime.HttpInputSchemaGenerator;
 import io.quarkiverse.mcp.server.http.runtime.HttpMcpServerRecorder;
@@ -53,6 +54,11 @@ public class HttpMcpServerProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem("mcp-server-http");
+    }
+
+    @BuildStep
+    TransportBuildItem transport() {
+        return new TransportBuildItem(TransportBuildItem.HTTP);
     }
 
     @BuildStep

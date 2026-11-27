@@ -108,7 +108,8 @@ public interface McpServerRuntimeConfig {
      * The amount of time that a connection can be inactive. The connection might be automatically closed when the timeout
      * expires. Negative and zero durations imply no timeout.
      * <p>
-     * The {@code stdio} transport disables this timeout by default.
+     * This timeout does not apply to the {@code stdio} connection. If {@code stdio} is the only transport in the application
+     * then this timeout is disabled by default.
      */
     @WithDefault("30m")
     Duration connectionIdleTimeout();

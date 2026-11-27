@@ -18,6 +18,11 @@ include::./includes/attributes.adoc[]
 
 * [3.0.0] The `quarkus-mcp-server-stdio` extension no longer redirects console logging to the standard error if the stdio transport is disabled with `quarkus.mcp.server.stdio.enabled=false`. Previously, console logging was redirected whenever the extension was present, e.g. in an application using the HTTP transport with the stdio extension on the classpath. Set `quarkus.log.console.stderr=true` to restore the previous behavior. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1176[#1176])
 
+[[version-3-0-fixes]]
+=== Important Bug Fixes
+
+* [3.0.0] The `quarkus-mcp-server-stdio` extension disables the connection idle timeout by default only if `stdio` is the only transport in the application. Previously, the default `quarkus.mcp.server.connection-idle-timeout=0` was applied whenever the extension was present, so idle connections of the HTTP and WebSocket transports were never removed. Set `quarkus.mcp.server.connection-idle-timeout=0` to restore the previous behavior. Furthermore, the `stdio` connection is never removed due to inactivity, even if the connection idle timeout is set explicitly. See xref:concepts-transports.adoc#combining-transports[Combining STDIO with Other Transports]. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1175[#1175])
+
 [[version-2-1]]
 == 2.1.x
 

@@ -32,6 +32,14 @@ public class StdioMcpConnection extends McpConnectionBase {
     }
 
     @Override
+    public boolean isIdleTimeoutExpired() {
+        // There is exactly one stdio connection for the whole lifetime of the server process
+        // and it's closed when the client closes the input stream, i.e. it should never be removed due to inactivity
+        // Note that the connection idle timeout might be set if stdio is combined with other transports
+        return false;
+    }
+
+    @Override
     public Future<Void> send(JsonObject message) {
         if (message == null) {
             return Future.succeededFuture();

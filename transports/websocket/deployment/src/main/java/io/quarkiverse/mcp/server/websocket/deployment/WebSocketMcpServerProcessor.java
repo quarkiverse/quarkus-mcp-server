@@ -14,6 +14,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.mcp.server.InitialCheck;
 import io.quarkiverse.mcp.server.InitialResponseInfo;
 import io.quarkiverse.mcp.server.deployment.ServerNameBuildItem;
+import io.quarkiverse.mcp.server.deployment.TransportBuildItem;
 import io.quarkiverse.mcp.server.runtime.CancellationRequests;
 import io.quarkiverse.mcp.server.runtime.ConnectionManager;
 import io.quarkiverse.mcp.server.runtime.ExtensionMethodManagerImpl;
@@ -61,6 +62,11 @@ public class WebSocketMcpServerProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem("mcp-server-websocket");
+    }
+
+    @BuildStep
+    TransportBuildItem transport() {
+        return new TransportBuildItem(TransportBuildItem.WEBSOCKET);
     }
 
     @BuildStep

@@ -1586,7 +1586,7 @@ endif::add-copy-button-to-config-props[]
 --
 The amount of time that a connection can be inactive. The connection might be automatically closed when the timeout expires. Negative and zero durations imply no timeout.
 
-The `stdio` transport disables this timeout by default.
+This timeout does not apply to the `stdio` connection. If `stdio` is the only transport in the application then this timeout is disabled by default.
 
 
 ifdef::add-copy-button-to-env-var[]
