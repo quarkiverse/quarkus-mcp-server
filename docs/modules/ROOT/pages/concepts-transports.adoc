@@ -51,7 +51,32 @@ IMPORTANT: If you use the `stdio` transport then your app should not write anyth
 Quarkus console logging is automatically redirected to the standard error, unless the `stdio` transport is disabled with `quarkus.mcp.server.stdio.enabled=false`.
 And the standard output stream is set to "null" when the app is started by default.
 
+The application exits as soon as the standard input reaches end-of-file (EOF).
+This is how the client shuts the server down: according to the https://modelcontextprotocol.io/specification/latest/basic/lifecycle#stdio[MCP specification], the client closes the input stream to the server process and then waits for the server to exit.
+
+The `stdio` connection exists for the whole lifetime of the server process and is never closed due to inactivity, i.e. the connection idle timeout (`quarkus.mcp.server.connection-idle-timeout`) does not apply to it.
+Moreover, the connection idle timeout is disabled by default if `stdio` is the only transport in the application.
+
 See xref:getting-started-stdio.adoc[Getting Started with STDIO] for a complete tutorial.
+
+[[combining-transports]]
+=== Combining STDIO with Other Transports
+
+You can add the `stdio` and `HTTP` (or `WebSocket`) transports to the same application.
+However, keep in mind that the application exits when the standard input reaches EOF.
+If the standard input is already closed when the application starts, the application stops right after startup, together with the `HTTP` server, and the exit code is `0`.
+This happens, for example, in a container started without `-i`, in a Kubernetes pod without `stdin: true`, or in a systemd service.
+In such environments, disable the `stdio` transport with `quarkus.mcp.server.stdio.enabled=false`.
+
+NOTE: The connection idle timeout is not disabled by default in this case, so that connections of the other transports are removed when inactive.
+The `stdio` connection is never removed due to inactivity.
+
+[source,properties]
+----
+# Disable stdio when the app runs without an attached standard input,
+# e.g. when deployed as an HTTP service in a container
+%prod.quarkus.mcp.server.stdio.enabled=false
+----
 
 == HTTP Transport
 

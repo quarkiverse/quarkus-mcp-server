@@ -4,6 +4,7 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.util.List;
 
+import io.quarkiverse.mcp.server.deployment.TransportBuildItem;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpMessageHandler;
 import io.quarkiverse.mcp.server.stdio.runtime.StdioMcpServerRecorder;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -38,9 +39,19 @@ public class StdioMcpServerProcessor {
     }
 
     @BuildStep
-    RunTimeConfigurationDefaultBuildItem noConnectionIdleTimeout() {
+    TransportBuildItem transport() {
+        return new TransportBuildItem(TransportBuildItem.STDIO);
+    }
+
+    @BuildStep
+    void noConnectionIdleTimeout(List<TransportBuildItem> transports,
+            BuildProducer<RunTimeConfigurationDefaultBuildItem> defaults) {
+        // Disable the idle timeout only if stdio is the only transport,
+        // otherwise the default would also apply to the connections of other transports
         // Note that multiple server configs are not supported for stdio
-        return new RunTimeConfigurationDefaultBuildItem("quarkus.mcp.server.connection-idle-timeout", "0");
+        if (TransportBuildItem.isOnlyTransport(transports, TransportBuildItem.STDIO)) {
+            defaults.produce(new RunTimeConfigurationDefaultBuildItem("quarkus.mcp.server.connection-idle-timeout", "0"));
+        }
     }
 
 }
