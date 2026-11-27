@@ -11,6 +11,7 @@ The Quarkus MCP Server extension provides several mechanisms for handling errors
 
 * **Business Logic Errors**: Using `ToolCallException` for tool-specific errors
 * **Protocol Errors**: Using `McpException` for JSON-RPC protocol errors
+* **Custom Results**: Using `McpResultException` to supply a successful JSON-RPC result instead of the regular one (see <<mcp-response-exception>>)
 * **Automatic Error Wrapping**: Using `@WrapBusinessError` to automatically convert exceptions
 * **Validation Errors**: Integration with Hibernate Validator (see xref:guides-hibernate-validator.adoc[Hibernate Validator Integration])
 
@@ -102,6 +103,16 @@ public class MyTools {
 }
 ----
 <1> Use standard JSON-RPC error codes for protocol-level errors.
+
+[[mcp-response-exception]]
+=== McpResponseException Hierarchy
+
+`McpException` is one of the two branches of the abstract `io.quarkiverse.mcp.server.McpResponseException`, which represents an exception that a feature method (tool, prompt or resource) can throw to produce a JSON-RPC response instead of an internal error:
+
+* `McpException` - converted to a JSON-RPC error,
+* `McpResultException` - supplies the payload of a _successful_ JSON-RPC response via `result()`. For example, `InputRequiredException` used by Multi Round-Trip Requests is a subclass of `McpResultException`.
+
+Extensions can subclass either branch; such subtypes are handled automatically, without any additional registration.
 
 === JSON-RPC Error Codes
 
@@ -196,6 +207,8 @@ public class MyTools {
 
 The client receives a failed tool response with the message: `"java.lang.IllegalArgumentException: Order ID cannot be empty"`
 
+NOTE: Some exceptions are never wrapped, even if they match the `value()` of the annotation: `ToolCallException`, cancellation exceptions, and subclasses of `McpResponseException`, i.e. `McpException` (always emitted as a JSON-RPC error) and `McpResultException` (e.g. `InputRequiredException`).
+
 === Selective Wrapping
 
 You can specify which exception types to wrap:
@@ -221,9 +234,7 @@ Use the `unless` parameter to exclude certain exception types from wrapping:
 
 [source,java]
 ----
-import io.quarkiverse.mcp.server.McpException;
-
-@WrapBusinessError(unless = McpException.class) // <1>
+@WrapBusinessError(unless = IllegalStateException.class) // <1>
 @Tool
 String complexOperation() {
     // Business logic error - will be wrapped
@@ -231,16 +242,18 @@ String complexOperation() {
         throw new IllegalArgumentException("Business error");
     }
 
-    // Protocol error - will NOT be wrapped
-    if (securityViolation) {
-        throw new McpException("Unauthorized", JsonRpcErrorCodes.SECURITY_ERROR); // <2>
+    // Unexpected state - will NOT be wrapped
+    if (invalidState) {
+        throw new IllegalStateException("Invalid state"); // <2>
     }
 
     return "Success";
 }
 ----
-<1> Wrap all exceptions except `McpException` and its subclasses.
-<2> This protocol error bypasses the wrapper and becomes a JSON-RPC error.
+<1> Wrap all exceptions except `IllegalStateException` and its subclasses.
+<2> This exception bypasses the wrapper and becomes a JSON-RPC internal error.
+
+NOTE: There is no need to exclude `McpException` or `ToolCallException`; these exceptions are never wrapped.
 
 == Reactive Error Handling
 
@@ -262,7 +275,7 @@ public class MyTools {
                 new ToolCallException("Failed to fetch data: " + e.getMessage())); // <1>
     }
 
-    @WrapBusinessError(unless = ToolCallException.class)
+    @WrapBusinessError
     @Tool
     Uni<String> processAsync(String input) {
         return Uni.createFrom().item(() -> {

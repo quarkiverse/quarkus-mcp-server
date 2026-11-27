@@ -1,4 +1,4 @@
-== OIDC Integration
+= OIDC Integration
 
 include::./includes/attributes.adoc[]
 :diataxis-type: howto
@@ -8,7 +8,7 @@ The `quarkus-mcp-server-oidc` extension enhances the OAuth2/OIDC security of MCP
 When an authenticated MCP client makes a request with an access token that lacks the required scopes, the extension returns an HTTP `403 Forbidden` response with a `WWW-Authenticate` header containing the `insufficient_scope` error, the required scopes, and the URL of the https://datatracker.ietf.org/doc/html/rfc9728[OAuth2 Protected Resource Metadata] endpoint.
 This allows MCP clients to discover the authorization server and initiate a step-up authorization flow to obtain the necessary permissions.
 
-=== Dependency
+== Dependency
 
 Add the `quarkus-mcp-server-oidc` extension to your build file.
 For instance, with Maven, add the following dependency to your POM file:
@@ -18,11 +18,11 @@ For instance, with Maven, add the following dependency to your POM file:
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-oidc</artifactId>
-    <version>${quarkus-mcp.version}</version>
+    <version>{project-version}</version>
 </dependency>
 ----
 
-=== Configuration
+== Configuration
 
 You must enable the OIDC resource metadata and configure the required scopes.
 

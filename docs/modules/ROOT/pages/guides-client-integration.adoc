@@ -944,21 +944,25 @@ import io.quarkiverse.mcp.server.ElicitationRequest.StringSchema;
 import io.quarkiverse.mcp.server.Sampling;
 import io.quarkiverse.mcp.server.SamplingMessage;
 import io.quarkiverse.mcp.server.Tool;
+import io.quarkiverse.mcp.server.ToolCallException;
 
 public class MyTools {
 
     @Tool(description = "Analyze with context")
     String analyzeWithContext(String topic, Elicitation elicitation, Sampling sampling) {
+        if (elicitation.isServerInitiatedRequestSupported()) { // <1>
+            throw new ToolCallException("This tool requires a stateless client");
+        }
         if (elicitation.inputResponses().isEmpty()) {
             var builder = elicitation.inputRequired();
 
-            builder.addElicitationRequest("prefs", // <1>
+            builder.addElicitationRequest("prefs", // <2>
                 elicitation.requestBuilder()
                     .setMessage("What style of analysis do you prefer?")
                     .addSchemaProperty("style", new StringSchema(true))
                     .build());
 
-            builder.addSamplingRequest("summary", // <2>
+            builder.addSamplingRequest("summary", // <3>
                 sampling.requestBuilder()
                     .setMaxTokens(200)
                     .addMessage(SamplingMessage.withUserRole(
@@ -969,16 +973,17 @@ public class MyTools {
         }
 
         var prefs = elicitation.inputResponses().getElicitationResponse("prefs");
-        var summary = sampling.inputResponses().getSamplingResponse("summary"); // <3>
+        var summary = sampling.inputResponses().getSamplingResponse("summary"); // <4>
         String style = prefs.content().getString("style");
         String text = summary.content().asText().text();
         return "Analysis (" + style + "): " + text;
     }
 }
 ----
-<1> Add an elicitation request with key `"prefs"`.
-<2> Add a sampling request with key `"summary"` to the same builder.
-<3> `InputResponses` is available from any of the `MrtrRequest` objects — they all share the same responses.
+<1> `inputRequired()` throws `IllegalStateException` for a stateful client; use the server-initiated request API there instead (see the examples above).
+<2> Add an elicitation request with key `"prefs"`.
+<3> Add a sampling request with key `"summary"` to the same builder.
+<4> `InputResponses` is available from any of the `MrtrRequest` objects — they all share the same responses.
 
 === Roots with MRTR
 
@@ -1028,8 +1033,8 @@ Configure timeouts for client integration features in `application.properties`:
 
 [source,properties]
 ----
-# Sampling timeout (default: 30s)
-quarkus.mcp.server.sampling.default-timeout=30s
+# Sampling timeout (default: 60s)
+quarkus.mcp.server.sampling.default-timeout=60s
 
 # Elicitation response timeout (default: 60s)
 quarkus.mcp.server.elicitation.default-timeout=60s
@@ -1040,8 +1045,8 @@ quarkus.mcp.server.elicitation.default-timeout=60s
 # Expired entries are checked every minute.
 quarkus.mcp.server.elicitation.default-completion-timeout=10m
 
-# Roots timeout (default: 10s)
-quarkus.mcp.server.roots.default-timeout=10s
+# Roots timeout (default: 60s)
+quarkus.mcp.server.roots.default-timeout=60s
 ----
 
 == Error Handling
@@ -1083,4 +1088,4 @@ public class MyTools {
 
 * xref:guides-implementing-tools.adoc[Implementing Tools]
 * xref:reference-parameter-types.adoc[Parameter Types Reference]
-* xref:guides-logging-progress-cancellation.adoc[Monitoring and Logging]
+* xref:guides-logging-progress-cancellation.adoc[Logging, Progress Tracking, and Cancellation]

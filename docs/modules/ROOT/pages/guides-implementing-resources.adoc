@@ -132,7 +132,7 @@ public class DocumentResources {
 The result of a "resource read" operation is always represented as a `ResourceResponse`.
 However, `@Resource` and `@ResourceTemplate` methods can return other types that are automatically converted.
 
-For details on supported return types and conversion rules, see xref:reference-return-types.adoc#resource-return-types[Resource Return Type Conversion].
+For details on supported return types and conversion rules, see xref:reference-return-types.adoc#_resource_return_types[Resource Return Type Conversion].
 
 === Common Return Type Examples
 
@@ -209,7 +209,6 @@ Example with logging and progress:
 ----
 import io.quarkiverse.mcp.server.McpLog;
 import io.quarkiverse.mcp.server.Progress;
-import io.quarkiverse.mcp.server.RequestUri;
 
 @Resource(uri = "file:///large-file.dat")
 BlobResourceContents largeFile(McpLog log, Progress progress) throws Exception {
@@ -217,11 +216,16 @@ BlobResourceContents largeFile(McpLog log, Progress progress) throws Exception {
     // In a real implementation, you would typically want to send multiple progress updates during the file reading process.
 
     log.info("Reading large file");
-    progress.send("Reading file", 0.0);
-
     byte[] data = Files.readAllBytes(Path.of("large-file.dat"));
 
-    progress.send("File read complete", 1.0);
+    if (progress.token().isPresent()) { // the client requested progress notifications
+        progress.notificationBuilder()
+            .setProgress(1)
+            .setTotal(1)
+            .setMessage("File read complete")
+            .build()
+            .sendAndForget();
+    }
     return BlobResourceContents.create("file:///large-file.dat", data);
 }
 ----
@@ -288,6 +292,8 @@ import io.quarkiverse.mcp.server.CacheScope;
 import io.quarkiverse.mcp.server.Resource;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import java.util.List;
+import java.util.Map;
 
 public class MyResources {
 
@@ -423,7 +429,7 @@ public class DocumentTemplates {
 
         // Provide context-aware suggestions based on the category
         return documentService.getDocumentIds(category).stream()
-            .filter(id -> id.startsWith(partial))
+            .filter(docId -> docId.startsWith(id))
             .toList();
     }
 }
@@ -448,6 +454,8 @@ import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkus.runtime.Startup;
 import jakarta.inject.Inject;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -459,20 +467,27 @@ public class MyResources {
 
     @Startup // <2>
     void addResource() {
-       resourceManager.newResource("file:///project/alpha") // <3>
+       resourceManager.newResource("alpha") // <3>
+          .setUri("file:///project/alpha")
           .setDescription("Alpha resource file")
           .setHandler(
-              args -> new ResourceResponse(
-                  List.of(BlobResourceContents.create(
-                      args.requestUri().value(),
-                      Files.readAllBytes(Path.of("alpha.txt"))))))
+              args -> {
+                  try {
+                      return new ResourceResponse(
+                          List.of(BlobResourceContents.create(
+                              args.requestUri().value(),
+                              Files.readAllBytes(Path.of("alpha.txt")))));
+                  } catch (IOException e) {
+                      throw new UncheckedIOException(e);
+                  }
+              })
           .register(); // <4>
     }
 }
 ----
 <1> The injected manager can be used to obtain metadata and register a new resource programmatically.
 <2> Ensure that `addResource` is executed when the application starts.
-<3> The `ResourceManager#newResource(String)` method returns `ResourceDefinition`, a builder-like API.
+<3> The `ResourceManager#newResource(String)` method takes the resource name and returns `ResourceDefinition`, a builder-like API. The URI must be set via `setUri(String)`.
 <4> Registers the resource definition and sends the `notifications/resources/list_changed` notification to the clients connected to the server(s) the resource is bound to. See xref:guides-multiple-servers.adoc#list-changed-notification-scope[Scope of the automatic list-changed notification] for details.
 
 The programmatic API also allows you to remove existing resources at runtime (using `removeResource(String uri)`), which is not possible with the annotation-based approach.

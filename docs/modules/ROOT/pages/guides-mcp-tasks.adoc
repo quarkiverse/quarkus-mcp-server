@@ -598,7 +598,7 @@ import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
 @Test
 public void testTask() {
     McpStreamableTestClient client = McpAssured.newStreamableClient()
-            .setClientCapabilities(new ClientCapability(ClientCapability.EXTENSIONS,
+            .setClientCapabilities(new ClientCapability("extensions",
                     Map.of(TaskManager.EXTENSION_ID, Map.of()))) // <1>
             .build()
             .connect();
@@ -635,7 +635,7 @@ public void testTask() {
 == See Also
 
 * xref:guides-implementing-tools.adoc[Implementing Tools]
-* xref:guides-logging-progress-cancellation.adoc[Monitoring]
+* xref:guides-logging-progress-cancellation.adoc[Logging, Progress Tracking, and Cancellation]
 * xref:guides-mcp-extensions.adoc[Implementing MCP Extensions]
 * xref:concepts-mcp-protocol.adoc[MCP Protocol]
 * xref:reference-configuration.adoc[Configuration Reference]

@@ -128,7 +128,7 @@ public class MyResources {
     @MetaField(name = "refreshable", type = Type.BOOLEAN, value = "true")
     @Resource(uri = "data://config", description = "Application configuration")
     TextResourceContents config(RequestUri uri) {
-        return new TextResourceContents(uri.value(), "{\"setting\": \"value\"}");
+        return TextResourceContents.create(uri.value(), "{\"setting\": \"value\"}");
     }
 }
 ----
@@ -169,7 +169,7 @@ public class MyResourceTemplates {
     @MetaField(name = "retention", type = Type.INT, value = "7")
     @ResourceTemplate(uriTemplate = "logs://{date}", description = "Daily log files")
     TextResourceContents dailyLogs(String date, RequestUri uri) {
-        return new TextResourceContents(uri.value(), "Log data for " + date);
+        return TextResourceContents.create(uri.value(), "Log data for " + date);
     }
 }
 ----
@@ -360,7 +360,7 @@ public class MyResources {
     @Icons(DocumentIcons.class)
     @Resource(uri = "file:///docs/readme.txt", description = "README file")
     TextResourceContents readme(RequestUri uri) {
-        return new TextResourceContents(uri.value(), "README content");
+        return TextResourceContents.create(uri.value(), "README content");
     }
 
     public static class DocumentIcons implements IconsProvider {

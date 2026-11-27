@@ -80,7 +80,7 @@ include::./includes/attributes.adoc[]
 |https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.1[2.0.1]
 |September 11, 2026
 
-|2.0.0
+|https://github.com/quarkiverse/quarkus-mcp-server/releases/tag/2.0.0[2.0.0]
 |August 27, 2026
 |===
 

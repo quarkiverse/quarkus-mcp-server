@@ -118,6 +118,8 @@ public class MyTools {
 The output schema describes the structure of the data returned by a tool.
 It helps clients understand what data to expect and enables validation.
 
+TIP: If the `quarkus-mcp-server-schema-validator` extension is present, the `structuredContent` of a successful tool result is validated against the tool's output schema. By default, a non-conforming or missing `structuredContent` is replaced with a tool error. See xref:guides-schema-validator.adoc#tool-output[Tool output validation].
+
 === Automatic Schema Generation
 
 When `structuredContent = true`, the schema is generated automatically from the return type:
@@ -160,11 +162,16 @@ public record Parameter(
     String description) {
 }
 
+public record Parameters(
+    @JsonPropertyDescription("List of available parameters.")
+    List<Parameter> parameters) {
+}
+
 public class MyTools {
 
     @Tool(description = "Returns the list of available parameters", structuredContent = true)
-    List<Parameter> getParameters() { // <2>
-        return List.of(new Parameter("id", "A parameter"));
+    Parameters getParameters() { // <2>
+        return new Parameters(List.of(new Parameter("id", "A parameter")));
     }
 }
 ----
@@ -176,16 +183,25 @@ The generated output schema looks like this:
 [source,json]
 ----
 {
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "paramId": { "type": "string", "description": "Identifier of the parameter." },
-      "description": { "type": "string", "description": "Description of the parameter." }
+  "type": "object",
+  "properties": {
+    "parameters": {
+      "type": "array",
+      "description": "List of available parameters.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "paramId": { "type": "string", "description": "Identifier of the parameter." },
+          "description": { "type": "string", "description": "Description of the parameter." }
+        }
+      }
     }
   }
 }
 ----
+
+IMPORTANT: The MCP specification restricts the output schema to `"type": "object"` at the root level, and the `structuredContent` must be a JSON object.
+Therefore, a tool should not return a collection or an array directly; use a wrapper type instead, as shown above.
 
 TIP: See xref:guides-implementing-tools.adoc#customizing-json-schema-generation[Customizing JSON Schema Generation] for more details about the schema generator modules and relevant configuration properties.
 
@@ -415,3 +431,4 @@ NOTE: Compatibility mode is disabled by default. Only enable it if you need to s
 * xref:guides-implementing-tools.adoc[Implementing Tools]
 * xref:reference-content-types.adoc[Content Types Reference]
 * xref:reference-return-types.adoc[Return Types Reference]
+* xref:guides-schema-validator.adoc[Schema Validator]

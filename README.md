@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.Prompt;
 import io.quarkiverse.mcp.server.PromptArg;
 import io.quarkiverse.mcp.server.PromptMessage;
@@ -87,7 +86,7 @@ Run your Quarkus app and have fun!
 
 ## Documentation
 
-The full documentation is available at https://quarkiverse.github.io/quarkiverse-docs/quarkus-mcp-server/dev/index.html.
+The full documentation is available at https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html.
 
 ## Contributors ✨
 

@@ -13,7 +13,7 @@ An extension is:
 * *advertised* to clients during capability negotiation, as a key inside the `capabilities.extensions` object of the `initialize` and `server/discover` responses. The key is the extension _id_ and the value is the extension's _settings object_.
 * *implemented* by one or more custom top-level JSON-RPC methods (such as `skills/list`) that are dispatched just like the built-in methods (`tools/call`, `resources/read`, etc.).
 
-Typical examples are the https://modelcontextprotocol.io/[Skills] extension (`skills/list`, `skills/get`) and the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`tasks/*` combined with `tools/call`).
+Typical examples are the https://modelcontextprotocol.io/extensions/skills/overview[Skills] extension (`skills/list`, `skills/get`) and the https://modelcontextprotocol.io/extensions/tasks/overview[Tasks] extension (`tasks/*` combined with `tools/call`).
 
 TIP: The Tasks extension is supported out of the box; see xref:guides-mcp-tasks.adoc[MCP Tasks]. This guide covers the generic API used to implement other extensions.
 
@@ -249,7 +249,7 @@ public JsonObject connection(McpConnection connection, McpLog log, RawMessage ra
 
 As with any request handler, `Sampling`, `Elicitation` and `Roots` involve server-initiated requests back to the client, so they are only usable when the connected client advertised the corresponding capability (and, for `Sampling`/`Elicitation`, over a non-stateless connection). Guard their use with `isSupported()` / `isServerInitiatedRequestSupported()`.
 
-TIP: The whole raw request message (including the top-level `params`) is available through a `RawMessage` parameter. `RequestUri` and completion-context providers are not applicable to extension methods. See xref:reference-parameter-types.adoc[Parameter Types] for the full list of supported provider types.
+TIP: The whole raw request message (including the top-level `params`) is available through a `RawMessage` parameter. `RequestUri` and completion-context providers are not applicable to extension methods.
 
 NOTE: An extension can also register its own custom injectable parameter type (in addition to the built-in providers listed above) by implementing `FeatureArgumentProvider`. See xref:reference-parameter-types.adoc#custom-injectable-parameters[Custom Injectable Parameters] for details.
 

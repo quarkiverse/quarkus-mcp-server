@@ -75,7 +75,7 @@ TIP: Keep testing with `localhost` URLs. A server bound to localhost rejects req
 When running in dev mode, you can test your MCP server using the Dev UI:
 
 1. Open your web browser and navigate to `http://localhost:8080/q/dev-ui`.
-2. In the "MCP Server - HTTP/SSE" card, click "Tools".
+2. In the "MCP Server - HTTP" card, click "Tools".
 +
 image::devui-mcp-tools.png[MCP Server Tools in Dev UI,align="center"]
 
