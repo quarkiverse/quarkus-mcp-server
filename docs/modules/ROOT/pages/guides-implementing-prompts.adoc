@@ -35,7 +35,7 @@ public class MyPrompts {
 <3> `@Prompt` annotates a business method of a CDI bean that should be exposed as a prompt template. By default, the name of the prompt is derived from the method name.
 <4> The `@PromptArg` annotation can be used to customize the description of an argument and set the default value that is used when a client does not provide an argument value.
 
-TIP: Default values are specified as strings and automatically converted to the argument type. For complex types, you can implement custom `DefaultValueConverter` instances. See xref:reference-parameter-types.adoc#default-value-converters[Default Value Converters] for more information.
+TIP: Default values are specified as strings. Since prompt arguments are always of type `String`, no conversion is performed.
 
 NOTE: You can also use the standard annotations from the https://github.com/mcp-java/java-mcp-annotations[Java MCP Annotations & APIs] project - i.e. `@org.mcpjava.server.prompts.Prompt` and `@org.mcpjava.server.prompts.PromptArg` instead of `@Prompt`/`@PromptArg`.
 Both APIs are supported; the Quarkus-specific annotations are not dropped because the standard API currently covers only a subset of the functionality.
@@ -77,7 +77,7 @@ Arguments without a `defaultValue` are required and must be provided by the clie
 The result of a "prompt get" operation is always represented as a `PromptResponse`.
 However, `@Prompt` methods can return other types that are automatically converted.
 
-For details on supported return types and conversion rules, see xref:reference-return-types.adoc#prompt-return-types[Prompt Return Type Conversion].
+For details on supported return types and conversion rules, see xref:reference-return-types.adoc#_prompt_return_types[Prompt Return Type Conversion].
 
 === Common Return Type Examples
 
@@ -100,8 +100,8 @@ import java.util.List;
 @Prompt(description = "Multi-message prompt")
 List<PromptMessage> conversationPrompt(String topic) {
     return List.of(
-        PromptMessage.withSystemRole(new TextContent("You are a helpful assistant.")),
-        PromptMessage.withUserRole(new TextContent("Tell me about " + topic))
+        PromptMessage.withUserRole(new TextContent("Tell me about " + topic)),
+        PromptMessage.withAssistantRole(new TextContent("Sure, what would you like to know about " + topic + "?"))
     );
 }
 ----

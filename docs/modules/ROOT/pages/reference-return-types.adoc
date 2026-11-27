@@ -216,6 +216,7 @@ import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.RequestUri;
 import io.smallrye.mutiny.Uni;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -223,15 +224,15 @@ import java.util.List;
 
 public class MyResources {
 
-    // Returns TextResourceContents - converted to ResourceResponse
-    @Resource(uri = "file:///data.txt")
+    // Returns String - converted to TextResourceContents
+    @Resource(uri = "file:///text.txt")
     String simpleText() {
         return "Resource content";
     }
     
-    // Returns BlobResourceContents - converted to ResourceResponse
+    // Returns byte[] - converted to BlobResourceContents
     @Resource(uri = "file:///data.bin")
-    byte[] simpleBlob() {
+    byte[] simpleBlob() throws IOException {
         return Files.readAllBytes(Path.of("data.bin"));
     }
 
@@ -303,13 +304,13 @@ public class MyCompletions {
 
     // Returns String - converted to CompletionResponse with single value
     @CompletePrompt("myPrompt")
-    String singleValue(String partial) {
+    String singleValue(String language) {
         return "matched-value";
     }
 
     // Returns List<String> - converted to CompletionResponse with values
     @CompletePrompt("myPrompt")
-    List<String> multipleValues(String partial) {
+    List<String> multipleValues(String country) {
         return List.of("option1", "option2", "option3");
     }
 
@@ -321,7 +322,7 @@ public class MyCompletions {
 
     // Returns CompletionResponse directly - no conversion
     @CompletePrompt("myPrompt")
-    CompletionResponse explicit(String partial) {
+    CompletionResponse explicit(String city) {
         return CompletionResponse.create(List.of("explicit1", "explicit2"));
     }
 }

@@ -38,7 +38,7 @@ Quarkus analyzes your code at build time, not runtime. Tools, resources, and pro
 
 * **Instant startup** : Native executables start in milliseconds
 * **Minimal memory** : Production servers run on ~30MB of RAM
-* **Zero reflection** : Everything is known at build time
+* **Build-time processing** : Feature methods are discovered and validated at build time, minimizing reflection
 
 === Production Ready, Out of the Box
 

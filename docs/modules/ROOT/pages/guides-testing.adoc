@@ -12,7 +12,7 @@ This guide covers testing MCP servers using the _McpAssured_ testing utility, wh
 * Fluent API: Readable, chainable test methods
 * Transport Support: Test Streamable HTTP, WebSocket, STDIO, and (legacy) SSE transports
 * Type-Safe Assertions: Strongly-typed response validation
-* Batch Testing: Send multiple requests and validate results together
+* Chained Requests: Send multiple requests and validate results together
 * Request/Response Inspection: Access raw JSON-RPC messages for advanced scenarios
 
 [TIP]
@@ -417,14 +417,14 @@ public void testPromptGet() {
 }
 ----
 
-== Batch Testing
+== Chaining Requests
 
 Send multiple requests and validate them together:
 
 [source,java]
 ----
 @Test
-public void testBatchOperations() {
+public void testChainedRequests() {
     McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
@@ -437,7 +437,7 @@ public void testBatchOperations() {
         .thenAssertResults(); // <1>
 }
 ----
-<1> All requests are sent and validated together
+<1> All requests are sent (as separate JSON-RPC messages) and the results are validated together
 
 == Advanced Client Configuration
 
@@ -521,7 +521,8 @@ public void testRawMessages() {
     McpStreamableTestClient client = McpAssured.newConnectedStreamableClient();
 
     client.when()
-        .toolsCall("echo", Map.of("message", "test"))
+        .toolsCall("echo")
+        .withArguments(Map.of("message", "test"))
         .send()
         .thenAssertResults();
 
@@ -554,7 +555,9 @@ public void testProgressNotifications() {
     client.sendAndForget(
         client.newRequest("tools/call")
             .put("params", new JsonObject()
-                .put("name", "long_operation")));
+                .put("name", "long_operation")
+                .put("_meta", new JsonObject()
+                    .put("progressToken", "abc123"))));
 
     Snapshot snapshot = client.waitForNotifications(2); // <1>
 
@@ -589,7 +592,7 @@ public void testMetadata() {
             assertEquals(1, content._meta().size()); // <2>
 
             Map<MetaKey, Object> responseMeta = response._meta(); // <3>
-            assertTrue(responseMeta.containsKey(new MetaKey("alpha-foo")));
+            assertTrue(responseMeta.containsKey(MetaKey.from("alpha-foo")));
         })
         .thenAssertResults();
 }

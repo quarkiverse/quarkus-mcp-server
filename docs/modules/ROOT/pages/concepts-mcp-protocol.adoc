@@ -45,7 +45,6 @@ If you encounter any issues or discrepancies with the specification, please open
 The following MCP features are not currently supported:
 
 * https://modelcontextprotocol.io/specification/{spec-version}/basic/transports#resumability-and-redelivery[Streamable HTTP - Resumability and Redelivery] (optional feature)
-* https://modelcontextprotocol.io/specification/{spec-version}/client/elicitation#url-mode-flow[Elicitation - URL Mode]
 
 If you encounter a problem or discrepancy, please https://github.com/quarkiverse/quarkus-mcp-server/issues[file an issue].
 
@@ -262,7 +261,7 @@ flowchart TD
 
     Created -->|"Client sends 'initialize'"| Initialized
     Initialized -->|"Client sends 'initialized' notification"| Ready
-    Ready -->|"Connection closed or client sends 'shutdown'"| Shutdown
+    Ready -->|"Connection closed or session terminated"| Shutdown
 ----
 
 NOTE: The exact sequence is not strictly enforced by the protocol, but this is the typical flow for most clients and servers.
@@ -278,7 +277,7 @@ NOTE: The exact sequence is not strictly enforced by the protocol, but this is t
 * Stateful connections are session-based; each session maintains separate state
 * Stateless clients (protocol version `2026-07-28`+) use transient connections — created per-request with no session
 * `McpConnection.isTransient()` returns `true` for transient connections
-* Explicit `shutdown` request recommended for clean termination of stateful sessions
+* Stateful sessions can be terminated explicitly with an HTTP `DELETE` request carrying the `Mcp-Session-Id` header
 * SSE connections require keep-alive mechanism
 
 **WebSocket Transport** (custom transport)::
@@ -339,7 +338,7 @@ See: https://modelcontextprotocol.io/specification/{spec-version}/server/resourc
 **Prompts** are reusable templates for LLM interactions, parameterized with arguments.
 
 * Define conversation starters or task templates
-* Support multiple message roles (system, user, assistant)
+* Support multiple message roles (user, assistant)
 * Can include embedded resources
 * Completion API for argument suggestions
 

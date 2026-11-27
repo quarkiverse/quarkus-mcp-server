@@ -241,6 +241,8 @@ Tracks the current number of active MCP connections.
 | Tags | None
 |===
 
+NOTE: There is a single gauge for all MCP servers. It counts the connections of all servers and is registered if metrics are enabled for at least one server.
+
 This metric helps you monitor:
 
 * Peak connection usage
@@ -268,10 +270,10 @@ All request timers include these tags:
 | Tag | Description
 
 | `mcp.server`
-| The name of the MCP server instance (e.g., "default", or custom server names)
+| The name of the MCP server instance (e.g., `<default>`, or custom server names)
 
 | `failure`
-| Error type if the request failed, or "none" for successful requests. The value is the simple class name of the exception's cause.
+| Error type if the request failed, or "none" for successful requests. The value is the simple class name of the exception's cause, or of the exception itself if it has no cause.
 |===
 
 ===== Tools Call Timer
@@ -421,7 +423,7 @@ public class MetricsMonitor {
 
 | `quarkus.mcp.server."server-name".tracing.enabled`
 | Enable tracing for a specific server instance
-| Inherits from global setting
+| `false`
 
 | `quarkus.mcp.server.metrics.enabled`
 | Enable metrics collection when Micrometer is present
@@ -429,7 +431,7 @@ public class MetricsMonitor {
 
 | `quarkus.mcp.server."server-name".metrics.enabled`
 | Enable metrics for a specific server instance
-| Inherits from global setting
+| `false`
 |===
 
 == Related Documentation

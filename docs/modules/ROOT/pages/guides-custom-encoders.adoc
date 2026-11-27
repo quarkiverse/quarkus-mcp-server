@@ -4,16 +4,17 @@ include::includes/attributes.adoc[]
 :diataxis-type: howto
 
 Custom encoders allow you to control how your application's custom types are converted to MCP protocol types.
-This guide covers the three types of encoders and when to use them.
+This guide covers the four types of encoders and when to use them.
 
 == Overview
 
 The MCP server uses encoders to convert custom return types from your methods into MCP protocol types.
-There are three types of encoders, each serving a specific purpose:
+There are four types of encoders, each serving a specific purpose:
 
 * `ContentEncoder`: Converts objects to `Content` (used by tools and prompts)
 * `ToolResponseEncoder`: Converts objects to `ToolResponse` (used by tools only)
 * `ResourceContentsEncoder`: Converts objects to `ResourceContents` (used by resources)
+* `PromptResponseEncoder`: Converts objects to `PromptResponse` (used by prompts only)
 
 All encoders must be CDI beans and implement the appropriate encoder interface.
 Higher priority encoders take precedence when multiple encoders support the same type.
@@ -271,30 +272,13 @@ public class MyResources {
 
 === Default ResourceContentsEncoder
 
-The default encoder serializes objects to JSON as `TextResourceContents`:
+The default encoder (`DefaultResourceContentsEncoder`, priority `0`) supports all types:
 
-[source,java]
-----
-@Singleton
-@Priority(0)
-public class JsonTextResourceContentsEncoder implements ResourceContentsEncoder<Object> {
+* `byte[]` is encoded as `BlobResourceContents`,
+* `String` is encoded as `TextResourceContents`,
+* any other object is serialized to JSON and encoded as `TextResourceContents`.
 
-    @Inject
-    ObjectMapper mapper;
-
-    @Override
-    public boolean supports(Class<?> runtimeType) {
-        return true;
-    }
-
-    @Override
-    public ResourceContents encode(ResourceContentsData<Object> data) {
-        return TextResourceContents.create(
-            data.uri().value(),
-            mapper.writeValueAsString(data.data()));
-    }
-}
-----
+The MIME type of the resource or resource template is used, if declared.
 
 == PromptResponseEncoder
 
@@ -325,8 +309,8 @@ public class TemplateEncoder implements PromptResponseEncoder<Template> {
     @Override
     public PromptResponse encode(Template template) {
         List<PromptMessage> messages = List.of(
-            PromptMessage.withSystemRole(
-                new TextContent("You are a " + template.role())),
+            PromptMessage.withAssistantRole(
+                new TextContent("I am a " + template.role())),
             PromptMessage.withUserRole(
                 new TextContent(template.userMessage()))
         );

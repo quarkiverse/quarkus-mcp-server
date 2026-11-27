@@ -24,12 +24,12 @@ This means your CLI application can run in two modes:
 
 Add the CLI adapter dependency to your Quarkus CLI project:
 
-[source,xml]
+[source,xml,subs=attributes+]
 ----
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-cli-adapter</artifactId>
-    <version>${quarkus-mcp.version}</version>
+    <version>{project-version}</version>
 </dependency>
 ----
 
@@ -151,7 +151,8 @@ The command becomes available as an MCP tool:
               "type": "string",
               "description": "The programming language"
             }
-          }
+          },
+          "required": ["language"]
         }
       }
     ]
@@ -194,25 +195,21 @@ The command becomes available as an MCP tool:
 |===
 |CLI Element |MCP Element |Example
 
-|Command name
-|Tool name
-|`code-service` → `codeservicecommand`
+|Command class name
+|Tool name (lowercased simple class name; for multiple commands, the lowercased fully qualified class name without the common package prefix)
+|`CodeServiceCommand` → `codeservicecommand`
 
 |Command description
 |Tool description
 |`"Code assistance tool"`
 
 |`@Parameters`
-|Tool argument (required if no default)
+|Tool argument (required unless the field type is `Optional`)
 |`String language` → `"language": {"type": "string"}`
 
 |`@Option`
-|Tool argument (named after the longest option name)
+|Optional tool argument (named after the longest option name)
 |`@Option(names = {"-f", "--format"}) String fmt` → `"format": {...}`
-
-|Default value
-|Argument default
-|`defaultValue = "java"` → optional argument
 
 |Parameter description
 |Argument description
@@ -221,14 +218,8 @@ The command becomes available as an MCP tool:
 
 === Supported Parameter Types
 
-The adapter supports standard Java types:
-
-* `String`
-* `int`, `Integer`
-* `boolean`, `Boolean`
-* `long`, `Long`
-* `double`, `Double`
-* Arrays and Lists of the above types
+All tool arguments are exposed as JSON `string` values.
+The adapter passes the argument values to picocli, which converts them to the type of the annotated field (e.g. `int`, `boolean`, `long` or `double`).
 
 == Multiple Commands
 
@@ -266,8 +257,9 @@ class LintCommand implements Callable<Integer> {
 }
 ----
 
-Each subcommand becomes an MCP tool:
+The top command and each subcommand become an MCP tool:
 
+- `devtoolscommand` - Top-level command
 - `formatcommand` - Format source code
 - `lintcommand` - Lint source code
 - `testcommand` - Run tests
@@ -354,12 +346,12 @@ public Integer call() {
         // Process
         return ExitCode.OK;
     } catch (IllegalArgumentException e) {
-        System.err.println("Error: " + e.getMessage()); // <1>
+        System.out.println("Error: " + e.getMessage()); // <1>
         return ExitCode.USAGE;
     }
 }
 ----
-<1> Error messages appear in the tool response.
+<1> Only the standard output is captured; messages printed to `System.err` do not appear in the tool response. If the command returns a non-zero exit code, the response contains the captured output followed by `Command failed with exit code: <code>`.
 
 == Limitations
 
