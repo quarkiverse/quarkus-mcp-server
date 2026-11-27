@@ -48,7 +48,7 @@ For instance, with Maven, add the following dependency to your POM file:
 ----
 
 IMPORTANT: If you use the `stdio` transport then your app should not write anything to the standard output.
-Quarkus console logging is automatically redirected to the standard error.
+Quarkus console logging is automatically redirected to the standard error, unless the `stdio` transport is disabled with `quarkus.mcp.server.stdio.enabled=false`.
 And the standard output stream is set to "null" when the app is started by default.
 
 See xref:getting-started-stdio.adoc[Getting Started with STDIO] for a complete tutorial.

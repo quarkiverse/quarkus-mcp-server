@@ -13,8 +13,8 @@ public interface McpStdioRuntimeConfig {
      * If set to `false` then the stdio transport is completely disabled, i.e. the application does not read/write messages
      * from/to the standard input/output.
      *
-     * Keep in mind that console logging is still automatically redirected to the standard error. You will need to set the
-     * `quarkus.log.console.stderr` to `false` to suppress this behavior.
+     * By default, console logging is automatically redirected to the standard error. The redirection is not applied if the
+     * stdio transport is disabled.
      *
      * @asciidoclet
      */
