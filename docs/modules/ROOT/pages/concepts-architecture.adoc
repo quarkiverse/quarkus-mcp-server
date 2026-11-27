@@ -14,7 +14,7 @@ This results in faster startup, lower memory usage, and better performance compa
 
 **Build-Time Metadata Processing**::
 Tools, resources, and prompts are discovered and validated during the build, not at runtime.
-JSON schemas, capability declarations, and routing information are pre-computed.
+Capability declarations and routing information are pre-computed.
 
 **Transport Independence**::
 Server features (tools, resources, prompts) are declared once using annotations.
@@ -303,7 +303,7 @@ Understanding when to use each execution model:
 === CDI Request Scope
 
 Each feature method execution is associated with a new CDI request context.
-This means that if a client sends a batch of MCP requests (e.g. multiple tools/call messages) then each MCP request (e.g. @Tool method invocation) receives a different instance of a `@RequestScoped` bean.
+This means that if a client sends multiple MCP requests (e.g. multiple tools/call messages) then each MCP request (e.g. @Tool method invocation) receives a different instance of a `@RequestScoped` bean.
 However, if the HTTP transport is used then all MCP requests will have the same `io.vertx.core.http.HttpServerRequest` injected.
 
 == Schema Generation
@@ -327,7 +327,7 @@ For simple types, schemas are generated automatically:
 @Tool
 String search(
     String query,      // → {"type": "string"}
-    int maxResults,    // → {"type": "number"}
+    int maxResults,    // → {"type": "integer"}
     boolean caseSensitive  // → {"type": "boolean"}
 ) { }
 ----
@@ -359,7 +359,7 @@ If `jsonschema-module-jakarta-validation` is on the classpath, constraints are i
 @Tool
 String process(
     @NotNull @Email String email,     // → {"type": "string", "format": "email"}
-    @Min(1) @Max(100) int count        // → {"type": "number", "minimum": 1, "maximum": 100}
+    @Min(1) @Max(100) int count        // → {"type": "integer", "minimum": 1, "maximum": 100}
 ) { }
 ----
 
@@ -430,7 +430,7 @@ Register features dynamically at runtime:
 @Startup
 void registerDynamicFeatures() {
     toolManager.newTool("dynamic").setHandler(...).register();
-    resourceManager.newResource("uri").setHandler(...).register();
+    resourceManager.newResource("name").setUri("file:///data").setHandler(...).register();
     promptManager.newPrompt("template").setHandler(...).register();
 }
 ----

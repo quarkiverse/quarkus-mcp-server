@@ -59,6 +59,9 @@ The Quarkus MCP Server provides built-in converters for common Java types:
 |`double`, `Double`
 |`"2.71828"`
 
+|`char`, `Character`
+|`"a"` (exactly one character)
+
 |`String`
 |`"any string value"`
 
@@ -402,7 +405,7 @@ public record OrderItem(String productId, int quantity, double price) {
 
 To create a custom default value converter for your own types:
 
-1. Implement the `DefaultValueConverter<TYPE>` interface
+1. Implement the `DefaultValueConverter<TYPE>` interface in a `public` class (non-public converters are ignored)
 2. Provide a public no-args constructor
 3. The converter is discovered automatically
 

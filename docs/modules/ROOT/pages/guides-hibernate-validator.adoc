@@ -1,11 +1,11 @@
-== Hibernate Validator Integration
+= Hibernate Validator Integration
 
 include::./includes/attributes.adoc[]
 :diataxis-type: howto
 
 The extension provides integration with Hibernate Validator, a Jakarta Validation implementation.
 First, it adds the `quarkus-hibernate-validator` dependency so that all `@Tool` methods with constraint annotations are validated when executed.
-The resulting constraint violations are transformed in a protocol error message.
+The resulting constraint violations are transformed into a failed tool response (`isError: true`) for tools, and into a protocol error message for other features.
 Additionally, the extension adds a transitive dependency on `com.github.victools:jsonschema-module-jakarta-validation` which means that Jakarta Validation annotations will be considered when generating the input schema for `@Tool` methods.
 
 If you want to use the Hibernate Validator integration in your application you'll need to add the `io.quarkiverse.mcp:quarkus-mcp-server-hibernate-validator` extension to your build file first.
@@ -16,7 +16,7 @@ For instance, with Maven, add the following dependency to your POM file:
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-hibernate-validator</artifactId>
-    <version>${quarkus-mcp.version}</version>
+    <version>{project-version}</version>
 </dependency>
 ----
 
@@ -97,7 +97,7 @@ public class MyTools {
 ----
 <1> `@Valid` is required to trigger the validation of `Person`.
 
-=== `ConstraintViolationConverter`
+== `ConstraintViolationConverter`
 
 By default, a `ConstraintViolationException` is converted into:
 

@@ -188,6 +188,8 @@ When a check fails:
 * No `initialized` notification is received
 * No server capabilities are exposed
 
+IMPORTANT: Initial checks are only executed for an explicit `initialize` request. They are *not* executed for stateless clients (protocol version `2026-07-28` or later), which do not perform the handshake, and for connections initialized automatically, i.e. via the `quarkus.mcp.server.http.streamable.auto-init` feature of the Streamable HTTP transport or the `quarkus.mcp.server.dev-mode.dummy-init` feature in the dev mode. Do not rely on initial checks as the only access control mechanism.
+
 For API details, see xref:reference-filters-and-checks.adoc#initial-check-interface[InitialCheck Interface].
 
 === Authentication Check
@@ -513,7 +515,9 @@ public class ProtocolVersionCheck implements InitialCheck {
 Stateful clients establish a session (via the `Mcp-Session-Id` header) that must be handled by the same server instance for every subsequent request.
 In deployments where session affinity cannot be guaranteed — for example serverless platforms or horizontally scaled instances behind a non-sticky load balancer — this leads to intermittent failures when a follow-up request is routed to an instance that does not know the session.
 
-To avoid this, you can require clients to use the stateless protocol (version `2026-07-28` or later) and reject any client that attempts a stateful `initialize` handshake:
+TIP: The simplest way to accept stateless clients only is the `quarkus.mcp.server.supported-protocol-versions` configuration property. A list that contains only stateless protocol versions (e.g. `quarkus.mcp.server.supported-protocol-versions=2026-07-28`) disables the `initialize` handshake and the legacy HTTP/SSE endpoints. See xref:concepts-transports.adoc#_restricting_protocol_versions[Restricting Protocol Versions].
+
+Alternatively, you can require clients to use the stateless protocol (version `2026-07-28` or later) and reject any client that attempts a stateful `initialize` handshake with an initial check:
 
 [source,java]
 ----

@@ -9,6 +9,8 @@ This reference documents the APIs for filters and initial checks. For usage exam
 
 All filter interfaces follow the same pattern with a `test()` method that receives the feature information and a `FilterContext`.
 
+NOTE: Both `test()` methods are `default` methods. Implement the variant with `FilterContext`; the variant with `McpConnection` is kept for backward compatibility.
+
 === ToolFilter
 
 [source,java]
@@ -16,12 +18,19 @@ All filter interfaces follow the same pattern with a `test()` method that receiv
 package io.quarkiverse.mcp.server;
 
 public interface ToolFilter {
+
+    default boolean test(ToolInfo tool, McpConnection connection) {
+        return true;
+    }
+
     /**
      * @param tool The tool being tested
      * @param context The filter context
      * @return true if the tool should be visible, false otherwise
      */
-    boolean test(ToolInfo tool, FilterContext context);
+    default boolean test(ToolInfo tool, FilterContext context) {
+        return test(tool, context.connection());
+    }
 }
 ----
 
@@ -32,12 +41,19 @@ public interface ToolFilter {
 package io.quarkiverse.mcp.server;
 
 public interface ResourceFilter {
+
+    default boolean test(ResourceInfo resource, McpConnection connection) {
+        return true;
+    }
+
     /**
      * @param resource The resource being tested
      * @param context The filter context
      * @return true if the resource should be visible, false otherwise
      */
-    boolean test(ResourceInfo resource, FilterContext context);
+    default boolean test(ResourceInfo resource, FilterContext context) {
+        return test(resource, context.connection());
+    }
 }
 ----
 
@@ -48,12 +64,19 @@ public interface ResourceFilter {
 package io.quarkiverse.mcp.server;
 
 public interface ResourceTemplateFilter {
+
+    default boolean test(ResourceTemplateInfo template, McpConnection connection) {
+        return true;
+    }
+
     /**
-     * @param template The resource template being tested
+     * @param template The template being tested
      * @param context The filter context
      * @return true if the template should be visible, false otherwise
      */
-    boolean test(ResourceTemplateInfo template, FilterContext context);
+    default boolean test(ResourceTemplateInfo template, FilterContext context) {
+        return test(template, context.connection());
+    }
 }
 ----
 
@@ -64,12 +87,19 @@ public interface ResourceTemplateFilter {
 package io.quarkiverse.mcp.server;
 
 public interface PromptFilter {
+
+    default boolean test(PromptInfo prompt, McpConnection connection) {
+        return true;
+    }
+
     /**
      * @param prompt The prompt being tested
      * @param context The filter context
      * @return true if the prompt should be visible, false otherwise
      */
-    boolean test(PromptInfo prompt, FilterContext context);
+    default boolean test(PromptInfo prompt, FilterContext context) {
+        return test(prompt, context.connection());
+    }
 }
 ----
 
@@ -83,14 +113,24 @@ package io.quarkiverse.mcp.server;
 
 public interface FilterContext {
     /**
+     * @return The MCP method of the current request, e.g. `tools/list`
+     */
+    McpMethod method();
+
+    /**
      * @return The MCP connection for the current request
      */
     McpConnection connection();
 
     /**
-     * @return Metadata about the feature and connection context
+     * @return The `_meta` of the current request
      */
     Meta meta();
+
+    /**
+     * @return The id of the current request
+     */
+    RequestId requestId();
 }
 ----
 
@@ -138,47 +178,38 @@ public interface InitialCheck {
 
 == CheckResult
 
-The `CheckResult` class represents the result of an initial check.
+`CheckResult` is a record nested in the `InitialCheck` interface that represents the result of an initial check.
+The static factory methods return a `Uni<CheckResult>` that can be returned directly from `InitialCheck#perform()`.
 
 [source,java]
 ----
 package io.quarkiverse.mcp.server;
 
-public class CheckResult {
+public interface InitialCheck {
 
-    /**
-     * A successful check result (convenience constant)
-     */
-    public static final CheckResult SUCCESS = new CheckResult(false, null);
+    // ...
 
-    /**
-     * Create a successful check result
-     */
-    public static CheckResult success() {
-        return SUCCESS;
-    }
+    record CheckResult(boolean error, String message) {
 
-    /**
-     * Create a failed check result with an error message
-     *
-     * @param message The error message to send to the client
-     */
-    public static CheckResult error(String message) {
-        return new CheckResult(true, message);
-    }
+        /**
+         * A successful check result (convenience constant)
+         */
+        public static final CheckResult SUCCESS = new CheckResult(false, null);
 
-    /**
-     * @return true if the check failed
-     */
-    public boolean isError() {
-        // ...
-    }
+        /**
+         * @return a successful check result
+         */
+        public static Uni<CheckResult> success() {
+            return Uni.createFrom().item(SUCCESS);
+        }
 
-    /**
-     * @return The error message (null if successful)
-     */
-    public String message() {
-        // ...
+        /**
+         * @param message The error message to send to the client
+         * @return a failed check result
+         */
+        public static Uni<CheckResult> error(String message) {
+            return Uni.createFrom().item(new CheckResult(true, message));
+        }
     }
 }
 ----
@@ -187,22 +218,16 @@ Usage examples:
 
 [source,java]
 ----
+import io.quarkiverse.mcp.server.InitialCheck.CheckResult;
+
 // Success
 return CheckResult.success();
 
 // Or using the constant
-return CheckResult.SUCCESS;
+return Uni.createFrom().item(CheckResult.SUCCESS);
 
 // Error with message
 return CheckResult.error("Authentication failed");
-
-// Async success
-return Uni.createFrom().item(CheckResult.SUCCESS);
-
-// Async error
-return Uni.createFrom().item(
-    CheckResult.error("Invalid token")
-);
 ----
 
 == InitialRequest
@@ -345,6 +370,8 @@ String description = prompt.description();
 * First failed check stops execution and returns error to client
 * Checks can be async (return `Uni<CheckResult>`)
 * Failed checks prevent connection establishment
+
+IMPORTANT: Initial checks are only executed for an explicit `initialize` request. They are *not* executed for stateless clients (protocol version `2026-07-28`+), which use `server/discover` instead of the `initialize` handshake, and for connections that are initialized automatically, e.g. via `quarkus.mcp.server.http.streamable.auto-init` or the dev mode dummy initialization. Do not rely on initial checks as the only access control mechanism.
 
 == Related Documentation
 

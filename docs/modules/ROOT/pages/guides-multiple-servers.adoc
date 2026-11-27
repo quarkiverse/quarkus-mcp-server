@@ -156,8 +156,11 @@ In versions 1.10 and lower, it was not possible to bind a feature to multiple se
 Also a binding declared on a class was applied to all features defined in the class that did not declare the annotation themselves.
 However, this behavior makes no sense anymore.
 Instead, all values declared on a class are now included in the set of servers for a feature.
-If you need to revert to the previous behavior, you can set the `quarkus.mcp.server.support-multi-server-bindings` configuration property to `false`.
-Then the previous rules will apply, and multiple server bindings will then result in a build failure.
+
+If a feature method and its declaring class both declare a different `@McpServer` value, the build fails unless the `quarkus.mcp.server.support-multi-server-bindings` configuration property is set explicitly:
+
+* `true` - the class-level and method-level bindings are merged, i.e. the feature is bound to both servers,
+* `false` - the previous rules apply, i.e. the method-level binding overrides the class-level one, and multiple server bindings result in a build failure.
 ====
 
 
@@ -196,6 +199,12 @@ public class MultiServerFeatures {
 
 Bind all features in a class to a server by default:
 
+[source,properties]
+----
+quarkus.mcp.server.support-multi-server-bindings=true # <1>
+----
+<1> Required because `sharedTool()` declares a binding that differs from the class-level one; see the backward compatibility note above.
+
 [source,java]
 ----
 @McpServer("bravo") // <1>
@@ -220,7 +229,7 @@ public class BravoFeatures {
 ----
 <1> Class-level annotation sets default for all methods
 <2> These tools inherit the "bravo" server binding
-<3> Class-level and method-level annotations are combined
+<3> Class-level and method-level annotations are merged, i.e. the tool is bound to both the "bravo" and the default server
 
 == Default Server Constant
 
@@ -246,7 +255,7 @@ public class SpecialFeatures {
 }
 ----
 <1> Inherits "special" from class-level annotation
-<2> Explicitly override to use default server
+<2> Adds the default server; with `quarkus.mcp.server.support-multi-server-bindings=true` the tool is bound to both the "special" and the default server, with `false` the method-level binding overrides the class-level one and the tool is bound to the default server only
 
 == All Servers Constant
 
@@ -298,14 +307,14 @@ Configure transports independently:
 
 [source,properties]
 ----
-# Default server: HTTP only
+# Default server: HTTP endpoint
 quarkus.mcp.server.http.root-path=/api/mcp
 
 # Admin server: Different path
 quarkus.mcp.server.admin.http.root-path=/admin/mcp
 
 # Public server: WebSocket
-quarkus.mcp.server.public.ws.root-path=/public/ws/mcp
+quarkus.mcp.server.public.websocket.endpoint-path=/public/ws/mcp
 ----
 
 == Security Configuration

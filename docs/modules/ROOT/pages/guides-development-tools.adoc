@@ -109,6 +109,7 @@ Unlike the built-in traffic logging, custom listeners are always invoked regardl
 import io.quarkiverse.mcp.server.McpTrafficListener;
 import io.quarkiverse.mcp.server.McpConnection;
 import io.quarkiverse.mcp.server.RawMessage;
+import io.quarkus.logging.Log;
 
 public class MyTrafficListener implements McpTrafficListener { <1>
 
@@ -154,7 +155,7 @@ http://localhost:8080/q/dev-ui
 
 The Dev UI allows you to test your MCP tools interactively:
 
-1. In the Dev UI, locate the "MCP Server - HTTP/SSE" card
+1. In the Dev UI, locate the "MCP Server - HTTP" card
 2. Click "Tools" to see all registered tools
 3. Click the "Call" button next to any tool
 4. Enter the required arguments in the form
@@ -175,10 +176,10 @@ The Dev UI allows:
 
 === Limitations
 
-The Dev UI is only available for HTTP-based transports (SSE, Streamable HTTP, and WebSocket). STDIO transport servers cannot use the Dev UI and should use MCP Inspector instead.
+The Dev UI is only provided by the HTTP transport (`quarkus-mcp-server-http`). Servers that only use the STDIO or WebSocket transport cannot use the Dev UI and should use MCP Inspector instead.
 
 NOTE: Dev UI is automatically disabled in production builds.
-It's only available when running with `quarkus:dev` or when `quarkus.dev-mode.enabled=true`.
+It's only available in dev mode, i.e. when running with `quarkus:dev`.
 
 == Testing with curl
 
@@ -249,8 +250,8 @@ These simple calls return ordinary JSON; they do not demonstrate tools that use 
 
 == MCP Inspector
 
-The MCP Inspector is an external tool provided by Anthropic for comprehensive MCP server testing.
-It supports all transport types and provides a full-featured client interface.
+The MCP Inspector is an external tool from the Model Context Protocol project for comprehensive MCP server testing.
+It supports the STDIO and HTTP transports and provides a full-featured client interface.
 
 === Installation
 
@@ -311,7 +312,7 @@ To test an MCP server using STDIO transport:
    * Transport: Select "STDIO"
    * Command: Enter the absolute path to your native executable
 +
-For example: `/Users/username/projects/mcp-server/target/mcp-server-1.0.0-runner`
+For example: `/Users/username/projects/mcp-server/target/mcp-server-1.0.0-SNAPSHOT-runner`
 
 image::mcp-inspector-config.png[MCP Inspector Configuration,align="center"]
 
@@ -320,13 +321,6 @@ image::mcp-inspector-config.png[MCP Inspector Configuration,align="center"]
 * 4. Test your tools, resources, and prompts through the Inspector interface
 
 image::mcp-inspector-greet-tool.png[Invoking the greet tool,align="center"]
-
-=== Testing WebSocket Transport
-
-For WebSocket transport:
-
-* Transport: Select "WebSocket"
-* URL: `ws://localhost:8080/mcp/ws`
 
 == See Also
 
