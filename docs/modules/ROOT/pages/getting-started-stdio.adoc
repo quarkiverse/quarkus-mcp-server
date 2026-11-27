@@ -71,7 +71,7 @@ The MCP Inspector is a handy tool for testing MCP servers.
 Follow the instructions from https://modelcontextprotocol.io/docs/tools/inspector[MCP Inspector] to download and run it.
 
 Open the MCP Inspector in your browser (use the link with the token shown in the console) and configure it to connect to your native executable using STDIO transport.
-In the server configuration, set the command to the absolute path of your native executable (e.g., `/path/to/mcp-stdio-quickstart/target/mcp-stdio-quickstart-1.0.0-runner`).
+In the server configuration, set the command to the absolute path of your native executable (e.g., `/path/to/mcp-stdio-quickstart/target/mcp-stdio-quickstart-1.0.0-SNAPSHOT-runner`).
 
 image::mcp-inspector-config.png[MCP Inspector Configuration,align="center"]
 

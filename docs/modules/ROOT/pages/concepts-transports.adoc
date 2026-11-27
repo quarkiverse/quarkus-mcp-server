@@ -67,7 +67,7 @@ For instance, with Maven, add the following dependency to your POM file:
 </dependency>
 ----
 
-NOTE: The `artifactId` has changed from `quarkus-mcp-server-sse` to `quarkus-mcp-server-http` in version 1.8.0. However, the old `artifactId` should still work because it's relocated.
+NOTE: The `artifactId` has changed from `quarkus-mcp-server-sse` to `quarkus-mcp-server-http` in version 1.8.0. The relocation of the old `artifactId` (and the `quarkus.mcp.server.sse.*` configuration fallbacks) was removed in 2.0.0, so you must use `quarkus-mcp-server-http`.
 
 This artifact contains both versions of the `HTTP` transport.
 // We need to escape the {rootPath}

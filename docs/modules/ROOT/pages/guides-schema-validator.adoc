@@ -1,10 +1,11 @@
-== Schema Validator
+= Schema Validator
 
 include::./includes/attributes.adoc[]
 :diataxis-type: howto
 
 The extension provides integration with the https://vertx.io/docs/vertx-json-schema/java/[Vert.x JSON Schema] library.
-When present, all client requests and notifications are validated against the relevant MCP JSON schema.
+When present, client requests and notifications are validated against the relevant MCP JSON schema.
+Requests and notifications that have no corresponding schema type (e.g. `subscriptions/listen`, `notifications/elicitation/complete` or custom extension methods) are not validated; a warning is logged instead.
 Validation errors are transformed into protocol error messages with the JSON-RPC error code `-32600` (`INVALID_REQUEST`).
 The error message includes the name of the schema type that failed validation, e.g. `Schema validation failed - CallToolRequest: ...`.
 
@@ -16,18 +17,18 @@ For instance, with Maven, add the following dependency to your POM file:
 <dependency>
     <groupId>io.quarkiverse.mcp</groupId>
     <artifactId>quarkus-mcp-server-schema-validator</artifactId>
-    <version>${quarkus-mcp.version}</version>
+    <version>{project-version}</version>
 </dependency>
 ----
 
 No further configuration is needed.
 Validations are performed automatically.
 
-The extension includes MCP JSON schemas for the following protocol versions: `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
-The appropriate schema is selected based on the protocol version negotiated during the client initialization.
+The extension includes MCP JSON schemas for the following protocol versions: `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`, and `2026-07-28`.
+The appropriate schema is selected based on the protocol version negotiated during the client initialization or, for stateless clients, based on the protocol version of the request.
 
 [[tool-output]]
-=== Tool output validation
+== Tool output validation
 
 The MCP specification requires that a tool with an `outputSchema` returns a `structuredContent` that conforms to it.
 The extension also validates the result of every successful `tools/call` against the tool's `outputSchema` before it is sent to the client, as the official TypeScript, Python, and Java SDKs do.
@@ -39,7 +40,7 @@ The check is a xref:guides-using-guardrails.adoc#global-guardrails[global output
 The behavior can be configured with `quarkus.mcp.server.schema-validator.tools.output`. See the xref:reference-configuration.adoc#schema-validator[configuration reference].
 
 [[tool-input]]
-=== Tool input validation
+== Tool input validation
 
 The MCP specification requires servers to validate all tool inputs.
 The extension validates the arguments of every `tools/call` against the tool's `inputSchema` before the tool is called, as the official TypeScript, Python, and Java SDKs do.

@@ -103,8 +103,9 @@ public class MyTools {
 
 === Logger Names
 
-The MCP logger name is automatically derived from the method name.
-For a tool method `myTool()`, the logger name will be `tool:myTool`.
+The MCP logger name is automatically derived from the feature type and the feature name, i.e. `<feature>:<name>`.
+For a tool named `myTool`, the logger name sent to the client will be `tool:myTool`.
+The server-side JBoss Logging logger is named after the declaring class.
 
 === Checking Log Level
 
@@ -309,6 +310,7 @@ import io.quarkiverse.mcp.server.Progress;
 import io.quarkiverse.mcp.server.ProgressTracker;
 import io.quarkiverse.mcp.server.Tool;
 import io.smallrye.mutiny.Uni;
+import java.math.BigDecimal;
 
 public class MyTools {
 
@@ -325,11 +327,11 @@ public class MyTools {
             .build();
 
         return processStepAsync(1)
-            .onItem().call(() -> tracker.advance(1)) // <1>
+            .onItem().call(() -> tracker.advance(BigDecimal.ONE)) // <1>
             .chain(() -> processStepAsync(2))
-            .onItem().call(() -> tracker.advance(1))
+            .onItem().call(() -> tracker.advance(BigDecimal.ONE))
             .chain(() -> processStepAsync(3))
-            .onItem().call(() -> tracker.advance(1))
+            .onItem().call(() -> tracker.advance(BigDecimal.ONE))
             .map(v -> "All steps complete");
     }
 
