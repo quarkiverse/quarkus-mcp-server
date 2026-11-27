@@ -2,6 +2,22 @@
 
 include::./includes/attributes.adoc[]
 
+[[version-3-0]]
+== 3.0.x
+
+[cols="1,1"]
+|===
+|Version |Date
+
+|3.0.0
+|TBD
+|===
+
+[[version-3-0-breaking]]
+=== Breaking Changes
+
+* [3.0.0] The `quarkus-mcp-server-stdio` extension no longer redirects console logging to the standard error if the stdio transport is disabled with `quarkus.mcp.server.stdio.enabled=false`. Previously, console logging was redirected whenever the extension was present, e.g. in an application using the HTTP transport with the stdio extension on the classpath. Set `quarkus.log.console.stderr=true` to restore the previous behavior. (https://github.com/quarkiverse/quarkus-mcp-server/issues/1176[#1176])
+
 [[version-2-1]]
 == 2.1.x
 
